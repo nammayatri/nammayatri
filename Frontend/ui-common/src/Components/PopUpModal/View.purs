@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), not, (<<<), bind, discard, show, pure)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibilityImportance, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml)
 import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -43,7 +43,7 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
-    , accessibilityImportance DISABLE
+    , accessibility DISABLE
     , background state.backgroundColor
     , afterRender
         ( \action -> do
@@ -87,7 +87,7 @@ view push state =
         , background Color.white900
         , margin state.margin
         , padding state.padding
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , clickable true
         ]
         [ linearLayout
@@ -96,7 +96,7 @@ view push state =
             , gravity CENTER
             , visibility state.coverImageConfig.visibility
             , cornerRadii state.cornerRadius
-            , accessibilityImportance DISABLE_DESCENDANT
+            , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
             ][  textView $
                 [ width WRAP_CONTENT
@@ -124,7 +124,7 @@ view push state =
             [ textView $
                 [ text $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
-                , accessibilityImportance ENABLE
+                , accessibility ENABLE
                 , color $ state.primaryText.color
                 , margin $ state.primaryText.margin
                 , gravity $ state.primaryText.gravity
@@ -162,7 +162,7 @@ view push state =
             , padding state.secondaryText.padding
             , margin $ state.secondaryText.margin
             , text $ state.secondaryText.text
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
             , visibility $ state.secondaryText.visibility
             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
@@ -198,7 +198,7 @@ view push state =
                     , margin  state.option1.margin
                     , padding  state.option1.padding
                     , gravity CENTER
-                    , accessibilityImportance DISABLE
+                    , accessibility DISABLE
                     , onClick
                         ( \action -> do
                             _ <- push action
@@ -210,7 +210,7 @@ view push state =
                     [ textView $
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
-                        , accessibilityImportance ENABLE
+                        , accessibility ENABLE
                         , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
                         , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                         , color $ state.option1.color
@@ -234,7 +234,7 @@ view push state =
                         )
                         (const OnButton2Click)
                     , padding state.option2.padding
-                    , accessibilityImportance DISABLE
+                    , accessibility DISABLE
                     , orientation VERTICAL
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
@@ -242,7 +242,7 @@ view push state =
                     [ textView $ 
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
-                        , accessibilityImportance ENABLE
+                        , accessibility ENABLE
                         , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
                         , accessibilityHint $ (if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option2.text)) <> " : Button"
                         , color state.option2.color
@@ -309,7 +309,7 @@ tipsView push state =
                   , width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index))
-                  , accessibilityImportance ENABLE
+                  , accessibility ENABLE
                   , padding state.tipButton.padding
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                   , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
@@ -349,7 +349,7 @@ tipsView push state =
                 , width WRAP_CONTENT
                 , text state.fareEstimate
                 , accessibilityHint (replaceAll (Pattern "-") (Replacement " To ") state.fareEstimate)
-                , accessibilityImportance ENABLE
+                , accessibility ENABLE
                 , color Color.black800
                 , textSize FontSize.a_14
                 ]

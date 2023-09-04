@@ -49,7 +49,7 @@ type ImageConfig =
   , padding :: Padding
   , visibility :: Visibility
   , accessibilityHint :: String
-  , accessibilityImportance :: Accessiblity
+  , accessibility :: Accessiblity
   }
 
 type TextConfig =
@@ -78,7 +78,7 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
-    , accessibilityImportance : ENABLE
+    , accessibility : ENABLE
     , accessibilityHint : "Back : Button"
     }
   , textConfig : {
@@ -95,7 +95,7 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
-    , accessibilityImportance : DISABLE 
+    , accessibility : DISABLE 
     , accessibilityHint : ""
     }
 
@@ -118,7 +118,7 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
-    , accessibilityImportance : ENABLE 
+    , accessibility : ENABLE 
     , accessibilityHint : "Back : Button"
     }
   , textConfig : {
@@ -135,7 +135,7 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
-    , accessibilityImportance : DISABLE 
+    , accessibility : DISABLE 
     , accessibilityHint : ""
     }
 

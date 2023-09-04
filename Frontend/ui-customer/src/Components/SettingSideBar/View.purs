@@ -31,7 +31,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibilityImportance, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
@@ -163,7 +163,7 @@ profileView state push =
       [ width ( V 48 )
       , height ( V 48 )
       , accessibilityHint "Double Tap To Close Menu Bar"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
       , onClick push $ (const OnClose)
       ]
@@ -253,7 +253,7 @@ settingsMenuView item push  =
                               SETTINGS_SHARE_APP      -> ShareAppLink
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
-  , accessibilityImportance case item.tag of
+  , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
                               SETTINGS_FAVOURITES     -> ENABLE
                               SETTINGS_HELP           -> ENABLE

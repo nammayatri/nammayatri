@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -71,7 +71,7 @@ view push config =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
-                , accessibilityImportance DISABLE
+                , accessibility DISABLE
                 , gravity config.gravity
                 , visibility if config.enableLoader then INVISIBLE else VISIBLE
                 , afterRender push (const NoAction)
@@ -81,7 +81,7 @@ view push config =
                     $ [ height config.textConfig.height
                       , width config.textConfig.width
                       , accessibilityHint config.textConfig.accessibilityHint
-                      , accessibilityImportance ENABLE
+                      , accessibility ENABLE
                       , text config.textConfig.text
                       , color config.textConfig.color
                       , gravity config.textConfig.gravity

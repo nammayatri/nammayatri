@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||), (&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd, lineHeight, alpha, adjustViewWithKeyboard, accessibilityHint ,accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd, lineHeight, alpha, adjustViewWithKeyboard, accessibilityHint ,accessibility)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -69,7 +69,7 @@ view push state =
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , accessibilityImportance if state.props.backPressed then DISABLE_DESCENDANT else DISABLE
+            , accessibility if state.props.backPressed then DISABLE_DESCENDANT else DISABLE
             , margin $ MarginBottom 24
             , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
             , background Color.white900
@@ -245,7 +245,7 @@ genderCaptureView state push =
           , height WRAP_CONTENT
           , width WRAP_CONTENT
           , color if state.data.gender == Nothing then Color.black600 else Color.black800
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , accessibilityHint $ if state.data.gender == Nothing then "Select your gender : Drop-Down menu" else "Gender Selected : " <> RSRC.getGender state.data.gender (getString SELECT_YOUR_GENDER) <> " : " <>  if state.props.genderOptionExpanded then "Double Tap To Collapse DropDown" else " Double Tap To Expand DropDown"
           ] <> FontStyle.subHeading1 TypoGraphy
         , linearLayout

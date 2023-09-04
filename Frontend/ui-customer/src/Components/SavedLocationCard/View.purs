@@ -22,7 +22,7 @@ import Prelude (Unit, ($), const, unit, not,(<>),(/),(-), (==))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), Accessiblity(..), margin, accessibilityHint, accessibilityImportance, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), Accessiblity(..), margin, accessibilityHint, accessibility, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
@@ -96,7 +96,7 @@ savedLocationView state push =
               , weight 1.0
               , maxLines 2
               , color Color.black800
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , accessibilityHint ( (DS.replaceAll (DS.Pattern " : ") (DS.Replacement ",") state.savedLocation )<> " is Saved as" <> (case (getCardType (fromMaybe "" state.cardType)) of 
                     Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
@@ -121,7 +121,7 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString EDIT)
                 , accessibilityHint "Edit : Button"
-                , accessibilityImportance ENABLE
+                , accessibility ENABLE
                 , color Color.blue900
                 ] <> FontStyle.body1 LanguageStyle
               ]
@@ -135,7 +135,7 @@ savedLocationView state push =
                 [ text (getString REMOVE)
                 , color Color.blue900
                 , accessibilityHint "Remove : Button"
-                , accessibilityImportance ENABLE
+                , accessibility ENABLE
                 ] <> FontStyle.body1 LanguageStyle
               ]
           ]
@@ -144,7 +144,7 @@ savedLocationView state push =
       [ text state.savedLocation
       , maxLines 2
       , ellipsize true
-      , accessibilityImportance DISABLE
+      , accessibility DISABLE
       , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
       , margin (MarginTop 8)
       , color Color.black700
