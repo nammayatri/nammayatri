@@ -619,7 +619,7 @@ executable dynamic-offer-driver-app-exe
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5

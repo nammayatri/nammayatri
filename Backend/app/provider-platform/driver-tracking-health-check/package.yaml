@@ -106,6 +106,7 @@ executables:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+      - -fwhole-archive-hs-libs
     dependencies:
       - driver-tracking-healthcheck
       - mobility-core

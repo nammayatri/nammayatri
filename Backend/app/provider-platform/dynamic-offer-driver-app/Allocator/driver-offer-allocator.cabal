@@ -141,7 +141,7 @@ executable driver-offer-allocator-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5

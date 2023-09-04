@@ -158,7 +158,7 @@ executable mock-public-transport-provider-platform-exe
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5
