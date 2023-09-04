@@ -105,6 +105,7 @@ view push state =
             , background Color.white900
             , padding (Padding 16 0 16 26)
             , adjustViewWithKeyboard "true"
+            , accessibility if state.props.backPressed then DISABLE_DESCENDANT else DISABLE
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
         

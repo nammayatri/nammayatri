@@ -320,6 +320,7 @@ mobileNumberTextView state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginTop 32
+  , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
   ][  textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT

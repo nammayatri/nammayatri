@@ -106,7 +106,7 @@ postfixImageView push config =
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
     , accessibilityHint "Add Favourite Button : Select to add this location to favourite"
-    , accessibility ENABLE
+    , accessibility DISABLE_DESCENDANT
     , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20

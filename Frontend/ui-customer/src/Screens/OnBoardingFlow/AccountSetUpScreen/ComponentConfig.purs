@@ -39,7 +39,7 @@ primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config
   { textConfig { text = "Let’s go!" 
     , color = state.data.config.primaryTextColor
-    , accessibilityHint = "Let's go : Button"}
+    , accessibilityHint = if state.props.btnActive then "Let's go : Button" else "Let's go : Button disabled"}
   , isClickable = state.props.btnActive
   , alpha = if state.props.btnActive then 1.0 else 0.4
   , margin = (Margin 0 0 0 0)

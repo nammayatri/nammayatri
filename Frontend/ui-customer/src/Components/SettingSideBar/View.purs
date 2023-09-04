@@ -162,7 +162,7 @@ profileView state push =
   ][ imageView
       [ width ( V 48 )
       , height ( V 48 )
-      , accessibilityHint "Double Tap To Close Menu Bar"
+      , accessibilityHint "Close Menu Bar Button"
       , accessibility ENABLE
       , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
       , onClick push $ (const OnClose)
