@@ -330,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
         updateType = AppUpdateType.IMMEDIATE;
         appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                     && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
                 Log.d(LOG_TAG, "Inside update");
                 try {
