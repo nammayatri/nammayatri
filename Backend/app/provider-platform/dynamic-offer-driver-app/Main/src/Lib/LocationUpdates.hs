@@ -19,6 +19,8 @@ module Lib.LocationUpdates
   )
 where
 
+import Data.List (sort)
+import qualified Data.Vector as V
 import Domain.Action.Beckn.Search
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
@@ -41,12 +43,30 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
-isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
-  let minDistance = highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
-   in minDistance <= routeDeviationThreshold
+lowerBoundSearch :: (Ord a) => a -> V.Vector a -> Int
+lowerBoundSearch target vec = binarySearch 0 (V.length vec - 1)
+  where
+    binarySearch l r =
+      if l > r
+        then l
+        else
+          let mid = l + ((r - l) `div` 2)
+           in if vec V.! mid >= target
+                then binarySearch l (mid - 1)
+                else binarySearch (mid + 1) r
 
-checkForDeviation :: Meters -> [LatLong] -> [LatLong] -> Int -> Bool
+isWithinTolerance :: LatLong -> V.Vector LatLong -> Meters -> Bool
+isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
+  let gap = fromIntegral routeDeviationThreshold / 1e5
+      startingIndex = validateIndex $ lowerBoundSearch (LatLong (pt.lat - 1.25 * gap) pt.lon) estimatedRoute
+      endingIndex = validateIndex $ lowerBoundSearch (LatLong (pt.lat + 1.25 * gap) pt.lon) estimatedRoute
+      slicedRoute = V.slice startingIndex (endingIndex - startingIndex + 1) estimatedRoute
+      minDistance = highPrecMetersToMeters (V.minimum $ V.map (distanceBetweenInMeters pt) slicedRoute)
+   in minDistance <= routeDeviationThreshold
+  where
+    validateIndex index = if index >= V.length estimatedRoute then V.length estimatedRoute - 1 else index
+
+checkForDeviation :: Meters -> V.Vector LatLong -> [LatLong] -> Int -> Bool
 checkForDeviation _ _ [] deviationCount
   | deviationCount >= 3 = True
   | otherwise = False
@@ -62,19 +82,20 @@ updateDeviation _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return False
 updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
-  logWarning "Updating Deviation"
+  logInfo "Updating Deviation"
   let key = searchRequestKey (getId rideId)
   routeInfo :: Maybe RI.RouteInfo <- Redis.get key
   case routeInfo >>= (.points) of
     Just estimatedRoute ->
-      if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
-        then do
-          logInfo $ "Deviation detected for rideId: " <> show rideId
-          QRide.updateDriverDeviatedFromRoute rideId True
-          return True
-        else do
-          logInfo $ "No deviation detected for rideId: " <> show rideId
-          return False
+      let estimatedRouteVec = V.fromList $ sort estimatedRoute
+       in if checkForDeviation routeDeviationThreshold estimatedRouteVec batchWaypoints 0
+            then do
+              logInfo $ "Deviation detected for rideId: " <> show rideId
+              QRide.updateDriverDeviatedFromRoute rideId True
+              return True
+            else do
+              logInfo $ "No deviation detected for rideId: " <> show rideId
+              return False
     Nothing -> do
       logWarning $ "Ride route points not found for rideId: " <> show rideId
       return False
