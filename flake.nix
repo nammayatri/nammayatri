@@ -8,9 +8,6 @@
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
 
-    beckn-gateway.inputs.flake-parts.follows = "common/flake-parts";
-    beckn-gateway.inputs.nixpkgs.follows = "common/nixpkgs";
-
     # We cannot use southern-zone-latest here, because the sha256 will change
     # over time.  NOTE: This file is not permanent, find the available one at
     # https://download.geofabrik.de/asia/india/
