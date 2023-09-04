@@ -7,7 +7,7 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibility)
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import Screens.Types (WelcomeScreenState)
@@ -38,7 +38,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , gravity CENTER
         , onBackPressed push $ const BackPressed
         , afterRender push $ const AfterRender
@@ -62,7 +62,7 @@ carouselView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , id $ getNewIDWithTag "CarouselView"
-    , accessibilityImportance ENABLE
+    , accessibility ENABLE
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20

@@ -41,7 +41,7 @@ import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -75,7 +75,7 @@ view push state =
     width MATCH_PARENT
   , height MATCH_PARENT
   , onBackPressed push $ const BackPressed state
-  , accessibilityImportance DISABLE
+  , accessibility DISABLE
   , afterRender
     (\action -> do
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
@@ -90,20 +90,20 @@ view push state =
      width MATCH_PARENT
     , height MATCH_PARENT
     , clickable true
-    , accessibilityImportance DISABLE
+    , accessibility DISABLE
    ][
       linearLayout
       [  height MATCH_PARENT
       , width MATCH_PARENT
       , margin (Margin 0 EHC.safeMarginTop 0 0)
-      , accessibilityImportance DISABLE_DESCENDANT
+      , accessibility DISABLE_DESCENDANT
       , id (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap")
       ][]
     , linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , background Color.transparent
-      , accessibilityImportance DISABLE_DESCENDANT
+      , accessibility DISABLE_DESCENDANT
       , padding (PaddingBottom if showLabel then 80 else 44)
       , gravity CENTER
       , orientation VERTICAL
@@ -137,7 +137,7 @@ view push state =
         [ height $ V ((EHC.screenHeight unit) / 7)
         , width MATCH_PARENT
         , clickable true
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , background state.data.config.searchLocationConfig.searchLocationTheme
         , padding (Padding 0 EHC.safeMarginTop 0 0)
         ][]
@@ -168,7 +168,7 @@ recenterButtonView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , accessibilityImportance DISABLE_DESCENDANT
+  , accessibility DISABLE_DESCENDANT
   , gravity RIGHT
   ][  imageView
       [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
@@ -189,7 +189,7 @@ bottomBtnsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , accessibilityImportance DISABLE_DESCENDANT
+    , accessibility DISABLE_DESCENDANT
     , alignParentBottom "true,-1"
     , visibility if (state.props.isLocateOnMap || state.props.showSavePlaceView || (DA.null state.data.locationList)) then GONE else VISIBLE
     , gravity CENTER_VERTICAL
@@ -315,7 +315,7 @@ addNewScreenView state push =
             , width $ V 16
             , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
             , accessibilityHint "Clear Text : Button"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             ]
           ]
         ]
@@ -528,7 +528,7 @@ savePlaceView state push =
               [  textView $
                 [ text (getString EDIT)
                 , accessibilityHint "Edit : Button"
-                , accessibilityImportance ENABLE
+                , accessibility ENABLE
                 , color Color.blue900
                 , width MATCH_PARENT
                 , onFocus push $ const $ EditTextFocusChanged
@@ -591,7 +591,7 @@ tagView state push =
           , onClick push $ const (TagSelected index)
           , margin (MarginRight 12)
           , cornerRadius 6.0
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , accessibilityHint if (Just index) == state.data.activeIndex then (item.text <> ":  Selected") else if (validTag state.data.savedTags item.tag state.data.placeName) then (item.text <> ": Un Selected") else (item.text <> " : Already Saved")
           , alpha case item.tag of
                       "FAVOURITE"     -> 1.0

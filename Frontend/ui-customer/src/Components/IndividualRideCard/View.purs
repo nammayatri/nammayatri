@@ -30,7 +30,7 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getCommonAsset
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -201,7 +201,7 @@ sourceAndDestination push =
       ][  imageView
           [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
           , height $ V 15
-          , accessibilityImportance ENABLE 
+          , accessibility ENABLE 
           , accessibilityHint "Source Location is :"
           , width $ V 15
           , margin (MarginTop 2)
@@ -211,7 +211,7 @@ sourceAndDestination push =
           , padding (PaddingHorizontal 12 2)
           , width MATCH_PARENT
           , color Color.black700
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , width MATCH_PARENT
           , maxLines 1
           , ellipsize true
@@ -227,14 +227,14 @@ sourceAndDestination push =
           [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
           , height $ V 16
           , width $ V 16
-          , accessibilityImportance ENABLE 
+          , accessibility ENABLE 
           , accessibilityHint "Destination Location is : "
           , margin (MarginTop 2)
           ]
         , textView (
           [ PrestoList.textHolder "destination"
           , layoutGravity "center_vertical"
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , width MATCH_PARENT
           , padding (PaddingHorizontal 12 2)
           , maxLines 1
@@ -371,7 +371,7 @@ viewDetailsAndRepeatRide push state =
       , height WRAP_CONTENT
       , text $ getString VIEW_DETAILS
       , accessibilityHint $ "View Details : Button"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , color Color.blue900
       , padding $ Padding 26 18 50 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
@@ -387,7 +387,7 @@ viewDetailsAndRepeatRide push state =
       , height WRAP_CONTENT
       , text $ getString REPEAT_RIDE
       , accessibilityHint $ "Repeat Ride : Button"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , color Color.blue900
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5

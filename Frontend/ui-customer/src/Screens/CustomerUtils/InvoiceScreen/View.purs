@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -131,7 +131,7 @@ amountBreakupView state =
                   [ text (getFareText item.fareType state.data.selectedItem.baseDistance)
                   , color Color.black800
                   , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
-                  , accessibilityImportance ENABLE
+                  , accessibility ENABLE
                   , layoutGravity "bottom"
                   ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
@@ -144,7 +144,7 @@ amountBreakupView state =
                       [ text item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
-                      , accessibilityImportance DISABLE
+                      , accessibility DISABLE
                       , height WRAP_CONTENT
                       , width WRAP_CONTENT
                       , lineHeight "18"
@@ -167,7 +167,7 @@ totalAmountView state =
     [ textView $
         [ text $ getString TOTAL_PAID
         , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , color Color.black800
         , lineHeight "28"
         ] <> FontStyle.h1 LanguageStyle
@@ -180,7 +180,7 @@ totalAmountView state =
     , textView $
         [ text state.data.totalAmount
         , color Color.black800
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         ] <> FontStyle.h1 LanguageStyle
     ]
 

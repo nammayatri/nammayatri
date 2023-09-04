@@ -4,7 +4,7 @@ import Data.Array (mapWithIndex)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (+), (>=), (&&), (>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility, background, padding, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility, background, padding, accessibilityHint, accessibility)
 import Screens.Types (StepsHeaderModelState)
 import Styles.Colors as Color
 import Components.StepsHeaderModel.Controller (Action(..))
@@ -32,7 +32,7 @@ view push state =
             , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ic_chevron_left_white.png"
             , onClick push $ const OnArrowClick
             , accessibilityHint "Back"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , visibility case state.backArrowVisibility of 
                 true -> VISIBLE
                 false -> if state.activeIndex > 0 then VISIBLE else GONE
@@ -53,7 +53,7 @@ view push state =
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , accessibilityHint $ "Step " <> (show (state.activeIndex + 1)) <> " Of "<> (show (Array.length state.textArray))
             , text $ "Step "<> (show (state.activeIndex + 1)) <> "/"<> (show (Array.length state.textArray))
             , color Color.white900
@@ -63,7 +63,7 @@ view push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , text $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
         , color Color.white900
         , margin $ Margin 15 5 0 22

@@ -20,7 +20,7 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.MobileNumberEditor.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Margin(..), Padding(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, relativeLayout, scrollView, onClick, onChange, onAnimationEnd, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat,imageWithFallback, accessibilityImportance, accessibilityHint)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Margin(..), Padding(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, relativeLayout, scrollView, onClick, onChange, onAnimationEnd, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat,imageWithFallback, accessibility, accessibilityHint)
 import Font.Style as FontStyle
 import Common.Types.App
 import PrestoDOM.Animation as PrestoAnim
@@ -69,7 +69,7 @@ topLabelView config =
     , gravity config.topLabel.gravity
     , lineHeight "28"
     , singleLine true
-    , accessibilityImportance config.topLabel.accessibilityImportance
+    , accessibility config.topLabel.accessibility
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
     , visibility config.topLabel.visibility
@@ -192,7 +192,7 @@ editTextView push config =
   , id config.id
   , weight 1.0
   , color config.editText.color
-  , accessibilityImportance ENABLE
+  , accessibility ENABLE
   , accessibilityHint $ if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , text config.editText.text
   , hint config.editText.placeholder

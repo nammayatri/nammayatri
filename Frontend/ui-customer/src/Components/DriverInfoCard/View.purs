@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -250,14 +250,14 @@ otpView push state =
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , background state.data.config.quoteListModel.otpTextBackground
         , margin $ MarginLeft 7
         ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
-            , accessibilityImportance DISABLE
+            , accessibility DISABLE
             , color state.data.config.quoteListModel.otpTextColor
             ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
@@ -284,7 +284,7 @@ expiryTimeView push state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , accessibilityHint $ "O.T.P is :" <> (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , text $ getString OTP <> ":"
               , color Color.black700
               ] <> FontStyle.body4 TypoGraphy)
@@ -328,7 +328,7 @@ supportButton push state =
   , orientation VERTICAL
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
-  , accessibilityImportance if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
+  , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
   , margin $ MarginTop 10
   , cornerRadius 20.0
@@ -338,7 +338,7 @@ supportButton push state =
       , width $ V 18
       , margin $ Margin 10 10 10 4
       , accessibilityHint "Share Ride : Button"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
       , onClick push $ const ShareRide
       ]
@@ -355,7 +355,7 @@ supportButton push state =
       , width $ V 18
       , margin $ Margin 10 12 10 10
       , accessibilityHint "Contact Customer Support : Button"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , onClick push $ const Support
       ]
   ]
@@ -372,7 +372,7 @@ locationTrackButton push state =
   , stroke $ "1,"<> Color.grey900
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
-  , accessibilityImportance DISABLE_DESCENDANT
+  , accessibility DISABLE_DESCENDANT
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  linearLayout
@@ -403,7 +403,7 @@ sosView push state =
         , height $ V 50
         , width $ V 50
         , accessibilityHint $ "S O S Button, Select to view S O S options"
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , onClick push $ const OpenEmergencyHelp
         ]
     ]
@@ -562,7 +562,7 @@ otpAndWaitView push state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , accessibilityHint $ "O.T.P is :" <>  (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
@@ -586,7 +586,7 @@ waitTimeView push state =
   , margin $ MarginLeft 12
   , padding $ Padding 14 2 14 2
   , accessibilityHint $ "Wait Timer : " <> state.data.waitingTime
-  , accessibilityImportance ENABLE
+  , accessibility ENABLE
   , visibility case state.props.currentSearchResultType == QUOTES of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
@@ -670,7 +670,7 @@ driverInfoView push state =
               , background Color.transparentGrey
               , height $ V 4
               , width $ V 34
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , accessibilityHint "Bottom Sheet : Swipe Up Or Down : To Expand Or Collapse : Button"
               , margin (MarginTop 8)
               , onClick push $ const ExpandBottomSheet
@@ -710,7 +710,7 @@ cancelRideLayout push state =
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
   , accessibilityHint "Cancel Ride : Button"
-  , accessibilityImportance ENABLE
+  , accessibility ENABLE
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
   ][ textView (
@@ -737,7 +737,7 @@ contactView push state =
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
         , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> secondsToHms state.data.eta <> " Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
         ][  textView $
             [ text $ state.data.driverName <> " "
@@ -780,7 +780,7 @@ contactView push state =
               , afterRender push $ const $ LoadMessages
               , onClick push $ const $ MessageDriver
               , accessibilityHint "Chat or Call : Button"
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               ][ imageView
                   [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
                   , height $ V state.data.config.driverInfoConfig.callHeight
@@ -818,7 +818,7 @@ driverDetailsView push state =
               [ height $ V 50
               , width $ V 50
               , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
               ]
@@ -827,7 +827,7 @@ driverDetailsView push state =
           [ text state.data.driverName
           , maxLines 1
           , ellipsize true
-          , accessibilityImportance DISABLE
+          , accessibility DISABLE
           , color Color.black800
           , width MATCH_PARENT
           , height WRAP_CONTENT
@@ -839,7 +839,7 @@ driverDetailsView push state =
                           "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                           _ -> "")
           , color Color.black700
-          , accessibilityImportance DISABLE
+          , accessibility DISABLE
           , width $ V ((screenWidth unit) /2 - 20)
           , maxLines 2
           , singleLine false
@@ -853,7 +853,7 @@ driverDetailsView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibilityImportance DISABLE_DESCENDANT
+      , accessibility DISABLE_DESCENDANT
       , gravity RIGHT
       ][  frameLayout
           [ height MATCH_PARENT
@@ -929,12 +929,12 @@ ratingView push state =
   , gravity CENTER_VERTICAL
   , stroke  state.data.config.driverInfoConfig.ratingStroke
   , cornerRadius state.data.config.driverInfoConfig.ratingCornerRadius
-  , accessibilityImportance DISABLE
+  , accessibility DISABLE
   ][  imageView
       [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
       , height $ V 13
       , width $ V 13
-      , accessibilityImportance DISABLE
+      , accessibility DISABLE
       ]
     , textView (
       [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
@@ -943,7 +943,7 @@ ratingView push state =
       , margin (Margin 8 0 2 0)
       , width WRAP_CONTENT
       , height $ V 30
-      , accessibilityImportance DISABLE
+      , accessibility DISABLE
       ] <> FontStyle.tags TypoGraphy)
     ]
 
@@ -957,7 +957,7 @@ paymentMethodView push state title shouldShowIcon =
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
   , accessibilityHint $ "Ride Fare : " <> (replaceAll (Pattern "₹") (Replacement "") (show state.data.price))  <> " Rupees" <> " : Pick Up Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.source) <> " : Destination Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.destination) <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
-  , accessibilityImportance ENABLE
+  , accessibility ENABLE
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -1004,11 +1004,11 @@ sourceDistanceView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , accessibilityImportance DISABLE_DESCENDANT
+  , accessibility DISABLE_DESCENDANT
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
   ][  textView (
       [ text $ getString PICKUP_AND_DROP
-      , accessibilityImportance DISABLE
+      , accessibility DISABLE
       , margin $ Margin 16 0 0 10
       ] <> FontStyle.body3 TypoGraphy)
     , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
