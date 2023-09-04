@@ -21,6 +21,7 @@ import Screens.Types(Stage, ZoneType(..), SearchResultType)
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
 import MerchantConfig.Types
+import PrestoDOM (Eval)
 
 data Action = NoAction
             | Support
@@ -36,7 +37,11 @@ data Action = NoAction
             | RemoveNotification
             | CallDriver
             | LoadMessages
-            | OnNavigateToZone
+            | OnNavigateToZone           
+            | ShareRidePopUp
+            | LiveDashboardAction
+            | WaitingInfo  
+            | ScrollSupportButton 
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -91,5 +96,5 @@ type DriverInfoCardData =
   , bookingCreatedAt :: String
   , lastMessage :: ChatView.ChatComponent
   , config :: AppConfig
-  , vehicleVariant :: String
+  , vehicleVariant :: String 
   }

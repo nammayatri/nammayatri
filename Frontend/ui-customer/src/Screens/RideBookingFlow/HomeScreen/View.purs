@@ -325,7 +325,7 @@ view push state =
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
-            , if state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true") then (shareAppPopUp push state) else emptyTextView state
+            ----TODO when shareApp needed over Share ride, if state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true") then (shareAppPopUp push state) else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
@@ -335,6 +335,8 @@ view push state =
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
+            , if state.props.shareRidePopUp then shareRidePopUpView push state else emptyTextView state
+            , if state.data.waitTimeInfo then waitTimeInfoPopUp push state else emptyTextView state
             ]
         ]
     ]
@@ -345,6 +347,13 @@ callSupportPopUpView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< CallSupportAction) (callSupportConfig state)]
+
+shareRidePopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+shareRidePopUpView push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ShareRidePopUpAction) (shareRideConfig state)]
 
 cancelSearchPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelSearchPopUp push state =
@@ -435,6 +444,15 @@ driverCallPopUp push state =
 
         ]
     ]
+
+waitTimeInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+waitTimeInfoPopUp push state =
+   PrestoAnim.animationSet [ fadeIn true ]
+     $ linearLayout
+         [ height MATCH_PARENT
+         , width MATCH_PARENT
+         ]
+         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig FunctionCall) ]
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
@@ -1290,7 +1308,7 @@ topLeftIconView state push =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , visibility if state.data.config.showHamMenu then VISIBLE else GONE
-      , margin (Margin 16 48 0 0)
+      , margin $ Margin 16 18 0 0
       ][
         linearLayout
           [ height $ V 48
@@ -1315,9 +1333,24 @@ topLeftIconView state push =
           [ height WRAP_CONTENT
           , weight 1.0
           ][]
-        , referralView push state
-        , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
+       , sosView push state
       ]
+-----------------------------------------sosView--------------------------------------------------
+sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+sosView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginRight (12)
+    , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
+    ][ imageView
+        [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
+        , height $ V 46
+        , width $ V 46
+        , onClick push $ const OpenEmergencyHelp
+        ]
+    ]
 
 ----------- suggestedPriceView -------------
 suggestedPriceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1912,8 +1945,8 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
-                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
+                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 44
+                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 44
                              else getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
@@ -1934,7 +1967,7 @@ rideTrackingView push state =
 
 getPeakHeight :: Stage -> Int
 getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
-                      "true" , RideAccepted -> getHeightFromPercent 65
+                      "true" , RideAccepted -> getHeightFromPercent 52
                       "true" , ChatWithDriver -> getHeightFromPercent 65
                       "false" , RideAccepted -> getHeightFromPercent 60
                       "false" , ChatWithDriver -> getHeightFromPercent 60

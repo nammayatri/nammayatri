@@ -36,6 +36,7 @@ data Action = OnButton1Click
             | DismissPopup
 
 type Config = {
+    title :: TextConfig,
     primaryText :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
@@ -143,6 +144,15 @@ config = {
   , padding : (Padding 0 0 0 0)
   , dismisText : Mb.Nothing
   , topTitle : Mb.Nothing
+  , title : {
+      text : "Title",
+      color : Color.black800,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 0 0 0),
+      visibility : GONE,
+      textStyle : Heading0
+    }
   , primaryText : {
       text : "Text1",
       color : Color.black800,

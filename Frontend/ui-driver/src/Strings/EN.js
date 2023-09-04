@@ -770,5 +770,6 @@ const englishStrings = {
   REFRESH_STRING : "Refresh",
   CHAT_FOR_HELP : "Chat for Help",
   VIEW_FAQs : "View FAQs",
-  SUPPORT : "Support"
+  SUPPORT : "Support",
 } 
+

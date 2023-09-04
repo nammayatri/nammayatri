@@ -578,6 +578,17 @@ const kannadaStrings = {
   "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ",
   "PLATFORM_GST" : "ತೆರಿಗೆಗಳು (GST)",
   "MISC_WAITING_CHARGE" : "ಇತರ (ವೇಟಿಂಗ್ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ)",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "\nಮೊದಲ 3 ನಿಮಿಷಗಳಿಗೆ ವೇಟಿಂಗ್ ಚಾರ್ಜ್ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ. ನಿಮಗೆ\nಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ ₹1. ಅದರ ನಂತರ ಕಾಯುವ ಸಮಯಕ್ಕೆ\n ವಿಧಿಸಲಾಗುತ್ತದೆ.",
+  "WAIT_TIMER" : "ವೇಟ್ ಟೈಮರ್",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "ಪಿಕಪ್‌ನಲ್ಲಿ \nಡ್ರೈವರ್ ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದಾರೆಂದು ನಿಮಗೆ ತೋರಿಸುತ್ತದೆ.",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 ನಿಮಿಷಗಳ ನಂತರ ಅನ್ವಯವಾಗುವ ಶುಲ್ಕಗಳು",
+  "REACHING_YOUR_DESTINATION_IN_" : "ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ",
+  "WAITING_AT_PICKUP" : " ಪಿಕಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದೆ ",
+  "SHARE_RIDE" : "ಶೇರ್ ರೈಡ್",
+  "CUSTOMER_SUPPORT" : "ಗ್ರಾಹಕ ಬೆಂಬಲ",
+  "LIVE_STATS" : "ಲೈವ್ ಅಂಕಿಅಂಶಗಳು",
+  "LEARN_MORE" : "ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ",
+  "PICKUP" : "ಪಿಕಪ್",
   "AC_TAXI" : "AC ಟ್ಯಾಕ್ಸಿ",
   "NON_AC_TAXI" : "ನಾನ್ ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
   "GET_OTP_VIA_WHATSAPP" : "WhatsApp ಮೂಲಕ OTP ಪಡೆಯಿರಿ",
@@ -586,5 +597,8 @@ const kannadaStrings = {
   "LETS_GET_YOU_TRIP_READY" : "ನಿಮ್ಮನ್ನು ಪ್ರವಾಸಕ್ಕೆ ಸಿದ್ಧಗೊಳಿಸೋಣ!",
   "GOT_AN_OTP" : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   "JUST_ONE_LAST_THING" : "ಕೇವಲ ಒಂದು ಕೊನೆಯ ವಿಷಯ",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ",
+  "SHARE_THIS_RIDE" : "ಈ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+  "SHARE_RIDE_DESCRIPTION" : "ಈಗ ನಿಮ್ಮ ರೈಡ್ ಅನ್ನು ನಿಮ್ಮ ಸ್ನೇಹಿತರು ಮತ್ತು ಕುಟುಂಬದೊಂದಿಗೆ ಬಟನ್ ಟ್ಯಾಪ್ ಮಾಡುವ ಮೂಲಕ ಹಂಚಿಕೊಳ್ಳಿ.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳುವುದು ಈಗ ಹಿಂದೆಂದಿಗಿಂತಲೂ ಸುಲಭವಾಗಿದೆ!"
 }

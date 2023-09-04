@@ -581,6 +581,17 @@ const englishStrings = {
   "OTP_EXPIRED_DESCRIPTION" : "Your ride OTP expired. Please book again to get a ride",
   "PLATFORM_GST" : "Taxes (GST)",
   "MISC_WAITING_CHARGE" : "Misc. (including Waiting Charges)",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "Waiting charge is zero for \nthe first 3 minutes. You will\nbe charged for ₹1.per minute\nof wait time after that.",
+  "WAIT_TIMER" : "Wait Timer",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "Shows you how long the\ndriver has waited at pickup.",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "Charges applicable after 3 mins",
+  "REACHING_YOUR_DESTINATION_IN_" : "Reaching your Destination in ",
+  "WAITING_AT_PICKUP" : "is waiting at pickup ",
+  "SHARE_RIDE" : "Share ride",
+  "CUSTOMER_SUPPORT" : "Customer Support",
+  "LIVE_STATS" : "Live Stats",
+  "LEARN_MORE" : "Learn more",
+  "PICKUP" : "Pickup",
   "AC_TAXI" : "AC Taxi",
   "NON_AC_TAXI" : "Non AC Taxi",
   "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
@@ -590,5 +601,8 @@ const englishStrings = {
   "GOT_AN_OTP" : "Got an OTP?",
   "JUST_ONE_LAST_THING" : "Just one last thing",
   "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
+  "SHARE_THIS_RIDE" : "Share this ride",
+  "SHARE_RIDE_DESCRIPTION" : "Now share your ride with your friends and family at the tap of a button.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "Sharing your ride is now easier than ever!"
 }

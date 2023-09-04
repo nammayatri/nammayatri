@@ -598,6 +598,18 @@ const bengaliStrings = {
   "OTP_EXPIRED_DESCRIPTION" : "আপনার রাইডের OTP মেয়াদ শেষ হয়ে গেছে। একটি রাইড পেতে আবার বুক করুন",
   "PLATFORM_GST": "কর (GST)",
   "MISC_WAITING_CHARGE": "বিবিধ (ওয়েটিং চার্জ সহ)",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "প্রথম ৩ মিনিটের জন্য ওয়েটিং চার্জ শূন্য। আপনাকে\nপ্রতি মিনিটে ₹1 চার্জ করা হবে\nএর পরে অপেক্ষা করার সময় নেই।",
+  "WAIT_TIMER" : "ওয়েট টাইমার",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "আপনাকে দেখায়\nড্রাইভার পিকআপে কতক্ষণ অপেক্ষা করেছে।",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 মিনিট পরে চার্জ প্রযোজ্য",
+  "REACHING_YOUR_DESTINATION_IN_" : "এতে আপনার গন্তব্যে পৌঁছানো হচ্ছে",
+  "WAITING_AT_PICKUP" : "পিকআপে অপেক্ষা করছে",
+  "SHARE_RIDE" : "শেয়ার রাইড",
+  "CUSTOMER_SUPPORT" : "গ্রাহক সমর্থন",
+  "LIVE_STATS" : "লাইভ পরিসংখ্যান",
+  "LEARN_MORE" : "আরো জানুন",
+  "PICKUP" : "পিকআপ"
+,
   "AC_TAXI": "AC ট্যাক্সি",
   "NON_AC_TAXI": "কোন এসি ট্যাক্সি নেই",
   "GET_OTP_VIA_WHATSAPP" : "হোয়াটসঅ্যাপের মাধ্যমে ওটিপি পান",
@@ -606,5 +618,8 @@ const bengaliStrings = {
   "LETS_GET_YOU_TRIP_READY" : "চলুন আপনাকে ভ্রমণের জন্য প্রস্তুত করি!",
   "GOT_AN_OTP" : "একটি OTP পেয়েছেন?",
   "JUST_ONE_LAST_THING" : "শুধু একটি শেষ জিনিস",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "টোল/পার্কিং চার্জ অতিরিক্ত হবে"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "টোল/পার্কিং চার্জ অতিরিক্ত হবে",
+  "SHARE_THIS_RIDE" : "এই রাইডটি শেয়ার করুন",
+  "SHARE_RIDE_DESCRIPTION" : "এখন একটি বোতামের ট্যাপে আপনার বন্ধু এবং পরিবারের সাথে আপনার রাইড শেয়ার করুন।",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "আপনার রাইড শেয়ার করা এখন আগের চেয়ে সহজ!"
 }

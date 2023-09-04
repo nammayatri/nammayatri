@@ -583,6 +583,7 @@ type HomeScreenStateData =
   , ratingViewState :: RatingViewState
   , config :: AppConfig
   , logField :: Object Foreign
+  , waitTimeInfo :: Boolean
   }
 
 type HomeScreenStateProps =
@@ -662,6 +663,7 @@ type HomeScreenStateProps =
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
+  , shareRidePopUp :: Boolean
   }
 
 type RouteEndPoints = {

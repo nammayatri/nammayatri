@@ -582,6 +582,17 @@ const hindiStrings = {
   "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें",
   "PLATFORM_GST" : "कर (जीएसटी)",
   "MISC_WAITING_CHARGE" : "विविध (प्रतीक्षा शुल्क सहित)",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "पहले 3 मिनट के लिए प्रतीक्षा \nशुल्क शून्य है। उसके बाद आपसे प्रति \nमिनट प्रतीक्षा समय के लिए \n₹1 शुल्क लिया जाएगा।",
+  "WAIT_TIMER" : "प्रतीक्षा टाइमर",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "आपको दिखाता है कि\nड्राइवर ने पिकअप के लिए कितनी देर तक इंतजार किया है।",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 मिनट के बाद शुल्क लागू",
+  "REACHING_YOUR_DESTINATION_IN_" : "अपनी मंजिल तक पहुंचना",
+  "WAITING_AT_PICKUP" : "पिकअप की प्रतीक्षा में",
+  "SHARE_RIDE" : "शेयर राइड",
+  "CUSTOMER_SUPPORT" : "ग्राहक सहायता",
+  "LIVE_STATS" : "लाइव आँकड़े",
+  "LEARN_MORE" : "और जानें",
+  "PICKUP" : "पिकअप",
   "AC_TAXI" : "एसी टैक्सी",
   "NON_AC_TAXI" : "नॉन-एसी टैक्सी",
   "GET_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी प्राप्त करें",
@@ -590,5 +601,8 @@ const hindiStrings = {
   "LETS_GET_YOU_TRIP_READY" : "आइए हम आपको यात्रा के लिए तैयार करें!",
   "GOT_AN_OTP" : "एक OTP मिला?",
   "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा",
+  "SHARE_THIS_RIDE" : "इस सवारी को साझा करें",
+  "SHARE_RIDE_DESCRIPTION" : "अब एक बटन के टैप पर अपनी सवारी को अपने दोस्तों और परिवार के साथ साझा करें।",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "अपनी सवारी साझा करना अब पहले से कहीं अधिक आसान है!"
 }

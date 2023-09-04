@@ -594,6 +594,17 @@ const malayalamStrings = {
   "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക",
   "PLATFORM_GST" : "നികുതികൾ (ജിഎസ്ടി)",
   "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "ആദ്യ 3 മിനിറ്റിന് വെയിറ്റിംഗ് ചാർജ് പൂജ്യമാണ്. നിങ്ങളിൽ നിന്ന്\nഒരു മിനിറ്റിന് ₹1. അതിന് ശേഷമുള്ള കാത്തിരിപ്പ് സമയത്തിന്\n ഈടാക്കും.",
+  "WAIT_TIMER" : "വെയ്റ്റ് ടൈമർ",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "പിക്കപ്പിൽ\nഡ്രൈവർ എത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു.",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 മിനിറ്റിന് ശേഷം നിരക്കുകൾ ബാധകം",
+  "REACHING_YOUR_DESTINATION_IN_" : "നിങ്ങളുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്തിച്ചേരുന്നു ",
+  "WAITING_AT_PICKUP" : " പിക്കപ്പിൽ കാത്തിരിക്കുന്നു ",
+  "SHARE_RIDE" : "ഷെയർ റൈഡ്",
+  "CUSTOMER_SUPPORT" : "ഉപഭോക്തൃ പിന്തുണ",
+  "LIVE_STATS" : "തത്സമയ സ്ഥിതിവിവരക്കണക്കുകൾ",
+  "LEARN_MORE" : "കൂടുതലറിയുക",
+  "PICKUP" : "പുരോഗമിക്കുക",
   "AC_TAXI" : "AC ടാക്സി",
   "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല",
   "ASKED_FOR_EXTRA_FARE": "അധിക പണം ആവശ്യപ്പെട്ടു",
@@ -604,5 +615,8 @@ const malayalamStrings = {
   "LETS_GET_YOU_TRIP_READY" : "നിങ്ങളെ യാത്ര-തയ്യാറാക്കാം!",
   "GOT_AN_OTP" : "ഒരു OTP കിട്ടിയോ?",
   "JUST_ONE_LAST_THING" : "അവസാനമായി ഒരു കാര്യം മാത്രം",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും",
+  "SHARE_THIS_RIDE" : "ഈ റൈഡ് പങ്കിടുക",
+  "SHARE_RIDE_DESCRIPTION" : "ഇപ്പോൾ ഒരു ബട്ടണിന്റെ ടാപ്പിലൂടെ നിങ്ങളുടെ റൈഡ് സുഹൃത്തുക്കളുമായും കുടുംബാംഗങ്ങളുമായും പങ്കിടുക.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "നിങ്ങളുടെ റൈഡ് പങ്കിടുന്നത് ഇപ്പോൾ എന്നത്തേക്കാളും എളുപ്പമാണ്!"
 }

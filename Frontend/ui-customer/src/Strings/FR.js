@@ -489,6 +489,18 @@ export function getStringValue(key) {
     "CALL_EMERGENCY_CENTRE": "Appeler le centre d'urgence",
     "DIAL_112": "Composez le 112 ?",
     "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "Vous êtes sur le point d'appeler le centre d'urgence le plus proche. Voulez-vous poursuivre?",
+    "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "Les frais d'attente sont nuls pendant \nles 3 premières minutes. Vous serez\npayé pour 1 ₹ par minute\nde temps d'attente après cela.",
+    "WAIT_TIMER" : "Temporisateur d'attente",
+    "HOW_LONG_DRIVER_WAITED_FOR_PICKUP": "Vous indique combien de temps\nle chauffeur a attendu lors de la prise en charge.",
+    "CHARGES_APPLICABLE_AFTER_3_MINS" : "Frais applicables après 3 minutes",
+    "REACHING_YOUR_DESTINATION_IN_" : "Atteindre votre destination en ",
+    "WAITING_AT_PICKUP" : " en attente au ramassage ",
+    "SHARE_RIDE" : "Partager le trajet",
+    "SUPPORT_CLIENT" : "Soutien client",
+    "LIVE_STATS" : "Statistiques en direct",
+    "LEARN_MORE" : "En savoir plus",
+    "PICKUP" : "ramasser"
+,
     "AC_TAXI" : "AC Taxi",
     "NON_AC_TAXI" : "Taxi non climatisé",
     "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
@@ -497,5 +509,9 @@ export function getStringValue(key) {
     "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
     "GOT_AN_OTP": "Vous avez un OTP?",
     "JUST_ONE_LAST_THING": "Juste une dernière chose",
-    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément"
+    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément",
+
+    "SHARE_THIS_RIDE" : "Partager cette balade",
+    "SHARE_RIDE_DESCRIPTION" : "Partagez maintenant votre trajet avec vos amis et votre famille en appuyant simplement sur un bouton.",
+    "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "Partager votre trajet est désormais plus facile que jamais !"
   }
