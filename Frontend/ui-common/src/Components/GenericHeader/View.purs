@@ -20,7 +20,7 @@ import Effect (Effect)
 import Prelude (Unit, const, ($), (==), (<>))
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibility)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -32,24 +32,24 @@ view push config =
   , padding config.padding
   , orientation config.orientation
   , background config.background
-  , accessibilityImportance DISABLE
+  , accessibility DISABLE
   , clickable config.isClickable
   ][  linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER
-      , accessibilityImportance config.prefixImageConfig.accessibilityImportance
+      , accessibility config.prefixImageConfig.accessibility
       , accessibilityHint config.prefixImageConfig.accessibilityHint
       , onClick push $ const PrefixImgOnClick
       , accessibilityHint config.prefixImageConfig.accessibilityHint
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       ][ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
         , height config.prefixImageConfig.height
         , width config.prefixImageConfig.width
         , margin config.prefixImageConfig.margin
         , padding config.prefixImageConfig.padding
-        , accessibilityImportance DISABLE
+        , accessibility DISABLE
         , visibility config.prefixImageConfig.visibility
         ]
     ]
@@ -59,7 +59,7 @@ view push config =
       , text config.textConfig.text
       , margin config.textConfig.margin
       , clickable false
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , accessibilityHint if config.textConfig.accessibilityHint == "" then config.textConfig.text else config.textConfig.accessibilityHint
       , color config.textConfig.color
       ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
@@ -80,11 +80,11 @@ suffixImageLayout config push =
       , height config.suffixImageConfig.height
       , width config.suffixImageConfig.width
       , accessibilityHint config.suffixImageConfig.accessibilityHint
-      , accessibilityImportance config.suffixImageConfig.accessibilityImportance
+      , accessibility config.suffixImageConfig.accessibility
       , margin config.suffixImageConfig.margin
       , padding config.suffixImageConfig.padding
       , accessibilityHint config.suffixImageConfig.accessibilityHint
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , onClick push $ const SuffixImgOnClick
       , visibility config.suffixImageConfig.visibility
       ]

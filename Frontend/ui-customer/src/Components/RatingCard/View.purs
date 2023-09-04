@@ -31,7 +31,7 @@ import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||),show)
-import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance)
+import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint, accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -136,7 +136,7 @@ feedbackPillView state push =
                       , fontStyle $ FontStyle.medium LanguageStyle
                       , text item.text
                       , accessibilityHint $ item.text <> if isSelected then " : Selected" else " : Un Selected"
-                      , accessibilityImportance ENABLE
+                      , accessibility ENABLE
                       , color if isSelected then Color.blue900 else Color.black800
                       , padding $ Padding 12 12 12 12
                       ]
@@ -242,7 +242,7 @@ starRatingView state push =
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
         , accessibilityHint $ "Rate Your Ride With " <> state.data.driverName
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2
@@ -263,7 +263,7 @@ starRatingView state push =
                               [ height $ V 35
                               , width $ V 35
                               , accessibilityHint (show item <> " Star : " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
-                              , accessibilityImportance ENABLE
+                              , accessibility ENABLE
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])

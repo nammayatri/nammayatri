@@ -117,7 +117,7 @@ mobileNumberEditTextConfig state = let
         { text = (getString ENTER_YOUR_MOBILE_NUMBER)
         , color = Color.black800
         , alpha = 0.8
-        , accessibilityImportance = DISABLE
+        , accessibility = DISABLE
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
       , type = "number"
@@ -161,7 +161,7 @@ otpEditTextConfig state = let
         { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " " <> state.data.countryObj.countryCode <> " " <> state.data.mobileNumber
         , color = Color.black800
         , alpha = 0.8
-        , accessibilityImportance = DISABLE
+        , accessibility = DISABLE
         } 
       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
       , type = "number"

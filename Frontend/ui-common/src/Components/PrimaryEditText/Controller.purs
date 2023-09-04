@@ -88,7 +88,7 @@ type TextConfig =
   , alpha :: Number
   , margin :: Margin
   , textStyle :: Style
-  , accessibilityImportance :: Accessiblity
+  , accessibility :: Accessiblity
   }
 type ImageConfig =
   { height :: Length
@@ -140,7 +140,7 @@ config = {
     , color : Color.yellow900
     , alpha : 1.0
     , margin : (Margin 0 0 0 10)
-    , accessibilityImportance : ENABLE
+    , accessibility : ENABLE
     }
   , showErrorLabel : false
   , errorLabel : {
@@ -151,7 +151,7 @@ config = {
     , visibility : GONE
     , alpha : 1.0
     , margin : (Margin 0 0 0 0)
-    , accessibilityImportance : ENABLE
+    , accessibility : ENABLE
     }
   , showErrorImage : false
   , errorImageConfig :

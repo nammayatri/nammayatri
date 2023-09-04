@@ -11,7 +11,7 @@ import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibilityImportance, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibility, accessibilityHint)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
@@ -78,7 +78,7 @@ view listItemm push state =
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , accessibilityImportance if (state.props.showInfoPopUp == true) then DISABLE_DESCENDANT else DISABLE
+            , accessibility if (state.props.showInfoPopUp == true) then DISABLE_DESCENDANT else DISABLE
             ]
             [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
             , linearLayout
@@ -153,7 +153,7 @@ contactListView listItemm push state =
             [ height $ V 17
             , width $ V 17
             , accessibilityHint "Cancel Search : Button"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
             , gravity CENTER
             , margin (Margin 10 10 10 10)
@@ -338,7 +338,7 @@ contactCardView push state contact index =
         [ textView $
             [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
             , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-            , accessibilityImportance DISABLE
+            , accessibility DISABLE
             ] <> FontStyle.body3 TypoGraphy
         ]
     , textView $
@@ -353,7 +353,7 @@ contactCardView push state contact index =
         , width $ WRAP_CONTENT
         , text (getString REMOVE)
         , accessibilityHint "Remove : Button"
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))

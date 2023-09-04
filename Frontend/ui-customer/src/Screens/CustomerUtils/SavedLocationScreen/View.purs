@@ -46,7 +46,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
@@ -85,7 +85,7 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibilityImportance if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
+      , accessibility if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
       ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , if (not state.data.config.nyBrandingVisibility) then 
         linearLayout

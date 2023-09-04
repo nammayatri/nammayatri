@@ -20,7 +20,7 @@ import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 
 import Data.Maybe(Maybe(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..), accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..), accessibility)
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
@@ -95,7 +95,7 @@ type TextConfig =
   , alpha :: Number
   , margin :: Margin
   , textStyle :: Style
-  , accessibilityImportance :: Accessiblity
+  , accessibility :: Accessiblity
   }
 type ImageConfig =
   { height :: Length
@@ -176,7 +176,7 @@ config = {
     , color : Color.yellow900
     , alpha : 1.0
     , margin : (Margin 0 0 0 10)
-    , accessibilityImportance : DISABLE
+    , accessibility : DISABLE
     }
   , showErrorLabel : false
   , errorLabel : {
@@ -187,7 +187,7 @@ config = {
     , visibility : GONE
     , alpha : 1.0
     , margin : (Margin 0 0 0 0)
-    , accessibilityImportance : ENABLE
+    , accessibility : ENABLE
     }
   , showErrorImage : false
   , errorImageConfig :

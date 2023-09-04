@@ -16,7 +16,7 @@
 module Components.SelectListModal.View where
 
 import Prelude
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), Accessiblity(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed, accessibilityImportance, accessibilityHint)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), Accessiblity(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed, accessibility, accessibilityHint)
 import Effect (Effect)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
@@ -57,13 +57,13 @@ view push config =
       , gravity BOTTOM
       , onClick push (const OnGoBack)
       , adjustViewWithKeyboard "true"
-      , accessibilityImportance DISABLE
+      , accessibility DISABLE
       ][ linearLayout
           [ width MATCH_PARENT
           , alignParentBottom "true,-1"
           , height WRAP_CONTENT
           , clickable true
-          , accessibilityImportance DISABLE
+          , accessibility DISABLE
 
           , disableClickFeedback true
           , onClick ( \action -> do
@@ -318,7 +318,7 @@ primaryButtons push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , accessibilityImportance DISABLE
+  , accessibility DISABLE
   , gravity CENTER
   ] [ PrimaryButton.view (push <<< Button1) (primaryButtonConfig config)
     , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
@@ -365,13 +365,13 @@ radioButton config push index item =
                             Just activeIndex' -> if (activeIndex' == index) then item.description else (item.description <> " : Un Selected")
                             Nothing -> ""
           , padding $ PaddingBottom 5
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , color Color.black900
           ] <> font config.activeIndex
         , textView $
           [ text $ fromMaybe "" item.subtext
           , accessibilityHint $ fromMaybe "" item.subtext <> " : Selected"
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
           , padding $ PaddingBottom 5
           , color Color.black650
