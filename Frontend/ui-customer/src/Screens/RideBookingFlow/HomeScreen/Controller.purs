@@ -623,6 +623,8 @@ data Action = NoAction
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
             | RepeatRide Int Trip
+            | DisabilityBannerAC Banner.Action
+            | DisabilityPopUpAC PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

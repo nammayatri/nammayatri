@@ -92,6 +92,8 @@ import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
 import SuggestedDestinations (getSuggestedDestinations)
+import Components.CommonComponentConfig as CommonComponentConfig
+
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -795,69 +797,11 @@ updateDisabilityBanner state push =
 repeatTripView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 repeatTripView state push =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , padding $ Padding 16 0 16 (16+safeMarginBottom)
-  , cornerRadii $ Corners (4.0) true true false false
-  , visibility if length state.data.tripSuggestions > 0 then VISIBLE else GONE
-  ][ scrollView
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , scrollBarY false
-        ] ( mapWithIndex 
-                  (\index item -> 
-                      linearLayout
-                        [ width MATCH_PARENT
-                        , height WRAP_CONTENT
-                        , orientation VERTICAL
-                        , stroke $ "1," <> Color.grey900
-                        , onClick push $ const $ RepeatRide index item
-                        ][
-                      linearLayout
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , orientation VERTICAL
-                      ][ textView
-                          [ width WRAP_CONTENT
-                          , height WRAP_CONTENT
-                          , color Color.black900
-                          , textSize FontSize.a_12
-                          , text item.source
-                          ]
-                        , textView
-                          [ width WRAP_CONTENT
-                          , height WRAP_CONTENT
-                          , color Color.black600
-                          , textSize FontSize.a_12
-                          , text item.source
-                          ]
-                      ]
-                    , linearLayout
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , orientation VERTICAL
-                      ][ textView
-                          [ width WRAP_CONTENT
-                          , height WRAP_CONTENT
-                          , color Color.black900
-                          , textSize FontSize.a_12
-                          , text item.destination
-                          ]
-                        , textView
-                          [ width WRAP_CONTENT
-                          , height WRAP_CONTENT
-                          , color Color.black600
-                          , textSize FontSize.a_12
-                          , text item.destination
-                          ]
-                        ]
-                        ]
-                  )
-                  state.data.tripSuggestions
-                )
-          
-  ]
-
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 10 10
+    ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =

@@ -206,7 +206,9 @@ claimerView state push =
 
 dataListOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 dataListOptions config push =
-  linearLayout
+  (if os == "IOS" then linearLayout else scrollView )
+  ([height $ MATCH_PARENT
+  , width MATCH_PARENT])[linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
