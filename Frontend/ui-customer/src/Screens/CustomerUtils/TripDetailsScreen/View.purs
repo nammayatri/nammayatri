@@ -175,7 +175,7 @@ tripIdView push state =
   , gravity LEFT
   ][  textView $
       [ text (getString RIDE_ID)
-      , accessibilityHint $ "Ride I-D :" <> state.data.tripId
+      , accessibilityHint $ "Ride I-D :" <> ( DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.tripId)
       , accessibility ENABLE
       , color Color.black700
       ] <> FontStyle.body1 LanguageStyle

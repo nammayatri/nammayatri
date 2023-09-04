@@ -278,13 +278,13 @@ view push state =
                   , width MATCH_PARENT
                   , background Color.transparent
                   , clickable false
-                  , accessibility ENABLE
+                  , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][
                   linearLayout
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
-                    , accessibility if (state.props.currentStage == RideStarted) && not ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))  then DISABLE else DISABLE_DESCENDANT
+                    , accessibility if (state.props.currentStage == RideStarted) && not isAnyOverlayEnabled state then DISABLE else DISABLE_DESCENDANT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []]
@@ -405,14 +405,18 @@ driverCallPopUp push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.black9000
     , alignParentBottom "true,-1"
-    , onClick push (const $ CloseShowCallDialer)
-    , disableClickFeedback true
-    , accessibilityHint "Call driver popup double tap to dismiss : Button"
-    , accessibility ENABLE
     ]
     [ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT 
+      , background Color.black9000
+      , accessibilityHint "Call driver popup double tap to dismiss : Button"
+      , accessibility ENABLE
+      , disableClickFeedback true
+      , onClick push (const $ CloseShowCallDialer)
+      ][]
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.white900
@@ -454,9 +458,9 @@ driverCallPopUp push state =
                 )
                 (driverCallPopUpData state)
             )
-
         ]
     ]
+
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
@@ -2508,3 +2512,6 @@ confirmingLottieView push state =
 genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+
+isAnyOverlayEnabled :: HomeScreenState -> Boolean
+isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
