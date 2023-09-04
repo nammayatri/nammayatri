@@ -4,8 +4,8 @@
 module Types.DBSync.Create where
 
 import EulerHS.Prelude
-import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
+import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
 import qualified "rider-app" Storage.Beam.Booking.BookingLocation as BookingLocation

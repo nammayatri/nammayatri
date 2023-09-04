@@ -119,6 +119,7 @@ library
       Domain.Types.TransportStation
       Environment
       ExternalAPI.Flow
+      Storage.Beam.BecknRequest
       Storage.Queries.Booking
       Storage.Queries.PaymentTransaction
       Storage.Queries.Quote
@@ -130,6 +131,7 @@ library
       Storage.Tabular.Search
       Storage.Tabular.TransportStation
       Tools.Auth
+      Tools.Beam.UtilsTH
       Tools.Error
       Tools.Metrics
       Tools.Metrics.Types

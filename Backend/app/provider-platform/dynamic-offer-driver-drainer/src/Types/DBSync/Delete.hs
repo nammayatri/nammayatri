@@ -5,9 +5,9 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
-import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
+import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason

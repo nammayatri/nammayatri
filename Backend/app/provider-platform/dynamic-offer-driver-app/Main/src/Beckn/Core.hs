@@ -22,7 +22,7 @@ import qualified Data.Text.Encoding as T
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import qualified Kernel.Storage.Queries.BecknRequestDriver as QBR
+import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Flow
 import Kernel.Types.Id
@@ -33,6 +33,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified Network.Wai.Internal as Wai
 import Servant
 import SharedLogic.CallBAP (buildBppUrl)
+import Storage.Beam.BecknRequest ()
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
