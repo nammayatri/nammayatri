@@ -19,6 +19,7 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
@@ -31,7 +32,7 @@ main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   bracket (async NW.runMetricServer) cancel $ \_ -> do
     R.withFlowRuntime
       (Just loggerRt)
@@ -50,6 +51,6 @@ main = do
                 appCfg.tables
             )
           dbSyncMetric <- Event.mkDBSyncMetric
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )

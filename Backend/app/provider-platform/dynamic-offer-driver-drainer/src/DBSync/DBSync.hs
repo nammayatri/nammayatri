@@ -106,7 +106,7 @@ runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(Upda
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
-  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
+  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
@@ -130,7 +130,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc)
       else pure (length cSucc)
   {- run updates parallel -}
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -153,7 +153,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
   {- run deletes parallel -}
-  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
+  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) dbStreamKey deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
   void $
     if null dSucc
