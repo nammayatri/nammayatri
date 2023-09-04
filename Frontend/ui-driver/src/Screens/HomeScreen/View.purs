@@ -78,7 +78,7 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
-import Components.RateCard as RateCard 
+import Components.RateCard as RateCard
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Uncurried (runEffectFn1)
 
@@ -170,7 +170,7 @@ screen initialState =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
-          runEffectFn1 HU.consumeBP unit  
+          runEffectFn1 HU.consumeBP unit
           pure $ pure unit
         )
   ]
@@ -560,21 +560,12 @@ driverDetail push state =
           width $ V 42
         , height $ V 42
         , onClick push $ const GoToProfile
-        ][
-          (if state.data.profileImg == Nothing then 
-            imageView
-              [ width $ V 42
-              , height $ V 42
-              , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
-              ]
-          else
-            linearLayout
-              [ width $ V 42
-              , height $ V 42
-              , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "home_driver_prof_img") true "FIT_CENTER") (const NoAction)
-              , id (getNewIDWithTag "home_driver_prof_img")
-              ][])
-        ]  
+        ][ imageView
+           [ width $ V 42
+           , height $ V 42
+           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+           ]
+         ]
       ]
     , linearLayout
       [ width MATCH_PARENT
