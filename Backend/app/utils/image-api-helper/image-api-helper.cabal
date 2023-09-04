@@ -103,6 +103,8 @@ library
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable image-api-helper-exe
   main-is: Main.hs
@@ -184,3 +186,5 @@ executable image-api-helper-exe
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs

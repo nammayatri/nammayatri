@@ -435,6 +435,8 @@ library
     , warp
     , x509
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable rider-app-exe
   main-is: Main.hs
@@ -531,3 +533,5 @@ executable rider-app-exe
     , warp
     , x509
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
