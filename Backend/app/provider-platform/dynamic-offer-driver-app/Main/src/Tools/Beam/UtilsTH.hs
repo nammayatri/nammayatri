@@ -19,11 +19,11 @@ import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
 import Language.Haskell.TH
 
-schemaName :: String
-schemaName = "atlas_driver_offer_bpp"
+currentSchemaName :: String
+currentSchemaName = "atlas_driver_offer_bpp"
 
 mkTableInstances :: Name -> String -> Q [Dec]
-mkTableInstances name table = TH.mkTableInstances name table schemaName
+mkTableInstances name table = TH.mkTableInstances name table currentSchemaName
 
 mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
-mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table schemaName
+mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table currentSchemaName
