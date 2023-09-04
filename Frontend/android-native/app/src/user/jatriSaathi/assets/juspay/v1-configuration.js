@@ -100,7 +100,7 @@ window.getMerchantConfig = function () {
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
       "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF", 
+      "loaderColor": "#80B2FF",
       "otpTextBackground"  : "#2C2F3A",
       "otpBackground" : "#F1F1F1",
       "otpTextColor" : "#FFFFFF",
@@ -211,10 +211,10 @@ window.getMerchantConfig = function () {
     , "titleColor" : "#21C179"
     , "actionText" : "Update now"
     , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
-      "visibility" : false, 
+      "visibility" : false,
       "title" : "",
       "imageUrl" : ""
   }
@@ -233,6 +233,7 @@ window.getMerchantConfig = function () {
   , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , "internationalNumberEnabled" : true
+  , "callOptions" : ["ANONYMOUS"]
   })
 }
 
