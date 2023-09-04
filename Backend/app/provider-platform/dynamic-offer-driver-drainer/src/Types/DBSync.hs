@@ -21,6 +21,7 @@ import EulerHS.KVConnector.DBSync
 import EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types as ET hiding (Tag)
+import Kafka.Producer as Producer
 import Types.Config
 import Types.DBSync.Create as X
 import Types.DBSync.Delete as X
@@ -29,7 +30,8 @@ import Types.Event as Event
 
 data Env = Env
   { _streamRedisInfo :: Text,
-    _counterHandles :: Event.DBSyncCounterHandler
+    _counterHandles :: Event.DBSyncCounterHandler,
+    _kafkaConnection :: Producer.KafkaProducer
   }
 
 type Flow = EL.ReaderFlow Env
