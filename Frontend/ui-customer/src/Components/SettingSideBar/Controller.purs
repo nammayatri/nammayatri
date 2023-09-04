@@ -61,4 +61,5 @@ type Item =
   , text :: String
   , tag :: Tag
   , iconUrl :: String
+  , accessibilityHint :: String
   }

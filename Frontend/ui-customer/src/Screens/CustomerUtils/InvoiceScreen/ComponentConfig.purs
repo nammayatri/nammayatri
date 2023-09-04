@@ -60,5 +60,6 @@ primaryButtonConfig state = let
       , accessibilityHint = ((getString DOWNLOAD_PDF) <> " : Button" )
       , color = state.data.config.primaryTextColor }
       , background = state.data.config.primaryBackground
+      , id = "DownloadPDFButton"
      }
    in primaryButtonConfig'

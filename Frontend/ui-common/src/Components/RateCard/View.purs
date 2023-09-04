@@ -333,6 +333,7 @@ primaryButtonConfig state = let
       , cornerRadius = 8.0
       , background = Color.black900
       , height = V 54
+      , id = "RateCardButton"
       }
   in primaryButtonConfig'
 

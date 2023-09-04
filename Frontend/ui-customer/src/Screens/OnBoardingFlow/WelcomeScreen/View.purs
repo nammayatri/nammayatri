@@ -47,7 +47,7 @@ view push state =
         ][  imageView
             [ height $ V 50
             , width $ V 147
-            , accessibilityHint "Namma Yatri : Logo"
+            , accessibilityHint "Namma Yatri"
             , margin $ MarginTop if os == "IOS" then 80 else 50
             , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
             ]
@@ -62,7 +62,7 @@ carouselView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , id $ getNewIDWithTag "CarouselView"
-    , accessibility ENABLE
+    , accessibility DISABLE
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20

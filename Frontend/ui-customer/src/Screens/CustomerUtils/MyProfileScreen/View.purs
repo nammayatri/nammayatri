@@ -183,7 +183,7 @@ personalDetails state push =
                               , width MATCH_PARENT
                               , text item.text
                               , accessibilityHint $ case item.fieldType of
-                                 ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") item.text) 
+                                 ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") item.text) 
                                  _ -> item.text
                               , accessibility ENABLE
                               , color case item.fieldType of
@@ -337,6 +337,8 @@ mobileNumberTextView state =
       ][textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
+      , accessibilityHint $ DS.replaceAll (DS.Pattern "") (DS.Replacement " ") (getValueToLocalStore MOBILE_NUMBER)
+      , accessibility ENABLE
       , text $ getValueToLocalStore MOBILE_NUMBER
       , color Color.black600
       ] <> FontStyle.subHeading1 LanguageStyle ]

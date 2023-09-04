@@ -170,7 +170,7 @@ const kannadaStrings = {
   "GO_BACK_": "ಹಿಂದೆ ಹೋಗು",
   "REGISTER_USING_DIFFERENT_NUMBER": "ನೀವು ಬೇರೆ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಬಳಸಿಕೊಂಡು ನೋಂದಾಯಿಸಲು ಬಯಸುವಿರಾ?",
   "YES": "ಹೌದು",
-  "NO": "ಸಂ",
+  "NO": "ಇಲ್ಲಾ",
   "CANCEL_": "ರದ್ದುಮಾಡಿ",
   "IS_ON_THE_WAY": "ದಾರಿಯಲ್ಲಿದೆ..",
   "ENTER_4_DIGIT_OTP": "4 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ",

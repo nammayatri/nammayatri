@@ -1194,8 +1194,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state 
-  -- continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state
         [ do
