@@ -87,6 +87,8 @@ library
     , text
     , time
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable scheduler-example-app-exe
   main-is: Main.hs
@@ -147,6 +149,8 @@ executable scheduler-example-app-exe
     , text
     , time
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable scheduler-example-scheduler-exe
   main-is: Scheduler.hs
@@ -208,3 +212,5 @@ executable scheduler-example-scheduler-exe
     , text
     , time
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs

@@ -99,6 +99,8 @@ library
     , time
     , unordered-containers
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable mock-google-exe
   main-is: Main.hs
@@ -162,3 +164,5 @@ executable mock-google-exe
     , time
     , unordered-containers
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
