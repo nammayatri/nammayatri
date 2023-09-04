@@ -16,7 +16,7 @@
 module Components.DriverInfoCard.View where
 
 import Common.Types.App
-import Animation (fadeIn)
+import Animation (fadeIn, fadeInWithDelay)
 import Common.Types.App (LazyCheck(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -50,6 +50,7 @@ import Storage (KeyStore(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
+import JBridge(fromMetersToKm)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -646,12 +647,15 @@ driverInfoView push state =
                 [ width (V 15)
                 , height (V 15)
                 , margin (MarginRight 6)
+                , accessibility DISABLE
                 , imageWithFallback $  "ny_ic_metro_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_metro_white.png"
                 ]
               , textView
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , textSize FontSize.a_14
+                , accessibility if state.props.zoneType == METRO then ENABLE else DISABLE
+                , accessibilityHint "Metro Ride"
                 , text (getString METRO_RIDE)
                 , color Color.white900
                 ]
@@ -770,14 +774,14 @@ contactView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity RIGHT
-          ] [ linearLayout
+          ] [ PrestoAnim.animationSet [ fadeInWithDelay 150 true ] $ linearLayout
               [ height $ V 40
               , width $ V 64
               , gravity CENTER
               , cornerRadius 20.0
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , afterRender push $ const $ LoadMessages
+              , onAnimationEnd push $ const $ LoadMessages
               , onClick push $ const $ MessageDriver
               , accessibilityHint "Chat or Call : Button"
               , accessibility ENABLE
@@ -956,7 +960,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , accessibilityHint $ "Ride Fare : " <> (replaceAll (Pattern "₹") (Replacement "") (show state.data.price))  <> " Rupees" <> " : Pick Up Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.source) <> " : Destination Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.destination) <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
+  , accessibilityHint $ "Ride Fare : " <> (replaceAll (Pattern "₹") (Replacement "") (show state.data.price))  <> " Rupees" <> " : Pick Up Location is " <> state.data.source <> " : Destination Location is " <> state.data.destination <> " : Ride Distance is : " <> state.data.estimatedDistance <> " Km"
   , accessibility ENABLE
   ][  linearLayout
       [ orientation VERTICAL
@@ -1004,11 +1008,12 @@ sourceDistanceView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , accessibility DISABLE_DESCENDANT
+  , accessibility DISABLE
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
   ][  textView (
       [ text $ getString PICKUP_AND_DROP
-      , accessibility DISABLE
+      , accessibilityHint $ (if state.props.currentStage == RideStarted then "Your destination is " else "Driver is ") <> (fromMetersToKm state.data.distance )<> " away" 
+      , accessibility ENABLE
       , margin $ Margin 16 0 0 10
       ] <> FontStyle.body3 TypoGraphy)
     , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
@@ -1043,6 +1048,7 @@ primaryButtonConfig = let
         , imageUrl = "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
+      , id = "CallButton"
       }
   in primaryButtonConfig'
 

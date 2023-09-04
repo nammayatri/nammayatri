@@ -63,6 +63,7 @@ primaryButtonConfig state =
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
         , margin = (MarginBottom 24)
         , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
+        , id = "ConfirmEmergencyContactsButton"
         }
   in
     primaryButtonConfig'
