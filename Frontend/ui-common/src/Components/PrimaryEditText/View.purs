@@ -104,11 +104,7 @@ editTextView push config =
   , gravity config.editText.gravity
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha
-  , onFocus (\action -> do 
-    _ <- push action 
-    _ <- pure $ setText config.id config.editText.text
-    pure unit
-    ) $ FocusChanged
+  , onFocus push $ FocusChanged
   ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
     <> (case config.editText.pattern of 
         Just _pattern -> case config.type of 
