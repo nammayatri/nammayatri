@@ -363,6 +363,22 @@ genderBannerConfig state =
       }
   in config'
 
+disabilityBannerConfig :: ST.HomeScreenState -> Banner.Config
+disabilityBannerConfig state =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.paleLavender
+      , title = (getString NOW_GET_ASSISTED_RIDES)
+      , titleColor = Color.purple
+      , actionText = (getString UPDATE_PROFILE)
+      , actionTextColor = Color.purple
+      , imageUrl = "ny_ic_accessibility_banner_img,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_accessibility_banner_img.png"
+      , stroke = "1,"<> Color.fadedPurple
+      }
+  in config'
+
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let

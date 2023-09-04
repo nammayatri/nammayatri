@@ -14,7 +14,7 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), not, (<<<), bind, discard, show, pure)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml)
 import Components.PopUpModal.Controller (Action(..), Config)
@@ -161,11 +161,12 @@ view push state =
             , gravity $ state.secondaryText.gravity
             , padding state.secondaryText.padding
             , margin $ state.secondaryText.margin
-            , text $ state.secondaryText.text
+            , (text $ state.secondaryText.text)
             , accessibility ENABLE
             , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
             , visibility $ state.secondaryText.visibility
             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+        , listView push state
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -317,6 +318,38 @@ view push state =
         ]
     ]
 
+listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+listView push state = 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL 
+    , margin $ Margin 16 0 16 20
+    ](map (\item-> 
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ Margin 12 0 0 4
+        , orientation HORIZONTAL
+        ][  imageView
+            [ imageWithFallback $ "ny_ic_circle,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_circle.png"
+            , height $ V 6 
+            , alpha 0.7
+            , width $ V 6
+            , margin $ MarginTop 8
+            ]
+          , textView $
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , margin $ MarginLeft 8
+            , text item 
+            , accessibility ENABLE
+            , accessibilityHint item
+            ] <> (FontStyle.getFontStyle FontStyle.ParagraphText LanguageStyle)
+
+        ]
+        ) state.listViewArray)
+
 tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 tipsView push state =
   linearLayout
@@ -348,7 +381,7 @@ tipsView push state =
                   , cornerRadius 8.0
                   , width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+                  , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index)) <> " : Button"
                   , accessibility ENABLE
                   , padding state.tipButton.padding
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))

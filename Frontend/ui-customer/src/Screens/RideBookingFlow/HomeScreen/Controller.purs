@@ -619,6 +619,8 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | DisabilityBannerAC Banner.Action
+            | DisabilityPopUpAC PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1757,6 +1759,10 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
+
+eval (DisabilityBannerAC Banner.OnClick) state = exit $ GoToMyProfile state true
+
+eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = continue state{props{showDisabilityPopUp = false}}
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }

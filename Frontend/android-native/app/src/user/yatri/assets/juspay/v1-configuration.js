@@ -14,7 +14,8 @@ window.getMerchantConfig = function () {
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
     "CALL_NAMMA_YATRI_SUPPORT",
     "YOUR_FEEDBACK_HELPS_US",
-    "YOUR_FEEDBACK_HELPS_US"
+    "YOUR_FEEDBACK_HELPS_US",
+    "LEARN_HOW_TEXT"
     ],
     "isReferralEnabled": "false",
     "showBookingPreference": "false",
@@ -148,7 +149,8 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
-      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience"
+      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience",
+      "LEARN_HOW_TEXT" : "Learn how Yatri caters to your needs"
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -165,7 +167,8 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
-      "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു"
+      "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു",
+      "LEARN_HOW_TEXT" : "യാത്രി നിങ്ങളുടെ ആവശ്യങ്ങൾ എങ്ങനെ നിറവേറ്റുന്നുവെന്ന് അറിയുക"
   },
     "languageList": [{
       "name": "English",
@@ -204,6 +207,7 @@ window.getMerchantConfig = function () {
 }
   , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
+  , "showDisabilityBanner" : false
   })
 }
 

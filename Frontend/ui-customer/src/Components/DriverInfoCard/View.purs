@@ -427,6 +427,8 @@ messageNotificationView push state =
           , width $ V 22
           , clickable true
           , onClick push $ const $ RemoveNotification
+          , accessibility ENABLE
+          , accessibilityHint "Close Message Pop Up : Button"
           , imageWithFallback "ny_ic_cross_round,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_cross_round.png"
           ]
         ]

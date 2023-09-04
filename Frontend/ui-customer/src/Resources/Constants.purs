@@ -297,3 +297,13 @@ getVehicleCapacity variant = case getMerchant FunctionCall of
           Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
           _ -> "4 " <> (getString SEATS)
   _ ->    ""
+
+getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
+getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
+
+dummyDisabilityList :: ST.DisabilityT
+dummyDisabilityList ={
+  tag : "OTHER",
+  id : "8a365d73-b81e-6b21-962b-b1397aa687e0",
+  description : "Other"
+}

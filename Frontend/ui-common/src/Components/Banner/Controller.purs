@@ -35,7 +35,8 @@ type Config = {
   imageWidth :: Length,
   isBanner :: Boolean,
   actionTextStyle :: Style,
-  titleStyle :: Style
+  titleStyle :: Style,
+  stroke :: String
 }
 
 config :: Config
@@ -50,5 +51,6 @@ config = {
     imageWidth : (V 118),
     isBanner : true,
     actionTextStyle : ParagraphText,
-    titleStyle : Body7
+    titleStyle : Body7,
+    stroke : "0,#FFFFFF"
 }

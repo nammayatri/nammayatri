@@ -122,4 +122,5 @@ config =
   , dashboardUrl : "https://nammayatri.in/open/"
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
+  , showDisabilityBanner : true
   }

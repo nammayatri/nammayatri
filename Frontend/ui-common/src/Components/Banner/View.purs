@@ -17,7 +17,7 @@ module Components.Banner.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback )
+import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
@@ -37,12 +37,14 @@ view push config =
     , visibility if config.isBanner then VISIBLE else GONE
     , gravity CENTER_VERTICAL
     , onClick push (const OnClick)
+    , stroke config.stroke
     ]
     [  linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         , padding $ Padding 20 0 0 0
         , orientation VERTICAL
+        , layoutGravity "center_vertical"
         ]
         [ textView $
           [ height WRAP_CONTENT

@@ -497,3 +497,12 @@ pickledBlue = "#29334A"
 
 aliceBlue :: Color 
 aliceBlue = "#F1F3F4"
+
+paleLavender :: Color 
+paleLavender = "#F4ECFF" 
+
+purple :: Color 
+purple = "#9747FF"
+
+fadedPurple :: Color 
+fadedPurple = "#339747FF"

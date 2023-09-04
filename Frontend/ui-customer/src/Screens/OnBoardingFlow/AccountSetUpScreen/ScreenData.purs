@@ -27,6 +27,24 @@ initData =
       , gender: Nothing
       , nameErrorMessage: Nothing
       , config : DC.config
+      , disabilityOptions : {
+          activeIndex : 0
+        , isSpecialAssistList : false 
+        , specialAssistActiveIndex : 0
+        , disabilityOptionList : []
+        , selectedDisability : Nothing
+        , otherDisabilityReason : Nothing
+        , editedDisabilityReason : ""
+      }
+      , editedDisabilityOptions : {
+         activeIndex : 0
+        , isSpecialAssistList : false 
+        , specialAssistActiveIndex : 0
+        , disabilityOptionList : []
+        , selectedDisability : Nothing
+        , otherDisabilityReason : Nothing
+        , editedDisabilityReason : ""
+      }
       }
   , props:
       { btnActive: false
