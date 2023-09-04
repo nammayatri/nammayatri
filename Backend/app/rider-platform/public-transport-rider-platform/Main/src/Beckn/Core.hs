@@ -20,13 +20,14 @@ import qualified Data.Text.Encoding as T
 import EulerHS.Prelude
 -- import EulerHS.Language hiding (generateGUID)
 
-import qualified Kernel.Storage.Queries.BecknRequestRider as QBR
+import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import qualified Network.Wai.Internal as Wai
 import Servant
+import Storage.Beam.BecknRequest ()
 
 logBecknRequest ::
   (HasField "coreMetrics" f CoreMetricsContainer) =>

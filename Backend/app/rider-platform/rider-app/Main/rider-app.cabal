@@ -215,6 +215,7 @@ library
       SharedLogic.Person
       SharedLogic.PublicTransport
       Storage.Beam.AppInstalls
+      Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation

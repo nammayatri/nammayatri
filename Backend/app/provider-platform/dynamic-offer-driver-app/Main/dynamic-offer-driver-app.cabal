@@ -284,6 +284,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
+      Storage.Beam.BecknRequest
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
