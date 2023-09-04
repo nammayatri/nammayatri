@@ -358,3 +358,5 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToAlerts
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = ViewDetails PaymentHistoryScreenState
+
+data APP_UPDATE_POPUP = Later | UpdateNow

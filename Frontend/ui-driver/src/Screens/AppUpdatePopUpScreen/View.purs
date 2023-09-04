@@ -167,7 +167,7 @@ updateRequiredView push state =
           [ imageUrl "ic_app_update"
           , height $ V 28
           , width $ V 28
-          , visibility GONE
+          -- , visibility GONE
           ]
         , textView
           [ text (getString UPDATE_REQUIRED)
@@ -201,7 +201,7 @@ updateRequiredView push state =
                 , stroke ("1," <> Color.textSecondary)
                 , cornerRadius 10.0
                 , alpha 0.6
-                , visibility GONE
+                -- , visibility GONE
                 ][
                     textView $
                     [ width WRAP_CONTENT
