@@ -35,17 +35,17 @@ xs !? n
       xs
       n
 
-executeInSequence :: (L.MonadFlow f, Show a1) => (t -> f (Either (a1, a2) a3)) -> ([a3], [a2]) -> [t] -> f ([a3], [a2])
-executeInSequence _ store [] = pure store
-executeInSequence func store (command : commands) = do
-  result <- func command
+executeInSequence :: (L.MonadFlow f, Show a1) => (t -> Text -> f (Either (a1, a2) a3)) -> ([a3], [a2]) -> Text -> [t] -> f ([a3], [a2])
+executeInSequence _ store _ [] = pure store
+executeInSequence func store dbStreamKey (command : commands) = do
+  result <- func command dbStreamKey
   case result of
     Left (err, id') -> do
-      let store' = (fst store, id' : snd store)
+      let store' = second (id' :) store
       L.logErrorT "EXECUTION_FAILURE" (show err) $> store'
     Right id' -> do
-      let store' = (id' : fst store, snd store)
-      executeInSequence func store' commands
+      let store' = first (id' :) store
+      executeInSequence func store' dbStreamKey commands
 
 (|::|) :: (EL.MonadFlow m, Show a) => m [Either a b] -> m [Either a b] -> m [Either a b]
 (|::|) fa fb = do
@@ -128,7 +128,7 @@ getStreamName streamName = do
 genSessionId :: IO C8.ByteString
 genSessionId = do
   rawUUID <- nextRandom
-  let sessId = (C8.pack "DRAINSESSION-") <> (C8.filter (/= '-') $ UUID.toASCIIBytes $ rawUUID)
+  let sessId = C8.pack "DRAINSESSION-" <> C8.filter (/= '-') (UUID.toASCIIBytes rawUUID)
   pure sessId
 
 -- Graceful shutdown utils
