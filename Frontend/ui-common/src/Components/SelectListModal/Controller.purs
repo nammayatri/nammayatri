@@ -18,7 +18,7 @@ module Components.SelectListModal.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Maybe
 import Common.Types.App (OptionButtonList)
-import PrestoDOM ( Length(..) )
+import PrestoDOM ( Length(..) , Gravity(..), Margin(..), Padding(..))
 import Font.Size as FontSize
 import Styles.Colors as Color
 import MerchantConfig.DefaultConfig as DC
@@ -35,9 +35,9 @@ data Action = Button1 PrimaryButtonController.Action
             
 type Config = {
     selectionOptions :: Array OptionButtonList
-    , primaryButtonTextConfig :: PrimaryButtonTextConfig
+    , primaryButtonTextConfig :: ButtonTextConfig
     , headingTextConfig :: HeadingTextConfig
-    , subHeadingTextConfig :: SubHeadingTextConfig
+    , subHeadingTextConfig :: HeadingTextConfig
     , primaryButtonVisibility :: Boolean
     , secondaryButtonVisibility :: Boolean
     , activeIndex :: Maybe Int
@@ -51,6 +51,10 @@ type Config = {
     , strings :: StringConfig
     , topLeftIcon :: Boolean
     , config :: AppConfig
+    , hideOthers :: Boolean
+    , showBgColor :: Boolean
+    , editTextBgColor :: String
+    , defaultText :: String
 }
 
 type StringConfig = {
@@ -58,7 +62,7 @@ type StringConfig = {
     , limitReached :: String 
 }
 
-type PrimaryButtonTextConfig = 
+type ButtonTextConfig = 
   {
       firstText :: String
     , secondText :: String
@@ -71,15 +75,11 @@ type HeadingTextConfig =
       , size :: Int
       , color :: String
       , visibility :: Boolean
+      , gravity :: Gravity
+      , margin :: Margin
+      , padding :: Padding
   }
 
-type SubHeadingTextConfig = 
-  {
-       text :: String
-      , size :: Int
-      , color :: String
-      , visibility :: Boolean
-  }
 
 config :: Config
 config = 
@@ -104,6 +104,9 @@ config =
           , size : FontSize.a_22
           , color : Color.black800
           , visibility : true
+          , gravity : CENTER 
+          , margin : Margin 0 0 0 0
+          , padding : Padding 0 0 0 0
       }
     , subHeadingTextConfig :
       {
@@ -111,8 +114,11 @@ config =
           , size : FontSize.a_14
           , color : Color.black700
           , visibility : true
+          , gravity : CENTER 
+          , margin : Margin 0 0 0 0
+          , padding : PaddingLeft 20
       }
-    , hint : "Help us with your reason"
+    , hint : ""
     , strings: {
         mandatory : "Mandatory"
       , limitReached : "Max character limit reached 100 of 100"
@@ -121,4 +127,8 @@ config =
     , secondaryButtonVisibility : true
     , topLeftIcon : false
     , config : DC.config
+    , hideOthers : true
+    , showBgColor : false
+    , editTextBgColor : Color.grey800
+    , defaultText : ""
 }

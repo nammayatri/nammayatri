@@ -23,11 +23,13 @@ import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.GenericRadioButton as GenericRadioButton
+import Components.SelectListModal as SelectListModal
 import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Array (mapWithIndex, length, (!!))
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -37,7 +39,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
+import Prelude (Unit, bind, map, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>), (>=) , (+), (&&))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard, accessibilityHint, accessibility)
 import Resources.Constants as RSRC
@@ -50,6 +52,9 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Engineering.Helpers.Utils (toggleLoader, loaderText)
 import Data.String as DS
+import PrestoDOM.Types.DomAttributes as PTD
+import Debug(spy)
+import Components.CommonComponentConfig as CommonComponentConfig
 
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
@@ -70,43 +75,31 @@ screen initialState =
                       pure $ pure unit
                     )
                   ]
-  , eval
+  , eval : 
+       \action state -> do
+        let _ = spy "MyProfileScteen action " action
+        let _ = spy "MyProfileScteen state " state
+        eval action state
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.MyProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
     Anim.screenAnimation $
       frameLayout
-      [ height MATCH_PARENT
+      ([ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
-      , adjustViewWithKeyboard "true"
-      ][
+      ] <> if state.props.updateProfile && (not state.data.editedDisabilityOptions.isSpecialAssistList) then [adjustViewWithKeyboard "true"] else [] )([
         linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , gravity BOTTOM
-            , alignParentBottom "true,-1"
-            , padding $ PaddingBottom 24
-            , visibility if state.props.updateProfile then VISIBLE else GONE
-            , background Color.white900
-            ][ linearLayout
-                [ orientation VERTICAL
-                , height WRAP_CONTENT
-                , width MATCH_PARENT
-                ]
-                [ PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
-                ]
-              ]
-        , linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , onBackPressed push (const BackPressed state)
             , afterRender push (const AfterRender)
-            , padding (PaddingBottom EHC.safeMarginBottom)
-            , margin $ MarginBottom if EHC.os == "IOS" then (if state.props.updateProfile then 85 else 65) else 75
+            , padding (PaddingBottom (EHC.safeMarginBottom))
+            , margin $ MarginBottom if state.props.updateProfile then 16 else 0
+            , accessibility if state.props.showAccessibilityPopUp || state.data.editedDisabilityOptions.isSpecialAssistList then DISABLE_DESCENDANT else DISABLE
             , background Color.white900
             ][  headerView state push
               , linearLayout
@@ -117,7 +110,32 @@ view push state =
                 ][]
               , detailsView state push
             ]
-          ]
+          , if state.props.updateProfile then updateButtonView state push else textView[height $ V 0]
+          ] <> if state.data.editedDisabilityOptions.isSpecialAssistList then [specialAssistanceView state push] else []
+            <> if state.props.showAccessibilityPopUp then 
+              [linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , gravity BOTTOM
+              ][  PopUpModal.view (push <<< AccessibilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disabilityOptions.selectedDisability)] ]
+              else [])
+
+updateButtonView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+updateButtonView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity BOTTOM
+  , alignParentBottom "true,-1"
+  , background Color.transparent
+  ][ linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , padding $ PaddingVertical 5 24
+      ][ PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)]
+    ]
 
 detailsView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 detailsView state push =
@@ -125,93 +143,104 @@ detailsView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ]
-  [ personalDetails state push
-  , updatePersonalDetails state push
-  ]
+  ][ if state.props.updateProfile then updatePersonalDetails state push else personalDetails state push]
 
 personalDetails :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 personalDetails state push =
   linearLayout
-  [ height  if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
+  [ height  MATCH_PARENT
   , width MATCH_PARENT
-  , padding $ PaddingBottom if EHC.os == "IOS" then 50 else 15
+  , padding $ PaddingBottom 15
   , background Color.white900
   , orientation VERTICAL
-  , visibility if state.props.updateProfile then GONE else VISIBLE
-  ][  scrollView[
-          height WRAP_CONTENT
+  ][  scrollView
+      [ height if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
         , scrollBarY false
-        ][
-           linearLayout
-              [ height if EHC.os == "IOS" then (V (EHC.screenHeight unit)) else WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              , background Color.white900
-              , padding $ PaddingBottom 100
-              ]
-              [ profileImageView state push
-              , linearLayout
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.white900
+          , padding $ PaddingBottom if EHC.os == "IOS" then 100 else 0
+          ][  profileImageView state push
+            , linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , background Color.white900
               , orientation VERTICAL
-              ]
-              ( mapWithIndex ( \index item ->
-                    linearLayout
+              , padding $ PaddingBottom 20
+              ]( mapWithIndex ( \index item ->
+                  linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  ][  linearLayout
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
-                      ]
-                      [ linearLayout
+                      , margin $ MarginHorizontal 16 16
+                      ][  textView $
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
-                          , orientation VERTICAL
-                          , margin $ Margin 16 0 16 0
-                          ][  textView $
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              , text item.title
-                              , clickable false
-                              , color Color.black700
-                              , margin $ MarginBottom 8
-                              ] <> FontStyle.body3 LanguageStyle
-                            , textView $
-                              [ height WRAP_CONTENT
-                              , width MATCH_PARENT
-                              , text item.text
-                              , accessibilityHint $ case item.fieldType of
-                                 ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") item.text) 
-                                 _ -> item.text
-                              , accessibility ENABLE
-                              , color case item.fieldType of
-                                  ST.EMAILID_ ->  if state.data.emailId /= Nothing then Color.black900 else Color.blue900
-                                  ST.GENDER_ -> if state.data.gender /= Nothing then Color.black900 else Color.blue900
-                                  _ -> Color.black900
-                              , onClick push $ case item.fieldType of
-                                  ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
-                                  ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
-                                  _ -> const $ NoAction
-                              , clickable case item.fieldType of
-                                  ST.EMAILID_ ->  not (isJust state.data.emailId)  
-                                  ST.GENDER_ -> not ( isJust state.data.gender) 
-                                  _ -> false
-                              ] <> FontStyle.body6 LanguageStyle
-                            ]
-                      , horizontalLineView state (index /= 3)
-                      ] ) (personalDetailsArray state))
+                          , text item.title
+                          , clickable false
+                          , color Color.black700
+                          , margin $ MarginBottom 8
+                          ] <> FontStyle.body3 LanguageStyle
+                        , textView $
+                          [ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , text item.text
+                          , accessibilityHint $ case item.fieldType of
+                              ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") item.text) 
+                              _ -> item.text
+                          , accessibility ENABLE
+                          , color case item.fieldType of
+                              ST.EMAILID_ ->  if isJust state.data.emailId then Color.black900 else Color.blue900
+                              ST.GENDER_ -> if isJust state.data.gender then Color.black900 else Color.blue900
+                              ST.DISABILITY_TYPE -> if isJust state.data.hasDisability then Color.black900 else Color.blue900
+                              _ -> Color.black900
+                          , onClick push $ case item.fieldType of
+                              ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
+                              ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
+                              ST.DISABILITY_TYPE -> if (isJust state.data.hasDisability) then const $ NoAction else const $ EditProfile $ Just ST.DISABILITY_TYPE
+                              _ -> const $ NoAction
+                          , clickable case item.fieldType of
+                              ST.EMAILID_ ->  isNothing state.data.emailId
+                              ST.GENDER_ ->   isNothing state.data.gender 
+                              ST.DISABILITY_TYPE -> isNothing state.data.hasDisability
+                              _ -> false
+                            ] <> FontStyle.body6 LanguageStyle
+                        , textView
+                          ([ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , text $ fromMaybe "" item.supportText
+                          , margin $ MarginTop 4
+                          , visibility if (isNothing item.supportText ) then GONE else VISIBLE
+                          , color Color.blue900 
+                          , onClick push $ const $ MoreInfo $ item.fieldType
+                          , clickable true
+                          ] <> FontStyle.body6 LanguageStyle)
+                        ]
+                    , horizontalLineView state (index /= (length (personalDetailsArray state)) - 1)
+                  ] ) (personalDetailsArray state))
               ]
           ]
       ]
 
-personalDetailsArray :: ST.MyProfileScreenState ->  Array {title :: String, text :: String, fieldType :: ST.FieldType}
+personalDetailsArray :: ST.MyProfileScreenState ->  Array {title :: String, text :: String, fieldType :: ST.FieldType, supportText :: (Maybe String)}
 personalDetailsArray state =
-  [ {title : (getString NAME), text : state.data.name, fieldType : ST.NAME}
-  , {title : (getString EMAIL_ID) , text :fromMaybe (getString ADD_NOW) state.data.emailId , fieldType : ST.EMAILID_ }
-  , {title : (getString GENDER_STR), text : (RSRC.getGender state.data.gender (getString SET_NOW)), fieldType : ST.GENDER_}
-  , {title : (getString MOBILE) , text : (getValueToLocalStore MOBILE_NUMBER), fieldType : ST.MOBILE}
+  [ {title : (getString NAME), text : state.data.name, fieldType : ST.NAME, supportText : Nothing}
+  , {title : (getString MOBILE_NUMBER_STR) , text : (getValueToLocalStore MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
+  , {title : (getString EMAIL_ID) , text :fromMaybe (getString ADD_NOW) state.data.emailId , fieldType : ST.EMAILID_ , supportText : Nothing }
+  , {title : (getString GENDER_STR), text : (RSRC.getGender state.data.gender (getString SET_NOW)), fieldType : ST.GENDER_ , supportText : Nothing}
+  , {title : (getString ASSISTANCE_REQUIRED) , text : case state.data.hasDisability of 
+                                                                        Just false -> (getString NO_DISABILITY)
+                                                                        _ -> case state.data.disabilityType of 
+                                                                                Just disabilityType -> disabilityType.description
+                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}
   ]
 
 horizontalLineView :: forall w. ST.MyProfileScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -227,27 +256,26 @@ horizontalLineView state visible =
 updatePersonalDetails :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updatePersonalDetails state push =
   linearLayout
-  [ height  if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
+  [ height MATCH_PARENT
   , width MATCH_PARENT
   , padding $ PaddingBottom if EHC.os == "IOS" then 75 else 0
   , background Color.white900
   , orientation VERTICAL
-  , visibility if state.props.updateProfile then VISIBLE else GONE
-  ][  scrollView[
-          height WRAP_CONTENT
-        , width MATCH_PARENT
-        , background Color.white900
-        , scrollBarY false
-        ][
-           linearLayout
-              [ height if EHC.os == "IOS" then (V (EHC.screenHeight unit)) else WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              , background Color.white900
-              ]
-              ([] <> (if state.props.updateProfile then [userNameEditTextView push state, emailIdEditTextView push state, genderCaptureView state push ] else []))
+  ][  scrollView
+      [ height if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
+      , width MATCH_PARENT    
+      , background Color.white900
+      , scrollBarY false
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ PaddingBottom 200
+          , orientation VERTICAL
+          , background Color.white900
           ]
-      ]
+          (if state.props.updateProfile then [userNameEditTextView push state, mobileNumberTextView state, emailIdEditTextView push state, genderCaptureView state push ] else [])
+        ]
+    ]
 
 headerView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push =
@@ -311,7 +339,13 @@ profileImageView state push =
 
 userNameEditTextView :: forall w . (Action -> Effect Unit) -> ST.MyProfileScreenState -> PrestoDOM (Effect Unit) w
 userNameEditTextView push state =
-  PrimaryEditText.view (push <<< NameEditTextAction) (nameEditTextConfig state)
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
+  ][
+  PrimaryEditText.view (push <<< NameEditTextAction) (nameEditTextConfig state)]
 
 mobileNumberTextView :: forall w . ST.MyProfileScreenState -> PrestoDOM (Effect Unit) w
 mobileNumberTextView state =
@@ -319,7 +353,7 @@ mobileNumberTextView state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ MarginTop 32
+  , margin $ Margin 16 32 16 0
   , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
   ][  textView $
       [ height WRAP_CONTENT
@@ -401,7 +435,7 @@ genderCaptureView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ]
-        [  mobileNumberTextView state
+        [   disabilityOptionView state push
         , if state.props.expandEnabled then genderOptionsView state push else textView[height $ V 0]
         ]
     ]
@@ -464,3 +498,52 @@ genderOptionsArray state =
   , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
   ]
 
+disabilityOptionView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+disabilityOptionView state push =
+  linearLayout[height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL][linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
+  , margin (MarginTop 28)
+  ]$[ textView $
+    [ text (getString DO_YOU_NEEED_SPECIAL_ASSISTANCE)
+    , height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , margin $ MarginBottom 16
+    ] <> FontStyle.body3 TypoGraphy
+  ] <> (mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
+  , if state.data.editedDisabilityOptions.activeIndex == 1 then disabilityClaimerView state push  else textView[]
+  ]
+
+
+specialAssistanceView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+specialAssistanceView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.transparent
+  ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)]
+
+disabilityClaimerView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+disabilityClaimerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 20 16 20 16
+  , cornerRadius 12.0 
+  , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
+  , background Color.pink
+  , alignParentBottom "true,-1"
+  , gravity CENTER 
+  ][  textView
+      ([ text (getString DISABILITY_CLAIMER_TEXT)
+      , accessibility ENABLE
+      , accessibilityHint (getString DISABILITY_CLAIMER_TEXT)
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]

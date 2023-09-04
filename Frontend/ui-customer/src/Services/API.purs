@@ -1234,6 +1234,8 @@ newtype GetProfileRes = GetProfileRes
   , gender :: Maybe String
   , bundleVersion :: Maybe Version
   , clientVersion :: Maybe Version
+  , disability :: Maybe String
+  , hasDisability :: Maybe Boolean
   }
 
 
@@ -1249,6 +1251,8 @@ newtype UpdateProfileReq = UpdateProfileReq
   , gender :: Maybe String
   , bundleVersion :: Maybe Version
   , clientVersion :: Maybe Version
+  , disability :: Maybe Disability
+  , hasDisability :: Maybe Boolean
   }
 
 
@@ -1256,6 +1260,19 @@ newtype UpdateProfileRes = UpdateProfileRes
   {
     result :: String
   }
+
+data Disability = Disability 
+  {
+    id :: String
+  , tag :: String
+  , description :: String
+  }
+
+derive instance genericDisability :: Generic Disability _
+instance standardEncodeDisability :: StandardEncode Disability where standardEncode (Disability body) = standardEncode body
+instance showDisability :: Show Disability where show = genericShow
+instance decodeDisability :: Decode Disability where decode = defaultDecode
+instance encodeDisability  :: Encode Disability where encode = defaultEncode
 
 instance makeGetProfileReq :: RestEndpoint GetProfileReq GetProfileRes where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.profile "") headers reqBody Nothing
@@ -1955,3 +1972,26 @@ derive instance genericRideFeedbackRes :: Generic RideFeedbackRes _
 instance standardEncodeRideFeedbackRes :: StandardEncode RideFeedbackRes where standardEncode (RideFeedbackRes) = standardEncode {}
 instance decodeRideFeedbackRes :: Decode RideFeedbackRes where decode = defaultDecode
 instance encodeRideFeedbackRes  :: Encode RideFeedbackRes where encode = defaultEncode
+
+data GetDisabilityListReq = GetDisabilityListReq
+
+newtype GetDisabilityListResp = GetDisabilityListResp (Array Disability)
+
+instance makeGetDisabilityListReq :: RestEndpoint GetDisabilityListReq GetDisabilityListResp where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.disabilityList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetDisabilityListReq :: Generic GetDisabilityListReq _
+instance standardEncodeGetDisabilityListReq :: StandardEncode GetDisabilityListReq where standardEncode _ = standardEncode {}
+instance showGetDisabilityListReq :: Show GetDisabilityListReq where show = genericShow
+instance decodeGetDisabilityListReq :: Decode GetDisabilityListReq where decode = defaultDecode
+instance encodeGetDisabilityListReq  :: Encode GetDisabilityListReq where encode = defaultEncode
+
+derive instance genericGetDisabilityListResp :: Generic GetDisabilityListResp _
+derive instance newtypeGetDisabilityListResp :: Newtype GetDisabilityListResp _
+instance standardEncodeGetDisabilityListResp :: StandardEncode GetDisabilityListResp where standardEncode _ = standardEncode {}
+instance showGetDisabilityListResp :: Show GetDisabilityListResp where show = genericShow
+instance decodeGetDisabilityListResp :: Decode GetDisabilityListResp where decode = defaultDecode
+instance encodeGetDisabilityListResp  :: Encode GetDisabilityListResp where encode = defaultEncode
+

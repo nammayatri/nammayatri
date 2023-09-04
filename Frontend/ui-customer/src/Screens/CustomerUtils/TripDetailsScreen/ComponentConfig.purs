@@ -126,6 +126,23 @@ primaryButtonConfig state = let
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 
-      , id = "SubmitButton"
+      , id =  "SubmitButton"
+      }
+  in primaryButtonConfig'
+
+goHomeButtonConfig :: ST.TripDetailsScreenState -> PrimaryButton.Config
+goHomeButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig { 
+          text = (getString GO_HOME_) 
+        , accessibilityHint = (getString GO_HOME_) <> ": Button"
+        , color = state.data.config.primaryTextColor
+        }
+      , height = V 48
+      , width = MATCH_PARENT
+      , background = state.data.config.primaryBackground
+      , margin = (Margin 16 0 16 16 ) 
+      , id = "GoToHomeButton"
       }
   in primaryButtonConfig'

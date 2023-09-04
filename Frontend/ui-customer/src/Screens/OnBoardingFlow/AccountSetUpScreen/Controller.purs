@@ -16,22 +16,25 @@
 module Screens.AccountSetUpScreen.Controller where
 
 import Components.GenericHeader as GenericHeaderController
+import Components.GenericRadioButton as GenericRadioButton
+import Components.MenuButton as MenuButtonController
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
-import Components.MenuButton as MenuButtonController
 import Components.PrimaryEditText as PrimaryEditTextController
+import Components.SelectListModal as SelectListModal
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
+import Data.Maybe (Maybe(..))
 import Data.String (length, trim)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Helpers.Utils (clearCountDownTimer, setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==),(<))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (clearCountDownTimer)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
-import Engineering.Helpers.Commons(getNewIDWithTag)
-import Data.Maybe(Maybe(..))
-import Components.StepsHeaderModel.Controller as StepsHeaderModelController
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -73,6 +76,9 @@ instance loggableAction :: Loggable Action where
     AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
     StepsHeaderModelAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "steps_header_modal" "backpressed"
     NameSectionClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "full_name_click"
+    SpecialAssistanceListAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "special_assistance_list_click"
+    GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "disability_radio_btn_click"
+    _ -> pure unit
       
 
 
@@ -94,6 +100,8 @@ data Action
   | AnimationEnd String
   | StepsHeaderModelAC StepsHeaderModelController.Action
   | NameSectionClick
+  | SpecialAssistanceListAC SelectListModal.Action
+  | GenericRadioButtonAC GenericRadioButton.Action
 
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
@@ -114,8 +122,8 @@ eval (GenderSelected value) state = continue state{data{gender = Just value}, pr
 
 eval (TextChanged value) state = do
   let
-    newState = state { data { name = trim value } }
-  continue newState { data{nameErrorMessage = if (length newState.data.name >= 3) then Nothing else if (newState.data.gender /= Nothing && length newState.data.name < 3) then Just INVALID_NAME else newState.data.nameErrorMessage}, props { expandEnabled = false, genderOptionExpanded = false, isNameValid = (length newState.data.name >= 3), btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
+    newState = state { data { name = trim value } ,props{ btnActive = getBtnActive state {data{name = trim value}}} }
+  continue newState { data{nameErrorMessage = if (length newState.data.name >= 3) then Nothing else if (newState.data.gender /= Nothing && length newState.data.name < 3) then Just INVALID_NAME else newState.data.nameErrorMessage}, props { expandEnabled = false, genderOptionExpanded = false, isNameValid = (length newState.data.name >= 3)} }
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -126,13 +134,47 @@ eval NameSectionClick state = continue state {props{genderOptionExpanded = false
 eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 
 eval BackPressed state = do
-  _ <- pure $ hideKeyboardOnNavigation true
-  _ <- pure $ clearCountDownTimer ""
-  continue state { props { backPressed = true } }
+  if state.data.editedDisabilityOptions.isSpecialAssistList then continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
+    else do 
+      _ <- pure $ hideKeyboardOnNavigation true
+      _ <- pure $ clearCountDownTimer ""
+      continue state { props { backPressed = true } }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
+eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
+  let otherDisability = case state.data.disabilityOptions.otherDisabilityReason of 
+                          Just reason -> reason
+                          Nothing -> ""
+  _ <- pure $ setText (getNewIDWithTag "SpecialAssistanceEditText") otherDisability
+  let newState = state{data{editedDisabilityOptions{activeIndex = idx, isSpecialAssistList = idx == 1, selectedDisability = if idx == 0 then Nothing else state.data.editedDisabilityOptions.selectedDisability ,specialAssistActiveIndex = if idx == 0 then 0 else state.data.editedDisabilityOptions.specialAssistActiveIndex}}}
+  continue state{ data = newState.data{disabilityOptions = if idx == 0 then newState.data.editedDisabilityOptions else state.data.disabilityOptions}, props{btnActive = getBtnActive newState }}
+
+
+eval (SpecialAssistanceListAC action) state = case action of
+  SelectListModal.OnGoBack ->  continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
+  SelectListModal.UpdateIndex idx -> do 
+    let newState = state{data{editedDisabilityOptions{specialAssistActiveIndex = idx , otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason}}}
+    continue state { props{btnActive = getBtnActive newState}, data = newState.data}
+  SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
+  SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
+    let newState = state{data{editedDisabilityOptions{otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason, isSpecialAssistList = false, selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) }}}
+        updatedState = state{props{btnActive = getBtnActive newState}, data = newState.data } 
+    continue updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}
+  _ -> continue state
+
 eval _ state = continue state
 
+
+getBtnActive :: AccountSetUpScreenState -> Boolean
+getBtnActive state = do 
+  let disabilityOptions = state.data.editedDisabilityOptions
+      selectedTag  = case disabilityOptions.selectedDisability of 
+                      Just disability -> Just disability.tag 
+                      _ -> Nothing
+      disabilityType  = case disabilityOptions.otherDisabilityReason of 
+                          Just disabilityType -> disabilityType
+                          _ -> ""
+  (state.data.name /= "") && (length state.data.name >= 3) && (state.data.gender /= Nothing) && (if disabilityOptions.activeIndex == 1 then (if (selectedTag == Just "OTHER") then (length (disabilityType) >= 3) else true) else true)

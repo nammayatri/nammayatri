@@ -21,9 +21,11 @@ import Animation.Config (AnimConfig, animConfig)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.GenericRadioButton as GenericRadioButton
+import Components.SelectListModal as SelectListModal
 import Data.Maybe (Maybe(..), fromMaybe)
-import Prelude (not, negate, (&&),(>=))
-import Data.String(length,trim)
+import Prelude (not, negate, map, unit, (&&),(>=), (==), (-))
+import Data.String as DS
 import Engineering.Helpers.Commons as EHC 
 import Font.Size as FontSize
 import Font.Style (Style(..))
@@ -34,10 +36,11 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
 import Prelude (not, negate)
-import PrestoDOM (Length(..), Margin(..), Padding(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Gravity(..))
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types as ST
 import Styles.Colors as Color
+import Data.Array as DA
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -163,3 +166,26 @@ getConfig state =
     , fromY : 0
     , toY : -100
     }
+
+getRadioButtonConfig :: Int -> String -> ST.MyProfileScreenState -> GenericRadioButton.Config
+getRadioButtonConfig index item state = GenericRadioButton.config {
+  activeButtonConfig {
+    stroke = Color.blue900
+  , buttonColor = Color.black800
+  , background = Color.blue600
+  },
+  buttonTextConfig {
+    text = item
+  , color = Color.black900
+  },
+  editTextConfig {
+    hint = "Enter nature of condition"
+  }
+  , inActiveButtonConfig {
+    stroke = Color.grey900
+  , buttonColor = Color.black600
+  , background = Color.white900
+  }
+  , isSelected = index == state.data.editedDisabilityOptions.activeIndex
+  , id = index
+}

@@ -225,6 +225,8 @@ type AccountSetUpScreenStateProps =
     , isNameValid :: Boolean
   }
 
+
+
 data ActiveFieldAccountSetup = DropDown | NameSection
 
 derive instance genericActiveFieldAccountSetup :: Generic ActiveFieldAccountSetup _
@@ -236,7 +238,11 @@ type AccountSetUpScreenStateData =
     , gender :: Maybe Gender
     , nameErrorMessage :: Maybe ErrorType
     , config :: AppConfig
+    , disabilityOptions :: DisabilityData
+    , editedDisabilityOptions :: DisabilityData
   }
+
+
 
  -- ######################################  TripDetailsScreenState   ######################################
 type TripDetailsScreenState =
@@ -590,7 +596,25 @@ type HomeScreenStateData =
   , config :: AppConfig
   , logField :: Object Foreign
   , nearByDrivers :: Maybe Int
+  , disability :: Maybe DisabilityT
   }
+
+type DisabilityT = 
+  {
+    id :: String
+  , tag :: String
+  , description :: String
+  }
+
+type DisabilityData = {
+    activeIndex :: Int
+  , isSpecialAssistList :: Boolean
+  , specialAssistActiveIndex :: Int
+  , disabilityOptionList :: Array DisabilityT
+  , selectedDisability :: Maybe DisabilityT
+  , otherDisabilityReason :: Maybe String 
+  , editedDisabilityReason :: String
+}
 
 type HomeScreenStateProps =
   {
@@ -670,6 +694,7 @@ type HomeScreenStateProps =
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
+  , showDisabilityPopUp :: Boolean
   }
 
 type RouteEndPoints = {
@@ -859,10 +884,11 @@ type MyProfileScreenProps = {
   isNameValid :: Boolean,
   isBtnEnabled :: Boolean,
   showOptions :: Boolean,
-  fromHomeScreen :: Boolean
+  fromHomeScreen :: Boolean,
+  showAccessibilityPopUp :: Boolean
 }
 
-data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE
+data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE | DISABILITY_TYPE
 
 derive instance genericFieldType :: Generic FieldType _
 instance eqFieldType :: Eq FieldType where eq = genericEq
@@ -878,7 +904,11 @@ type MyProfileScreenData = {
   emailErrorMessage :: Maybe ErrorType,
   nameErrorMessage :: Maybe ErrorType,
   config :: AppConfig,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  disabilityType :: Maybe DisabilityT,
+  disabilityOptions :: DisabilityData,
+  editedDisabilityOptions :: DisabilityData,
+  hasDisability :: Maybe Boolean
 }
 
 data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_NAME | NAME_CANNOT_BE_BLANK

@@ -17,40 +17,38 @@ module Services.Backend where
 
 import Services.API
 
+import Accessor (_deviceToken)
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..))
+import Data.Array ((!!), take, any)
 import Data.Either (Either(..), either)
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Lens ((^.))
+import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
 import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
+import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeError, toString, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
-import Juspay.OTP.Reader as Readers
-import Log (printLog)
-import ModifyScreenState (modifyScreenState)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
-import Types.App (GlobalState(..), FlowBT, ScreenType(..))
-import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
--- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
-import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
-import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>), (/=))
-import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
-import Tracker.Labels (Label(..))
-import Tracker.Types as Tracker
-import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Types.EndPoint as EP
-import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
-import Data.Array ((!!), take, any)
+import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Log (printLog)
+import ModifyScreenState (modifyScreenState)
+import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..))
 import Services.Config as SC
-import Data.Lens ((^.))
-import Engineering.Helpers.Utils as EHU
-import Accessor (_deviceToken)
+import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
+import Tracker (trackApiCallFlow, trackExceptionFlow)
+import Tracker.Labels (Label(..))
+import Tracker.Types as Tracker
+import Types.App (GlobalState(..), FlowBT, ScreenType(..))
+import Types.App (GlobalState, FlowBT, ScreenType(..))
+import Types.EndPoint as EP
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -515,10 +513,12 @@ mkUpdateProfileRequest _ =
             _       -> "ENGLISH"
         , clientVersion : Nothing
         , bundleVersion : Nothing
+        , disability : Nothing
+        , hasDisability : Nothing
     }
 
-editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
-editProfileRequest firstName middleName lastName emailID gender =
+editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Boolean -> Maybe Disability -> UpdateProfileReq
+editProfileRequest firstName middleName lastName emailID gender hasDisability disabilityType =
     UpdateProfileReq{
           middleName : middleName
         , lastName : lastName
@@ -537,6 +537,18 @@ editProfileRequest firstName middleName lastName emailID gender =
             _       -> "ENGLISH"
         , clientVersion : Nothing
         , bundleVersion : Nothing
+        , disability : disabilityType
+        , hasDisability : hasDisability
+    }
+
+mkDisabilityData :: DisabilityT -> String -> Disability
+mkDisabilityData selectedDisability otherDisabilityDescription = 
+    Disability{
+      id : selectedDisability.id 
+    , tag : selectedDisability.tag 
+    , description : case selectedDisability.tag of
+        "OTHER" -> otherDisabilityDescription
+        _       -> selectedDisability.description
     }
 
 placeNameBT :: GetPlaceNameReq -> FlowBT String GetPlaceNameResp
@@ -890,4 +902,10 @@ makeRideFeedBackReq id feedbackList = RideFeedbackReq
     {   "rideId" : id
     ,   "feedback" : feedbackList
     }
- 
+
+disabilityList :: FlowBT String (Either ErrorResponse GetDisabilityListResp)
+disabilityList = do
+  headers <- getHeaders' "" false
+  lift $ lift $ withAPIResult (EP.disabilityList "") unwrapResponse $ callAPI headers GetDisabilityListReq
+  where
+    unwrapResponse x = x

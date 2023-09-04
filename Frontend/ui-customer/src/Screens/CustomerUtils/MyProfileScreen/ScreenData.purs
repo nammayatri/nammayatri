@@ -30,19 +30,40 @@ initData = {
         isNameValid : true,
         isBtnEnabled : true,
         showOptions : false,
-        fromHomeScreen : false
+        fromHomeScreen : false,
+        showAccessibilityPopUp : false
     },
     data : {
         name : "",
         mobileNumber : "",
         editedName : "",
-        emailId : Nothing ,
+        emailId : Nothing,
         gender : Nothing,
         editedGender : Nothing,
         editedEmailId  : Nothing,
         nameErrorMessage : Nothing,
         emailErrorMessage : Nothing,
         config : DC.config,
-        logField : empty
+        logField : empty,
+        disabilityType : Nothing,
+        hasDisability : Nothing,
+        editedDisabilityOptions : {
+          activeIndex : 0
+        , isSpecialAssistList : false 
+        , specialAssistActiveIndex : 0
+        , disabilityOptionList : []
+        , selectedDisability : Nothing
+        , otherDisabilityReason : Nothing
+        , editedDisabilityReason : ""
+        },
+        disabilityOptions : {
+          activeIndex : 0
+        , isSpecialAssistList : false 
+        , specialAssistActiveIndex : 0
+        , disabilityOptionList : []
+        , selectedDisability : Nothing
+        , otherDisabilityReason : Nothing
+        , editedDisabilityReason : ""
+      }
     }
 }

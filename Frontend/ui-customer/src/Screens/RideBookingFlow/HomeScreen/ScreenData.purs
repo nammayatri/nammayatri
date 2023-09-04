@@ -126,6 +126,7 @@ initData = {
     , config : DC.config
     , logField : empty
     , nearByDrivers : Nothing
+    , disability : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -220,6 +221,7 @@ initData = {
     , confirmLocationCategory : ""
     , canSendSuggestion : true
     , sheetState : COLLAPSED
+    , showDisabilityPopUp : false
     }
 }
 

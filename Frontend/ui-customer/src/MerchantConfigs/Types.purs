@@ -53,6 +53,7 @@ type AppConfig =
   , dashboardUrl :: String 
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
+  , showDisabilityBanner :: Boolean
   } 
 
 type QuoteListItemConfig = {

@@ -63,7 +63,8 @@ view push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , accessibility DISABLE
+        , accessibility ENABLE
+        , accessibilityHint $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
         , text $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
         , color Color.white900
         , margin $ Margin 15 5 0 22

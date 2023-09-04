@@ -19,8 +19,8 @@ import Common.Styles.Colors as Color
 import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Common.Types.App
-import PrestoDOM.Types.DomAttributes (Corners(..))
+import Common.Types.App as Common
+import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
@@ -46,7 +46,7 @@ type Config = {
     tipButton :: ButtonConfig,
     backgroundClickable :: Boolean,
     customerTipAvailable :: Boolean,
-    cornerRadius :: Corners,
+    cornerRadius :: PTD.Corners,
     margin :: Margin,
     gravity :: Gravity,
     activeIndex :: Int,
@@ -70,7 +70,8 @@ type Config = {
     tipSelectedText :: String,
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
-    topTitle :: Mb.Maybe String
+    topTitle :: Mb.Maybe String,
+    listViewArray :: Array String
 }
 
 type ContactViewConfig = {
@@ -152,7 +153,7 @@ config = {
   , backgroundClickable : true
   , customerTipArray : []
   , customerTipArrayWithValues : []
-  , cornerRadius : (Corners 24.0 true true false false)
+  , cornerRadius : (PTD.Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
   , backgroundColor : Color.black9000
@@ -294,7 +295,7 @@ config = {
       }
     }
     , dismissPopupConfig : 
-    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_close.png"
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , margin : (MarginTop 20)
@@ -305,7 +306,7 @@ config = {
     , eTextConfig : PrimaryEditTextController.config
     , coverImageConfig :
     {
-      imageUrl : "ny_ic_ride_completed," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_ride_completed.png"
+      imageUrl : "ny_ic_ride_completed," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_ride_completed.png"
     , visibility : GONE
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
@@ -328,4 +329,7 @@ config = {
     , tipSelected : ""
     , fareEstimateText : ""
     , tipSelectedText : ""
+    , listViewArray : []
 }
+
+

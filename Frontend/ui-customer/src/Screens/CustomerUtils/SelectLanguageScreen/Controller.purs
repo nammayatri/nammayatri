@@ -26,6 +26,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (SelectLanguageScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -64,7 +65,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
   let isBtnActive = if config.id /= language then true else false
   continue state{props{selectedLanguage = config.id,btnActive = isBtnActive}}
 
-eval AfterRender state = continue state {props {selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
+eval AfterRender state = continue state {props {selectedLanguage = if DA.any (_ == getValueToLocalStore LANGUAGE_KEY) ["__failed" , "(null)"] then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state $ UpdateLanguage state
 
