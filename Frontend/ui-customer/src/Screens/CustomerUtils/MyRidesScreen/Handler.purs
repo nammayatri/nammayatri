@@ -38,7 +38,7 @@ myRidesScreen :: FlowBT String MY_RIDES_SCREEN_OUTPUT
 myRidesScreen = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "MyRidesScreen"
-  listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push listItem1
+  listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push (listItem1 { isSrcServiceable = state.myRidesScreen.data.isSrcServiceable})
   logField_ <- lift $ lift $ getLogFields
   act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn , data{logField = logField_}} listItemm
   case act of 
