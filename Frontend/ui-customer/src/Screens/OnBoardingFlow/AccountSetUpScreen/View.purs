@@ -15,18 +15,26 @@
 
 module Screens.AccountSetUpScreen.View where
 
+import Screens.AccountSetUpScreen.ComponentConfig
+
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
+import Components.GenericRadioButton as GenericRadioButton
+import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.MenuButton as MenuButton
+import Components.StepsHeaderModel as StepsHeaderModel
+import Components.SelectListModal as SelectListModal
+import Data.Array as DA
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||), (&&))
+import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||), (&&), (-), (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd, lineHeight, alpha, adjustViewWithKeyboard, accessibilityHint ,accessibility)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -35,15 +43,22 @@ import Common.Types.App (LazyCheck(..))
 import Screens.AccountSetUpScreen.ComponentConfig
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Array (mapWithIndex)
+import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude (Unit, const, map, not, show, unit, ($), (&&), (/=), (<<<), (<>), (==), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, onFocus, orientation, padding, pattern, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
-import Components.StepsHeaderModel as StepsHeaderModel
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
-
+import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types as ST
+import Styles.Colors as Color
+import Debug (spy)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Properties (cornerRadii)
+import Data.String as DS
+import Components.CommonComponentConfig as CommonComponentConfig
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -51,7 +66,10 @@ screen initialState =
   , view
   , name: "AccountSetUpScreen"
   , globalEvents: []
-  , eval
+  , eval : (\state  action -> do
+      let _ = spy "AccountSetupScreen state -----" state
+      let _ = spy "AccountSetupScreen--------action" action
+      eval state action)
   }
 
 view ::
@@ -78,23 +96,23 @@ view push state =
             , Anim.screenAnimation $
               scrollView
                 [ width MATCH_PARENT
-                , height WRAP_CONTENT
+                , height $ if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
                 ]
                 [ linearLayout
-                    [ height $ if EHC.os == "IOS" then V (EHC.screenHeight unit) else WRAP_CONTENT
+                    [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
-                    , padding (Padding 16 0 16 0)
+                    , padding (Padding 16 0 16 75)
                     ]
                     [ nameEditTextView state push
                     , genderCaptureView state push
+                    , if (not state.props.genderOptionExpanded) then disabilityOptionView state push else textView[]
                     , linearLayout
-                        [ height WRAP_CONTENT
-                        , width MATCH_PARENT
+                        [ width MATCH_PARENT
                         , weight 1.0
                         , orientation VERTICAL
-                        ]
-                        []
+                        ][]
+                    , if state.data.editedDisabilityOptions.activeIndex == 1 && (isJust state.data.disabilityOptions.selectedDisability) then disabilityClaimerView state push  else textView[]
                     ]
                 ]
             ]
@@ -108,8 +126,9 @@ view push state =
             , accessibility if state.props.backPressed then DISABLE_DESCENDANT else DISABLE
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
-        
-        ] <> [if state.props.backPressed then goBackPopUpView push state else emptyTextView])
+        , if state.props.backPressed then goBackPopUpView push state else emptyTextView
+        , if state.data.editedDisabilityOptions.isSpecialAssistList then specialAssistanceView state push else emptyTextView
+        ])
 
 goBackPopUpView :: forall w. (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
 goBackPopUpView push state =
@@ -287,7 +306,7 @@ genderOptionsView state push =
     , stroke $ "1,"<>Color.grey900
     , cornerRadius 8.0
     ]
-    (mapWithIndex(\index item ->
+    (DA.mapWithIndex(\index item ->
        linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -318,4 +337,61 @@ genderOptionsArray _ =
   , {text : (getString OTHER) , value : ST.OTHER}
   , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
   ]
+
+disabilityOptionView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+disabilityOptionView state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin (MarginTop 28)
+  ]$[ textView $
+    [ text (getString ARE_YOU_A_PERSON_WITH_DISABILITY)
+    , height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , margin $ MarginBottom 16
+    ] <> FontStyle.body3 TypoGraphy
+  ] <> (DA.mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
+
+specialAssistanceView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+specialAssistanceView state push = do 
+  SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)
+
+disabilityClaimerView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+disabilityClaimerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 20 16 20 16
+  , cornerRadius 12.0 
+  , background Color.pink
+  , alignParentBottom "true,-1"
+  , gravity CENTER 
+  ][  textView
+      ([ text (getString DISABILITY_CLAIMER_TEXT)
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]
+
+getRadioButtonConfig :: Int -> String -> ST.AccountSetUpScreenState -> GenericRadioButton.Config
+getRadioButtonConfig index item state = GenericRadioButton.config {
+  activeButtonConfig {
+    stroke = Color.blue900
+  , buttonColor = Color.black800
+  , background = Color.blue600
+  },
+  buttonTextConfig {
+    text = item
+  , color = Color.black900
+  }
+  , inActiveButtonConfig {
+    stroke = Color.grey900
+  , buttonColor = Color.black600
+  , background = Color.white900
+  }
+  , isSelected = index == state.data.editedDisabilityOptions.activeIndex
+  , id = index
+}
+
 

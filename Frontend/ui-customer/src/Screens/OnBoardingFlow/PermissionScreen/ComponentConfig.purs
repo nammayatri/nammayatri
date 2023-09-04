@@ -68,6 +68,8 @@ primaryButtonConfig  state = let
         { text = getString if EHC.os == "IOS" then CONTINUE
                   else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
         , textStyle = FontStyle.Body7
+        , accessibilityHint =  (getString if EHC.os == "IOS" then CONTINUE
+                  else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS) <> " Button"
         , color = state.appConfig.primaryTextColor
         }
       , width = MATCH_PARENT 

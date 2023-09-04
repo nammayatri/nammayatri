@@ -54,17 +54,15 @@ view push config =
       , clickable true
       , background Color.black9000
       , disableClickFeedback true
-      , gravity BOTTOM
       , onClick push (const OnGoBack)
-      , adjustViewWithKeyboard "true"
       , accessibility DISABLE
       ][ linearLayout
           [ width MATCH_PARENT
           , alignParentBottom "true,-1"
           , height WRAP_CONTENT
           , clickable true
+          , adjustViewWithKeyboard "true"
           , accessibility DISABLE
-
           , disableClickFeedback true
           , onClick ( \action -> do
             _ <- pure $ hideKeyboardOnNavigation true
@@ -73,10 +71,12 @@ view push config =
           , cornerRadii $ Corners 20.0 true true false false
           , orientation VERTICAL
           , background Color.white900
-          , padding (Padding 20 20 20 0)
+          , padding (PaddingTop 20)
+          , margin $ MarginBottom 40
           ][  headingText config push ,
               optionListView push config
            ]
+        , primaryButtons push config
          ]
 
 
@@ -86,27 +86,39 @@ headingText config push =
   [
     width MATCH_PARENT
   , height WRAP_CONTENT
-  , orientation HORIZONTAL
+  , orientation VERTICAL
   ][
 linearLayout
     [
       height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width MATCH_PARENT
     , orientation HORIZONTAL
-    , gravity LEFT
+    , padding (PaddingHorizontal 20 20)
+    , gravity CENTER
     , margin $ MarginTop 4
-    , visibility if config.topLeftIcon then VISIBLE else GONE
-    , onClick push (const OnGoBack)
-    , padding (PaddingRight 12)
-    ][
-      imageView
-      [ height $ V 22
-      , width $ V 22
-      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin $ MarginTop 4
-      , color Color.black900
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ] 
+    ][ 
+          imageView
+          [ height $ V 22
+          , width $ V 22
+          , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , margin $ Margin 0 4 12 0
+          , onClick push (const OnGoBack)
+          , visibility if config.topLeftIcon then VISIBLE else GONE
+          , color Color.black900
+          , accessibility if config.topLeftIcon then ENABLE else DISABLE
+          , accessibilityHint "Back Button"
+          , fontStyle $ FontStyle.semiBold LanguageStyle
+          ] 
+    , textView (
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , text config.headingTextConfig.text
+      , color config.headingTextConfig.color
+      , orientation HORIZONTAL
+      , padding config.headingTextConfig.padding
+      , margin config.headingTextConfig.margin
+      , gravity config.headingTextConfig.gravity
+      ] <> FontStyle.h1 TypoGraphy)
     ]
 , linearLayout
  [ width MATCH_PARENT
@@ -118,28 +130,23 @@ linearLayout
             pure unit
           ) (const NoAction)
  , disableClickFeedback true
- ][ textView (
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , text config.headingTextConfig.text
-    , color config.headingTextConfig.color
-    , orientation HORIZONTAL
-    , gravity CENTER
-    ] <> FontStyle.h1 TypoGraphy), 
+ ][ 
     textView (
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , text config.subHeadingTextConfig.text
+    , margin config.subHeadingTextConfig.margin
+    , padding config.subHeadingTextConfig.padding
     , visibility if config.subHeadingTextConfig.visibility then VISIBLE else GONE
     , orientation HORIZONTAL
-    , padding (PaddingTop 4)
-    , gravity CENTER
+    , gravity config.subHeadingTextConfig.gravity 
     , color config.subHeadingTextConfig.color
     ] <> FontStyle.paragraphText TypoGraphy) 
     ,linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , padding (PaddingHorizontal 20 20)
     , onClick ((\action -> do
         _ <- push action
         pure $ setText (getNewIDWithTag "OtherReasonEditText") ""
@@ -147,7 +154,7 @@ linearLayout
         pure unit
     )) ( const ClearOptions)
     , visibility case config.activeReasonCode of
-                    Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
+                    Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") && config.hideOthers then VISIBLE else GONE
                     _               -> GONE
     ][  textView $
         [ width WRAP_CONTENT
@@ -165,36 +172,36 @@ optionListView push config =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , padding (PaddingVertical 0 24)
+    , padding (Padding 20 0 20 24)
     , orientation VERTICAL
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][dataListOptions config push],
-          primaryButtons push config
+        ][dataListOptions config push]
     ]
 
 
 dataListOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 dataListOptions config push =
-  linearLayout
+  (if os == "IOS" then linearLayout else scrollView )
+  ([height $ MATCH_PARENT
+  , width MATCH_PARENT])[linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding (PaddingBottom 24)
+  , padding (PaddingVertical 12 24)
   ] (mapWithIndex (\index item ->
       linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation VERTICAL
       ][ linearLayout
-          [ height MATCH_PARENT
+          ([ height MATCH_PARENT
           , width MATCH_PARENT
           , orientation VERTICAL
-          , padding (PaddingTop if index == 0 then 12 else 0)
           , visibility case config.activeReasonCode of
-                Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode /= "TECHNICAL_GLITCH") || ( reasonCode == "OTHER" && item.reasonCode /= "OTHER")) then GONE else VISIBLE
+                Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode /= "TECHNICAL_GLITCH") || ( reasonCode == "OTHER" && item.reasonCode /= "OTHER")) && config.hideOthers then GONE else VISIBLE
                 _               -> VISIBLE
           , onClick (\action -> do
             _ <- push action
@@ -204,7 +211,19 @@ dataListOptions config push =
               _ -> pure unit
             pure unit
           ) (const (UpdateIndex index))
-          ][radioButton config push index item,
+          ] <> if config.showBgColor then 
+                  [ background case config.activeIndex of
+                      Just activeIndex' -> if (index == activeIndex') then Color.blue600 else Color.white900
+                      Nothing -> Color.white900
+                  , gravity CENTER_VERTICAL
+                  , stroke $ "1,"<>case config.activeIndex of
+                      Just activeIndex' -> if (index == activeIndex') then Color.blue900 else Color.grey800
+                      Nothing -> Color.grey800
+                  , cornerRadius 6.0
+                  , margin (MarginBottom 16)
+                  , padding $ PaddingHorizontal 16 16] 
+                else [])
+          [ radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
             (case config.activeReasonCode of
               Just reasonCode -> if (( reasonCode == "OTHER" && item.reasonCode == "OTHER")) then someOtherReason config push index else dummyTextView
@@ -213,9 +232,9 @@ dataListOptions config push =
               Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView
               Nothing         -> dummyTextView)
             -- , technicalGlitchDescription config push index
-           ]
           ]
-      ) config.selectionOptions)
+        ]
+      ) config.selectionOptions)]
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
@@ -228,6 +247,7 @@ someOtherReason config push index =
   , visibility case config.activeReasonCode of
                   Just reasonCode -> if (reasonCode == "OTHER") then VISIBLE else GONE
                   _               -> GONE
+  , margin $ MarginBottom if config.showBgColor then 16 else 0
   ][ linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -238,23 +258,25 @@ someOtherReason config push index =
           , stroke ("1," <> (if config.isLimitExceeded then Color.warningRed else Color.grey800))
           , gravity LEFT
           , cornerRadius 4.0
-          , background Color.grey800
+          , background config.editTextBgColor
           , padding (Padding 16 2 16 2)
           ][
-            ((if os == "ANDROID" then editText else multiLineEditText)
+            (if os == "ANDROID" then editText else multiLineEditText)
               $ [ width MATCH_PARENT
               , height ( V 58)
               , color Color.black800
               , hint config.hint
               , hintColor Color.black650
               , cornerRadius 4.0
-              , background Color.grey800
+              , background config.editTextBgColor
+              , text config.defaultText
               , singleLine false
               , textSize FontSize.a_14
               , padding $ PaddingBottom 0
-              , onChange push (TextChanged ( getNewIDWithTag "OtherReasonEditText") )
               , pattern "[A-Za-z0-9 ]*,100"
-              ] <> (if os == "ANDROID" then [id (getNewIDWithTag "OtherReasonEditText")] else [] ))
+              , id (getNewIDWithTag "OtherReasonEditText")  
+              , onChange push (TextChanged ( getNewIDWithTag "OtherReasonEditText") )
+              ]
             ]
           , textView (
             [ height WRAP_CONTENT
@@ -286,7 +308,7 @@ technicalGlitchDescription config push index =
           , stroke ("1," <> (if config.isLimitExceeded then Color.warningRed else Color.grey800))
           , gravity LEFT
           , cornerRadius 4.0
-          , background Color.grey800
+          , background config.editTextBgColor
           , padding (Padding 16 2 16 2)
           ][
             ((if os == "ANDROID" then editText else multiLineEditText)
@@ -295,7 +317,7 @@ technicalGlitchDescription config push index =
               , color Color.black800
               , hint config.hint
               , hintColor Color.black650
-              , background Color.grey800
+              , background config.editTextBgColor
               , cornerRadius 4.0
               , singleLine false
               , onChange push (TextChanged ( getNewIDWithTag "TechGlitchEditText") )
@@ -319,6 +341,10 @@ primaryButtons push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , accessibility DISABLE
+  , adjustViewWithKeyboard "true"
+  , alignParentBottom "true,-1"
+  , padding (PaddingBottom 24)
+  , background Color.white900
   , gravity CENTER
   ] [ PrimaryButton.view (push <<< Button1) (primaryButtonConfig config)
     , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
@@ -373,7 +399,6 @@ radioButton config push index item =
           , accessibilityHint $ fromMaybe "" item.subtext <> " : Selected"
           , accessibility ENABLE
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
-          , padding $ PaddingBottom 5
           , color Color.black650
           , visibility $ case config.activeIndex of 
                             Just activeIndex' -> if (activeIndex' == index) then if item.subtext == Nothing then GONE else VISIBLE else GONE
@@ -433,7 +458,7 @@ horizontalLine index activeIndex config =
   , width MATCH_PARENT
   , background Color.grey800
   , padding (PaddingVertical 2 2)
-  , visibility if(((fromMaybe dummyReason( (config.selectionOptions)!!index)).textBoxRequired == true && index == activeIndex)) then GONE else VISIBLE
+  , visibility if(((fromMaybe dummyReason( (config.selectionOptions)!!index)).textBoxRequired == true && index == activeIndex) || (config.showBgColor)) then GONE else VISIBLE
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w

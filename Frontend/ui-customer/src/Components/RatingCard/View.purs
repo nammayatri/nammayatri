@@ -51,16 +51,18 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , gravity BOTTOM
     , onClick push $ const BackPressed
-  ][  linearLayout
-      [ orientation VERTICAL
-      , height MATCH_PARENT
+    , background Color.black9000
+  ][  currentRatingView push state 
+    , linearLayout
+      [height WRAP_CONTENT
       , width MATCH_PARENT
+      , padding $ Padding 16 0 16 16
       , alignParentBottom "true,-1"
-      , gravity BOTTOM
-      , background Color.black9000
-      ][ currentRatingView push state 
-        ] 
+      , adjustViewWithKeyboard "true"
+      , background Color.white900
+      ][PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)]
       ]
   
 
@@ -71,25 +73,26 @@ currentRatingView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ Padding 16 24 16 30
+  , margin (MarginBottom if os == "IOS" then 30 else 0)
   , background Color.white900
   , cornerRadii $ Corners 20.0 true true false false
   , clickable true
-  , adjustViewWithKeyboard "true"
+  , alignParentBottom "true,-1"
   , onClick push $ const NoAction
   ][  scrollView 
-      [ height WRAP_CONTENT
+      [ height if os == "IOS" then (V 500) else WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarY false 
       ][ linearLayout 
          [ height WRAP_CONTENT
          , width MATCH_PARENT
          , orientation VERTICAL
+         , padding $ PaddingBottom if os == "IOS" then 40 else 0
          ][ starRatingView state push
           , feedbackPillView state push
           , editTextView state push
           ]
        ]
-      , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)
   ]
 
 

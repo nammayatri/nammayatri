@@ -499,6 +499,6 @@ issueReportedView state push =
           , alignParentBottom "true,-1"
           , gravity BOTTOM
           , margin (MarginBottom 16)
-          ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+          ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (goHomeButtonConfig state)]
       ]
 
