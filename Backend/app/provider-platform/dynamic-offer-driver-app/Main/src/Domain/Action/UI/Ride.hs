@@ -102,6 +102,7 @@ data DriverRideRes = DriverRideRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     customerExtraFee :: Maybe Money,
+    disabilityTag :: Maybe Text,
     requestedVehicleVariant :: DVeh.Variant
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -182,6 +183,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       customerExtraFee = fareParams.customerExtraFee,
       bapName = bapMetadata <&> (.name),
       bapLogo = bapMetadata <&> (.logoUrl),
+      disabilityTag = booking.disabilityTag,
       requestedVehicleVariant = booking.vehicleVariant
     }
 

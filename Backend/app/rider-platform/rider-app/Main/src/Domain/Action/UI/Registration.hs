@@ -310,6 +310,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         referralCode = Nothing,
         referredAt = Nothing,
         hasTakenValidRide = False,
+        hasDisability = Nothing,
         createdAt = now,
         updatedAt = now,
         blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,

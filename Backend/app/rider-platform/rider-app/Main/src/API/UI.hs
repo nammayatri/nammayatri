@@ -25,6 +25,7 @@ import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
+import qualified API.UI.Disability as Disability
 import qualified API.UI.Feedback as Feedback
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
@@ -83,6 +84,7 @@ type API =
            :<|> AppInstalls.API
            :<|> PersonStats.API
            :<|> HotSpot.API
+           :<|> Disability.API
        )
 
 handler :: FlowServer API
@@ -117,3 +119,4 @@ handler =
     :<|> AppInstalls.handler
     :<|> PersonStats.handler
     :<|> HotSpot.handler
+    :<|> Disability.handler
