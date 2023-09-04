@@ -24,6 +24,7 @@ module Domain.Action.UI.Profile
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
+    DisabilityItem (..),
   )
 where
 
