@@ -281,7 +281,7 @@ const englishStrings = {
   HELP_US_WITH_YOUR_REASON: "Help us with your reason",
   MAX_CHAR_LIMIT_REACHED: "Max character limit reached,",
   SHOW_ALL_OPTIONS: "Show all options",
-  UPDATE_REQUIRED: "Update Required",
+  UPDATE_REQUIRED: "Update Available",
   PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE: "We're excited to announce that there's a new update available for our app. This update includes a fresh new design and several new features to make your experience even better.",
   NOT_NOW: "Not now",
   OF: "of",
