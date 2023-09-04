@@ -9,11 +9,11 @@ pipeline {
                 when {
                     anyOf {
                         expression { 'x86_64-linux' == env.SYSTEM }
-                        // Enable running macOS / Linux ARM builds when on main
-                        // branch
+                        // Enable running macOS / Linux ARM builds when on 'main' or PRs
                         // - macOS: Provide Nix cache to devs using macOS
                         // - Linux ARM: For AWS graviton deployment
                         branch 'main'
+                        changeRequest target: 'main'
                     }
                 }
                 axes {
