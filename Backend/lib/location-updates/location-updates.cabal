@@ -83,6 +83,8 @@ library
     , unordered-containers
     , uri-encode
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 test-suite location-updates-tests
   type: exitcode-stdio-1.0
@@ -160,3 +162,5 @@ test-suite location-updates-tests
     , unordered-containers
     , uri-encode
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs

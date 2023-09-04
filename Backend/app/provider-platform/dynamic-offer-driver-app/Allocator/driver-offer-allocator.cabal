@@ -100,6 +100,8 @@ library
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable driver-offer-allocator-exe
   main-is: Main.hs
@@ -178,3 +180,5 @@ executable driver-offer-allocator-exe
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs

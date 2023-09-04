@@ -616,6 +616,8 @@ library
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
 
 executable dynamic-offer-driver-app-exe
   main-is: Main.hs
@@ -715,3 +717,5 @@ executable dynamic-offer-driver-app-exe
     , wai
     , warp
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs

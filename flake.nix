@@ -18,6 +18,7 @@
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";
     easy-purescript-nix.flake = false;
   };
+
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
       imports = [
