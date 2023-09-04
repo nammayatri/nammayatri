@@ -36,10 +36,10 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Screens.Types (Stage(..))
+import Data.String as DS
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -93,14 +93,14 @@ settingsView state push =
   , orientation VERTICAL
   ](map (\item -> 
         case item of
-        "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides," <> (getAssetStoreLink FunctionCall) <> "ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
-        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-        "EmergencyContacts" ->  settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
-        "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
-        "Language" -> settingsMenuView {imageUrl : "ic_change_language," <> (getAssetStoreLink FunctionCall) <> "ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
-        "ShareApp" -> settingsMenuView {imageUrl : "ic_share," <> (getAssetStoreLink FunctionCall) <> "ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-        "LiveStatsDashboard" -> settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
-        "About" -> settingsMenuView {imageUrl : "ic_info," <> (getAssetStoreLink FunctionCall) <> "ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
+        "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides," <> (getAssetStoreLink FunctionCall) <> "ic_past_rides.png", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
+        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
+        "EmergencyContacts" ->  settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), accessibilityHint : "Help And Support ", tag : SETTINGS_HELP, iconUrl : ""} push
+        "Language" -> settingsMenuView {imageUrl : "ic_change_language," <> (getAssetStoreLink FunctionCall) <> "ic_change_language.png", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
+        "ShareApp" -> settingsMenuView {imageUrl : "ic_share," <> (getAssetStoreLink FunctionCall) <> "ic_share.png", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
+        "LiveStatsDashboard" -> settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
+        "About" -> settingsMenuView {imageUrl : "ic_info," <> (getAssetStoreLink FunctionCall) <> "ic_info.png", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : ""} push
         "Logout" -> logoutView state push
         "Separator" -> separator
         _ -> emptyLayout
@@ -146,7 +146,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : "ic_logout," <> (getAssetStoreLink FunctionCall) <> "ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} push
+  , settingsMenuView {imageUrl : "ic_logout," <> (getAssetStoreLink FunctionCall) <> "ic_logout.png", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : ""} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -197,6 +197,8 @@ profileView state push =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , accessibilityHint $ DS.replaceAll (DS.Pattern "") (DS.Replacement " ") (getValueToLocalStore MOBILE_NUMBER)
+          , accessibility ENABLE
           , text ((getValueToLocalStore COUNTRY_CODE) <> " " <> (getValueToLocalStore MOBILE_NUMBER))
           , color state.appConfig.profileName
           ] <> FontStyle.paragraphText TypoGraphy
@@ -242,7 +244,7 @@ settingsMenuView item push  =
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding (Padding 0 16 16 16 )
-  , accessibilityHint $ item.text <> " : Button"
+  , accessibilityHint $ item.accessibilityHint <> " : Button"
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites

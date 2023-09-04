@@ -126,5 +126,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 
+      , id = "SubmitButton"
       }
   in primaryButtonConfig'

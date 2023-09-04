@@ -43,7 +43,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, show, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -142,7 +142,6 @@ recentRideView state push=
   , stroke ("1," <> Color.greyLight)
   , height $ V 174
   , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
-  , shadow (Shadow 10.0 10.0 4.0 1.0 Color.black 0.9)
   ][
     linearLayout
     [ height $ V 134

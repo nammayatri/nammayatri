@@ -277,14 +277,13 @@ view push state =
                   [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                   , width MATCH_PARENT
                   , background Color.transparent
-                  , clickable false
                   , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][
                   linearLayout
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
-                    , accessibility if (state.props.currentStage == RideStarted) && not isAnyOverlayEnabled state then DISABLE else DISABLE_DESCENDANT
+                    , accessibility DISABLE_DESCENDANT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []]
@@ -483,6 +482,8 @@ trackingCardCallView push state item =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , padding (Padding 0 20 0 20)
+    , accessibility ENABLE
+    , accessibilityHint $ item.text <> " : " <> item.data
     , gravity CENTER_VERTICAL
     , onClick push (const (ShowCallDialer item.type))
     ]
@@ -1349,7 +1350,7 @@ topLeftIconView state push =
       , orientation HORIZONTAL
       , visibility if state.data.config.showHamMenu then VISIBLE else GONE
       , margin (Margin 16 48 0 0)
-      , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal then DISABLE_DESCENDANT else DISABLE
+      , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
       ][
         linearLayout
           [ height $ V 48
@@ -1428,6 +1429,7 @@ suggestedPriceView push state =
       , width MATCH_PARENT
       , background Color.white900
       , clickable true
+      , accessibility if state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
       , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
       , padding (Padding 16 16 16 24)
       , stroke ("1," <> Color.grey900)
@@ -2439,10 +2441,9 @@ currentLocationView push state =
             , padding $ PaddingHorizontal 15 15
             , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder
             , gravity CENTER_VERTICAL
+            , accessibility DISABLE
             , cornerRadius 5.0
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
-            , accessibility ENABLE
-            , accessibilityHint $ "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.data.source)
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
@@ -2457,7 +2458,7 @@ currentLocationView push state =
                   , ellipsize true
                   , singleLine true
                   , accessibility ENABLE
-                  , accessibilityHint state.data.source
+                  , accessibilityHint $ "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source)
                   , gravity CENTER
                   , padding (Padding 10 16 10 16)
                   , color Color.black800
@@ -2514,4 +2515,4 @@ genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
-isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
+isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))

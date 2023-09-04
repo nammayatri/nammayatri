@@ -130,6 +130,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
     , color = Color.yellow900
 
     }
+  , id = "ConfirmAndBookButton" 
   , background = Color.black900
   , margin = Margin 16 16 16 15
   }
