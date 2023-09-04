@@ -42,6 +42,8 @@ data Action = NoAction
             | LiveDashboardAction
             | WaitingInfo  
             | ScrollSupportButton 
+            | OnNavigateToZone
+            | ExpandBottomSheet
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

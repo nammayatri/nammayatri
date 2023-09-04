@@ -19,6 +19,20 @@ import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
 
+data RatingError
+  = InvalidRatingValue
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RatingError
+
+instance IsBaseError RatingError
+
+instance IsHTTPError RatingError where
+  toErrorCode InvalidRatingValue = "INVALID_RATING_VALUE"
+  toHttpCode InvalidRatingValue = E400
+
+instance IsAPIError RatingError
+
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate

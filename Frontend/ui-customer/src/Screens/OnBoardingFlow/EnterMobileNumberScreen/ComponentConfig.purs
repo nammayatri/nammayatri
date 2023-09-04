@@ -32,10 +32,13 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (not, (<>), (==), (&&), (/=), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility, Accessiblity(..))
 import Screens.Types as ST
 import Storage (KeyStore(..))
 import Styles.Colors as Color
+import Common.Types.App
+import Storage(getValueToLocalStore, KeyStore(..))
+import Data.String as DS
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -43,6 +46,7 @@ mobileNumberButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = (getString CONTINUE) 
                   ,  color = state.data.config.primaryTextColor 
+                  , accessibilityHint = if state.props.btnActiveMobileNumber then "Continue : Button" else "Enter a valid Mobile Number to continue"
                   }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNumber
@@ -82,7 +86,8 @@ verifyOTPButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) 
-                  , color = state.data.config.primaryTextColor }
+                  , color = state.data.config.primaryTextColor
+                  , accessibilityHint = if state.props.btnActiveOTP then "Continue : Button" else "Enter a valid OTP to continue" }
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP 
       , alpha = if state.props.btnActiveOTP  then 1.0 else 0.4
@@ -104,6 +109,7 @@ mobileNumberEditTextConfig state = let
           , margin = MarginHorizontal 10 10
           , focused = state.props.mNumberEdtFocused
           , text = state.props.editTextVal
+          , accessibilityHint = (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.mobileNumber)
           , placeholder = (getString ENTER_MOBILE_NUMBER)
         }
       , background = Color.white900
@@ -111,6 +117,7 @@ mobileNumberEditTextConfig state = let
         { text = (getString ENTER_YOUR_MOBILE_NUMBER)
         , color = Color.black800
         , alpha = 0.8
+        , accessibilityImportance = DISABLE
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
       , type = "number"
@@ -154,6 +161,7 @@ otpEditTextConfig state = let
         { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " " <> state.data.countryObj.countryCode <> " " <> state.data.mobileNumber
         , color = Color.black800
         , alpha = 0.8
+        , accessibilityImportance = DISABLE
         } 
       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
       , type = "number"

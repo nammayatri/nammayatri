@@ -69,6 +69,7 @@ primaryButtonConfig state = let
       { textConfig
         {
           text = (getString ADD_NEW_FAVOURITE)
+        , accessibilityHint = "Add New Favourite : Button"
         , color = state.data.config.primaryTextColor
         }
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)

@@ -20,6 +20,7 @@ where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.Internal as Internal
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
@@ -51,6 +52,7 @@ type MainAPI =
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API
+    :<|> Internal.API
 
 handler :: FlowServer API
 handler =
@@ -67,6 +69,7 @@ mainServer =
     :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
+    :<|> Internal.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

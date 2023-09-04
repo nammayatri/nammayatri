@@ -24,6 +24,8 @@ import Components.GenericHeader as GenericHeaderController
 import JBridge (generatePDF)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -67,6 +69,11 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = contin
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continueWithCmd state
     [ do
+        let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : state.data.selectedItem.baseFare},
+                                                                                                                    { key : "Distance", value : state.data.selectedItem.baseDistance},
+                                                                                                                    { key : "Driver pickup charges", value : "₹ 10"},
+                                                                                                                    { key : "Total fare", value : state.data.selectedItem.totalAmount},
+                                                                                                                    { key : "Ride completion timestamp", value : state.data.selectedItem.rideEndTime}]
         _ <- pure $ generatePDF state "NEW"
         pure NoAction
     ]

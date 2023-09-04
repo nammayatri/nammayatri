@@ -25,7 +25,6 @@ import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
-import qualified API.UI.Feedback as Feedback
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
@@ -35,6 +34,7 @@ import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
+import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
@@ -68,7 +68,7 @@ type API =
            :<|> Support.API
            :<|> Route.API
            :<|> Serviceability.API
-           :<|> Feedback.API
+           :<|> Rating.API
            :<|> FeedbackForm.API
            :<|> CustomerSupport.API
            :<|> MapsProxy.API
@@ -102,7 +102,7 @@ handler =
     :<|> Support.handler
     :<|> Route.handler
     :<|> Serviceability.handler
-    :<|> Feedback.handler
+    :<|> Rating.handler
     :<|> FeedbackForm.handler
     :<|> CustomerSupport.handler
     :<|> MapsProxy.handler

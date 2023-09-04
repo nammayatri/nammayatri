@@ -108,7 +108,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+      App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
 --       _ <- pure $ spy "lat handler" startRideCurrentLat

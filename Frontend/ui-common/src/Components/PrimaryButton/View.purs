@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibilityImportance)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -39,6 +39,7 @@ view push config =
         [ height config.height
         , width config.width
         , visibility config.visibility
+        , gravity CENTER
         ]
         [ linearLayout
             ([ height config.height
@@ -47,6 +48,7 @@ view push config =
             , background config.background
             , padding config.padding
             , gravity config.gravity
+            , id $ getNewIDWithTag (config.id <> "_buttonLayout")
             , clickable if config.enableLoader then false else config.isClickable
             , onClick
                 ( \action -> do
@@ -66,16 +68,20 @@ view push config =
             , stroke config.stroke
             ]  <> if config.isGradient then [gradient config.gradient] else [background config.background])
             [ linearLayout
-                [ width config.width
-                , height config.height
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
                 , orientation HORIZONTAL
+                , accessibilityImportance DISABLE
                 , gravity config.gravity
-                , visibility if config.enableLoader then GONE else VISIBLE
+                , visibility if config.enableLoader then INVISIBLE else VISIBLE
+                , afterRender push (const NoAction)
                 ]
                 [ prefixImageLayout config
                 , textView
                     $ [ height config.textConfig.height
                       , width config.textConfig.width
+                      , accessibilityHint config.textConfig.accessibilityHint
+                      , accessibilityImportance ENABLE
                       , text config.textConfig.text
                       , color config.textConfig.color
                       , gravity config.textConfig.gravity

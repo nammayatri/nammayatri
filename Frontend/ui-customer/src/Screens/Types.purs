@@ -30,9 +30,9 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
+import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
 
 type Contacts = {
@@ -135,7 +135,8 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  carouselModel :: Array CarouselModel
+  carouselModel :: Array CarouselModel,
+  logField :: Object Foreign 
 }
 
 type StepsHeaderModelState = {
@@ -301,7 +302,8 @@ type InvoiceScreenData =
     totalAmount :: String,
     date :: String ,
     selectedItem :: IndividualRideCardState,
-    config :: AppConfig
+    config :: AppConfig,
+    logField :: Object Foreign
   }
 
 type InvoiceScreenProps =
@@ -325,7 +327,8 @@ type ContactUsScreenData =
     description :: String,
     bookingId :: String,
     errorMessage :: Maybe ErrorType,
-    config :: AppConfig
+    config :: AppConfig,
+    logField :: Object Foreign
   }
 
 type ContactUsScreenProps =
@@ -364,7 +367,8 @@ type HelpAndSupportScreenData =
     description :: String,
     accountStatus :: DeleteStatus ,
     config :: AppConfig,
-    vehicleVariant :: Maybe VehicleVariant
+    vehicleVariant :: Maybe VehicleVariant,
+    logField :: Object Foreign
   }
 
 type HelpAndSuportScreenProps =
@@ -664,6 +668,7 @@ type HomeScreenStateProps =
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
   , shareRidePopUp :: Boolean
+  , sheetState :: BottomSheetState
   }
 
 type RouteEndPoints = {
@@ -810,7 +815,8 @@ type EmergencyContactsScreenData = {
   removedContactDetail :: NewContacts,
   offsetForEmergencyContacts :: Int,
   limitForEmergencyContacts :: Int,
-  editedText :: String
+  editedText :: String,
+  logField :: Object Foreign 
 }
 
 type EmergencyContactsScreenProps = {
@@ -976,6 +982,7 @@ type SavedLocationScreenData =
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
   , config :: AppConfig
+  , logField :: Object Foreign
   }
 
 type DistInfo =

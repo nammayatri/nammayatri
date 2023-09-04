@@ -29,13 +29,15 @@ import Data.Semigroup ((<>))
 import Font.Style (Style(..))
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (unit, (==), (/=), (&&), ($), (/))
+import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
+import Data.Int as DI
 import Common.Types.App (LazyCheck(..))
+import Data.Function.Uncurried (runFn1)
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -55,7 +57,7 @@ clearDueButtonConfig state = let
 retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 retryPaymentButtonConfig state =
   let
-    screenWidth = EHC.screenWidth unit
+    layouts = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag $ "RetryPaymentPrimaryButton" <> "_buttonLayout"
   in
     PrimaryButton.config
       { textConfig
@@ -66,11 +68,11 @@ retryPaymentButtonConfig state =
         , color = Color.white900
         , textStyle = Body4
         }
-      , height = V 30
-      , width = V $ screenWidth / 3
+      , height = WRAP_CONTENT
+      , width = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 24.0
-      , padding = Padding 10 5 10 6
+      , padding = Padding 10 7 10 9
       , margin = MarginLeft 10
       , isSuffixImage = true
       , background = Color.blue800
@@ -83,7 +85,8 @@ retryPaymentButtonConfig state =
       , id = "RetryPaymentPrimaryButton"
       , enableLoader = JB.getBtnLoader "RetryPaymentPrimaryButton"
       , lottieConfig
-        { width = V $ screenWidth / 4
+        { width = V $ DI.ceil $ (DI.toNumber layouts.width) * 0.9
+        , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.9
         , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
         }
       }
@@ -140,8 +143,8 @@ popupModalConfig state = let
       , gravity = CENTER
       , backgroundColor =  Color.black9000
       , backgroundClickable = false
-      , dismisText = Mb.Nothing
       , buttonLayoutMargin = MarginBottom 0
+      , optionButtonOrientation = if state.props.popUpState == Mb.Just SupportPopup then "VERTICAL" else "HORIZONTAL"
     ,primaryText {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> (getString PLAN_ACTIVATED_SUCCESSFULLY)
@@ -149,9 +152,10 @@ popupModalConfig state = let
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
                   Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == getString DAILY_UNLIMITED then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
+                  Mb.Just SupportPopup -> ""
                   Mb.Nothing -> ""
       , margin = Margin 16 16 16 0
-      , visibility = VISIBLE
+      , visibility = if state.props.popUpState == Mb.Just SupportPopup then GONE else VISIBLE
       , color = Color.black800
       , textStyle = Heading2
      },
@@ -162,11 +166,15 @@ popupModalConfig state = let
                   Mb.Just DuesClearedPopup -> getString GOT_IT
                   Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
+                  Mb.Just SupportPopup -> getString CALL_SUPPORT
                   Mb.Nothing -> ""
       , color = Color.yellow900
       , background = Color.black
       , visibility =true
       , margin = MarginTop 16
+      , width = case state.props.popUpState of
+                  Mb.Just SupportPopup -> MATCH_PARENT
+                  _                    -> (V 156)
       },
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
@@ -175,21 +183,44 @@ popupModalConfig state = let
           Mb.Just FailedPopup -> "ny_failed,"
           Mb.Just DuesClearedPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
           Mb.Just CancelAutoPay -> "ny_ic_pause_autopay,"
+          Mb.Just SupportPopup -> ""
           Mb.Nothing -> ""
-      , visibility = VISIBLE
+      , visibility = case state.props.popUpState of
+          Mb.Just SupportPopup -> GONE
+          _                    -> VISIBLE
       , width = V 114
       , height = V 114
       },
     secondaryText {
-      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE else ""
+      text = if state.props.popUpState == Mb.Just FailedPopup 
+                then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL 
+             else if state.props.popUpState == Mb.Just SupportPopup
+                then getString NEED_HELP_JOINING_THE_PLAN
+             else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE 
+                then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE 
+             else ""
       , color = Color.black700
       , margin = Margin 16 4 16 0
-      , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan] then VISIBLE else GONE
+      , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan, Mb.Just SupportPopup] then VISIBLE else GONE
+      , textStyle = if Mb.Just SupportPopup == state.props.popUpState then SubHeading1 else Body1
       },
-      option2 { visibility = false }
+    option2 { 
+      visibility = state.props.popUpState == Mb.Just SupportPopup
+      , text = getString CANCEL
+      , color = Color.black650
+      , background = Color.white900
+      , strokeColor = Color.white900
+      , width = MATCH_PARENT
+      , margin = (Margin 0 0 0 0)
+    },
+    optionWithHtml {
+      text = if state.props.popUpState == Mb.Just FailedPopup then getString NEED_HELP_CALL_SUPPORT else ""
+      , color = Color.black650
+      , margin = Margin 16 4 16 0
+      , visibility = state.props.popUpState == Mb.Just FailedPopup
+    }
     }
   in popUpConf'
-
 
 confirmCancelPopupConfig :: ST.SubscriptionScreenState -> PopUpModalConfig.Config
 confirmCancelPopupConfig state = let
@@ -266,7 +297,7 @@ optionsMenuConfig state =
     {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : state.props.subView == ST.MyPlan},
     {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : false},
     {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible : true},
-    {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true},
+    -- {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true}, -- TODO:: Removed for some time
     {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,

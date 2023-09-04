@@ -463,7 +463,7 @@ data STR = LETS_GET_STARTED
         | VERIFICATION_IS_TAKING_A_BIT_LONGER
         | DEMO
         | RIDE_RELATED
-        | FARE_RELATED
+        | FARE
         | APP_RELATED
         | LOST_AND_FOUND
         | REPORT_LOST_ITEM
@@ -780,6 +780,8 @@ data STR = LETS_GET_STARTED
         | CHAT_FOR_HELP
         | VIEW_FAQs
         | SUPPORT
+        | NEED_HELP_JOINING_THE_PLAN
+        | NEED_HELP_CALL_SUPPORT
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1236,7 +1238,7 @@ getStringFromEnum key = case key of
     RESOLVED_ISSUES -> "RESOLVED_ISSUES"
     LOST_AND_FOUND -> "LOST_AND_FOUND"
     RIDE_RELATED -> "RIDE_RELATED"
-    FARE_RELATED -> "FARE_RELATED"
+    FARE -> "FARE"
     APP_RELATED -> "APP_RELATED"
     REPORT_LOST_ITEM -> "REPORT_LOST_ITEM"
     GENDER -> "GENDER"
@@ -1548,3 +1550,5 @@ getStringFromEnum key = case key of
     CHAT_FOR_HELP -> "CHAT_FOR_HELP"
     SUPPORT -> "SUPPORT"
     ACTIVE_RC -> "ACTIVE_RC"
+    NEED_HELP_JOINING_THE_PLAN -> "NEED_HELP_JOINING_THE_PLAN"
+    NEED_HELP_CALL_SUPPORT -> "NEED_HELP_CALL_SUPPORT"

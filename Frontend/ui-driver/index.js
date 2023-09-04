@@ -128,7 +128,11 @@ window.onMerchantEvent = function (event, payload) {
         purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))();
       }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
         purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
-      } else {
+      } else if (parsedPayload.payload.viewParam){
+        purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+      } else if (parsedPayload.payload.viewParamNewIntent){
+        purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
+      } else{
         purescript.main(makeEvent("", ""))();
       }
     }
@@ -228,11 +232,10 @@ window["onEvent'"] = function (event, args) {
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
-    if (window.ppInitiateCallback) {
-      window.ppInitiateCallback()();
-    } else {
-      window.isPPInitiated = true;
-    }
+    window.isPPInitiated = true;
+    // if (window.ppInitiateCallback) { TODO fix the red screen in PP
+    //   window.ppInitiateCallback()();
+    // }
   }
 }
 

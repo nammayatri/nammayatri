@@ -54,7 +54,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "യാത്രയിൽ യാത്ര ചെയ്ത ദൂരം",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും."
     },
-    "logs": ["JUSPAY","FIREBASE"]
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false

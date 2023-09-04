@@ -122,7 +122,8 @@ updateButtonConfig :: ST.MyProfileScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
-        { textConfig{ text = (getString UPDATE), color = state.data.config.primaryTextColor}
+        { textConfig{ text = (getString UPDATE), color = state.data.config.primaryTextColor
+        , accessibilityHint = if state.props.isBtnEnabled then "Update Personal Details Button " else if not state.props.isEmailValid then "Update Button Is DisAbled : Please Enter A Valid Email" else if (not state.props.isNameValid) then  "Update Button Is DisAbled : Please Enter A Valid Name" else "Update Button Is DisAbled"}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)

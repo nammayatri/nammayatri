@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), not, (<<<), bind, discard, show, pure)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibilityImportance, textFromHtml)
 import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -31,10 +31,10 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, clearTimer, countDown)
 import Data.Array ((!!), mapWithIndex)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
-import Data.Maybe (Maybe(..))
+import Data.String (replaceAll, Replacement(..), Pattern(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -43,6 +43,7 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , accessibilityImportance DISABLE
     , background state.backgroundColor
     , afterRender
         ( \action -> do
@@ -86,6 +87,7 @@ view push state =
         , background Color.white900
         , margin state.margin
         , padding state.padding
+        , accessibilityImportance DISABLE
         , clickable true
         ]
         [  textView $
@@ -104,6 +106,7 @@ view push state =
             , gravity CENTER
             , visibility state.coverImageConfig.visibility
             , cornerRadii state.cornerRadius
+            , accessibilityImportance DISABLE_DESCENDANT
             , orientation VERTICAL
             ][  textView $
                 [ width WRAP_CONTENT
@@ -130,6 +133,8 @@ view push state =
             ]
             [ textView $
                 [ text $ state.primaryText.text
+                , accessibilityHint state.primaryText.text
+                , accessibilityImportance ENABLE
                 , color $ state.primaryText.color
                 , margin $ state.primaryText.margin
                 , gravity $ state.primaryText.gravity
@@ -167,8 +172,10 @@ view push state =
             , padding state.secondaryText.padding
             , margin $ state.secondaryText.margin
             , text $ state.secondaryText.text
+            , accessibilityImportance ENABLE
+            , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
             , visibility $ state.secondaryText.visibility
-            ] <> FontStyle.body1 TypoGraphy
+            ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -201,6 +208,7 @@ view push state =
                     , margin  state.option1.margin
                     , padding  state.option1.padding
                     , gravity CENTER
+                    , accessibilityImportance DISABLE
                     , onClick
                         ( \action -> do
                             _ <- push action
@@ -212,7 +220,9 @@ view push state =
                     [ textView $
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
+                        , accessibilityImportance ENABLE
                         , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
+                        , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                         , color $ state.option1.color
                         , gravity CENTER
                         ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
@@ -234,6 +244,7 @@ view push state =
                         )
                         (const OnButton2Click)
                     , padding state.option2.padding
+                    , accessibilityImportance DISABLE
                     , orientation VERTICAL
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
@@ -241,7 +252,9 @@ view push state =
                     [ textView $ 
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
+                        , accessibilityImportance ENABLE
                         , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
+                        , accessibilityHint $ (if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option2.text)) <> " : Button"
                         , color state.option2.color
                         , gravity CENTER
                         ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
@@ -251,14 +264,26 @@ view push state =
         , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
+            , background state.optionWithHtml.background
+            , cornerRadius 8.0
+            , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
+            , stroke ("1," <> state.optionWithHtml.strokeColor)
+            , margin state.optionWithHtml.margin
+            , color $ state.optionWithHtml.color
             , gravity CENTER
-            , margin $ MarginTop 5
-            , padding $ Padding 5 5 5 10
-            , onClick push $ const DismissPopup
-            ] <> (case state.dismisText of
-                    Just txt -> [text txt]
-                    Nothing -> [visibility GONE]) 
-              <> (FontStyle.subHeading2 LanguageStyle)
+            , onClick
+                ( \action -> do
+                    _ <- push action
+                    clearTheTimer state
+                    pure unit
+                )
+                (const OptionWithHtmlClick)
+            , padding state.optionWithHtml.padding
+            , orientation VERTICAL
+            , clickable state.optionWithHtml.isClickable
+            , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
+            , textFromHtml state.optionWithHtml.text
+            ] <> (FontStyle.subHeading2 LanguageStyle)
         ]
     ]
 
@@ -293,6 +318,8 @@ tipsView push state =
                   , cornerRadius 8.0
                   , width WRAP_CONTENT
                   , height WRAP_CONTENT
+                  , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+                  , accessibilityImportance ENABLE
                   , padding state.tipButton.padding
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                   , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
@@ -331,6 +358,8 @@ tipsView push state =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text state.fareEstimate
+                , accessibilityHint (replaceAll (Pattern "-") (Replacement " To ") state.fareEstimate)
+                , accessibilityImportance ENABLE
                 , color Color.black800
                 , textSize FontSize.a_14
                 ]

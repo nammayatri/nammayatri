@@ -22,7 +22,7 @@ import Domain.Types.Ride
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon

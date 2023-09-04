@@ -108,7 +108,8 @@ type ChooseLanguageScreenState = {
 
 type ChooseLanguageScreenData =  {
   config :: AppConfig,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  logField :: Object Foreign
  }
 
 type ChooseLanguageScreenProps =  {
@@ -135,7 +136,8 @@ type AddVehicleDetailsScreenData =  {
   rcImageID :: String,
   errorMessage :: String,
   dateOfRegistration :: Maybe String,
-  dateOfRegistrationView :: String
+  dateOfRegistrationView :: String,
+  logField :: Object Foreign
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -185,6 +187,7 @@ type UploadDrivingLicenseStateData = {
   , dateOfIssue :: Maybe String
   , dateOfIssueView :: String
   , imageFrontUrl :: String
+  , logField :: Object Foreign
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -399,7 +402,8 @@ type EnterMobileNumberScreenState = {
 }
 
 type EnterMobileNumberScreenStateData = {
-    mobileNumber :: String
+    mobileNumber :: String,
+    logField :: Object Foreign
 }
 
 type EnterMobileNumberScreenStateProps = {
@@ -718,6 +722,7 @@ type SelectLanguageScreenState = {
 type SelectLanguageScreenData = {
   isSelected :: Boolean
 , config :: AppConfig
+, logField :: Object Foreign
 }
 
 type SelectLanguageScreenProps = {
@@ -1540,7 +1545,8 @@ type SubscriptionScreenProps = {
   refreshPaymentStatus :: Boolean,
   confirmCancel :: Boolean,
   isSelectedLangTamil :: Boolean,
-  optionsMenuExpanded :: Boolean
+  optionsMenuExpanded :: Boolean,
+  redirectToNav :: String
 }
 
 type JoinPlanData = {
@@ -1605,7 +1611,7 @@ type PromoConfig = {
   , addedFromUI :: Boolean
 }
 
-data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan
+data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup
 
 derive instance genericSubscribePopupType :: Generic SubscribePopupType _
 instance showSubscribePopupType :: Show SubscribePopupType where show = genericShow

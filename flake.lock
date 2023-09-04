@@ -2359,6 +2359,7 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
+
         "lastModified": 1693400525,
         "narHash": "sha256-2ZJIJ9PAU/WBrcAzx3uZRHsg2ydA7uBEbhmeafBtUVw=",
         "owner": "nammayatri",

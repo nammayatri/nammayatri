@@ -189,6 +189,7 @@ in  { esqDBCfg
         //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
+    , internalAPIKey = sec.internalAPIKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions

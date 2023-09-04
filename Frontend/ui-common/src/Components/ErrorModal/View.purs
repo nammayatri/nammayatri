@@ -89,6 +89,7 @@ primaryButtonConfig config = let
       { textConfig
         { text = config.buttonConfig.text
         , color = config.buttonConfig.color
+        , accessibilityHint = (config.buttonConfig.text <> " : Button")
         -- , textStyle = config.buttonConfig.textStyle ?? NEED TO CHECK
         }
       , width = config.buttonConfig.width

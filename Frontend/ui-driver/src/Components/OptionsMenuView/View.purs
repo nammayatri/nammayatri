@@ -55,7 +55,7 @@ view push config =
     , cornerRadius config.cornerRadius
     ](map (\item -> 
               linearLayout[
-                height $ V config.itemHeight
+                height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER_VERTICAL
                 , orientation VERTICAL
@@ -65,6 +65,7 @@ view push config =
                 linearLayout[
                   gravity CENTER_VERTICAL
                   , padding $ Padding config.itemPadding config.itemPadding config.itemPadding config.itemPadding
+                  , height WRAP_CONTENT
                 ][
                   imageView [
                     imageWithFallback item.image
@@ -75,6 +76,7 @@ view push config =
                   ]
                   , textView $ [
                     text item.textdata
+                    , margin $ MarginBottom 1
                     , color Color.black800
                   ] <> FontStyle.paragraphText TypoGraphy
                 ]

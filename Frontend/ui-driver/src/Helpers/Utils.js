@@ -739,17 +739,22 @@ export const initiatePP = function () {
     return function (_response) {
       return function () {
         var response = JSON.parse(_response);
-        console.log("%cHyperpay initiate Response ", "background:darkblue;color:white;font-size:13px;padding:2px", response);
+        console.log("%cHyperpay Terminate Response ", "background:darkblue;color:white;font-size:13px;padding:2px", code, response);
       }
     }
   }
   if (JOS) {
     try {
-      console.log("%cHyperpay initiate Request ", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
-      JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
+      var innerPayload = window.__payload.payload;
+      var initiatePayload = window.__payload;
+      innerPayload["action"] = "initiate";
+      initiatePayload["payload"] = innerPayload;
+      JOS.startApp("in.juspay.hyperpay")(initiatePayload)(cb)();
     } catch (err) {
       console.error("Hyperpay initiate Request not sent : ", err);
     }
+  } else {
+    console.log("%cHyperpay initiate Result - Already Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
   }
 }
 
@@ -802,7 +807,10 @@ export const killPP = function () {
     mapps.forEach((key) => {
       if (key != JOS.self) {
         var currJOS = top.JOSHolder[key];
-        currJOS.finish(0)("")();
+        try{currJOS.finish(1)(JSON.stringify({result:"success"}))();}
+        catch (err){
+          console.log(err);
+        }
         delete top.JOSHolder[key];
       }
     });

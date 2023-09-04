@@ -205,9 +205,14 @@ android {
     }
 }
 
+ext {
+    jpSDKversion = '2.1.13-nammayatri.33'
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.33'
+    implementation "in.juspay:hypersdk:$jpSDKversion"
+    implementation "in.juspay:hyperqr:$jpSDKversion"
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')

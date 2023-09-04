@@ -67,6 +67,7 @@ library
       API.UI.Payment
       API.UI.Performance
       API.UI.Plan
+      API.UI.Rating
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
@@ -141,6 +142,7 @@ library
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
       Domain.Action.UI.Plan
+      Domain.Action.UI.Rating
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -252,6 +254,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.CallBAP
+      SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverLocation

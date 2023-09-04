@@ -55,7 +55,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
@@ -69,11 +69,11 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange, toString)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -81,7 +81,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -104,7 +104,7 @@ import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-
+import PrestoDOM.Properties (sheetState) as PP 
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 import Data.Function (const)
 import Data.List ((:))
@@ -938,9 +938,13 @@ eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
       exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-    _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-            exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-          else continue state
+    _ -> do
+      let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
+      case focusedIndex of
+        Just index -> do
+          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+        Nothing -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
@@ -967,9 +971,7 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
       filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
   continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_give_feedback"
-  updateAndExit state $ SubmitRating state
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
 
@@ -983,20 +985,27 @@ eval (RatingCardAC (RatingCard.BackPressed)) state = do
   _ <- pure $ updateLocalStage RideCompleted
   continue state {props {currentStage = RideCompleted}}
 
-eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
+  exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_language"
+  exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
+  exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
-
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
+  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
     _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
     continue state
 
@@ -1028,6 +1037,7 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) s
 
 eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = do
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
     continueWithCmd state [do
       _ <- openUrlInApp state.data.config.dashboardUrl
@@ -1099,6 +1109,7 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SearchExpireCountDown seconds id status timerID) state = do
@@ -1201,6 +1212,8 @@ eval (OpenEmergencyHelp) state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state 
+  -- continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state
         [ do
@@ -1851,6 +1864,12 @@ eval GoToEditProfile state = do
   exit $ GoToMyProfile state true
 eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
   continueWithCmd state{props{defaultPickUpPoint = config.id}} [do
+      let focusedIndex = findIndex (\item -> item.place == config.id) state.data.nearByPickUpPoints
+      case focusedIndex of
+        Just index -> do
+          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+          pure unit
+        Nothing -> pure unit
       _ <- animateCamera config.lat config.lng 25 "NO_ZOOM"
       pure NoAction
     ]
@@ -2120,11 +2139,16 @@ updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (from
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
   if state.props.isSource == Just true then do
+    let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_pickup_select" $ [ {key : "Source", value : item.title},
+                                                                                                              {key : "Favourite", value : favClick}]
     let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
     exit $ LocationSelected item addToRecents newState
     else do
+      let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : item.title},
+                                                                                                                    {key : "Favourite", value : favClick}]
       let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
       pure $ setText (getNewIDWithTag "DestinationEditText") item.title
       exit $ LocationSelected item addToRecents newState

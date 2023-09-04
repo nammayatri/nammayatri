@@ -22,7 +22,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
-import Data.String (Pattern(..), split, length, take, drop, toLower, contains)
+import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..), contains, toLower)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
@@ -37,7 +37,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<),(-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Gradient(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width,  horizontalScrollView, scrollBarX, layoutGravity, textFromHtml, relativeLayout, id, gradient, alignParentRight)
+import PrestoDOM (Gravity(..), Gradient(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width,  horizontalScrollView, scrollBarX, layoutGravity, textFromHtml, relativeLayout, id, gradient, alignParentRight, accessibilityHint, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -124,7 +124,6 @@ titleAndETA push state =
       , height WRAP_CONTENT
       , text $ "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
-      -- , fontSize FontSize.a_22
       ] <> FontStyle.h2 TypoGraphy
   ]
 
@@ -245,12 +244,14 @@ otpView push state =
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
+        , accessibilityImportance DISABLE
         , background state.data.config.quoteListModel.otpTextBackground
         , margin $ MarginLeft 7
         ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
+            , accessibilityImportance DISABLE
             , color state.data.config.quoteListModel.otpTextColor
             ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
@@ -276,6 +277,8 @@ expiryTimeView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
+              , accessibilityHint $ "O.T.P is :" <> (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
+              , accessibilityImportance ENABLE
               , text $ getString OTP <> ":"
               , color Color.black700
               ] <> FontStyle.body4 TypoGraphy)
@@ -306,9 +309,9 @@ mapOptionsView push state =
       ][]
     ]
 
-type ButtonData = { text :: String, image :: String, action :: Action }
+type SupportButtonData = { text :: String, image :: String, action :: Action }
 
-buttonData :: Array ButtonData
+supportButtonData :: Array SupportButtonData
 buttonData  = [
     { text: (getString SHARE_RIDE), 
       image: "ny_ic_share_icon.png," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png" , 
@@ -375,7 +378,7 @@ supportButton push state =
                       , color Color.black900
                       ]
                   ]
-                )(buttonData)
+                )(supportButtonData)
             )
         ]
     
@@ -391,7 +394,7 @@ supportButton push state =
       [ height MATCH_PARENT
         , width WRAP_CONTENT
         , alignParentRight "true,-1"
-        , margin (Margin 0 18  6 0) 
+        , margin $ Margin 0 18  6 0 
       ]
       [ imageView
         [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
@@ -415,6 +418,7 @@ locationTrackButton push state =
   , stroke $ "1,"<> Color.grey900
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
+  , accessibilityImportance DISABLE_DESCENDANT
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  linearLayout
@@ -586,6 +590,8 @@ otpAndWaitView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
+              , accessibilityHint $ "O.T.P is :" <>  (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
+              , accessibilityImportance ENABLE
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
@@ -674,13 +680,13 @@ waitTimeDetails push state =
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
   , padding $ Padding 14 2 14 2
-  ][ textView (
+  ][ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.props.currentSearchResultType == QUOTES then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
       , color "rdr"
-      ] <> FontStyle.body1 TypoGraphy)
-    , textView (
+      ] <> FontStyle.body1 TypoGraphy
+    , textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text state.data.waitingTime
@@ -695,7 +701,7 @@ waitTimeDetails push state =
                   else pure unit
             )
             (const NoAction)
-      ] <> FontStyle.h2 TypoGraphy)
+      ] <> FontStyle.h2 TypoGraphy
   ]
 
 
@@ -754,7 +760,10 @@ driverInfoView push state =
               , background Color.transparentGrey
               , height $ V 4
               , width $ V 34
+              , accessibilityImportance ENABLE
+              , accessibilityHint "Bottom Sheet : Swipe Up Or Down : To Expand Or Collapse : Button"
               , margin (MarginTop 8)
+              , onClick push $ const ExpandBottomSheet
               , cornerRadius 4.0
               ][]
               , if state.props.currentSearchResultType == QUOTES  then headerTextView push state else contactView push state
@@ -811,6 +820,8 @@ cancelRideLayout push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
+  , accessibilityHint "Cancel Ride : Button"
+  , accessibilityImportance ENABLE
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
   ][ textView $
@@ -836,6 +847,8 @@ contactView push state =
     ][  linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
+        , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> secondsToHms state.data.eta <> " Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
+        , accessibilityImportance ENABLE
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
         ][  textView $
             [ text $ state.data.driverName <> " "
@@ -938,6 +951,7 @@ driverDetailsView push state =
           [ text state.data.driverName
           , maxLines 1
           , ellipsize true
+          , accessibilityImportance DISABLE
           , color Color.black800
           , width MATCH_PARENT
           , height WRAP_CONTENT
@@ -950,6 +964,7 @@ driverDetailsView push state =
                           "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                           _ -> "")
           , color Color.black700
+          , accessibilityImportance DISABLE
           , width $ V ((screenWidth unit) /2 - 20)
           , maxLines 2
           , singleLine false
@@ -963,6 +978,7 @@ driverDetailsView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , accessibilityImportance DISABLE_DESCENDANT
       , gravity RIGHT
       ][  frameLayout
           [ height MATCH_PARENT
@@ -1039,11 +1055,11 @@ ratingView push state =
   , gravity CENTER_VERTICAL
   , stroke  state.data.config.driverInfoConfig.ratingStroke
   , cornerRadius state.data.config.driverInfoConfig.ratingCornerRadius
+  , accessibilityImportance DISABLE
   ][  imageView
       [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
       , height $ V 9
       , width $ V 9
-
       ]
     , textView (
       [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating

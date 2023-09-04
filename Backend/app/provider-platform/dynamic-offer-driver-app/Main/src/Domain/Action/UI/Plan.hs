@@ -101,7 +101,8 @@ data CurrentPlanRes = CurrentPlanRes
     subscribed :: Bool,
     planRegistrationDate :: Maybe UTCTime,
     latestAutopayPaymentDate :: Maybe UTCTime,
-    latestManualPaymentDate :: Maybe UTCTime
+    latestManualPaymentDate :: Maybe UTCTime,
+    isLocalized :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -173,7 +174,8 @@ currentPlan (driverId, _merchantId) = do
         orderId,
         latestManualPaymentDate = latestManualPayment <&> (.updatedAt),
         latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
-        planRegistrationDate = mDriverPlan <&> (.createdAt)
+        planRegistrationDate = mDriverPlan <&> (.createdAt),
+        isLocalized = Just True
       }
   where
     getDriverPaymentMode = \case
@@ -285,6 +287,7 @@ planResume (driverId, _merchantId) = do
   mandate <- validateInActiveMandateExists driverId driverPlan
   Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.ACTIVE
+    QDPlan.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) AUTOPAY
     CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
   return Success

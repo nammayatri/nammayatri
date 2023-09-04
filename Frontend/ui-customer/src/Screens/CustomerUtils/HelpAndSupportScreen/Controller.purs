@@ -47,6 +47,9 @@ import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getValueFromConfig)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
+import Foreign.Object (empty)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -98,6 +101,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
       SourceToDestinationActionController (SourceToDestination.Dummy) -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "source_to_destination_updated"
       FAQs -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "faq_action"
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
@@ -124,6 +128,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
       AccountDeletedModalAction act -> case act of
         PopUpModal.OnButton1Click -> do
@@ -135,6 +140,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
 
 
@@ -176,11 +182,15 @@ eval (BackPressed flag ) state = if state.props.isCallConfirmation
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else exit GoBack
 
-eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
+eval ContactUs state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"
+  exit $ GoToSupportScreen state.data.bookingId
 
 eval ReportIssue state = exit $ GoToTripDetails state
 
-eval CallSupport state = continue state{props{isCallConfirmation = true}}
+eval CallSupport state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_click"
+  continue state{props{isCallConfirmation = true}}
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
 
@@ -205,6 +215,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
@@ -264,7 +275,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           email : "",
           description : "",
           accountStatus : ACTIVE,
-          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)
+          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant),
+          logField : empty
           },
       props : {
         apiFailure : false

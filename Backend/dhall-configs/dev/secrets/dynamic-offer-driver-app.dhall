@@ -9,4 +9,6 @@
 , clickHousePassword = "xxxx"
 , locDBUserId = "atlas_person_location_user"
 , locationTrackingServiceKey = "ae288466-2add-11ee-be56-0242ac120002"
+, appBackendApikey = "test-bap-api-key"
+, internalKey = "test-bpp-api-key"
 }

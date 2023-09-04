@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,6 +37,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -62,14 +64,17 @@ import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.gson.Gson;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hypersdk.core.PaymentConstants;
@@ -236,48 +241,59 @@ public class MainActivity extends AppCompatActivity {
         return deviceDetails;
     }
 
+    private static HashMap<String, String> getQueryMap(String link) {
+        String[] query_params_array = link.split("&");
+        HashMap<String, String> query_params = new HashMap<>();
+        for (String query_param : query_params_array) {
+            String[] key_value = query_param.split("=");
+            String key = key_value[0];
+            String value = key_value[1];
+            query_params.put(key, value);
+        }
+        return query_params;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        }
+        // https://nammayatri.in/partner?checking=this&vd=ewt34gwrg&fdg=srgrw34&er=e453tge3&pl=35t345gg // ---NOTE:// DeepLink example for debug
+        
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
-        try {
-            MapsInitializer.initialize(getApplicationContext());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        boolean isMigrated = migrateLocalStore(getApplicationContext());
-        mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
-        String clientId = getApplicationContext().getResources().getString(R.string.client_id);
-        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
-        CleverTapAPI.createNotificationChannel(getApplicationContext(),clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
-        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
-        cleverTap.enableDeviceNetworkInfoReporting(true);
+        boolean isMigrated = migrateLocalStore(context);
+        String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
-        sharedPref.registerOnSharedPreferenceChangeListener(mListener);
-        String key = getResources().getString(R.string.service);
-        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
-        sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
-        Bundle params = new Bundle();
-        params.putString("id", androidId);
-        mFirebaseAnalytics.logEvent("device_id", params);
-        widgetService = new Intent(this, WidgetService.class);
-        FirebaseDynamicLinks.getInstance()
-                .getDynamicLink(getIntent())
-                .addOnSuccessListener(this, pendingDynamicLinkData -> {
-                    // Get deep link from result (may be null if no link is found)
-                    if (pendingDynamicLinkData != null) {
-                        pendingDynamicLinkData.getLink();
-                    }
-                })
-                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
-        WebView.setWebContentsDebuggingEnabled(true);
-        registerCallBack();
         setContentView(R.layout.activity_main);
+//        String key = getResources().getString(R.string.service);
+//        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
+
+//        Bundle params = new Bundle(); TODO:: Do we want these anymore??
+//        params.putString("id", androidId);
+//        mFirebaseAnalytics.logEvent("device_id", params);
+
+//        FirebaseDynamicLinks.getInstance() TODO:: This is deprecated and not suggested to use in projects. What was the intent of adding it??
+//                .getDynamicLink(getIntent())
+//                .addOnSuccessListener(this, pendingDynamicLinkData -> {
+//                    // Get deep link from result (may be null if no link is found)
+//                    if (pendingDynamicLinkData != null) {
+//                        pendingDynamicLinkData.getLink();
+//                    }
+//                })
+//                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
+        
+        WebView.setWebContentsDebuggingEnabled(true);
+        sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
         if (MERCHANT_TYPE.equals("DRIVER")) {
+            widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             MobilityCommonBridge.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
         } else {
@@ -288,33 +304,27 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     splashLottieView.addAnimatorListener(new Animator.AnimatorListener() {
                         @Override
-                        public void onAnimationStart(Animator animation) {
-
-                        }
-
-                        @Override
                         public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) {
-                                hideSplash();
-                            } else {
-                                splashLottieView.playAnimation();
-                            }
+                            if (isHideSplashEventCalled) hideSplash();
+                                else splashLottieView.playAnimation();
                         }
 
                         @Override
-                        public void onAnimationCancel(Animator animation) {
-                        }
-
+                        public void onAnimationCancel(Animator animation) {}
                         @Override
-                        public void onAnimationRepeat(Animator animation) {
-
-                        }
+                        public void onAnimationRepeat(Animator animation) {}
+                        @Override
+                        public void onAnimationStart(Animator animation) {}
                     });
                 }
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
         }
+
+        updateConfigURL();
+        initApp(viewParam, deepLinkJson);
+
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
@@ -342,8 +352,24 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(LOG_TAG, "No Update available");
             }
         });
-        updateConfigURL();
-        initApp();
+
+        mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
+        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
+        CleverTapAPI.createNotificationChannel(context,clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
+        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
+        cleverTap.enableDeviceNetworkInfoReporting(true);
+
+
+        sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
+        sharedPref.registerOnSharedPreferenceChangeListener(mListener);
+        sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
+
+        try {
+            MapsInitializer.initialize(getApplicationContext());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        registerCallBack();
         inAppNotification = new InAppNotification(this);
         initNotificationChannel();
         if (BuildConfig.DEBUG) {
@@ -399,7 +425,7 @@ public class MainActivity extends AppCompatActivity {
             }
     }
 
-    private void initApp() {
+    private void initApp(String viewParam, String deepLinkJSON) {
 
         hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
         final JSONObject json = new JSONObject();
@@ -410,10 +436,9 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId", getResources().getString(R.string.client_id));
-            payload.put("action", "initiate");
-            payload.put("merchantId", getResources().getString(R.string.merchant_id));
-            payload.put(PaymentConstants.ENV, "prod");
+            payload = getInnerPayload("initiate");
+            if (viewParam != null) payload.put("viewParam", viewParam);
+            if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -425,15 +450,15 @@ public class MainActivity extends AppCompatActivity {
                 String event = jsonObject.optString("event");
                 switch (event) {
                     case "initiate_result":
-                        if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
-                            try {
-                                JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-                                innerPayload.put("action", "process");
+                        try {
+                            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                            innerPayload.put("action", "process");
+                            if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
                                 innerPayload.put("notificationData", getNotificationDataFromIntent());
-                                json.put(PaymentConstants.PAYLOAD, innerPayload);
-                            } catch (JSONException e) {
-                                Log.e(LOG_TAG, e.toString());
                             }
+                            json.put(PaymentConstants.PAYLOAD, innerPayload);
+                        } catch (JSONException e) {
+                            Log.e(LOG_TAG, e.toString());
                         }
                         hyperServices.process(json);
                         break;
@@ -456,7 +481,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(LOG_TAG, "event reboot");
                         hyperServices.terminate();
                         hyperServices = null;
-                        initApp();
+                        initApp(null,null);
                         break;
                     case "in_app_notification":
                         String title = jsonObject.optString("title");
@@ -501,7 +526,7 @@ public class MainActivity extends AppCompatActivity {
             dialog.cancel();
             hyperServices.terminate();
             hyperServices = null;
-            initApp();
+            initApp(null, null);
         });
         runOnUiThread(() -> {
             AlertDialog alertDialog = builder.create();
@@ -509,8 +534,53 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+    protected Vector<String> handleDeepLinkIfAvailable(Intent appLinkIntent){
+        if(appLinkIntent==null) return null;
+        Vector<String> res = new Vector<>();
+        Uri appLinkData = appLinkIntent.getData();
+        String deepLinkJson = null, viewParam = null;
+        if (appLinkData != null && appLinkData.getQuery() != null) {
+            String query = appLinkData.getQuery();
+            HashMap<String, String> query_params = getQueryMap(query);
+            for (String key : query_params.keySet()) {
+                if (key.equals("vp")){
+                    viewParam = query_params.get(key);
+                    break;
+                }
+            }
+            Gson gson = new Gson();
+            deepLinkJson = gson.toJson(query_params);
+        } else return null;
+        if(viewParam==null || deepLinkJson == null) return null;
+        res.add(viewParam);
+        res.add(deepLinkJson);
+        return res;
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
+        Vector<String> res = handleDeepLinkIfAvailable(intent);
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        }
+        JSONObject proccessPayloadDL = new JSONObject();
+        try {
+            JSONObject innerPayloadDL = getInnerPayload("process");
+            if (viewParam != null && deepLinkJson != null) {
+                innerPayloadDL.put("viewParamNewIntent", viewParam)
+                        .put("deepLinkJSON", deepLinkJson);
+                proccessPayloadDL.put("service", getService())
+                        .put("merchantId", getResources().getString(R.string.merchant_id))
+                        .put("requestId", UUID.randomUUID())
+                        .put(PaymentConstants.PAYLOAD, innerPayloadDL);
+                {hyperServices.process(proccessPayloadDL);}
+            }
+        }catch (Exception e){
+            // Need to handle exception
+        }
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
                 String data = intent.getExtras().getString("NOTIFICATION_DATA");
@@ -519,21 +589,21 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject innerPayload = new JSONObject();
                 JSONObject jsonData = new JSONObject(data);
                 if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
+                    innerPayload = getInnerPayload("OpenChatScreen");
                     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                     notificationManager.cancel(NotificationUtils.chatNotificationId);
-                    innerPayload.put("action", "OpenChatScreen")
-                            .put("notification_type", "CHAT_MESSAGE");
+                    innerPayload.put("notification_type", "CHAT_MESSAGE");
                 }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
                     if (type.equals("NEW_MESSAGE")) {
-                        innerPayload.put("action", "callDriverAlert")
-                                .put("id", id)
+                        innerPayload = getInnerPayload("callDriverAlert");
+                        innerPayload.put("id", id)
                                 .put("popType", type);
                     }
                 }
-                proccessPayload.put("payload", innerPayload);
+                proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
                 {hyperServices.process(proccessPayload);}
             } catch (Exception e) {
                 e.printStackTrace();
@@ -754,5 +824,14 @@ public class MainActivity extends AppCompatActivity {
         }
         oldSharedPref.edit().clear().apply();
         return true;
+    }
+
+    private JSONObject getInnerPayload(String action) throws JSONException{
+        JSONObject payload = new JSONObject();
+        payload.put("clientId", getResources().getString(R.string.client_id));
+        payload.put("merchantId", getResources().getString(R.string.merchant_id));
+        payload.put("action", action);
+        payload.put(PaymentConstants.ENV, "prod");
+        return payload;
     }
 }

@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound)
+import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -159,6 +159,7 @@ foreign import toggleLoaderImpl :: Boolean -> Effect Unit
 foreign import loaderTextImpl :: String -> String -> Effect Unit
 foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> String -> Unit
 foreign import requestKeyboardShow :: String -> Effect Unit
+foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
@@ -211,9 +212,10 @@ foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setCleverTapUserData :: String -> String -> Unit
 foreign import setCleverTapUserProp :: String -> String -> Unit
-foreign import cleverTapCustomEvent :: String -> Unit
+foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
+foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 foreign import launchDateSettings :: String -> Unit
@@ -226,6 +228,7 @@ foreign import getAllDates :: Fn1 Int (Array DateObj)
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
+foreign import scrollViewFocus :: String -> Int -> Boolean
 
 type LottieAnimationConfig = {
     rawJson :: String

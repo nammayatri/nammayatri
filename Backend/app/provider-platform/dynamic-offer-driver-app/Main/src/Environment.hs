@@ -44,6 +44,7 @@ import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -82,13 +83,13 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
-    minimumDriverRatesCount :: Int,
     disableSignatureAuth :: Bool,
     smsCfg :: SmsConfig,
     slackCfg :: SlackConfig,
     apiRateLimitOptions :: APIRateLimitOptions,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
+    appBackendBapInternal :: AppBackendBapInternal,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -145,7 +146,6 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
-    minimumDriverRatesCount :: Int,
     port :: Int,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
@@ -155,6 +155,7 @@ data AppEnv = AppEnv
     slackCfg :: SlackConfig,
     apiRateLimitOptions :: APIRateLimitOptions,
     googleTranslateUrl :: BaseUrl,
+    appBackendBapInternal :: AppBackendBapInternal,
     googleTranslateKey :: Text,
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,

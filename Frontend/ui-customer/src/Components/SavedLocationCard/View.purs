@@ -22,7 +22,7 @@ import Prelude (Unit, ($), const, unit, not,(<>),(/),(-), (==))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), Accessiblity(..), margin, accessibilityHint, accessibilityImportance, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
@@ -31,6 +31,7 @@ import Data.Maybe(Maybe(..), fromMaybe)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -95,6 +96,13 @@ savedLocationView state push =
               , weight 1.0
               , maxLines 2
               , color Color.black800
+              , accessibilityImportance ENABLE
+              , accessibilityHint ( (DS.replaceAll (DS.Pattern " : ") (DS.Replacement ",") state.savedLocation )<> " is Saved as" <> (case (getCardType (fromMaybe "" state.cardType)) of 
+                    Just tag -> case tag of 
+                      HOME_TAG -> (getString HOME)
+                      WORK_TAG -> (getString WORK)
+                      OTHER_TAG -> state.tagName
+                    Nothing -> state.tagName))
               ] <> FontStyle.subHeading1 LanguageStyle
             ]
         , linearLayout
@@ -112,6 +120,8 @@ savedLocationView state push =
             , margin (MarginRight 12)
             ][  textView $
                 [ text (getString EDIT)
+                , accessibilityHint "Edit : Button"
+                , accessibilityImportance ENABLE
                 , color Color.blue900
                 ] <> FontStyle.body1 LanguageStyle
               ]
@@ -124,6 +134,8 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString REMOVE)
                 , color Color.blue900
+                , accessibilityHint "Remove : Button"
+                , accessibilityImportance ENABLE
                 ] <> FontStyle.body1 LanguageStyle
               ]
           ]
@@ -132,6 +144,7 @@ savedLocationView state push =
       [ text state.savedLocation
       , maxLines 2
       , ellipsize true
+      , accessibilityImportance DISABLE
       , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
       , margin (MarginTop 8)
       , color Color.black700
