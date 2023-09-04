@@ -183,3 +183,6 @@ maxDbFailureRetries :: String
 maxDbFailureRetries = "MAX_DB_FAILURE_RETRIES"
 
 --
+
+drainerExecutionDelayEnvKey :: String
+drainerExecutionDelayEnvKey = "DRAINER_EXECUTION_DELAY"

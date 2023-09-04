@@ -41,3 +41,6 @@ getDrainerRetryDelay = fromMaybe 5000000 . (>>= readMaybe) <$> SE.lookupEnv drai
 
 getMaxRetries :: IO Int
 getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetries
+
+getDrainerExecutionDelay :: IO Int
+getDrainerExecutionDelay = fromMaybe 20000 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
