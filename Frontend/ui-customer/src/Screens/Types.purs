@@ -405,7 +405,8 @@ type MyRideScreenData = {
     offsetValue :: Int,
     loadMoreText :: String,
     config :: AppConfig,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    isSrcServiceable :: Boolean
   }
 
 type MyRideScreenProps = {
@@ -455,6 +456,7 @@ type IndividualRideCardState =
   , nightCharges :: Boolean
   , zoneType :: ZoneType
   , vehicleVariant :: Maybe VehicleVariant
+  , isSrcServiceable :: Boolean
   }
 
 

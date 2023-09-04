@@ -252,6 +252,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
+  , isSrcServiceable: state.data.isSrcServiceable
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

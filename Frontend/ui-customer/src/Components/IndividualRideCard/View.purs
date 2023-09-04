@@ -373,7 +373,7 @@ viewDetailsAndRepeatRide push state =
       , accessibilityHint $ "View Details : Button"
       , accessibility ENABLE
       , color Color.blue900
-      , padding $ Padding 26 18 50 3
+      , padding $ Padding 26 18 (if state.isSrcServiceable then 50 else 26) 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout 
@@ -381,6 +381,7 @@ viewDetailsAndRepeatRide push state =
       , height if os == "IOS" then (V 20) else MATCH_PARENT
       , margin $ MarginTop 15
       , background Color.grey900
+      , visibility if state.isSrcServiceable then VISIBLE else GONE
       ][]
     , textView (
       [ width WRAP_CONTENT
@@ -395,6 +396,7 @@ viewDetailsAndRepeatRide push state =
       , padding $ PaddingVertical 18 3
       , weight 1.0
       , gravity CENTER
+      , visibility if state.isSrcServiceable then VISIBLE else GONE
       ] <> FontStyle.body1 LanguageStyle)
   ]
 
@@ -419,6 +421,7 @@ viewDetailsAndRepeatRideShimmer state =
       , height if os == "IOS" then (V 10) else MATCH_PARENT
       , margin $ MarginHorizontal 40 40
       , background Color.grey900
+      , visibility if state.isSrcServiceable then VISIBLE else GONE
       ][]
     , sfl $ textView (
       [ width WRAP_CONTENT
@@ -428,6 +431,7 @@ viewDetailsAndRepeatRideShimmer state =
       , color Color.grey900
       , background Color.grey900
       , padding $ Padding 10 3 10 3
+      , visibility if state.isSrcServiceable then VISIBLE else GONE
       ] <> FontStyle.body1 LanguageStyle)
   ]
 
@@ -447,3 +451,4 @@ separatorConfig =
   , layoutWidth : V 14
   , layoutHeight : V 16
   }
+
