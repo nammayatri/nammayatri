@@ -669,7 +669,7 @@ homeScreenFlow = do
   (GlobalState currentState) <- getState
   _ <- checkAndUpdateSavedLocations currentState.homeScreen
   _ <- pure $ cleverTapSetLocation unit
-  _ <- pure $ spy "geohash" (encodeGeohash 12.940028 77.62285 8)
+  -- _ <- pure $ spy "geohash" (encodeGeohash 12.940028 77.62285 8)
 
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
   -- resp <- lift $ lift $ getCurrentLocationsObjFromLocal currentState.homeScreen
@@ -1162,6 +1162,7 @@ homeScreenFlow = do
       --     _ <- pure $ spy "debug nexus inside CHECK_SERVICEABILITY" "."
       --     lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
       --   else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
+      _ <-  pure $ spy "CHECK_SERVICEABILITY output" "before "
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
@@ -1175,6 +1176,7 @@ homeScreenFlow = do
         _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
         _ <- pure $ currentPosition ""
         _ <- updateLocalStage HomeScreen
+        _ <- pure $ spy "HOME_SCREEN output state.props " state.homeScreen.props 
         modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isBanner = state.homeScreen.props.isBanner}})
         homeScreenFlow
     CHECK_CURRENT_STATUS -> do
@@ -2321,6 +2323,8 @@ fetchOrModifyLocationLists savedLocationResp = do
     _ <- pure $ spy "geohash abcde " currentGeoHash
     _ <- pure $ spy "LAST_KNOWN_LAT abcde " (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)
     _ <- pure $ spy "LAST_KNOWN_LON abcde " (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON)
+    _ <- pure $ spy "state.props.sourceLat abcde " state.props.sourceLat
+    _ <- pure $ spy "state.props.sourceLong abcde " state.props.sourceLong
     _ <- pure $ spy "map arr abcde " (getSuggestedDestinations currentGeoHash mmap)
     _ <- pure $ spy "sugestedFinalList abcde " sugestedFinalList
     _ <- pure $ spy "recentSearchesWithoutSuggested abcde " recentSearchesWithoutSuggested
