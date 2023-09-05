@@ -68,6 +68,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
+    -- functions for moving drainer data to kafka
     runCreate dbConf _ model object = do
       let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
           byteStream = map (\(_, bts, _, _) -> bts) object
