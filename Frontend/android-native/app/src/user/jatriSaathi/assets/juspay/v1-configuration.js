@@ -233,6 +233,7 @@ window.getMerchantConfig = function () {
   , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , "internationalNumberEnabled" : true
+  , "callOptions" : ["ANONYMOUS"]
   })
 }
 
