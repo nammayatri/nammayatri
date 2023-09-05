@@ -1,0 +1,315 @@
+[
+    [
+        "tdr1w7bj",
+        {
+            "tripSuggestions": [
+                {
+                    "sourceLong": 77.6186064,
+                    "sourceLat": 12.9415373,
+                    "sourceAddress": {
+                        "ward": "Koramangala, Koramangala 8th Block, WJR9+MC9",
+                        "street": "Koramangala 8th Block",
+                        "state": "Karnataka 560095",
+                        "placeId": null,
+                        "door": null,
+                        "country": "India",
+                        "city": "Bengaluru",
+                        "building": "WJR9+MC9",
+                        "areaCode": "",
+                        "area": "Koramangala"
+                    },
+                    "source": "WJR9+MC9, Koramangala 8th Block, Koramangala, Bengaluru, Karnataka 560095, India",
+                    "recencyDate": "2023-09-03",
+                    "locationScore": 0.3,
+                    "isSpecialZone": false,
+                    "frequencyCount": 1,
+                    "destinationAddress": {
+                        "ward": "Koramangala, 1st Block Koramangala, 5th A Main Road",
+                        "street": "1st Block Koramangala",
+                        "state": "Karnataka",
+                        "placeId": "ChIJ0yj5VUEVrjsRa9F13pfUn4w",
+                        "door": "Coolulu Sports and Entertainment Pvt. Ltd.",
+                        "country": "India",
+                        "city": "Bengaluru",
+                        "building": "5th A Main Road",
+                        "areaCode": "",
+                        "area": "Koramangala"
+                    },
+                    "destination": "Coolulu Sports and Entertainment Pvt. Ltd., 5th A Main Road, 1st Block Koramangala, Koramangala, Bengaluru, Karnataka, India",
+                    "destLong": 77.6349484,
+                    "destLat": 12.9290676
+                }
+            ],
+            "destinationSuggestions": [
+                {
+                    "title": "Coolulu Sports and Entertainment Pvt. Ltd.",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "5th A Main Road, 1st Block Koramangala, Koramangala, Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-02",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJ0yj5VUEVrjsRa9F13pfUn4w",
+                    "lon": 77.6349484,
+                    "locationScore": 0.3,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.9290676,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 1,
+                    "distance": "2.3 km",
+                    "description": "Coolulu Sports and Entertainment Pvt. Ltd., 5th A Main Road, 1st Block Koramangala, Koramangala, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                }
+            ]
+        }
+    ],
+    [
+        "tdr1w7bn",
+        {
+            "tripSuggestions": [],
+            "destinationSuggestions": [
+                {
+                    "title": "BTM Layout",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-02",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJMTCpkfwUrjsRP9zLdiXmr_A",
+                    "lon": 77.6101163,
+                    "locationScore": 0.3,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.9165757,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 1,
+                    "distance": "2.9 km",
+                    "description": "BTM Layout, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                },
+                {
+                    "title": "HSR layout Sector 2",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "1st Stage, BTM Layout, Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-02",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJ1fVhq1cUrjsRPSz9FSV7NFQ",
+                    "lon": 77.6166666,
+                    "locationScore": 0.3,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.925317,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 1,
+                    "distance": "1.8 km",
+                    "description": "HSR layout Sector 2, 1st Stage, BTM Layout, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                }
+            ]
+        }
+    ],
+    [
+        "tdr1w9sj",
+        {
+            "tripSuggestions": [],
+            "destinationSuggestions": [
+                {
+                    "title": "Jar Technologies Pvt. Ltd.",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "1st Main Road, Chandra Nagara, III Phase, J. P. Nagar, Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-03",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJ508sSEkVrjsRWltlGbl9fTc",
+                    "lon": 77.5796754,
+                    "locationScore": 0.48,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.8831724,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 4,
+                    "distance": "7.9 km",
+                    "description": "Jar Technologies Pvt. Ltd., 1st Main Road, Chandra Nagara, III Phase, J. P. Nagar, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                },
+                {
+                    "title": "Juspay Technologies Private Limited",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "1st A Cross, KHB Colony, 6th Block, Koramangala, Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-02",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJTf-sz5oVrjsRH8iqkCBYvzQ",
+                    "lon": 77.621472,
+                    "locationScore": 0.3,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.9366598,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 1,
+                    "distance": "1.7 km",
+                    "description": "Juspay Technologies Private Limited, 1st A Cross, KHB Colony, 6th Block, Koramangala, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                },
+                {
+                    "title": "Juspro.in",
+                    "tagType": "LOC_LIST",
+                    "tagName": "",
+                    "tag": "",
+                    "subTitle": "Shanthala Nagar, Ashok Nagar, Bengaluru, Karnataka, India",
+                    "showDistance": false,
+                    "savedLocation": "",
+                    "recencyDate": "2023-09-03",
+                    "prefixImageUrl": "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png",
+                    "postfixImageVisibility": true,
+                    "postfixImageUrl": "ny_ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav.png",
+                    "placeName": "",
+                    "placeId": "ChIJq6oWCn4WrjsR1Z7mBv2farA",
+                    "lon": 77.6066451,
+                    "locationScore": 0.3,
+                    "locationItemType": {
+                        "values": [],
+                        "tag": "SUGGESTED_DESTINATIONS"
+                    },
+                    "lat": 12.9733568,
+                    "isEditEnabled": true,
+                    "isClickable": true,
+                    "fullAddress": {
+                        "ward": null,
+                        "street": null,
+                        "state": null,
+                        "placeId": null,
+                        "door": null,
+                        "country": null,
+                        "city": null,
+                        "building": null,
+                        "areaCode": null,
+                        "area": null
+                    },
+                    "frequencyCount": 1,
+                    "distance": "5.8 km",
+                    "description": "Juspro.in, Shanthala Nagar, Ashok Nagar, Bengaluru, Karnataka, India",
+                    "cardType": null,
+                    "alpha": 1,
+                    "address": ""
+                }
+            ]
+        }
+    ]
+]
