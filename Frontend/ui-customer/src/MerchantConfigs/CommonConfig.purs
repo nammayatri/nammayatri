@@ -49,4 +49,5 @@ commonConfig =
         , logs: [ "JUSPAY" ]
         , djd: "sdvs"
         , internationalNumberEnabled : false
+        , callOptions : ["ANONYMOUS"]
         }

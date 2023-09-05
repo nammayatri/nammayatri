@@ -731,7 +731,9 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = continue st
 eval(ChatViewActionController (ChatView.Call)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state { props { showCallPopUp = true } }
+  if length state.data.config.callOptions > 1 then
+    continue state { props { showCallPopUp = true } }
+  else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -790,7 +792,9 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
 ------------------------------- ChatService - End --------------------------
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
-  continue state {props {showCallPopUp = true }}
+  if length state.data.config.callOptions > 1 then
+    continue state { props { showCallPopUp = true } }
+  else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
 
@@ -1610,20 +1614,8 @@ eval CloseShowCallDialer state = continue state { props { showCallPopUp = false 
 
 eval (ShowCallDialer item) state = do
   case item of
-    ANONYMOUS_CALLER -> do
-      continueWithCmd state{props{ showCallPopUp = false }}
-        [ do
-            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone) false -- TODO: FIX_DIALER
-            let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
-            pure NoAction
-        ]
-    DIRECT_CALLER -> do
-      continueWithCmd state{props{ showCallPopUp = false }}
-        [ do
-            _ <- pure $ showDialer (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber) false -- TODO: FIX_DIALER
-            let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
-            pure NoAction
-        ]
+    ANONYMOUS_CALLER -> callDriver state "ANONYMOUS"
+    DIRECT_CALLER -> callDriver state "DIRECT"
 
 eval (StartLocationTracking item) state = do
   _ <- pure $ performHapticFeedback unit
@@ -2380,3 +2372,15 @@ findingQuotesSearchExpired gotQuotes =
                       true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
                       false -> (searchExpiryTime - secondsPassed)
   in secondsLeft
+
+callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
+callDriver state callType = do
+  continueWithCmd state{props{ showCallPopUp = false }}
+    [ do
+        let driverNumber = case callType of 
+                            "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber) 
+                            _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone 
+        _ <- pure $ showDialer driverNumber false
+        let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField ("ny_user_"<> callType <>"_call_click") "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
+        pure NoAction
+    ]

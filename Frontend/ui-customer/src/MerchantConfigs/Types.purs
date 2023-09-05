@@ -50,7 +50,8 @@ type AppConfig =
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
   , internationalNumberEnabled :: Boolean
-  , dashboardUrl :: String
+  , dashboardUrl :: String 
+  , callOptions :: Array String
   } 
 
 type QuoteListItemConfig = {
