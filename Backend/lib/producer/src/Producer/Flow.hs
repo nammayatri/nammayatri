@@ -74,6 +74,7 @@ runReviver = do
 runReviver' :: Flow ()
 runReviver' = do
   logDebug "Reviver is Running "
+  Hedis.set getShouldRunReviverKey False
   pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
   let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
   logDebug $ "Total number of pendingJobs in DB : " <> show (length pendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
