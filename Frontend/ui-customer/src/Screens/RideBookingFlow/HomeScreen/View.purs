@@ -626,7 +626,7 @@ referralView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if (getValueFromConfig "isReferralEnabled") == "false" || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide) then GONE else VISIBLE
+    , visibility if (getValueFromConfig "isReferralEnabled") == "false" || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
     , stroke $ "1," <> if not state.props.isReferred then Color.blue900 else Color.black700
     , margin (MarginHorizontal 16 13)
     , cornerRadius 20.0
