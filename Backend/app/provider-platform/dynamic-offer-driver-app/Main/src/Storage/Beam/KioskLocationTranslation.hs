@@ -26,7 +26,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 

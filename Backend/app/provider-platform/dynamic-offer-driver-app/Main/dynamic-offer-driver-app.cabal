@@ -261,7 +261,6 @@ library
       Lib.LocationUpdates
       Lib.Mesh
       Lib.Schema
-      Lib.Utils
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.Mandate.Execution

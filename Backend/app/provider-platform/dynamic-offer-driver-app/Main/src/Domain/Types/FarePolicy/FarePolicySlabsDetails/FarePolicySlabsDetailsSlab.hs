@@ -19,10 +19,15 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
   )
 where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Utils.Common (encodeToText)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
@@ -42,6 +47,16 @@ instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+instance FromField PlatformFeeCharge where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be PlatformFeeCharge where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PlatformFeeCharge
+
+instance FromBackendRow Postgres PlatformFeeCharge
 
 data PlatformFeeInfo = PlatformFeeInfo
   { platformFeeCharge :: PlatformFeeCharge,

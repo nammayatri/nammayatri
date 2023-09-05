@@ -24,7 +24,6 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 
