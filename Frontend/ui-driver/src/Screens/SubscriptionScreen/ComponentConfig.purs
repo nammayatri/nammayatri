@@ -99,6 +99,7 @@ switchPlanButtonConfig state = let
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (Margin 0 16 0 16)
+      , id = "SwitchPlanPrimaryButton"
       , visibility = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlanItem.id then GONE else VISIBLE
       }
   in primaryButtonConfig'
@@ -113,6 +114,7 @@ resumeAutopayButtonConfig state = let
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (Margin 16 16 16 16)
+      , id = "ResumeAutopayPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -287,6 +289,7 @@ tryAgainButtonConfig state = let
       , height = V 48
       , cornerRadius = 8.0
       , margin = Margin 16 16 16 16
+      , id = "TryAgainPrimaryButton"
       }
   in primaryButtonConfig'
 

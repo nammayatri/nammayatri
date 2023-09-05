@@ -41,6 +41,7 @@ cancelButtonConfig state = let
     , height     = (V 60)
     , isClickable  = true
     , cornerRadius = 8.0
+    , id = "RideSelectionScreenPrimaryButton"
     }
   in primaryButtonConfig'
 
