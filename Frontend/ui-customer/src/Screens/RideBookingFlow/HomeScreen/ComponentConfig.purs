@@ -968,6 +968,7 @@ menuButtonConfig state item = let
           text = item.place
         , gravity = CENTER_VERTICAL
       }
+    , accessibilityHint = item.place
     , radioButtonConfig {
         height = V 16
         , width = V 16
