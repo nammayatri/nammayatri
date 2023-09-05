@@ -61,7 +61,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
-import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -164,7 +163,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CoreMetrics m, HasCacheConfig r, Redis.HedisFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
 createDriverDetails personId merchantId = do
   now <- getCurrentTime
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
@@ -279,7 +278,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CoreMetrics m, HasCacheConfig r, Redis.HedisFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   now <- getCurrentTime
