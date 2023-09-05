@@ -114,6 +114,7 @@ initData = {
         enterOtpFocusIndex : 0,
         time : 0,
         otpIncorrect : false,
+        wrongVehicleVariant : false,
         endRidePopUp : false,
         cancelRideModalShow : false,
         routeVisible : false,

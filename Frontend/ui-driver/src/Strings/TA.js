@@ -165,6 +165,7 @@ const tamilStrings = {
   STEP: "படி",
   PAID: "பணம்",
   ENTERED_WRONG_OTP: "தவறான OTP உள் நுழைந்தது",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "தவறான OTP - சவாரி வகையுடன் வாகன வகை பொருந்தவில்லை",
   COPIED: "நகலெடுக்கப்பட்டது",
   BANK_NAME: "வங்கி பெயர்",
   AADHAR_DETAILS: "ஆதார் விவரங்கள்",
