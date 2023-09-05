@@ -42,6 +42,7 @@ primaryButtonConfig state = let
       , height = (V 60)
       , isClickable = state.props.deleteButtonVisibility
       , alpha = if state.props.deleteButtonVisibility then 1.0 else 0.7
+      , id = "VehicleDetailsScreenPrimaryButton"
       }
   in primaryButtonConfig'
 

@@ -32,5 +32,6 @@ primaryButtonConfig state = let
       , height = (V 64)
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
+      , id = "BankDetailScreenPrimaryButton"
       }
   in primaryButtonConfig'

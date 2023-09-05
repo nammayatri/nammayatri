@@ -50,6 +50,7 @@ primaryButtonConfig state = let
                       (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) 
                       && (state.data.dateOfIssue /= Just "" && 
                       imageUploadCondition)
+      , id  = "UploadDrivingLicensePrimaryButton"
       , alpha = if (state.data.dob /= "" && 
                     DS.length state.data.driver_license_number >= 9) && 
                     (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && 

@@ -23,6 +23,7 @@ primaryButtonConfig state = let
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 48)
+      , id = "ApplicationStatusScreenButton"
       }
   in primaryButtonConfig'
 

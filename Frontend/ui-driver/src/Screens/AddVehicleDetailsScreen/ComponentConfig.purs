@@ -48,6 +48,7 @@ primaryButtonConfig state = let
       , alpha = if activate then 1.0 else 0.8
       , isClickable = activate
       , margin = (Margin 0 0 0 0)
+      , id = "AddVehiclePrimaryButton"
       }
   in primaryButtonConfig'
 

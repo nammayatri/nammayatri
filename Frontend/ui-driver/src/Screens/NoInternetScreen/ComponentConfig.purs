@@ -37,5 +37,6 @@ primaryButtonConfig triggertype = let
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
+      , id = "NoInternetScreenPrimaryButton"
       }
   in primaryButtonConfig'
