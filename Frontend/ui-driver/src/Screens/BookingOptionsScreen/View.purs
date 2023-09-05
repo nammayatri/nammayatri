@@ -243,5 +243,6 @@ primaryButtonConfig state = let
       , margin = (Margin 16 0 16 0)
       , alpha = if state.props.isBtnActive then 1.0 else 0.4
       , isClickable = state.props.isBtnActive
+      , id = "BookingOptionsScreenPrimaryButton"
       }
   in primaryButtonConfig'

@@ -59,5 +59,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 60)
+      , id = "WriteToUsScreenPrimaryButton"
       }
   in primaryButtonConfig'

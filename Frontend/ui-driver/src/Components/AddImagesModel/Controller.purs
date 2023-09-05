@@ -69,5 +69,6 @@ cancelButtonConfig state = let
       , stroke = "1,"<>Color.black700
       , height = (V 60)
       , isClickable = true
+      , id = "AddImagesModelCancelButton"
       }
   in primaryButtonConfig'

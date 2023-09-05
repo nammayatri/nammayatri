@@ -130,6 +130,7 @@ primaryButtonConfig val = let
       , margin = (Margin 16 16 16 16)
       , cornerRadius = 8.0
       , isClickable = true
+      , id = "AppUpdatePopUpScreenPrimaryButton"
       }
   in primaryButtonConfig'
 

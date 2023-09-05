@@ -221,13 +221,14 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  } else if (event == "onTimeChanged") {
-    if(window.dateCallback != undefined) {
-      window.dateCallback();
-    } else {
-      purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-    }
-  }  
+  } 
+  // else if (event == "onTimeChanged") {
+  //   if(window.dateCallback != undefined) {
+  //     window.dateCallback();
+  //   } else {
+  //     purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
+  //   }
+  // }   -- Need To Refactor 
 }
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);

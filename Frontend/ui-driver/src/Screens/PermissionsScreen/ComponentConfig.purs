@@ -39,5 +39,6 @@ primaryButtonConfig state = let
       , height = (V 60)
       , alpha = if(state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked) then 1.0 else 0.7
       , isClickable = (state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
+      , id = "PermissionsScreenPrimaryButton"
       }
   in primaryButtonConfig'

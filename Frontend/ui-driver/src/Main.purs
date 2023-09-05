@@ -97,7 +97,7 @@ onConnectivityEvent triggertype = do
       "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
       "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
       "REFRESH" -> Flow.baseAppFlow false Nothing
-      "CHECKING_DATE_TIME" ->  Flow.checkDateAndTime
+      -- "CHECKING_DATE_TIME" ->  Flow.checkDateAndTime -- Need To Refactor
       _ -> Flow.baseAppFlow false Nothing
     pure unit
   JBridge.storeMainFiberOb mainFiber

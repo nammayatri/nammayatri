@@ -32,5 +32,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 64)
+      , id = "DriverRideRatingScreenPrimaryButton"
       }
   in primaryButtonConfig'

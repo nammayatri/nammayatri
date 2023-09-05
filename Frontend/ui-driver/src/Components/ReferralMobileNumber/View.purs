@@ -151,5 +151,6 @@ primaryButtonConfig state = let
       , height = (V 60)
       , alpha = if (state.isApplyButtonActive) then 1.0 else 0.7
       , isClickable = state.isApplyButtonActive
+      , id = "ReferralMobileNumberButton"
       }
   in primaryButtonConfig'

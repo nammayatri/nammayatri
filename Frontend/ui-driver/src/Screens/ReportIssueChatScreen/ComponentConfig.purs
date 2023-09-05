@@ -100,6 +100,7 @@ doneButtonConfig state = let
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 60)
+      , id = "ReportIssueChatScreenDonePrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -114,5 +115,6 @@ cancelButtonConfig state = let
       , background = Color.white900
       , stroke = "1,"<>Color.black700
       , height = (V 60)
+      , id = "ReportIssueChatScreenCancelPrimaryButton"
       }
   in primaryButtonConfig'

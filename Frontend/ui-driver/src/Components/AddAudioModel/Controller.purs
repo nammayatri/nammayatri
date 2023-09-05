@@ -48,6 +48,7 @@ doneButtonConfig state = let
       , height = (V 60)
       , alpha = if (state.stateChanged) then 1.0 else 0.5
       , isClickable = state.stateChanged
+      , id = "AddAudioModelDoneButton"
       }
   in primaryButtonConfig'
 
@@ -63,5 +64,6 @@ cancelButtonConfig state = let
       , stroke = "1," <> Color.black700
       , height = (V 60)
       , isClickable = true
+      , id = "AddAudioModelCancelButton"
       }
   in primaryButtonConfig'
