@@ -17,17 +17,6 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
-      defaults.settings.default = { name, package, config, ... }:
-        lib.optionalAttrs (package.local.toDefinedProject or false) {
-          # Disabling haddock and profiling is mainly to speed up Nix builds.
-          haddock = lib.mkDefault false;
-          # Avoid double-compilation.
-          libraryProfiling = lib.mkDefault false;
-          # The use of -fwhole-archive-hs-libs (see hpack config in common repo)
-          # breaks builds on macOS (cyclic references between bin and out); this
-          # works around that.
-          separateBinOutput = if pkgs.stdenv.isDarwin then false else null;
-        };
       autoWire = [ "packages" "checks" "apps" ];
       devShell.tools = _: {
         inherit (self'.packages)
