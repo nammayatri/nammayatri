@@ -60,6 +60,7 @@ library
       API.UI.CancellationReason
       API.UI.Confirm
       API.UI.CustomerSupport
+      API.UI.Disability
       API.UI.FeedbackForm
       API.UI.Frontend
       API.UI.GoogleTranslate
@@ -126,6 +127,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerSupport
+      Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.Frontend
@@ -182,6 +184,7 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
+      Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
       Domain.Types.Quote
@@ -220,6 +223,8 @@ library
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Common
+      Storage.Beam.Disability
+      Storage.Beam.DisabilityTranslation
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
@@ -242,6 +247,7 @@ library
       Storage.Beam.Payment.PaymentTransaction
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
+      Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
       Storage.Beam.Quote
@@ -279,6 +285,7 @@ library
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.Disability
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
@@ -299,6 +306,7 @@ library
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
+      Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats
       Storage.Queries.Quote

@@ -126,3 +126,21 @@ instance IsHTTPError PersonStatsError where
     PersonStatsNotFound _ -> E500
 
 instance IsAPIError PersonStatsError
+
+newtype DisabilityError
+  = DisabilityDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DisabilityError
+
+instance IsBaseError DisabilityError where
+  toMessage = \case
+    DisabilityDoesNotExist personId -> Just $ "Disability with disabilityId \"" <> show personId <> "\"not found. "
+
+instance IsHTTPError DisabilityError where
+  toErrorCode = \case
+    DisabilityDoesNotExist _ -> "DISABILITY_DOES_NOT_EXIST"
+  toHttpCode = \case
+    DisabilityDoesNotExist _ -> E400
+
+instance IsAPIError DisabilityError
