@@ -47,6 +47,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
     customerLanguage
+    disabilityTag
     merchant
     (getPoints shortestRouteInfo)
   where
@@ -65,6 +66,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     Nothing
+    Nothing
     merchant
     Nothing
 
@@ -77,15 +79,16 @@ buildSearchReq ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Maps.Language ->
+  Maybe Text ->
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage merchant mbPoints = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
-  let intent = mkIntent origin destination customerLanguage distance duration mbPoints
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -94,11 +97,12 @@ mkIntent ::
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
   Maybe Maps.Language ->
+  Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
   Search.Intent
-mkIntent origin destination customerLanguage distance duration mbPoints = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin
@@ -121,7 +125,7 @@ mkIntent origin destination customerLanguage distance duration mbPoints = do
                       ]
                 else Nothing,
             customer =
-              if isJust customerLanguage
+              if isJust customerLanguage || isJust disabilityTag
                 then
                   Just $
                     Search.Customer
@@ -174,6 +178,12 @@ mkIntent origin destination customerLanguage distance duration mbPoints = do
                   code = (\_ -> Just "customer_language") =<< customerLanguage,
                   name = (\_ -> Just "Customer Language") =<< customerLanguage,
                   value = (Just . show) =<< customerLanguage
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< disabilityTag,
+                  code = (\_ -> Just "customer_disability") =<< disabilityTag,
+                  name = (\_ -> Just "Customer Disability") =<< disabilityTag,
+                  value = (Just . show) =<< disabilityTag
                 }
             ]
         }
