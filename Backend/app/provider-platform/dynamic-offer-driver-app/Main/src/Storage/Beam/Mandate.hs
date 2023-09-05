@@ -12,7 +12,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import EulerHS.Prelude (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMoney)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

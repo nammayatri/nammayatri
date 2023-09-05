@@ -25,7 +25,6 @@ import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

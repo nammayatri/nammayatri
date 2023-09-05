@@ -31,7 +31,6 @@ import Kernel.External.SMS (SmsService)
 import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

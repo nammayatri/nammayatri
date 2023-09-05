@@ -15,8 +15,13 @@
 
 module Domain.Types.FarePolicy.Common where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Utils.Common (encodeToText)
 
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
@@ -24,10 +29,40 @@ data WaitingChargeInfo = WaitingChargeInfo
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
+instance FromField WaitingChargeInfo where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be WaitingChargeInfo where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be WaitingChargeInfo
+
+instance FromBackendRow Postgres WaitingChargeInfo
+
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+instance FromField WaitingCharge where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be WaitingCharge where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be WaitingCharge
+
+instance FromBackendRow Postgres WaitingCharge
+
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+instance FromField NightShiftCharge where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be NightShiftCharge where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be NightShiftCharge
+
+instance FromBackendRow Postgres NightShiftCharge

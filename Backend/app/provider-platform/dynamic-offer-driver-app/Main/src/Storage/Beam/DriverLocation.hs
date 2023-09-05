@@ -30,7 +30,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Schema
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

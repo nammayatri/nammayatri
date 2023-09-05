@@ -23,9 +23,8 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Types.Common hiding (containsPoint')
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (containsPoint')
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 

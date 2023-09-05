@@ -26,7 +26,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common ()
 import Kernel.Types.Geofencing
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

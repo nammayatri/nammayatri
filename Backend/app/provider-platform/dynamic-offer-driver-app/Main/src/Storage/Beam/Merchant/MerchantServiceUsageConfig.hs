@@ -30,7 +30,6 @@ import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

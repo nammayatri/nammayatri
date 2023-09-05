@@ -206,7 +206,6 @@ library
       Domain.Types.Webengage
       Environment
       Lib.Mesh
-      Lib.Utils
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm

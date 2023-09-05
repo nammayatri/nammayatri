@@ -35,7 +35,6 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Utils.Common (Seconds)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

@@ -23,7 +23,6 @@ import qualified Domain.Types.Issue.IssueReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

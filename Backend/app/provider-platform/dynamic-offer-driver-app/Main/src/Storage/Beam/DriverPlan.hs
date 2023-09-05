@@ -24,7 +24,6 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import Kernel.Prelude
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

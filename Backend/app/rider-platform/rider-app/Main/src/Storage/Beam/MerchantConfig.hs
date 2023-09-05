@@ -24,7 +24,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

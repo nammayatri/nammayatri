@@ -29,7 +29,6 @@ import GHC.Generics (Generic)
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 

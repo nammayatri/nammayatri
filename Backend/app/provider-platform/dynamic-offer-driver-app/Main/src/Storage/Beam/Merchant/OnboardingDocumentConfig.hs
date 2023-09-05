@@ -28,7 +28,6 @@ import GHC.Generics (Generic)
 
 import Kernel.Prelude hiding (Generic)
 import Kernel.Utils.Common (encodeToText)
-import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 
