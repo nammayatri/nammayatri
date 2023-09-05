@@ -126,9 +126,14 @@ cancelAppConfig state = let
       optionButtonOrientation = "VERTICAL",
       buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
-        text = distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
-      , margin = Margin 16 20 16 20},
-      secondaryText { visibility = GONE },
+        text = if state.props.isOffline then getString LOOKS_OFFLINE else distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
+      , margin = Margin 16 20 16 20
+      },
+      secondaryText { 
+        text = getString OFFLINE_DRIVER_ON_WAY 
+      , visibility = if state.props.isOffline then VISIBLE else GONE
+      , margin = Margin 16 0 16 20
+        },
       option1 {
         text = getString CALL_DRIVER
       , color = Color.yellow900
@@ -138,7 +143,7 @@ cancelAppConfig state = let
       , width = MATCH_PARENT
       },
       option2 {
-        text = getString CANCEL_RIDE
+        text = if state.props.isOffline then getString BACK_TO_RIDE_DETAILS else getString CANCEL_RIDE
       , textStyle = FontStyle.SubHeading1
       , color = Color.black700
       , background = Color.white900
@@ -802,6 +807,7 @@ driverInfoTransformer state =
     , lastMessage : state.data.lastMessage
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
+    , isOffline : state.props.isOffline
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

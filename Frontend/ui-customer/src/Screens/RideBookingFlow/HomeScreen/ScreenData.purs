@@ -222,6 +222,7 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , isOffline : false
     }
 }
 
@@ -309,6 +310,7 @@ dummyDriverInfo =
   , initDistance : Nothing
   , config : DC.config
   , vehicleVariant : ""
+  , isOffline : false
   }
 
 dummySettingBar :: SettingSideBarState

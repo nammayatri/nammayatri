@@ -613,5 +613,13 @@ const englishStrings = {
   "LEARN_HOW_TEXT" : "Learn how Namma Yatri caters to your needs",
   "UPDATE_PROFILE" : "Update Profile",
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
-  "CLEAN_CAB" : "Clean Cab"
+  "CLEAN_CAB" : "Clean Cab",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
+  "LOOKS_OFFLINE": "Looks like you are offline!",
+  "OFFLINE_DRIVER_ON_WAY": "Your driver might be still on the way Reconnect to the network to cancle the ride",
+  "BACK_TO_RIDE_DETAILS": "Back to ride details",
+  "RECONNECT_TO_UPDATE": "Reconnect to the network to see live updates",
+  "DRIVER_ON_WAY": "Don't worry! Your driver might still be on their way.",
+  "RECONNECT_TO_UPDATE_2": "Reconnect to see live details.",
+  "RIDE_ACTIVE": "Don’t worry! Your ride is still active"
 }

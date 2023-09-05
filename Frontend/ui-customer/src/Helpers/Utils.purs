@@ -71,10 +71,13 @@ import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
 import Services.API (Prediction)
+import Services.API (RideBookingRes(..))
+import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Types.App (GlobalState)
-import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
+import Services.API (RideBookingRes(..))
+import Screens.Types (DriverInfoCard(..))
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do

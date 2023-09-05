@@ -304,6 +304,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
+  , visibility if state.data.isOffline then GONE else VISIBLE
   ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
@@ -327,7 +328,7 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (not state.data.isOffline) && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
@@ -739,12 +740,25 @@ contactView push state =
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 20 16 16
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
-    ][  linearLayout
+    ][  linearLayout 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility if state.data.isOffline then VISIBLE else GONE
+        , gravity CENTER_HORIZONTAL
+        ][ textView $ 
+            [ text $ getString RECONNECT_TO_UPDATE 
+            , color Color.black800
+            , singleLine false
+            , gravity CENTER_HORIZONTAL
+            ] <> FontStyle.subHeading2 TypoGraphy
+        ]
+        ,linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
         , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> secondsToHms state.data.eta <> " Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
         , accessibility ENABLE
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        , visibility if state.data.isOffline then GONE else VISIBLE
         ][  textView $
             [ text $ state.data.driverName <> " "
             , color Color.black800
@@ -772,6 +786,7 @@ contactView push state =
           width MATCH_PARENT
         , gravity RIGHT
         , height WRAP_CONTENT
+        , visibility if state.data.isOffline then GONE else VISIBLE
         ][linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -827,7 +842,7 @@ driverDetailsView push state =
               , accessibility ENABLE
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
-              ]
+              ]  
           ]
         , textView $
           [ text state.data.driverName

@@ -299,3 +299,8 @@ type FeedbackAnswer =  {
     questionId :: String,
     answer :: Array String
   }
+
+type SqlSchema = {
+  key :: String,
+  "type" :: String
+}

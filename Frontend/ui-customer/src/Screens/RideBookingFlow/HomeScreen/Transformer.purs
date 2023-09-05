@@ -32,7 +32,7 @@ import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime)
 import Data.Number (ceil)
-import Language.Strings (getString)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
@@ -48,7 +48,6 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Language.Strings (getEN)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -147,6 +146,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                            case vehicleVariant of
                             Just variant -> variant
                             Nothing -> ""
+      , isOffline : false
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | InternetCallBack HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -621,9 +622,15 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | InternetCallBackCustomer String
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval (InternetCallBackCustomer isInternetAvailable) state = do
+  if isInternetAvailable == "true" then do
+    updateAndExit state $ InternetCallBack state
+    else continue state  
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1178,7 +1185,10 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
-  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+  if state.props.isOffline then 
+    continue state {props { cancelSearchCallDriver = false }}
+    else
+    continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   if state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone then

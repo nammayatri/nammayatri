@@ -29,6 +29,7 @@ import Debug (spy)
 import Engineering.Helpers.Commons (os)
 import Effect (Effect (..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
+import Data.Function.Uncurried (Fn1, Fn2, Fn3, Fn4, Fn5, Fn6)
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -38,7 +39,7 @@ import MerchantConfig.DefaultConfig as DefaultConfig
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
-import Common.Types.App (MobileNumberValidatorResp(..))
+import Common.Types.App (MobileNumberValidatorResp(..), SqlSchema(..))
 import Foreign (Foreign)
 import Effect.Uncurried (mkEffectFn1)
 import Log (printLog)
@@ -49,6 +50,14 @@ foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 foreign import loaderTextIOS :: EffectFn2 String String Unit
 
 foreign import getFromWindow :: EffectFn1 String Foreign
+
+foreign import deleteDb :: Fn1 String Unit
+foreign import createTable :: Fn3 String String (Array (SqlSchema)) Unit
+foreign import deleteTable :: Fn2 String String Unit
+foreign import addToSqlite :: forall st. Fn3 String String st Unit
+foreign import readFromSqlite :: forall st. Fn6 String String String (Array String) (st -> Maybe st) (Maybe st) (Maybe st)
+foreign import deleteFromSqlite :: Fn4 String String String (Array String) Boolean
+foreign import updateInSqlite :: forall st. Fn5 String String String (Array String) st Int
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader flag = do

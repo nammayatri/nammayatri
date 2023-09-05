@@ -62,7 +62,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, getCommonAssetStoreLink, getAssetStoreLink, getAssetsBaseUrl, getSearchType)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, getLayoutBounds)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, getLayoutBounds, storeCallBackInternetAction)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -100,6 +100,7 @@ screen initialState =
   , name: "HomeScreen"
   , globalEvents:
       [ ( \push -> do
+            _ <- storeCallBackInternetAction push InternetCallBackCustomer
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
@@ -154,7 +155,7 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
-                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone) then do
+                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone && not initialState.props.isOffline) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
@@ -287,9 +288,10 @@ view push state =
                     , width MATCH_PARENT
                     , accessibility DISABLE_DESCENDANT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
-                    , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+                    , visibility if state.props.isSrcServiceable && (not state.props.isOffline) then VISIBLE else GONE
                     ]
                     []]
+                , offlineScreenView push state
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
@@ -331,9 +333,9 @@ view push state =
                         ]
                     ]
                 ]
-            , homeScreenView push state
-            , buttonLayoutParentView push state
-            , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
+            , if state.props.isOffline then emptyTextView state else homeScreenView push state
+            , if state.props.isOffline then emptyTextView state else buttonLayoutParentView push state
+            , if (state.props.isOffline) || (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , rideTrackingView push state
@@ -376,6 +378,42 @@ rideCompletedCardView push state =
 disabilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 disabilityPopUpView push state = 
   PopUpModal.view (push <<< DisabilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disability)
+
+offlineScreenView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+offlineScreenView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , visibility if state.props.isOffline then VISIBLE else GONE
+  , orientation VERTICAL
+  , gravity CENTER_HORIZONTAL
+  ][ 
+    imageView 
+      [ imageWithFallback $ "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_offline.png"
+      , width  $ V 160
+      , height $ V 160
+      , margin (MarginTop 30)
+      ]
+   ,textView 
+      [ text (getString LOOKS_OFFLINE)
+      , color Color.black800
+      , textSize FontSize.a_20
+      , margin (MarginTop 20)
+      , fontStyle $ FontStyle.bold LanguageStyle
+      ]
+   ,textView 
+      [ text if state.props.currentStage == RideAccepted then (getString DRIVER_ON_WAY) else if state.props.currentStage == RideStarted then (getString RIDE_ACTIVE) else ""
+      , color Color.black800
+      , textSize FontSize.a_16
+      , margin (MarginTop 10)
+      ]
+   ,textView 
+      [ text  (getString RECONNECT_TO_UPDATE_2)
+      , color Color.black800
+      , textSize FontSize.a_16
+      , margin (MarginTop 2)
+      ]
+  ]
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 callSupportPopUpView push state =
@@ -997,11 +1035,13 @@ homeScreenTopIconView push state =
                       , width MATCH_PARENT
                       , text if state.props.isSrcServiceable then
                               (if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION))
-                             else
+                             else if state.props.isOffline then
+                               getString YOU_ARE_OFFLINE
+                              else 
                                getString APP_NOT_SERVICEABLE
                       , maxLines 1
                       , ellipsize true
-                      , color if state.props.isSrcServiceable then Color.black800 else Color.greyDark
+                      , color if state.props.isSrcServiceable || (not state.props.isOffline) then Color.black800 else Color.greyDark
                       , gravity LEFT
                       , lineHeight "23"
                       ]
@@ -1746,8 +1786,8 @@ rideTrackingView push state =
                 , background Color.transparent
                 , sheetState state.props.sheetState 
                 , accessibility DISABLE
-                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
-                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
+                , peakHeight if state.props.isOffline then getHeightFromPercent 50
+                             else if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
                              else getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75

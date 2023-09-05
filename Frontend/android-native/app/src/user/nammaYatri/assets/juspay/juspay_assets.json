@@ -243,6 +243,7 @@
       "ny_ic_navigation" : true,
       "ny_ic_next_ride" : true,
       "ny_ic_night" : true,
+      "ny_ic_no_internet" : true,
       "ny_ic_no_past_rides" : true,
       "ny_ic_no_quotes" : true,
       "ny_ic_no_saved_address" : true,

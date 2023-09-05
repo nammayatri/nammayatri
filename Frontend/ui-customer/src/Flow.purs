@@ -23,12 +23,15 @@ import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
+import Constants as Constants
 import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last)
 import Data.Array as Arr
 import Data.Either (Either(..))
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3, runFn4, runFn5, runFn6)
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
@@ -37,12 +40,14 @@ import Data.Number (fromString)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Engineering.Helpers.Utils (addToSqlite, createTable, deleteFromSqlite, deleteTable, loaderText, readFromSqlite, toggleLoader, updateInSqlite)
+import Engineering.Helpers.Utils (getAppConfig)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
@@ -53,35 +58,34 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Engineering.Helpers.Utils (getAppConfig)
-import Constants as Constants
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard, dbName, driverTableName, driverSchema)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
+import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag) as AddNewAddress
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
+import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag, findingQuotesSearchExpired, getZoneType)
+import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
-import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..))
 import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
@@ -89,10 +93,6 @@ import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), defaultGlobalState)
-import Effect.Aff (makeAff, nonCanceler, launchAff)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) refreshFlow = do
@@ -108,6 +108,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
   void $ pure $ setCleverTapUserProp "Bundle version" bundle
+  void $ pure $ runFn3 createTable dbName driverTableName driverSchema
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
@@ -249,135 +250,196 @@ forceIOSupdate c_maj c_min c_patch updatedIOSversion=
   c_min < updatedIOSversion.minorUpdateIndex ||
   c_patch < updatedIOSversion.patchUpdateIndex
 
+offlineRideFlow :: FlowBT String Unit
+offlineRideFlow = do
+    (GlobalState state') <- getState
+    let state = state'.homeScreen
+    let _offlineDriverInfo = runFn6 readFromSqlite dbName driverTableName "userId = ?" [getValueToLocalStore CUSTOMER_ID] Just Nothing
+    case _offlineDriverInfo of
+        Nothing -> do
+          flow <- UI.permissionScreen "INTERNET_ACTION"
+          permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+          permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+          internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+          case flow of
+            REFRESH_INTERNET -> do
+                if (os == "IOS") then pure unit
+                  else if not internetCondition then permissionScreenFlow "INTERNET_ACTION"
+                  else currentFlowStatus
+            TURN_ON_GPS -> if not internetCondition then permissionScreenFlow "INTERNET_ACTION" else do
+                              setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
+                              currentFlowStatus
+            TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
+                                    true -> pure unit
+                                    _ -> if (os == "IOS") then currentFlowStatus
+                                         else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
+                                         else currentFlowStatus
+          pure unit
+        Just offlineDriverInfo -> do
+          let driverInfo = HomeScreenData.dummyDriverInfo { isOffline = true , otp = offlineDriverInfo.otp , driverName = offlineDriverInfo.driverName , vehicleDetails = offlineDriverInfo.vehicleDetails , registrationNumber = offlineDriverInfo.registrationNumber , rating = offlineDriverInfo.rating , source = offlineDriverInfo.source , destination = offlineDriverInfo.destination , price = offlineDriverInfo.price , distance = offlineDriverInfo.distance , estimatedDistance = offlineDriverInfo.estimatedDistance , driverNumber = offlineDriverInfo.driverNumber , merchantExoPhone = offlineDriverInfo.merchantExoPhone , vehicleVariant = offlineDriverInfo.vehicleVariant , initDistance = Nothing , rideId = offlineDriverInfo.rideId}
+          let newState = state{data{driverInfoCardState = driverInfo
+                    , currentSearchResultType = ESTIMATES}
+                    , props{currentStage = if (isLocalStageOn RideStarted) then RideStarted else RideAccepted
+                    , rideRequestFlow = true
+                    , isInApp = true
+                    , isPopUp = NoPopUp}
+                    }
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
+          pure unit
+
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
   config <- getAppConfig Constants.appConfig
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}, props{ isOffline = (not internetCondition) }})
   (GlobalState state') <- getState
   let state = state'.homeScreen
-  case rideBookingListResponse of
-    Right (RideBookingListRes listResp) -> do
-      if not (null listResp.list) then do
-        when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
-        let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
-            status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
-            rideStatus = if status == "NEW" then RideAccepted else RideStarted
-            newState = state{data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) ((length resp.rideList) == 0 )
-                , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
-                , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES},
-                  props{currentStage = rideStatus
-                  , rideRequestFlow = true
-                  , bookingId = resp.id
-                  , isPopUp = NoPopUp
-                  , zoneType = getSpecialTag resp.specialLocationTag
-                  }}
-        when (not rideAssigned) $ do
-          void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
-        _ <- pure $ spy "Active api" listResp
-        modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-        updateLocalStage rideStatus
-        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-        let (RideBookingDetails contents) = bookingDetails.contents
-        let otpCode = contents.otpCode
-        let rideList =  (resp.rideList !!0)
-        case rideList of
-          Nothing -> do
-            case otpCode of
-              Just otp' -> do
-                _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
-              Nothing -> pure unit
-          Just (RideAPIEntity _) ->
-            if otpCode /= Nothing then do
-              _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-              modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
-              pure unit
-      else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
-        updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
-        case rideBookingListResponse of
-          Right (RideBookingListRes listResp) -> do
+  if state.props.isOffline && (isLocalStageOn RideAccepted || isLocalStageOn RideStarted) then do
+      offlineRideFlow
+    else do
+      rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+      case rideBookingListResponse of
+        Right (RideBookingListRes listResp) -> do
+          if not (null listResp.list) then do
+            when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
             let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
+                status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
+                rideStatus = if status == "NEW" then RideAccepted else RideStarted
+                driverInfo = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) ((length resp.rideList) == 0 )
+                newState = state{data{driverInfoCardState = driverInfo
+                    , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
+                    , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES},
+                      props{currentStage = rideStatus
+                      , rideRequestFlow = true
+                      , bookingId = resp.id
+                      , isPopUp = NoPopUp
+                      , zoneType = getSpecialTag resp.specialLocationTag
+                      }}
+            void $ pure $ runFn4 deleteFromSqlite dbName driverTableName "userId = ?" [getValueToLocalStore CUSTOMER_ID]
+            void $ pure $ runFn3 addToSqlite dbName driverTableName ({userId : (getValueToLocalStore CUSTOMER_ID), otp : driverInfo.otp, driverName : driverInfo.driverName, vehicleDetails : driverInfo.vehicleDetails, registrationNumber : driverInfo.registrationNumber, rating : driverInfo.rating, source : driverInfo.source, destination : driverInfo.destination, price : driverInfo.price, distance : driverInfo.distance, estimatedDistance : driverInfo.estimatedDistance, driverNumber : driverInfo.driverNumber, merchantExoPhone : driverInfo.merchantExoPhone, vehicleVariant : driverInfo.vehicleVariant, rideId: driverInfo.rideId})
+            when (not rideAssigned) $ do
+              void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
+            modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
+            updateLocalStage rideStatus
             let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
             let (RideBookingDetails contents) = bookingDetails.contents
-            let (RideAPIEntity currRideListItem) = (fromMaybe dummyRideAPIEntity (resp.rideList !!0))
-            _ <- pure $ spy "CurrentRideListItem" currRideListItem
-            let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
-            let lastRideDate = (case currRideListItem.rideStartTime of
-                                Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
-                                Nothing        -> "")
-                currentDate =  getCurrentDate ""
-            if(lastRideDate /= currentDate) then do
-              _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
-              _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
-              _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
-              _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "22"
-              pure unit
-              else pure unit
-            when (isNothing currRideListItem.rideRating) $ do
-              when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
-                    props { currentStage = RideCompleted
-                          , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag}
-                  , data { rideRatingState
-                          { driverName = currRideListItem.driverName
-                          , rideId = currRideListItem.id
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
-                          , source = decodeAddress (Booking resp.fromLocation)
-                          , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
-                          , vehicleNumber = (currRideListItem.vehicleNumber)
-                          , status = (currRideListItem.status)
-                          , shortRideId = currRideListItem.shortRideId
-                          , rideEndTimeUTC = ""
-                          , offeredFare = resp.estimatedTotalFare
-                          , distanceDifference = differenceOfDistance
-                          , bookingId = resp.id
-                          , feedback = ""
-                          , rideStartTime = case currRideListItem.rideStartTime of
-                                              Just startTime -> (convertUTCtoISC startTime "h:mm A")
-                                              Nothing        -> ""
-                          , rideEndTime   = case currRideListItem.rideEndTime of
-                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                              Nothing        -> ""
-                          , rideStartDate = case currRideListItem.rideStartTime of
-                                              Just startTime ->( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC startTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
-                                              Nothing        -> ""
-                          , dateDDMMYY =  case currRideListItem.rideStartTime of
-                                            Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
-                                            Nothing        -> ""
-                          }
-                          , config = config
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
-                          , driverInfoCardState {
-                            price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
-                          }
-                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
-                          }
-                })
-                updateLocalStage RideCompleted
-          Left err -> updateLocalStage HomeScreen
-      else do
-        updateLocalStage HomeScreen
-    Left err -> updateLocalStage HomeScreen
-  if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
+            let otpCode = contents.otpCode
+            let rideList =  (resp.rideList !!0)
+            case rideList of
+              Nothing -> do
+                case otpCode of
+                  Just otp' -> do
+                    _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
+                    modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
+                  Nothing -> pure unit
+              Just (RideAPIEntity _) ->
+                if otpCode /= Nothing then do
+                  _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
+                  modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
+                  pure unit
+          else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
+            updateLocalStage HomeScreen
+            rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
+            case rideBookingListResponse of
+              Right (RideBookingListRes listResp) -> do
+                let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
+                if resp.status == "CANCELLED" then do
+                  _ <- pure $ removeAllPolylines ""
+                  _ <- updateLocalStage HomeScreen
+                  removeChatService ""
+                  setValueToLocalStore PICKUP_DISTANCE "0"
+                  lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{ driverInfoCardState{initDistance = Nothing}}, props { isBanner = state.props.isBanner, showChatNotification = false}})
+                  _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+                  pure unit
+                else do
+                  let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                  let (RideBookingDetails contents) = bookingDetails.contents
+                  let (RideAPIEntity currRideListItem) = (fromMaybe dummyRideAPIEntity (resp.rideList !!0))
+                  _ <- pure $ spy "CurrentRideListItem" currRideListItem
+                  let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
+                  let lastRideDate = (case currRideListItem.rideStartTime of
+                                      Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                      Nothing        -> "")
+                      currentDate =  getCurrentDate ""
+                  if(lastRideDate /= currentDate) then do
+                    _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+                    _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
+                    _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
+                    _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "22"
+                    pure unit
+                    else pure unit
+                  when (isNothing currRideListItem.rideRating) $ do
+                    when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
+                      modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
+                          props { currentStage = RideCompleted
+                                , estimatedDistance = contents.estimatedDistance
+                                , zoneType = getSpecialTag resp.specialLocationTag}
+                        , data { rideRatingState
+                                { driverName = currRideListItem.driverName
+                                , rideId = currRideListItem.id
+                                , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                                , source = decodeAddress (Booking resp.fromLocation)
+                                , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
+                                , vehicleNumber = (currRideListItem.vehicleNumber)
+                                , status = (currRideListItem.status)
+                                , shortRideId = currRideListItem.shortRideId
+                                , rideEndTimeUTC = ""
+                                , offeredFare = resp.estimatedTotalFare
+                                , distanceDifference = differenceOfDistance
+                                , bookingId = resp.id
+                                , feedback = ""
+                                , rideStartTime = case currRideListItem.rideStartTime of
+                                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                    Nothing        -> ""
+                                , rideEndTime   = case currRideListItem.rideEndTime of
+                                                    Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                    Nothing        -> ""
+                                , rideStartDate = case currRideListItem.rideStartTime of
+                                                    Just startTime ->( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC startTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
+                                                    Nothing        -> ""
+                                , dateDDMMYY =  case currRideListItem.rideStartTime of
+                                                  Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                                  Nothing        -> ""
+                                }
+                                , config = config
+                                , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                                , driverInfoCardState {
+                                  price = resp.estimatedTotalFare,
+                                  rideId = currRideListItem.id
+                                }
+                                , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                                }
+                      })
+                      updateLocalStage RideCompleted
+              Left err -> do 
+                 updateLocalStage HomeScreen
+          else do
+            updateLocalStage HomeScreen
+        Left err -> do
+           updateLocalStage HomeScreen
+      if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
 
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
   void $ lift $ lift $ toggleLoader false
   _ <- pure $ spy "currentFlowStatus" ":::"
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
-  verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
-  void $ pure $ spy "flowStatus" flowStatus
-  case flowStatus.currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    RIDE_ASSIGNED _                         -> currentRideFlow true
-    _                                       -> currentRideFlow false
+  internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ isOffline = (not internetCondition) } })
+  if internetCondition then do
+    verifyProfile "LazyCheck"
+    (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
+    case flowStatus.currentStatus of
+      WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
+      DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+      RIDE_ASSIGNED _                         -> currentRideFlow true
+      _                                       -> currentRideFlow false
+  else
+    if (isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted) then 
+        currentRideFlow true 
+    else permissionScreenFlow "INTERNET_ACTION"
   liftFlowBT $ hideLoader
   _ <- pure $ hideKeyboardOnNavigation true
   homeScreenFlow
@@ -679,8 +741,18 @@ homeScreenFlow = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
   flow <- UI.homeScreen
   case flow of
-    CHECK_FLOW_STATUS -> currentFlowStatus
-    ON_RESUME_APP -> currentFlowStatus
+    TURN_ON_INTERNET_ -> do
+       permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+       permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+       case (getValueToLocalStore USER_NAME == "__failed") of
+        true -> pure unit
+        _ -> if (os == "IOS") then currentFlowStatus
+             else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
+             else currentFlowStatus
+    CHECK_FLOW_STATUS -> do 
+       currentFlowStatus
+    ON_RESUME_APP -> do 
+       currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       myRidesScreenFlow true
@@ -1706,24 +1778,30 @@ permissionScreenFlow triggertype = do
   _ <- pure $ hideKeyboardOnNavigation true
   config <- getAppConfig Constants.appConfig
   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{appConfig = config})
-  flow <- UI.permissionScreen triggertype
-  permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
-  internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
-  case flow of
-    REFRESH_INTERNET -> do
-        if (os == "IOS") then pure unit
-          else if not internetCondition then permissionScreenFlow "INTERNET_ACTION"
-          else currentFlowStatus
-    TURN_ON_GPS -> if not internetCondition then permissionScreenFlow "INTERNET_ACTION" else do
-                      setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
-                      currentFlowStatus
-    TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
-                            true -> pure unit
-                            _ -> if (os == "IOS") then currentFlowStatus
-                                 else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
-                                 else currentFlowStatus
-  pure unit
+  if triggertype == "INTERNET_ACTION" && (isLocalStageOn RideAccepted || isLocalStageOn RideStarted) then do 
+    currentRideFlow true 
+    liftFlowBT $ hideLoader
+    _ <- pure $ hideKeyboardOnNavigation true
+    homeScreenFlow
+  else do
+    flow <- UI.permissionScreen triggertype
+    permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+    permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+    internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+    case flow of
+      REFRESH_INTERNET -> do
+          if (os == "IOS") then pure unit
+            else if not internetCondition then permissionScreenFlow "INTERNET_ACTION"
+            else currentFlowStatus
+      TURN_ON_GPS -> if not internetCondition then permissionScreenFlow "INTERNET_ACTION" else do
+                        setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
+                        currentFlowStatus
+      TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
+                              true -> pure unit
+                              _ -> if (os == "IOS") then currentFlowStatus
+                                   else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
+                                   else currentFlowStatus
+    pure unit
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
