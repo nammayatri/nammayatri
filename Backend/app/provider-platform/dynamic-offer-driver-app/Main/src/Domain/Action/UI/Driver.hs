@@ -503,6 +503,7 @@ createDriverDetails ::
   m ()
 createDriverDetails personId adminId merchantId = do
   now <- getCurrentTime
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -518,9 +519,9 @@ createDriverDetails personId adminId merchantId = do
             paymentPending = False,
             aadhaarVerified = False,
             referralCode = Nothing,
-            canDowngradeToSedan = False,
-            canDowngradeToHatchback = False,
-            canDowngradeToTaxi = True,
+            canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
+            canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
+            canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             mode = Just DriverInfo.OFFLINE,
             lastEnabledOn = Just now,
             blockedReason = Nothing,
