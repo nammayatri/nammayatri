@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module DBSync.Create where
 
@@ -18,91 +19,121 @@ import Utils.Utils
 runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
 runCreateCommands cmds = do
   dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
-  runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BapMetadata" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BapMetadataObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Booking" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BookingLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BookingCancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingCancellationReasonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BusinessEvent" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BusinessEventObject obj), val) <- cmds]
-    |::| runCreate dbConf ("CallStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CallStatusObject obj), val) <- cmds]
-    |::| runCreate dbConf ("CancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverFlowStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverFlowStatusObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverBlockReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverBlockReasonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverFee" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverFeeObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverInformation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverInformationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("AadhaarOtpReq" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpReqObject obj), val) <- cmds]
-    |::| runCreate dbConf ("AadhaarOtpVerify" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpVerifyObject obj), val) <- cmds]
-    |::| runCreate dbConf ("AadhaarVerification" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (AadhaarVerificationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverLicense" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverLicenseObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverRCAssociation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverRCAssociationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("IdfyVerification" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IdfyVerificationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Image" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (ImageObject obj), val) <- cmds]
-    |::| runCreate dbConf ("OperatingCity" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (OperatingCityObject obj), val) <- cmds]
-    |::| runCreate dbConf ("VehicleRegistrationCertificate" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (VehicleRegistrationCertificateObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverQuote" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverQuoteObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverReferral" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverReferralObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverStats" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverStatsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Estimate" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (EstimateObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Exophone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (ExophoneObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FareParameters" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareParametersObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FareParametersProgressiveDetails" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareParametersProgressiveDetailsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FareParametersSlabDetails" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareParametersSlabDetailsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FarePolicy" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FarePolicyObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverExtraFeeBounds" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverExtraFeeBoundsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FarePolicyProgressiveDetails" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FarePolicyProgressiveDetailsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FarePolicySlabDetailsSlab" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FarePolicySlabDetailsSlabObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RestrictedExtraFare" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RestrictedExtraFareObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FareProduct" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareProductObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Geometry" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Comment" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CommentObject obj), val) <- cmds]
-    |::| runCreate dbConf ("IssueCategory" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueCategoryObject obj), val) <- cmds]
-    |::| runCreate dbConf ("IssueOption" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueOptionObject obj), val) <- cmds]
-    |::| runCreate dbConf ("IssueReport" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueReportObject obj), val) <- cmds]
-    |::| runCreate dbConf ("IssueTranslation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueTranslationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("LeaderBoardConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (LeaderBoardConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PlaceNameCache" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MediaFile" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MediaFileObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Merchant" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverIntelligentPoolConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverIntelligentPoolConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverPoolConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverPoolConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantLeaderBoardConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantLeaderBoardConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantMessage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantPaymentMethod" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantPaymentMethodObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantServiceConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantOnboardingDocumentConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantOnboardingDocumentConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("TransporterConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (TransporterConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Message" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MessageReport" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageReportObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MessageTranslation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageTranslationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MetaData" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MetaDataObject obj), val) <- cmds]
-    |::| runCreate dbConf ("OnboardingDocumentConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (OnboardingDocumentConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Person" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("QuoteSpecialZone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (QuoteSpecialZoneObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Rating" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Ride" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RideDetails" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RideDetailsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RiderDetails" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RiderDetailsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchReqLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchReqLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchRequestForDriver" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestForDriverObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchRequestSpecialZone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestSpecialZoneObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchTry" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchTryObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Vehicle" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (VehicleObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Feedback" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FeedbackBadge" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+
+  runCreateInKafkaAndDb dbConf streamKey ("RegistrationToken" :: Text) [(obj, val, entryId, RegistrationTokenObject obj) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BapMetadata" :: Text) [(obj, val, entryId, BapMetadataObject obj) | (CreateDBCommand entryId _ _ _ _ (BapMetadataObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Booking" :: Text) [(obj, val, entryId, BookingObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BookingLocation" :: Text) [(obj, val, entryId, BookingLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BookingCancellationReason" :: Text) [(obj, val, entryId, BookingCancellationReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingCancellationReasonObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BusinessEvent" :: Text) [(obj, val, entryId, BusinessEventObject obj) | (CreateDBCommand entryId _ _ _ _ (BusinessEventObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("CallStatus" :: Text) [(obj, val, entryId, CallStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (CallStatusObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("CancellationReason" :: Text) [(obj, val, entryId, CancellationReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverFlowStatus" :: Text) [(obj, val, entryId, DriverFlowStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverFlowStatusObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverBlockReason" :: Text) [(obj, val, entryId, DriverBlockReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverBlockReasonObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverFee" :: Text) [(obj, val, entryId, DriverFeeObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverFeeObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverInformation" :: Text) [(obj, val, entryId, DriverInformationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverInformationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverLocation" :: Text) [(obj, val, entryId, DriverLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverLocationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarOtpReq" :: Text) [(obj, val, entryId, AadhaarOtpReqObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpReqObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarOtpVerify" :: Text) [(obj, val, entryId, AadhaarOtpVerifyObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpVerifyObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarVerification" :: Text) [(obj, val, entryId, AadhaarVerificationObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarVerificationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverLicense" :: Text) [(obj, val, entryId, DriverLicenseObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverLicenseObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverRCAssociation" :: Text) [(obj, val, entryId, DriverRCAssociationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverRCAssociationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IdfyVerification" :: Text) [(obj, val, entryId, IdfyVerificationObject obj) | (CreateDBCommand entryId _ _ _ _ (IdfyVerificationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Image" :: Text) [(obj, val, entryId, ImageObject obj) | (CreateDBCommand entryId _ _ _ _ (ImageObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("OperatingCity" :: Text) [(obj, val, entryId, OperatingCityObject obj) | (CreateDBCommand entryId _ _ _ _ (OperatingCityObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("VehicleRegistrationCertificate" :: Text) [(obj, val, entryId, VehicleRegistrationCertificateObject obj) | (CreateDBCommand entryId _ _ _ _ (VehicleRegistrationCertificateObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverQuote" :: Text) [(obj, val, entryId, DriverQuoteObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverQuoteObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverReferral" :: Text) [(obj, val, entryId, DriverReferralObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverReferralObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverStats" :: Text) [(obj, val, entryId, DriverStatsObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverStatsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Estimate" :: Text) [(obj, val, entryId, EstimateObject obj) | (CreateDBCommand entryId _ _ _ _ (EstimateObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Exophone" :: Text) [(obj, val, entryId, ExophoneObject obj) | (CreateDBCommand entryId _ _ _ _ (ExophoneObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FareParameters" :: Text) [(obj, val, entryId, FareParametersObject obj) | (CreateDBCommand entryId _ _ _ _ (FareParametersObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FareParametersProgressiveDetails" :: Text) [(obj, val, entryId, FareParametersProgressiveDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (FareParametersProgressiveDetailsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FareParametersSlabDetails" :: Text) [(obj, val, entryId, FareParametersSlabDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (FareParametersSlabDetailsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FarePolicy" :: Text) [(obj, val, entryId, FarePolicyObject obj) | (CreateDBCommand entryId _ _ _ _ (FarePolicyObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverExtraFeeBounds" :: Text) [(obj, val, entryId, DriverExtraFeeBoundsObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverExtraFeeBoundsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FarePolicyProgressiveDetails" :: Text) [(obj, val, entryId, FarePolicyProgressiveDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (FarePolicyProgressiveDetailsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) [(obj, val, entryId, FarePolicyProgressiveDetailsPerExtraKmRateSectionObject obj) | (CreateDBCommand entryId _ _ _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FarePolicySlabDetailsSlab" :: Text) [(obj, val, entryId, FarePolicySlabDetailsSlabObject obj) | (CreateDBCommand entryId _ _ _ _ (FarePolicySlabDetailsSlabObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("RestrictedExtraFare" :: Text) [(obj, val, entryId, RestrictedExtraFareObject obj) | (CreateDBCommand entryId _ _ _ _ (RestrictedExtraFareObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FareProduct" :: Text) [(obj, val, entryId, FareProductObject obj) | (CreateDBCommand entryId _ _ _ _ (FareProductObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Geometry" :: Text) [(obj, val, entryId, GeometryObject obj) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Comment" :: Text) [(obj, val, entryId, CommentObject obj) | (CreateDBCommand entryId _ _ _ _ (CommentObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueCategory" :: Text) [(obj, val, entryId, IssueCategoryObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueCategoryObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueOption" :: Text) [(obj, val, entryId, IssueOptionObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueOptionObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueReport" :: Text) [(obj, val, entryId, IssueReportObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueReportObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueTranslation" :: Text) [(obj, val, entryId, IssueTranslationObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueTranslationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("LeaderBoardConfig" :: Text) [(obj, val, entryId, LeaderBoardConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (LeaderBoardConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("PlaceNameCache" :: Text) [(obj, val, entryId, PlaceNameCacheObject obj) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MediaFile" :: Text) [(obj, val, entryId, MediaFileObject obj) | (CreateDBCommand entryId _ _ _ _ (MediaFileObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Merchant" :: Text) [(obj, val, entryId, MerchantObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverIntelligentPoolConfig" :: Text) [(obj, val, entryId, DriverIntelligentPoolConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverIntelligentPoolConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverPoolConfig" :: Text) [(obj, val, entryId, DriverPoolConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverPoolConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantLeaderBoardConfig" :: Text) [(obj, val, entryId, MerchantLeaderBoardConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantLeaderBoardConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantMessage" :: Text) [(obj, val, entryId, MerchantMessageObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantPaymentMethod" :: Text) [(obj, val, entryId, MerchantPaymentMethodObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantPaymentMethodObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantServiceConfig" :: Text) [(obj, val, entryId, MerchantServiceConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId, MerchantServiceUsageConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantOnboardingDocumentConfig" :: Text) [(obj, val, entryId, MerchantOnboardingDocumentConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantOnboardingDocumentConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TransporterConfig" :: Text) [(obj, val, entryId, TransporterConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (TransporterConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Message" :: Text) [(obj, val, entryId, MessageObject obj) | (CreateDBCommand entryId _ _ _ _ (MessageObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MessageReport" :: Text) [(obj, val, entryId, MessageReportObject obj) | (CreateDBCommand entryId _ _ _ _ (MessageReportObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MessageTranslation" :: Text) [(obj, val, entryId, MessageTranslationObject obj) | (CreateDBCommand entryId _ _ _ _ (MessageTranslationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MetaData" :: Text) [(obj, val, entryId, MetaDataObject obj) | (CreateDBCommand entryId _ _ _ _ (MetaDataObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("OnboardingDocumentConfig" :: Text) [(obj, val, entryId, OnboardingDocumentConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (OnboardingDocumentConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Person" :: Text) [(obj, val, entryId, PersonObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("QuoteSpecialZone" :: Text) [(obj, val, entryId, QuoteSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (QuoteSpecialZoneObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Rating" :: Text) [(obj, val, entryId, RatingObject obj) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Ride" :: Text) [(obj, val, entryId, RideObject obj) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("RideDetails" :: Text) [(obj, val, entryId, RideDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RideDetailsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("RiderDetails" :: Text) [(obj, val, entryId, RiderDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RiderDetailsObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequest" :: Text) [(obj, val, entryId, SearchRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchReqLocation" :: Text) [(obj, val, entryId, SearchReqLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchReqLocationObject obj), val) <- cmds]
+    |::| runCreateInKafka dbConf streamKey ("SearchRequestForDriver" :: Text) [(obj, val, entryId, SearchRequestForDriverObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestForDriverObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequestSpecialZone" :: Text) [(obj, val, entryId, SearchRequestSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestSpecialZoneObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchTry" :: Text) [(obj, val, entryId, SearchTryObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchTryObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Vehicle" :: Text) [(obj, val, entryId, VehicleObject obj) | (CreateDBCommand entryId _ _ _ _ (VehicleObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Feedback" :: Text) [(obj, val, entryId, FeedbackObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackBadge" :: Text) [(obj, val, entryId, FeedbackBadgeObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
-    runCreate dbConf model object = do
-      let dbObjects = map (\(dbObject, _, _) -> dbObject) object
-          byteStream = map (\(_, bts, _) -> bts) object
-          entryIds = map (\(_, _, entryId) -> entryId) object
+    -- functions for moving drainer data to kafka
+    runCreate dbConf _ model object = do
+      let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
+          byteStream = map (\(_, bts, _, _) -> bts) object
+          entryIds = map (\(_, _, entryId, _) -> entryId) object
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       maxRetries <- EL.runIO getMaxRetries
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
+
+    runCreateInKafka dbConf streamKey' model object = do
+      isPushToKafka' <- EL.runIO isPushToKafka
+      if not isPushToKafka'
+        then runCreate dbConf streamKey' model object
+        else
+          if null object
+            then pure [Right []]
+            else do
+              let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
+                  entryIds = map (\(_, _, entryId', _) -> entryId') object
+              Env {..} <- ask
+              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
+              either (\_ -> pure [Left entryIds]) (\_ -> pure [Right entryIds]) res
+
+    runCreateInKafkaAndDb dbConf streamKey' model object = do
+      isPushToKafka' <- EL.runIO isPushToKafka
+      if not isPushToKafka'
+        then runCreate dbConf streamKey' model object
+        else
+          if null object
+            then pure [Right []]
+            else do
+              let entryIds = map (\(_, _, entryId, _) -> entryId) object
+              kResults <- runCreateInKafka dbConf streamKey' model object
+              case kResults of
+                [Right _] -> runCreate dbConf streamKey' model object
+                _ -> pure [Left entryIds]
 
     runCreateInKafka dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
@@ -159,12 +190,8 @@ runCreateCommands cmds = do
 streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
 streamDriverDrainerCreates producer dbObject streamKey = do
   let topicName = "driver-drainer"
-  mapM_ (KafkaProd.produceMessage producer . message topicName) dbObject
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
+  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
     prodPush producer' = KafkaProd.flushProducer producer' >> pure True
 

@@ -18,7 +18,7 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Utils.Dhall
+import Kernel.Utils.Dhall hiding (void)
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
 import System.Environment (lookupEnv)
