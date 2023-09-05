@@ -30,6 +30,9 @@ getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetri
 getDrainerExecutionDelay :: IO Int
 getDrainerExecutionDelay = fromMaybe 20000 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
 
+isPushToKafka :: IO Bool
+isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
+
 defaultDBSyncConfig :: DBSyncConfig
 defaultDBSyncConfig =
   DBSyncConfig

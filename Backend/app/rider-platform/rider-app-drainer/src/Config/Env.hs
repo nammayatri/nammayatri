@@ -47,3 +47,6 @@ getDrainerExecutionDelay = fromMaybe 20000 . (>>= readMaybe) <$> SE.lookupEnv dr
 
 getThreadPerPodCount :: IO Int
 getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
+
+isPushToKafka :: IO Bool
+isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
