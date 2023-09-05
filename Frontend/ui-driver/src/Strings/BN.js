@@ -761,6 +761,6 @@ const bengaliStrings = {
 	SUPPORT : "সমর্থন",
 	NEED_HELP_JOINING_THE_PLAN : "পরিকল্পনা বা অটোপেতে যোগদানের জন্য সহায়তা দরকার?",
   	NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>",
-	SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
-	SETUP_NOW : "Setup Now"
+	SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "বিশেষ ছাড় পেতে এখনই অটোপে সেটআপ করুন",
+	SETUP_NOW : "এখন সেটআপ"
 	}

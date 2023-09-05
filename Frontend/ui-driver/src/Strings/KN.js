@@ -744,6 +744,6 @@ const kannadaStrings = {
   SUPPORT : "ಬೆಂಬಲ",
 	NEED_HELP_JOINING_THE_PLAN : "ಯೋಜನೆ ಅಥವಾ ಆಟೋಪೇಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ?",
   NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>",
-  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
-	SETUP_NOW : "Setup Now"
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡ",
+	SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ"
 }
