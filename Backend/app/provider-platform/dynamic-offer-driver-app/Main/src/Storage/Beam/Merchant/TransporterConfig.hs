@@ -69,6 +69,9 @@ data TransporterConfigT f = TransporterConfigT
     mandateValidity :: B.C f Int,
     driverLocationAccuracyBuffer :: B.C f Meters,
     routeDeviationThreshold :: B.C f Meters,
+    canDowngradeToSedan :: B.C f Bool,
+    canDowngradeToHatchback :: B.C f Bool,
+    canDowngradeToTaxi :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -127,7 +130,10 @@ transporterConfigTMod =
       driverAutoPayExecutionTime = B.fieldNamed "driver_auto_pay_execution_time",
       subscriptionStartTime = B.fieldNamed "subscription_start_time",
       driverLocationAccuracyBuffer = B.fieldNamed "driver_location_accuracy_buffer",
-      routeDeviationThreshold = B.fieldNamed "route_deviation_threshold"
+      routeDeviationThreshold = B.fieldNamed "route_deviation_threshold",
+      canDowngradeToSedan = B.fieldNamed "can_downgrade_to_sedan",
+      canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
+      canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi"
     }
 
 $(enableKVPG ''TransporterConfigT ['merchantId] [])
