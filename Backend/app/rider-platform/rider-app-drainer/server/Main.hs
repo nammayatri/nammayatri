@@ -19,7 +19,8 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Utils.Dhall hiding (void)
+import Kernel.Streaming.Kafka.Producer.Types
+import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
 import System.Environment (lookupEnv)
@@ -31,9 +32,10 @@ main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "rider-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   bracket (async NW.runMetricServer) cancel $ \_ -> do
-    R.withFlowRuntime (Just loggerRt) $
+    R.withFlowRuntime
+      (Just loggerRt)
       ( \flowRt -> do
           putStrLn @String "Initializing DB and KV Connections..."
           runFlow
@@ -48,7 +50,7 @@ main = do
             )
 
           dbSyncMetric <- Event.mkDBSyncMetric
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer
           threadPerPodCount <- Env.getThreadPerPodCount
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)

@@ -1,70 +1,79 @@
 module DBSync.Create where
 
 import Config.Env
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
+import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types as ET
+import Kafka.Producer as KafkaProd
+import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
 
-runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateCommands cmds = do
+runCreateCommands :: Show b => [(CreateDBCommand, b)] -> Text -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
+runCreateCommands cmds streamKey = do
   dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
-  runCreate dbConf ("AppInstalls" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (AppInstallsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BlackListOrg" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BlackListOrgObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Booking" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BookingLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BookingCancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingCancellationReasonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("CallbackRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CallbackRequestObject obj), val) <- cmds]
-    |::| runCreate dbConf ("CallStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CallStatusObject obj), val) <- cmds]
-    |::| runCreate dbConf ("CancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DriverOffer" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverOfferObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Estimate" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (EstimateObject obj), val) <- cmds]
-    |::| runCreate dbConf ("EstimateBreakup" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (EstimateBreakupObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Exophone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (ExophoneObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FareBreakup" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareBreakupObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Geometry" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Issue" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueObject obj), val) <- cmds]
-    |::| runCreate dbConf ("DirectionsCache" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DirectionsCacheObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PlaceNameCache" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Merchant" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantMessage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantPaymentMethod" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantPaymentMethodObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantServiceConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("MerchantConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("OnSearchEvent" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (OnSearchEventObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PaymentOrder" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentOrderObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PaymentTransaction" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentTransactionObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Person" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PersonDefaultEmergencyNumber" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonDefaultEmergencyNumberObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PersonFlowStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonFlowStatusObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Quote" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (QuoteObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RentalSlab" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RentalSlabObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Rating" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Ride" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SavedReqLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SavedReqLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SearchReqLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchReqLocationObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Sos" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SosObject obj), val) <- cmds]
-    |::| runCreate dbConf ("SpecialZoneQuote" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SpecialZoneQuoteObject obj), val) <- cmds]
-    |::| runCreate dbConf ("TripTerms" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (TripTermsObject obj), val) <- cmds]
-    |::| runCreate dbConf ("Webengage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
-    |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
-    |::| runCreate dbConf ("HotSpotConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+  runCreate dbConf streamKey ("AppInstalls" :: Text) [(obj, val, entryId, AppInstallsObject obj) | (CreateDBCommand entryId _ _ _ _ (AppInstallsObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("AppInstalls" :: Text) [(obj, val, entryId, AppInstallsObject obj) | (CreateDBCommand entryId _ _ _ _ (AppInstallsObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("BlackListOrg" :: Text) [(obj, val, entryId, BlackListOrgObject obj) | (CreateDBCommand entryId _ _ _ _ (BlackListOrgObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Booking" :: Text) [(obj, val, entryId, BookingObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("BookingLocation" :: Text) [(obj, val, entryId, BookingLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("BookingCancellationReason" :: Text) [(obj, val, entryId, BookingCancellationReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (BookingCancellationReasonObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("CallbackRequest" :: Text) [(obj, val, entryId, CallbackRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (CallbackRequestObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("CallStatus" :: Text) [(obj, val, entryId, CallStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (CallStatusObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("CancellationReason" :: Text) [(obj, val, entryId, CancellationReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("DriverOffer" :: Text) [(obj, val, entryId, DriverOfferObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverOfferObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Estimate" :: Text) [(obj, val, entryId, EstimateObject obj) | (CreateDBCommand entryId _ _ _ _ (EstimateObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("EstimateBreakup" :: Text) [(obj, val, entryId, EstimateBreakupObject obj) | (CreateDBCommand entryId _ _ _ _ (EstimateBreakupObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Exophone" :: Text) [(obj, val, entryId, ExophoneObject obj) | (CreateDBCommand entryId _ _ _ _ (ExophoneObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("FareBreakup" :: Text) [(obj, val, entryId, FareBreakupObject obj) | (CreateDBCommand entryId _ _ _ _ (FareBreakupObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Geometry" :: Text) [(obj, val, entryId, GeometryObject obj) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Issue" :: Text) [(obj, val, entryId, IssueObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("DirectionsCache" :: Text) [(obj, val, entryId, DirectionsCacheObject obj) | (CreateDBCommand entryId _ _ _ _ (DirectionsCacheObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("PlaceNameCache" :: Text) [(obj, val, entryId, PlaceNameCacheObject obj) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Merchant" :: Text) [(obj, val, entryId, MerchantObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("MerchantMessage" :: Text) [(obj, val, entryId, MerchantMessageObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("MerchantPaymentMethod" :: Text) [(obj, val, entryId, MerchantPaymentMethodObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantPaymentMethodObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("MerchantServiceConfig" :: Text) [(obj, val, entryId, MerchantServiceConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId, MerchantServiceUsageConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("MerchantConfig" :: Text) [(obj, val, entryId, MerchantConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("OnSearchEvent" :: Text) [(obj, val, entryId, OnSearchEventObject obj) | (CreateDBCommand entryId _ _ _ _ (OnSearchEventObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("PaymentOrder" :: Text) [(obj, val, entryId, PaymentOrderObject obj) | (CreateDBCommand entryId _ _ _ _ (PaymentOrderObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("PaymentTransaction" :: Text) [(obj, val, entryId, PaymentTransactionObject obj) | (CreateDBCommand entryId _ _ _ _ (PaymentTransactionObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Person" :: Text) [(obj, val, entryId, PersonObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("PersonDefaultEmergencyNumber" :: Text) [(obj, val, entryId, PersonDefaultEmergencyNumberObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonDefaultEmergencyNumberObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("PersonFlowStatus" :: Text) [(obj, val, entryId, PersonFlowStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonFlowStatusObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Quote" :: Text) [(obj, val, entryId, QuoteObject obj) | (CreateDBCommand entryId _ _ _ _ (QuoteObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("RegistrationToken" :: Text) [(obj, val, entryId, RegistrationTokenObject obj) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("RentalSlab" :: Text) [(obj, val, entryId, RentalSlabObject obj) | (CreateDBCommand entryId _ _ _ _ (RentalSlabObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Rating" :: Text) [(obj, val, entryId, RatingObject obj) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Ride" :: Text) [(obj, val, entryId, RideObject obj) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("SavedReqLocation" :: Text) [(obj, val, entryId, SavedReqLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (SavedReqLocationObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("SearchRequest" :: Text) [(obj, val, entryId, SearchRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("SearchReqLocation" :: Text) [(obj, val, entryId, SearchReqLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchReqLocationObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Sos" :: Text) [(obj, val, entryId, SosObject obj) | (CreateDBCommand entryId _ _ _ _ (SosObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("SpecialZoneQuote" :: Text) [(obj, val, entryId, SpecialZoneQuoteObject obj) | (CreateDBCommand entryId _ _ _ _ (SpecialZoneQuoteObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("TripTerms" :: Text) [(obj, val, entryId, TripTermsObject obj) | (CreateDBCommand entryId _ _ _ _ (TripTermsObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
-    runCreate dbConf model object = do
-      let dbObjects = map (\(dbObject, _, _) -> dbObject) object
-          byteStream = map (\(_, bts, _) -> bts) object
-          entryIds = map (\(_, _, entryId) -> entryId) object
+    runCreate dbConf streamKey' model object = do
+      let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
+          byteStream = map (\(_, bts, _, _) -> bts) object
+          entryIds = map (\(_, _, entryId, _) -> entryId) object
           cmdsToErrorQueue = map ("command" :: String,) byteStream
+          dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
+      Env {..} <- ask
+      void $ EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
       maxRetries <- EL.runIO getMaxRetries
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
@@ -89,3 +98,16 @@ runCreateCommands cmds = do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" model
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
+
+streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO ()
+streamDriverDrainerCreates producer dbObject streamKey = do
+  let topicName = "rider-drainer-creates"
+  mapM_ (KafkaProd.produceMessage producer . message topicName) dbObject
+  where
+    message topicName event =
+      ProducerRecord
+        { prTopic = TopicName topicName,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 streamKey,
+          prValue = Just . LBS.toStrict $ encode event
+        }
