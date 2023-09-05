@@ -166,6 +166,7 @@ const bengaliStrings = {
 	STEP: "পদক্ষেপ",
 	PAID: "প্রদত্ত",
 	ENTERED_WRONG_OTP: "ভুল ওটিপি প্রবেশ করেছে",
+	OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "অবৈধ OTP - গাড়ির ধরন রাইডের প্রকারের সাথে মেলে না",
 	COPIED: "অনুলিপি",
 	BANK_NAME: "ব্যাংকের নাম",
 	AADHAR_DETAILS: "আধারের বিবরণ",

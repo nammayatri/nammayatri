@@ -166,6 +166,7 @@ const hindiStrings = {
   PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL: "कृपया हमें बताएं कि आप क्यों रद्द करना चाहते हैं",
   MANDATORY: "अनिवार्य",
   ENTERED_WRONG_OTP: "गलत ओटीपी दर्ज किया",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "अवैध ओटीपी - वाहन का प्रकार सवारी के प्रकार से मेल नहीं खा रहा है",
   COPIED: "कॉपी किया गया",
   BANK_NAME: "बैंक का नाम",
   AADHAR_DETAILS: "आधार विवरण",

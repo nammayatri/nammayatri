@@ -165,6 +165,7 @@ const kannadaStrings = {
   PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL: "ನೀವು ಏಕೆ ರದ್ದುಗೊಳಿಸಬೇಕೆಂದು ದಯವಿಟ್ಟು ನಮಗೆ ತಿಳಿಸಿ",
   MANDATORY: "ಕಡ್ಡಾಯ",
   ENTERED_WRONG_OTP: "ತಪ್ಪು ಒಟಿಪಿಗೆ ಪ್ರವೇಶಿಸಿದೆ",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "ಅಮಾನ್ಯ OTP - ವಾಹನದ ಪ್ರಕಾರವು ರೈಡ್ ಪ್ರಕಾರದೊಂದಿಗೆ ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ",
   COPIED: "ನಕಲಿಸಿದ",
   BANK_NAME: "ಬ್ಯಾಂಕ್ ಹೆಸರು",
   AADHAR_DETAILS: "ಆಧಾರ್ ವಿವರಗಳು",
