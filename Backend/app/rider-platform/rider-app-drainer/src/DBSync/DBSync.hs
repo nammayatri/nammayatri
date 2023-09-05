@@ -103,7 +103,7 @@ runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(Upda
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
 
-  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
+  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
@@ -126,7 +126,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc)
       else pure (length cSucc)
 
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -148,7 +148,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
 
-  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
+  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) dbStreamKey deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
   void $
     if null dSucc
@@ -189,8 +189,7 @@ process dbStreamKey count = do
     Right Nothing -> do
       pure 0
     Right (Just c) -> do
-      successCount <- run c
-      pure successCount
+      run c
   where
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do

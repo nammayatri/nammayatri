@@ -73,6 +73,7 @@ dependencies:
   - http-client
   - http-client-tls
   - http-types
+  - hw-kafka-client
   - lens
   - pcg-random
   - servant-server
