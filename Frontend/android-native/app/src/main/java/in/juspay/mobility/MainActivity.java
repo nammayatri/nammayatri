@@ -25,6 +25,7 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.InflateException;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -90,6 +92,7 @@ import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
+import in.juspay.mobility.common.Utils;
 import in.juspay.services.HyperServices;
 
 
@@ -111,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             if (key != null && key.equals("LANGUAGE_KEY")) {
-                MobilityCommonBridge.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
+                Utils.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
             }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
                 String token = sharedPreferences.getString("REGISTERATION_TOKEN", "null");
@@ -271,7 +274,21 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        setContentView(R.layout.activity_main);
+        try {
+            setContentView(R.layout.activity_main);
+        } catch (Resources.NotFoundException e){
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            mFirebaseAnalytics.logEvent("res_not_found_exception",bundle);
+        } catch (InflateException e){
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            mFirebaseAnalytics.logEvent("inflate_exception",bundle);
+        }  catch (Exception e){
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
+        }
 //        String key = getResources().getString(R.string.service);
 //        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
 
@@ -295,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            MobilityCommonBridge.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
+            Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
         } else {
             LottieAnimationView splashLottieView = findViewById(in.juspay.mobility.app.R.id.splash_lottie);
             try {
@@ -777,14 +794,11 @@ public class MainActivity extends AppCompatActivity {
                 adInfo = AdvertisingIdClient.getAdvertisingIdInfo(MainActivity.this.getApplicationContext());
                 if (adInfo.isLimitAdTrackingEnabled()) // check if user has opted out of tracking
                     return "did not found GAID... sorry";
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (GooglePlayServicesNotAvailableException e) {
-                e.printStackTrace();
-            } catch (GooglePlayServicesRepairableException e) {
+            } catch (IOException | GooglePlayServicesRepairableException |
+                     GooglePlayServicesNotAvailableException e) {
                 e.printStackTrace();
             }
-             return adInfo != null ? adInfo.getId() : "did not found GAID... sorry";
+            return adInfo != null ? adInfo.getId() : "did not found GAID... sorry";
         }
         @Override
         protected void onPostExecute(String s) {

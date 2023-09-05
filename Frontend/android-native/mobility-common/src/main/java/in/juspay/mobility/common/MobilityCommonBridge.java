@@ -8,10 +8,10 @@ import static android.content.Context.MODE_PRIVATE;
 
 import android.Manifest;
 import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -20,7 +20,6 @@ import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentSender;
@@ -46,7 +45,6 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -74,7 +72,7 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.HorizontalScrollView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -116,7 +114,6 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
-import com.airbnb.lottie.LottieListener;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -161,19 +158,19 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
     //Maps
-    protected static JSONObject markers = new JSONObject();
-    protected static GoogleMap googleMap;
-    protected static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
-    protected static GeoJsonLayer layer;
+    protected JSONObject markers = new JSONObject();
+    protected GoogleMap googleMap;
+    protected ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
+    protected GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";
     protected float zoom = 17.0f;
     // CallBacks
-    protected static String storeLocateOnMapCallBack = null;
-    protected static String storeDashboardCallBack = null;
-    protected static Marker userPositionMarker;
+    protected String storeLocateOnMapCallBack = null;
+    protected String storeDashboardCallBack = null;
+    protected Marker userPositionMarker;
     private final FusedLocationProviderClient client;
-    protected static Polyline polyline = null;
+    protected Polyline polyline = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
     //Location
     protected double lastLatitudeValue;
@@ -195,13 +192,15 @@ public class MobilityCommonBridge extends HyperBridge {
     private LottieAnimationView animationView;
     protected Method[] methods = null;
 
-    protected static Receivers receivers = new Receivers();
+    protected  Receivers receivers;
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"mobility\"}));");
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+        receivers = new Receivers(bridgeComponents);
+        receivers.initReceiver();
     }
 
     public static boolean isClassAvailable(String className) {
@@ -216,13 +215,13 @@ public class MobilityCommonBridge extends HyperBridge {
     @Override
     public void reset() {
         if (receivers != null) {
-            receivers.deRegister(bridgeComponents.getContext());
+            receivers.deRegister();
             receivers = null;
         }
         polyline = null;
         googleMap = null;
-        markers = null;
-        pickupPointsZoneMarkers = null;
+        markers = new JSONObject();
+        pickupPointsZoneMarkers = new ArrayList<>();
         layer = null;
 
         // CallBacks
@@ -234,12 +233,12 @@ public class MobilityCommonBridge extends HyperBridge {
     // region Store and Trigger CallBack
     @JavascriptInterface
     public void storeCallBackInternetAction(String callback) {
-        Receivers.storeInternetActionCallBack = callback;
+        receivers.storeInternetActionCallBack = callback;
     }
 
     @JavascriptInterface
     public void storeCallBackDriverLocationPermission(String callback) {
-        Receivers.storeLocationCallBack = callback;
+        receivers.storeLocationCallBack = callback;
     }
     // endregion
 
@@ -392,10 +391,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
-        if (receivers == null) {
-            receivers = new Receivers();
-        }
-        receivers.initReceiver(bridgeComponents);
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
     }
@@ -666,7 +661,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
         if (bridgeComponents.getActivity() != null) {
             mapFragment.getMapAsync(googleMap -> {
-                MobilityCommonBridge.googleMap = googleMap;
+                this.googleMap = googleMap;
                 googleMap.setMinZoomPreference(7.0f);
                 googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -684,7 +679,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 try {
                     if (mapType.equals(LOCATE_ON_MAP)) {
                         upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f);
-                        MobilityCommonBridge.googleMap.setOnCameraMoveListener(() -> {
+                        this.googleMap.setOnCameraMoveListener(() -> {
                             try {
                                 double lat = (googleMap.getCameraPosition().target.latitude);
                                 double lng = (googleMap.getCameraPosition().target.longitude);
@@ -693,7 +688,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 Log.i(MAPS, "Marker creation error for ", e);
                             }
                         });
-                        MobilityCommonBridge.googleMap.setOnCameraIdleListener(() -> {
+                        this.googleMap.setOnCameraIdleListener(() -> {
                             if (callback != null) {
                                 double lat = (googleMap.getCameraPosition().target.latitude);
                                 double lng = (googleMap.getCameraPosition().target.longitude);
@@ -706,7 +701,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     setMapCustomTheme();
                     if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
                         LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        MobilityCommonBridge.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
+                        this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -757,7 +752,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             .findFragmentById(Integer.parseInt(pureScriptId));
                     if (mapFragment != null) {
                         mapFragment.getMapAsync(googleMap -> {
-                            MobilityCommonBridge.googleMap = googleMap;
+                            this.googleMap = googleMap;
                             googleMap.getUiSettings().setRotateGesturesEnabled(false);
                             googleMap.getUiSettings().setMyLocationButtonEnabled(false);
                             markers = markersElement.get(pureScriptId);
@@ -785,7 +780,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
-                        Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
+                        int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
                         upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
                         animateCamera(lat,lng,20.0f, ZoomType.ZOOM);
                         return;
@@ -832,7 +827,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng source = points.get(points.size() - 1);
                         if (type.equals("DRIVER_LOCATION_UPDATE")) {
-                            Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
+                            int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
                             upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarker);
                             int index = polyline.getPoints().size() - 1;
@@ -937,7 +932,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try {
             if (imageName.equals("ny_ic_zone_pickup_marker")) {
                 pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier("ny_ic_zone_pickup_marker_yellow", "drawable", context.getPackageName())));
-                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+                ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                 layoutParams.height = 40;
                 layoutParams.width = 40;
                 pointer.setLayoutParams(layoutParams);
@@ -1106,7 +1101,7 @@ public class MobilityCommonBridge extends HyperBridge {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
         if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
-            updateLocaleResource(value, bridgeComponents.getContext());
+            Utils.updateLocaleResource(value, bridgeComponents.getContext());
         }
     }
 
@@ -1871,7 +1866,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     protected boolean checkAndAskStoragePermission (){
         if (Build.VERSION.SDK_INT < 30) {
-            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
+            if (bridgeComponents.getActivity() != null && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
                 ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
                 return false;
             } else {
@@ -1880,6 +1875,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return true;
     }
+
 
     public ImageView.ScaleType getScaleTypes(String scale) {
         switch (scale) {
@@ -1920,39 +1916,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public static void updateLocaleResource(String languageKey, Context context) {
-        Locale locale;
-        switch (languageKey) {
-            case "HI_IN":
-                locale = new Locale("hi");
-                break;
-            case "KN_IN":
-                locale = new Locale("kn");
-                break;
-            case "EN_US":
-                locale = new Locale("en");
-                break;
-            case "TA_IN":
-                locale = new Locale("ta");
-                break;
-            case "BN_IN":
-                locale = new Locale("bn");
-                break;
-            case "ML_IN":
-                locale = new Locale("ml");
-                break;
-            case "FR_FR":
-                locale = new Locale("fr");
-                break;
-            default:
-                return;
-        }
-        Locale.setDefault(locale);
-        Configuration configuration = context.getResources().getConfiguration();
-        configuration.setLocale(locale);
-        context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
-    }
-
     @JavascriptInterface
     public void horizontalScrollToPos(final String id, final String childId, final int focus) {
         if (bridgeComponents.getActivity() != null) {
@@ -1980,16 +1943,34 @@ public class MobilityCommonBridge extends HyperBridge {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(fileName,MODE_PRIVATE);
         sharedPref.edit().clear().apply();
     }
+
+    @JavascriptInterface
+    public boolean isServiceRunning(String serviceClassName){
+        final ActivityManager activityManager = (ActivityManager) bridgeComponents.getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
+
+        for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
+            if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
+                return true;
+            }
+        }
+        return false;
+    }
     // endregion
 
     protected static class Receivers {
         BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
         BroadcastReceiver timeChangeCallback;
-        static String storeInternetActionCallBack = null;
-        static String storeLocationCallBack = null;
+        String storeInternetActionCallBack = null;
+        String storeLocationCallBack = null;
+        BridgeComponents bridgeComponents;
 
-        public void initReceiver(BridgeComponents bridgeComponents) {
+        public Receivers(BridgeComponents bridgeComponents) {
+            this.bridgeComponents = bridgeComponents;
+        }
+
+        public void initReceiver() {
             gpsReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
@@ -2052,8 +2033,9 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         }
 
-        public void deRegister(Context context) {
+        public void deRegister() {
             try {
+                Context context = bridgeComponents.getContext().getApplicationContext();
                 context.unregisterReceiver(gpsReceiver);
                 context.unregisterReceiver(internetActionReceiver);
                 context.unregisterReceiver(timeChangeCallback);
