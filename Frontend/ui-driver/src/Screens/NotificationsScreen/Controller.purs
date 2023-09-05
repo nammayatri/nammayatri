@@ -35,7 +35,7 @@ import Debug (spy)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
 import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, parseNumber)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
@@ -45,6 +45,7 @@ import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityRe
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -247,6 +248,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
 

@@ -520,6 +520,30 @@ public class MainActivity extends AppCompatActivity {
                             }
                         } catch (Exception ignored) {
                         } break;
+                    case "log_stream":
+                        JSONObject payload;
+                        try {
+                            payload = jsonObject.getJSONObject("payload");
+                            HashMap<String, String> params = new HashMap<>();
+                            switch (payload.optString("label")) {
+                                case "current_screen":
+                                    params.put("screen_name", payload.getJSONObject("value").getString("screen_name"));
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_current_screen", params ,context);
+                                    break;
+                                case "button_clicked":
+                                    params.put("button_name",payload.getJSONObject("value").getString("button_name"));
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_button_clicked",params ,context);
+                                    break;
+                                case "upi_apps":
+                                    params.put("app_name",payload.getJSONObject("value").getString("appName"));
+                                    params.put("package_name",payload.getJSONObject("value").getString("packageName"));
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_upi_app_selected",params ,context);
+                                    break;
+                                default:
+                            }
+                        } catch (JSONException e) {
+                            Log.e(LOG_TAG, "empty payload" + json);
+                        }
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
@@ -845,6 +869,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("clientId", getResources().getString(R.string.client_id));
         payload.put("merchantId", getResources().getString(R.string.merchant_id));
         payload.put("action", action);
+        payload.put("logLevel",1);
         payload.put(PaymentConstants.ENV, "prod");
         return payload;
     }

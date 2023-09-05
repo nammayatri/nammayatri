@@ -12,7 +12,8 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport)
+import Effect.Unsafe (unsafePerformEffect)
+import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare)
@@ -140,11 +141,15 @@ eval (SwitchPlan PrimaryButton.OnClick) state = do
   let planId = state.props.managePlanProps.selectedPlanItem.id
   if planId /= "" then do
     _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan_clicked"
+    _ <- pure $ metaLogEvent "ny_driver_switch_plan_clicked"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_switch_plan_clicked"
     updateAndExit state { props{showShimmer = true}} $ SwitchCurrentPlan state { props{showShimmer = true}} planId
   else continue state
 
 eval ManagePlanAC state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
+  _ <- pure $ metaLogEvent "ny_driver_manage_plan_clicked"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_manage_plan_clicked"
   updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuExpanded = false}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuExpanded = false }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
 eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
@@ -184,6 +189,8 @@ eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { p
 
 eval (ConfirmCancelPopup (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_cancel_autopay"
+  _ <- pure $ metaLogEvent "ny_driver_cancel_autopay"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_cancel_autopay"
   updateAndExit state { props{showShimmer = true, confirmCancel = false}} $ CancelAutoPayPlan state { props{showShimmer = true, confirmCancel = false}}
 
 eval (ResumeAutoPay PrimaryButton.OnClick) state = updateAndExit state $ ResumeAutoPayPlan state
