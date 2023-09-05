@@ -104,6 +104,10 @@
             android:name=".GPSBroadcastReceiver"
             android:enabled="true"
             android:exported="false"/>
+        <receiver
+            android:name=".GpsListeningService$LocationBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false"/>
 
         <service
             android:name=".OverlaySheetService"

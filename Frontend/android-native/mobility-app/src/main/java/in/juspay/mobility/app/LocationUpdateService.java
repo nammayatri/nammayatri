@@ -134,6 +134,10 @@ public class LocationUpdateService extends Service {
         LocationUpdateService.updateTimeCallbacks.add(timeUpdateCallback);
     }
 
+    public static void deRegisterCallback(UpdateTimeCallback timeUpdateCallback) {
+        LocationUpdateService.updateTimeCallbacks.add(timeUpdateCallback);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -273,9 +277,8 @@ public class LocationUpdateService extends Service {
             fusedLocationProviderClient.requestLocationUpdates(lr, lc, Looper.getMainLooper());
 
             TimerTask tt = createTimer();
-            if (timer != null) {
-                timer.scheduleAtFixedRate(tt, 0, delayForT);
-            }
+            if (timer == null) timer = new Timer();
+            timer.scheduleAtFixedRate(tt, 0, delayForT);
         }
     }
 
@@ -570,11 +573,7 @@ public class LocationUpdateService extends Service {
                 locationPayload = new JSONArray();
             }
             JSONArray metaData;
-            try {
-                metaData = new JSONArray(metaDataForLocation.toString());
-            } catch (JSONException e) {
-                metaData = new JSONArray();
-            }
+            metaData = metaDataForLocation;
             metaData.put(batteryPercentage);
             metaData.put(isOnCharge);
             metaData.put(triggerFunction);
@@ -701,8 +700,7 @@ public class LocationUpdateService extends Service {
                     if (resp.has("errorCode") && resp.get("errorCode").equals("INVALID_TOKEN")) {
                         System.out.println("Inisde Invalid token " + resp.get("errorCode"));
                         updateStorage("REGISTERATION_TOKEN", "__failed");
-                        if (timer != null)
-                            timer.cancel();
+                        cancelTimer();
                         onDestroy();
                         executor.shutdown();
                     }

@@ -64,7 +64,6 @@ public class WidgetService extends Service {
     private String widgetMessage;
     private int calculatedTime = 0;
     private JSONObject entity_payload, data;
-    private SharedPreferences sharedPref;
 
     private final Bundle params = new Bundle();
 
@@ -90,7 +89,6 @@ public class WidgetService extends Service {
     public void onCreate() {
         super.onCreate();
         addWidgetToWindowManager();
-        sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
     }
 
     private View silentRideRequest, dismissRequest, floatingWidget;
@@ -140,7 +138,7 @@ public class WidgetService extends Service {
                 df.setMaximumFractionDigits(2);
 
                 // Update text for fare and distanceToPickup
-
+                SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 fareTextView.setText(sharedPref.getString("CURRENCY", "₹") + fare);
                 if (distanceToPickup > 1000) {
                     distanceTextView.setText((df.format(distanceToPickup / 1000)) + " km pickup");
@@ -148,47 +146,54 @@ public class WidgetService extends Service {
                     distanceTextView.setText(distanceToPickup + " m pickup");
                 }
 
-                // Add silentRideRequest view
                 silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
-                silentRideRequest.setVisibility(View.VISIBLE);
+                if (silentRideRequest != null){
+                    // Add silentRideRequest view
+                    silentRideRequest.setVisibility(View.VISIBLE);
+
+                    // Start Slide-in animation
+                    silentRideRequest.setTranslationX(-1500);
+                    silentRideRequest.animate().translationX(0)
+                            .setInterpolator(new FastOutLinearInInterpolator())
+                            .setDuration(600)
+                            .start();
+
+                    //onClick Listener for rideRequest
+                    silentRideRequest.setOnClickListener(view -> {
+                        if (data != null && entity_payload != null) {
+                            NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload);
+                            silentRideRequest.setVisibility(View.GONE);
+                            progressBar.setVisibility(View.GONE);
+                            dismissRequest.setVisibility(View.GONE);
+                            calculatedTime = 0;
+                        }
+                    });
+                }
 
                 dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
-                dismissRequest.setVisibility(View.VISIBLE);
+                if (dismissRequest != null) {
+                    dismissRequest.setVisibility(View.VISIBLE);
 
-                //Start progress bar :-
+                    dismissRequest.setTranslationX(-1500);
+                    dismissRequest.animate().translationX(0)
+                            .setInterpolator(new FastOutLinearInInterpolator())
+                            .setDuration(600)
+                            .start();
+                }
 
                 progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
-                progressBar.setVisibility(View.VISIBLE);
-                progressBar.setIndicatorColor(getColor(R.color.green900));
-                // Start Slide-in animation
-                silentRideRequest.setTranslationX(-1500);
-                silentRideRequest.animate().translationX(0)
-                        .setInterpolator(new FastOutLinearInInterpolator())
-                        .setDuration(600)
-                        .start();
+                if (progressBar != null) {
+                    //Start progress bar :-
+                    progressBar.setVisibility(View.VISIBLE);
+                    progressBar.setIndicatorColor(getColor(R.color.green900));
 
-                dismissRequest.setTranslationX(-1500);
-                dismissRequest.animate().translationX(0)
-                        .setInterpolator(new FastOutLinearInInterpolator())
-                        .setDuration(600)
-                        .start();
+                    progressBar.setTranslationX(-1500);
+                    progressBar.animate().translationX(0)
+                            .setInterpolator(new FastOutLinearInInterpolator())
+                            .setDuration(600)
+                            .start();
+                }
 
-                progressBar.setTranslationX(-1500);
-                progressBar.animate().translationX(0)
-                        .setInterpolator(new FastOutLinearInInterpolator())
-                        .setDuration(600)
-                        .start();
-
-                //onClick Listener for rideRequest
-                silentRideRequest.setOnClickListener(view -> {
-                    if (data != null && entity_payload != null) {
-                        NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload);
-                        silentRideRequest.setVisibility(View.GONE);
-                        progressBar.setVisibility(View.GONE);
-                        dismissRequest.setVisibility(View.GONE);
-                        calculatedTime = 0;
-                    }
-                });
 
                 // Animate the floating widget
                 floatingWidget = widgetView.findViewById(R.id.floating_logo);
@@ -403,6 +408,7 @@ public class WidgetService extends Service {
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 try {
                     view.performClick();
+                    SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     switch (motionEvent.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             imageClose.setVisibility(View.GONE);
@@ -435,8 +441,6 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
-                                    if (sharedPref == null)
-                                        sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                                     if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
                                         mainLooper.postDelayed(() -> openMainActivity(), 600);
@@ -448,8 +452,6 @@ public class WidgetService extends Service {
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-                            if (sharedPref == null)
-                                sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                             if (Calendar.getInstance().getTimeInMillis() - actionDownTime > 200) {
                                 if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Offline")) {
                                     imageClose.setVisibility(View.VISIBLE);

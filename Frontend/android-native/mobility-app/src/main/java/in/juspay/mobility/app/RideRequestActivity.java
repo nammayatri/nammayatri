@@ -78,7 +78,7 @@ public class RideRequestActivity extends AppCompatActivity {
     }
 
     public void addToList(Bundle rideRequestBundle) {
-        if (rideRequestBundle == null && sheetArrayList == null || sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
+        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
         mainLooper.post(() -> {
             if (findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
                 return;

@@ -89,7 +89,7 @@ import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
-    public static int debounceAnimateCameraCounter = 0;
+    public int debounceAnimateCameraCounter = 0;
 
     @Override
     public void reset() {
