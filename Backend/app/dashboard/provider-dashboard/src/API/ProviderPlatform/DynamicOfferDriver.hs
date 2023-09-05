@@ -26,6 +26,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
+import qualified API.ProviderPlatform.DynamicOfferDriver.RegistryMap as RegistryMap
 import qualified API.ProviderPlatform.DynamicOfferDriver.Revenue as Revenue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
@@ -48,6 +49,7 @@ type API =
            :<|> DriverRegistration.API
            :<|> Issue.API
            :<|> Volunteer.API
+           :<|> RegistryMap.API
            :<|> Revenue.API
            :<|> Overlay.API
        )
@@ -64,5 +66,6 @@ handler merchantId =
     :<|> DriverRegistration.handler merchantId
     :<|> Issue.handler merchantId
     :<|> Volunteer.handler merchantId
+    :<|> RegistryMap.handler merchantId
     :<|> Revenue.handler merchantId
     :<|> Overlay.handler merchantId

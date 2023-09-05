@@ -78,7 +78,8 @@ merchantUpdate merchantShortId req = do
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
                  DM.description = req.description <|> merchant.description,
-                 DM.enabled = fromMaybe merchant.enabled req.enabled
+                 DM.enabled = fromMaybe merchant.enabled req.enabled,
+                 DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
   now <- getCurrentTime
 

@@ -53,6 +53,7 @@ update org = do
       Se.Set BeamM.description org.description,
       Se.Set BeamM.headCount org.headCount,
       Se.Set BeamM.enabled org.enabled,
+      Se.Set BeamM.registryUrl $ showBaseUrl org.registryUrl,
       Se.Set BeamM.updatedAt now,
       Se.Set BeamM.fromTime org.fromTime
     ]

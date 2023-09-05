@@ -31,6 +31,33 @@ findByUniqueId uniqueId = findAllWithKV [Se.Is BeamRMT.uniqueId $ Se.Eq uniqueId
 findBySubscriberIdAndUniqueId :: MonadFlow m => Text -> Text -> m (Maybe RegistryMapFallback)
 findBySubscriberIdAndUniqueId subscriberId uniqueId = findOneWithKV [Se.And [Se.Is BeamRMT.subscriberId $ Se.Eq subscriberId, Se.Is BeamRMT.uniqueId $ Se.Eq uniqueId]]
 
+updateBySubscriberId :: MonadFlow m => Text -> Text -> m ()
+updateBySubscriberId subscriberId registryUrl = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamRMT.registryUrl registryUrl,
+      Se.Set BeamRMT.updatedAt now
+    ]
+    [Se.Is BeamRMT.subscriberId (Se.Eq subscriberId)]
+
+updateByUniqueId :: MonadFlow m => Text -> Text -> m ()
+updateByUniqueId uniqueId registryUrl = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamRMT.registryUrl registryUrl,
+      Se.Set BeamRMT.updatedAt now
+    ]
+    [Se.Is BeamRMT.uniqueId (Se.Eq uniqueId)]
+
+updateBySubscriberIdAndUniqueId :: MonadFlow m => Text -> Text -> Text -> m ()
+updateBySubscriberIdAndUniqueId subscriberId uniqueId registryUrl = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRMT.registryUrl registryUrl,
+      Se.Set BeamRMT.updatedAt now
+    ]
+    [Se.And [Se.Is BeamRMT.subscriberId (Se.Eq subscriberId), Se.Is BeamRMT.uniqueId (Se.Eq uniqueId)]]
+
 instance FromTType' BeamRMT.RegistryMapFallback RegistryMapFallback where
   fromTType' BeamRMT.RegistryMapFallbackT {..} = do
     regUrl <- parseBaseUrl registryUrl
@@ -39,7 +66,8 @@ instance FromTType' BeamRMT.RegistryMapFallback RegistryMapFallback where
         RegistryMapFallback
           { subscriberId = subscriberId,
             uniqueId = uniqueId,
-            registryUrl = regUrl
+            registryUrl = regUrl,
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamRMT.RegistryMapFallback RegistryMapFallback where
@@ -47,5 +75,6 @@ instance ToTType' BeamRMT.RegistryMapFallback RegistryMapFallback where
     BeamRMT.RegistryMapFallbackT
       { BeamRMT.subscriberId = subscriberId,
         BeamRMT.uniqueId = uniqueId,
-        BeamRMT.registryUrl = showBaseUrl registryUrl
+        BeamRMT.registryUrl = showBaseUrl registryUrl,
+        BeamRMT.updatedAt = updatedAt
       }

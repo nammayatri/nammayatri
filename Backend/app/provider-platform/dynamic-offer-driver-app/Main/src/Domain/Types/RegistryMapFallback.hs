@@ -11,14 +11,28 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.RegistryMapFallback where
 
+import qualified "dashboard-helper-api" Dashboard.Common as Common
 import Kernel.Prelude
+import Kernel.Types.App ()
 
 data RegistryMapFallback = RegistryMapFallback
   { subscriberId :: Text,
     uniqueId :: Text,
-    registryUrl :: BaseUrl
+    registryUrl :: BaseUrl,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data RegistryMapReq = RegistryMapReq
+  { subscriberId :: Maybe Text,
+    uniqueId :: Maybe Text,
+    registryUrl :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+instance Common.HideSecrets RegistryMapReq where
+  hideSecrets = identity

@@ -151,16 +151,6 @@ let appBackendBapInternal =
       , internalKey = sec.internalKey
       }
 
-let registryMap =
-      [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
-        , mapValue = "http://localhost:8020/"
-        }
-      , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
-        , mapValue = "http://localhost:8020/"
-        }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
-      ]
-
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | SendPaymentReminderToDriver

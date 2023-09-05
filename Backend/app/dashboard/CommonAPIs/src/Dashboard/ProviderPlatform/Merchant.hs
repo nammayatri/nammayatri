@@ -50,7 +50,8 @@ data MerchantUpdateReq = MerchantUpdateReq
     description :: Maybe Text,
     enabled :: Maybe Bool,
     exoPhones :: Maybe (NonEmpty ExophoneReq),
-    fcmConfig :: Maybe FCMConfigUpdateReq
+    fcmConfig :: Maybe FCMConfigUpdateReq,
+    registryUrl :: Maybe BaseUrl
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -60,7 +61,8 @@ data MerchantUpdateTReq = MerchantUpdateTReq
     description :: Maybe Text,
     enabled :: Maybe Bool,
     exoPhones :: Maybe (NonEmpty ExophoneReq),
-    fcmConfig :: Maybe FCMConfigUpdateTReq
+    fcmConfig :: Maybe FCMConfigUpdateTReq,
+    registryUrl :: Maybe BaseUrl
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)

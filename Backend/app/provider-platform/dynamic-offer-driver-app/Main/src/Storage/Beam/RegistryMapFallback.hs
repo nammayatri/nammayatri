@@ -15,6 +15,7 @@
 
 module Storage.Beam.RegistryMapFallback where
 
+import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
@@ -22,7 +23,8 @@ import Tools.Beam.UtilsTH
 data RegistryMapFallbackT f = RegistryMapFallbackT
   { subscriberId :: B.C f Text,
     uniqueId :: B.C f Text,
-    registryUrl :: B.C f Text
+    registryUrl :: B.C f Text,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

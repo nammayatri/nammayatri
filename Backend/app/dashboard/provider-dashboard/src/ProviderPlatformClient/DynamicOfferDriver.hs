@@ -41,6 +41,7 @@ import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscriptio
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
+import "dynamic-offer-driver-app" Domain.Types.RegistryMapFallback as DRM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -64,7 +65,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     driverRegistration :: DriverRegistrationAPIs,
     issue :: IssueAPIs,
     revenue :: RevenueAPIs,
-    subscription :: SubscriptionAPIs
+    subscription :: SubscriptionAPIs,
+    registry :: RegistryMapAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -216,6 +218,10 @@ data SubscriptionAPIs = SubscriptionAPIs
     currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
   }
 
+newtype RegistryMapAPIs = RegistryMapAPIs
+  { updateRegistry :: DRM.RegistryMapReq -> Euler.EulerClient APISuccess
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
@@ -228,6 +234,7 @@ mkDriverOfferAPIs merchantId token = do
   let message = MessageAPIs {..}
   let volunteer = VolunteerAPIs {..}
   let issue = IssueAPIs {..}
+  let registry = RegistryMapAPIs {..}
   let revenue = RevenueAPIs {..}
   let overlay = OverlayAPIs {..}
   DriverOfferAPIs {..}
@@ -242,6 +249,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverRegistrationClient
       :<|> volunteerClient
       :<|> issueClient
+      :<|> registryMapClient
       :<|> revenueClient
       :<|> overlayClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
@@ -366,6 +374,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueAddComment
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack = issueClient
+
+    updateRegistry = registryMapClient
 
     getCollectionHistory
       :<|> getAllDriverFeeHistory = revenueClient

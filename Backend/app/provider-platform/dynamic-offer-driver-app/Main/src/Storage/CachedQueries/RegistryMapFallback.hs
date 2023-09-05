@@ -38,6 +38,30 @@ findBySubscriberIdAndUniqueId subId uniqueId =
     Just a -> return a
     Nothing -> cacheRegistryMapFallback (makeSubscriberIdAndUniqueIdKey subId uniqueId) /=<< Queries.findBySubscriberIdAndUniqueId subId uniqueId
 
+updateBySubscriberId :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
+updateBySubscriberId subId regUrl = do
+  clearCacheRegistryMapFallbackBySubscriberId subId
+  Queries.updateBySubscriberId subId regUrl
+
+updateByUniqueId :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
+updateByUniqueId uniqueId regUrl = do
+  clearCacheRegistryMapFallbackByUniqueId uniqueId
+  Queries.updateByUniqueId uniqueId regUrl
+
+updateBySubscriberIdAndUniqueId :: (CacheFlow m r, MonadFlow m) => Text -> Text -> Text -> m ()
+updateBySubscriberIdAndUniqueId subId uniqueId regUrl = do
+  clearCacheRegistryMapFallbackBySubscriberIdAndUniqueId subId uniqueId
+  Queries.updateBySubscriberIdAndUniqueId subId uniqueId regUrl
+
+clearCacheRegistryMapFallbackBySubscriberId :: (CacheFlow m r) => Text -> m ()
+clearCacheRegistryMapFallbackBySubscriberId subId = Hedis.del (makeSubscriberIdKey subId)
+
+clearCacheRegistryMapFallbackByUniqueId :: (CacheFlow m r) => Text -> m ()
+clearCacheRegistryMapFallbackByUniqueId uniqueId = Hedis.del (makeUniqueIdKey uniqueId)
+
+clearCacheRegistryMapFallbackBySubscriberIdAndUniqueId :: (CacheFlow m r) => Text -> Text -> m ()
+clearCacheRegistryMapFallbackBySubscriberIdAndUniqueId subId uniqueId = Hedis.del (makeSubscriberIdAndUniqueIdKey subId uniqueId)
+
 cacheRegistryMapFallbacks :: CacheFlow m r => Text -> [RegistryMapFallback] -> m ()
 cacheRegistryMapFallbacks key registryMap = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

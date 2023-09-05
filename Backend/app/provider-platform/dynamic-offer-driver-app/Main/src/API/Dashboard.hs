@@ -24,6 +24,7 @@ import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Overlay as Overlay
+import qualified API.Dashboard.RegistryMap as RegistryMap
 import qualified API.Dashboard.Revenue as Revenue
 import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.Subscription as Subscription
@@ -54,6 +55,7 @@ type API' =
            :<|> DriverRegistration.API
            :<|> Volunteer.API
            :<|> Issue.API
+           :<|> RegistryMap.API
            :<|> Revenue.API
            :<|> Overlay.API
        )
@@ -71,6 +73,7 @@ handler =
         :<|> DriverRegistration.handler merchantId
         :<|> Volunteer.handler merchantId
         :<|> Issue.handler merchantId
+        :<|> RegistryMap.handler merchantId
         :<|> Revenue.handler merchantId
         :<|> Overlay.handler merchantId
   )
