@@ -58,6 +58,7 @@ library
       API.UI.ExotelEndRide
       API.UI.Frontend
       API.UI.Issue
+      API.UI.KioskLocation
       API.UI.LeaderBoard
       API.UI.Location
       API.UI.Maps
@@ -132,6 +133,7 @@ library
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
+      Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.Location
       Domain.Action.UI.Location.UpdateLocation
@@ -202,6 +204,8 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.KioskLocation
+      Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
@@ -325,6 +329,8 @@ library
       Storage.Beam.Issue.IssueOption
       Storage.Beam.Issue.IssueReport
       Storage.Beam.Issue.IssueTranslation
+      Storage.Beam.KioskLocation
+      Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfig
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
@@ -368,6 +374,8 @@ library
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
+      Storage.CachedQueries.KioskLocation
+      Storage.CachedQueries.KioskLocationTranslation
       Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile
@@ -431,6 +439,8 @@ library
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
       Storage.Queries.Issue.IssueTranslation
+      Storage.Queries.KioskLocation
+      Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfig
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache

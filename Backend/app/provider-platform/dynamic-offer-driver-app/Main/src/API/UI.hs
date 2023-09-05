@@ -27,6 +27,7 @@ import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
+import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.Location as Location
 import qualified API.UI.Maps as Maps
@@ -79,6 +80,7 @@ type API =
            :<|> OnMessage.API
            :<|> RideRoute.API
            :<|> Plan.API
+           :<|> KioskLocation.API
        )
 
 handler :: FlowServer API
@@ -110,3 +112,4 @@ handler =
     :<|> OnMessage.handler
     :<|> RideRoute.handler
     :<|> Plan.handler
+    :<|> KioskLocation.handler
