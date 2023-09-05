@@ -8,6 +8,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -25,8 +26,10 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
-
+import java.util.Map;
+import com.facebook.appevents.AppEventsLogger;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
@@ -136,6 +139,26 @@ public class Utils {
         mFirebaseAnalytics.logEvent(event, params);
         if (clevertapDefaultInstance != null){
             clevertapDefaultInstance.pushEvent(event);
+        }
+    }
+    public static void logEventWithParams(String event, HashMap<String,String> params, Context context) {
+        try {
+            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+            AppEventsLogger logger = AppEventsLogger.newLogger(context);
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            Bundle bundleParams = new Bundle();
+            for(Map.Entry<String, String> entry : params.entrySet()) {
+                bundleParams.putString(entry.getKey(),entry.getValue());
+                if (clevertapDefaultInstance != null) {
+                    HashMap<String, Object> mapCustomEvent = new HashMap<>();
+                    mapCustomEvent.put(entry.getKey(),entry.getValue());
+                    clevertapDefaultInstance.pushEvent(event, mapCustomEvent);
+                }
+            }
+            logger.logEvent(event, bundleParams);
+            mFirebaseAnalytics.logEvent(event, bundleParams);
+        } catch (Exception e) {
+            Log.e(UTILS, "Error in logEventWithParams " + e);
         }
     }
 }
