@@ -201,7 +201,32 @@ public class MobilityAppBridge extends HyperBridge {
             AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
             logger.logEvent(event);
         } catch (Exception e) {
-            Log.e(META_LOG, "Error logging meta event : " + e);
+            Log.e(META_LOG, "Error in metaLogEvent " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void metaLogEventWithParams(String event, String paramKey, String paramValue) {
+        try {
+            Bundle params = new Bundle();
+            params.putString(paramKey, paramValue);
+            AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
+            logger.logEvent(event,params);
+        } catch (Exception e) {
+            Log.e(META_LOG, "Error in metaLogEventWithParams : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void metaLogEventWithTwoParams(String event, String paramKey1, String paramValue1, String paramKey2, String paramValue2) {
+        try {
+            Bundle params = new Bundle();
+            params.putString(paramKey1, paramValue1);
+            params.putString(paramKey2, paramValue2);
+            AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
+            logger.logEvent(event,params);
+        } catch (Exception e) {
+            Log.e(META_LOG, "Error in metaLogEventWithTwoParams : " + e);
         }
     }
 

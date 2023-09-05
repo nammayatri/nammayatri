@@ -59,7 +59,7 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..))
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -1841,6 +1841,8 @@ homeScreenFlow = do
       let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
       _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
+      _ <- pure $ metaLogEvent "ny_driver_ride_ended"
+      liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -1999,6 +2001,8 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       if fromJoinPlan then do
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
+        liftFlowBT $ metaLogEventWithTwoParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
+        liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
         pure unit 
       else pure unit
       let (CreateOrderRes orderResp) = listResp.orderResp
@@ -2008,6 +2012,8 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
+      _ <- pure $ metaLogEvent "ny_driver_payment_page_opened"
+      liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
       _ <- paymentPageUI sdkPayload
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
@@ -2032,10 +2038,14 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
   case paymentStatus of
     Success -> do 
       _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
+      _ <- pure $ JB.metaLogEvent "ny_driver_subscription_success"
+      liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup, paymentStatus = Just paymentStatus }})
     Failed -> do
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "failure_code" (show apiPaymentStatus)
+      liftFlowBT $ metaLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
+      liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
     Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlanItem = Nothing}}})
 
@@ -2173,6 +2183,8 @@ subScriptionFlow = do
           _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan"
           _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title
           _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "previous_plan" state.data.managePlanData.currentPlan.title
+          liftFlowBT $ metaLogEventWithTwoParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title "previous_plan" state.data.managePlanData.currentPlan.title
+          liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title "previous_plan" state.data.managePlanData.currentPlan.title
           modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{popUpState = Just SwitchedPlan}, data{managePlanData{currentPlan {title = state.props.managePlanProps.selectedPlanItem.title}}}})
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow

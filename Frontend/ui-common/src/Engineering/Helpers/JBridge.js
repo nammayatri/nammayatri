@@ -1084,6 +1084,34 @@ export const metaLogEvent = function (event) {
   }
 }
 
+export const metaLogEventWithParams = function (event) {
+  return function (paramKey) {
+    return function (paramValue) {
+      return function () {
+        if(window.JBridge.metaLogEventWithParams){
+            window.JBridge.metaLogEventWithParams(event, paramKey,paramValue);
+        }
+    };
+  };
+ };
+};
+
+export const metaLogEventWithTwoParams = function (event) {
+  return function (paramKey1) {
+    return function (paramValue1) {
+      return function (paramKey2) {
+        return function (paramValue2) {
+          return function () {
+            if (window.JBridge.metaLogEventWithTwoParams) {
+                window.JBridge.metaLogEventWithTwoParams(event, paramKey1,paramValue1,paramKey2,paramValue2);
+            }
+          };
+        };
+      };
+    };
+  };
+};
+
 export const hideKeyboardOnNavigation = function (permission) {
   if (permission)
     window.JBridge.hideKeyboardOnNavigation(permission);

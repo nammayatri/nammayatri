@@ -382,6 +382,8 @@ plansBottomView push state =
           , onClick (\action -> do
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
+                        _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
+                        _ <- pure $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
                                           "EN_US" -> "https://youtu.be/3I3adSdYeX8"
                                           "KN_IN" -> "https://youtu.be/3I3adSdYeX8"
@@ -586,6 +588,8 @@ myPlanBodyview push state =
             , onClick (\action -> do
                         _<- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
+                        _ <- pure $ JB.metaLogEvent "ny_driver_myplan_watchvideo_clicked"
+                        _ <- pure $ JB.firebaseLogEvent "ny_driver_myplan_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
                                           "EN_US" -> "https://youtu.be/3I3adSdYeX8"
                                           "KN_IN" -> "https://youtu.be/3I3adSdYeX8"

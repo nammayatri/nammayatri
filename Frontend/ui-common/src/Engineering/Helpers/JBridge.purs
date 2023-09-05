@@ -180,6 +180,8 @@ foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
+foreign import metaLogEventWithParams :: String -> String -> String -> Effect Unit
+foreign import metaLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseLogEvent :: String -> Effect Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
