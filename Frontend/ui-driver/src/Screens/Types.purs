@@ -859,6 +859,7 @@ type HomeScreenProps =  {
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
+  wrongVehicleVariant :: Boolean,
   endRidePopUp :: Boolean,
   cancelRideModalShow :: Boolean,
   routeVisible :: Boolean,

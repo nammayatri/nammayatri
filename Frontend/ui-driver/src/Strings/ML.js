@@ -168,6 +168,7 @@ const mlStrings = {
   STEP: "ഘട്ടം",
   PAID: "തുക അടച്ചു",
   ENTERED_WRONG_OTP: "തെറ്റായ OTP നൽകി",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "അസാധുവായ OTP - വാഹന തരം റൈഡ് തരവുമായി പൊരുത്തപ്പെടുന്നില്ല",
   COPIED: "പകർത്തി",
   BANK_NAME: "ബാങ്കിന്റെ പേര്",
   AADHAR_DETAILS: "ആധാർ വിശദാംശങ്ങൾ",

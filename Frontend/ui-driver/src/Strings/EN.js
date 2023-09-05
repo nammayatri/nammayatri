@@ -166,6 +166,7 @@ const englishStrings = {
   STEP: "Step",
   PAID: "Paid",
   ENTERED_WRONG_OTP: "Entered wrong OTP",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "Invalid OTP - Vehicle type is not matching with ride type",
   COPIED: "Copied",
   BANK_NAME: "Bank Name",
   AADHAR_DETAILS: "Aadhar Details",

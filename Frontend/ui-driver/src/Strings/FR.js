@@ -163,6 +163,7 @@ const frenchStrings = {
   STEP: "Étape",
   PAID: "Payé",
   ENTERED_WRONG_OTP: "Code à usage unique erroné",
+  OTP_INVALID_FOR_THIS_VEHICLE_VARIANT : "OTP invalide – Le type de véhicule ne correspond pas au type de trajet",
   COPIED: "Copié",
   BANK_NAME: "Nom de la banque",
   AADHAR_DETAILS: "Informations Aadhar",
