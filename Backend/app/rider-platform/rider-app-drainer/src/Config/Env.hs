@@ -44,3 +44,6 @@ getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetri
 
 isPushToKafka :: IO Bool
 isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
+
+getThreadPerPodCount :: IO Int
+getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount

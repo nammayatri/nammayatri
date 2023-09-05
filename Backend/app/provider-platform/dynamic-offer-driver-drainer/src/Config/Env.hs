@@ -38,3 +38,6 @@ defaultDBSyncConfig =
       _rateLimitWindow = 100,
       _streamReadCount = 200 -- 1000
     }
+
+getThreadPerPodCount :: IO Int
+getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount

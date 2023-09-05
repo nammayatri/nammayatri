@@ -92,6 +92,6 @@ messageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''MessageT ['id] [['merchantId]]) -- DON'T Enable for KV
+$(enableKVPG ''MessageT ['id] []) -- DON'T Enable for KV
 
 $(mkTableInstances ''MessageT "message" "atlas_driver_offer_bpp")

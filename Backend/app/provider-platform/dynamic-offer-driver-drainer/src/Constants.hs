@@ -186,3 +186,6 @@ maxDbFailureRetries = "MAX_DB_FAILURE_RETRIES"
 
 pushToKafkaEnvKey :: String
 pushToKafkaEnvKey = "PUSH_TO_KAFKA"
+
+threadPerPodCount :: String
+threadPerPodCount = "THREAD_PER_POD_COUNT"

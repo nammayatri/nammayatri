@@ -190,6 +190,6 @@ personTMod =
       faceImageId = B.fieldNamed "face_image_id"
     }
 
-$(enableKVPG ''PersonT ['id] [['merchantId]]) -- DON'T Enable for KV
+$(enableKVPG ''PersonT ['id] [['mobileNumberHash]]) -- DON'T Enable for KV
 
 $(mkTableInstances ''PersonT "person" "atlas_driver_offer_bpp")
