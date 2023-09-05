@@ -313,6 +313,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         referralCode = Nothing,
         referredAt = Nothing,
         hasTakenValidRide = False,
+        hasDisability = Nothing,
         createdAt = now,
         updatedAt = now,
         blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,
@@ -367,7 +368,7 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
     Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
   decPerson <- decrypt updPerson
-  let personAPIEntity = SP.makePersonAPIEntity decPerson
+  let personAPIEntity = SP.makePersonAPIEntity decPerson Nothing
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of

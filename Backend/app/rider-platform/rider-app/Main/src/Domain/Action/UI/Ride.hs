@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
@@ -121,6 +122,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
       else Just <$> CallBPP.callGetDriverLocation ride.trackingUrl
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rider <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+  let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
   return $
     GetRideStatusResp
@@ -131,6 +134,6 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider,
+        customer = SPerson.makePersonAPIEntity decRider tag,
         driverPosition = mbPos <&> (.currPoint)
       }
