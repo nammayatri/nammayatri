@@ -232,9 +232,6 @@ otpRideCreate driver otpCode booking = do
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
 
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
-  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
-  unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-  when driverInfo.onRide $ throwError DriverOnRide
   ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) Nothing <&> (.driverGoHomeRequestId)
   ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
   rideDetails <- buildRideDetails ride
@@ -265,6 +262,22 @@ otpRideCreate driver otpCode booking = do
 
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
 
+  Redis.whenWithLockRedis (makeOtpRideCreateKey driver.id) 60 $ do
+    unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+    unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+    when driverInfo.onRide $ throwError DriverOnRide
+    triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
+    _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
+    _ <- QRide.create ride
+    _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
+    _ <- QRideD.create rideDetails
+    QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+    _ <- QDI.updateOnRide (cast driver.id) True
+    _ <- DLoc.updateOnRideCache (cast driver.id)
+    uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+    Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+    void $ BP.sendRideAssignedUpdateToBAP uBooking ride
+    DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
@@ -349,3 +362,6 @@ otpRideCreate driver otpCode booking = do
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
+
+makeOtpRideCreateKey :: Id DP.Person -> Text
+makeOtpRideCreateKey driverId = "OtpStartRideCreateKey:PersonId-" <> driverId.getId
