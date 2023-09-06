@@ -58,7 +58,7 @@ handler hnd = do
   handlerLoop hnd executionChannels
   where
     executeTaskInChan :: Chan (AnyJob t) -> SchedulerM ()
-    executeTaskInChan ch = runTask =<< L.runIO (readChan ch)
+    executeTaskInChan ch = L.runIO (readChan ch) >>= runTask >> executeTaskInChan ch
 
     runTask :: AnyJob t -> SchedulerM ()
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId) $ do

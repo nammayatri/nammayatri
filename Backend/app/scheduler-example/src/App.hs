@@ -29,7 +29,7 @@ import Kernel.Storage.Hedis (HedisCfg (..))
 import Kernel.Types.Logging
 import Kernel.Utils.App
 import Kernel.Utils.Servant.Server (runServer)
-import Lib.Scheduler (SchedulerType (RedisBased))
+import Lib.Scheduler (SchedulerType (DbBased))
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()
@@ -115,7 +115,7 @@ defaultConfig =
       jobInfoMapx = mempty,
       schedulerSetName = "",
       streamName = "",
-      schedulerType = RedisBased,
+      schedulerType = DbBased,
       enableRedisLatencyLogging = False,
       groupName = ""
     }
