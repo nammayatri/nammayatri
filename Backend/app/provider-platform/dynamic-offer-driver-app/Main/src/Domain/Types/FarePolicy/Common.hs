@@ -19,9 +19,9 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Utils.Common (encodeToText)
 
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
@@ -43,26 +43,10 @@ data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharg
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField WaitingCharge where
-  fromField = fromFieldJSON
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be WaitingCharge where
-  sqlValueSyntax = sqlValueSyntax . encodeToText
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be WaitingCharge
-
-instance FromBackendRow Postgres WaitingCharge
+$(mkBeamInstancesForJSON ''WaitingCharge)
 
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField NightShiftCharge where
-  fromField = fromFieldJSON
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be NightShiftCharge where
-  sqlValueSyntax = sqlValueSyntax . encodeToText
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be NightShiftCharge
-
-instance FromBackendRow Postgres NightShiftCharge
+$(mkBeamInstancesForJSON ''NightShiftCharge)
