@@ -2,8 +2,10 @@
 
 module Storage.Queries.Notification where
 
+import qualified Domain.Types.DriverFee as DF
 import Domain.Types.Notification as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Kernel.External.Payment.Interface.Types (NotificationStatus)
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -16,6 +18,9 @@ create = createWithKV
 
 findById :: MonadFlow m => Id Domain.Notification -> m (Maybe Domain.Notification)
 findById (Id notificationId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq notificationId]
+
+findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
+findAllByDriverFeeIdAndStatus driverFeeIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds), Se.Is BeamI.status $ Se.Eq status]]
 
 updateNotificationStatusById :: MonadFlow m => Id Domain.Notification -> Payment.NotificationStatus -> m ()
 updateNotificationStatusById notificationId notificationStatus = do
@@ -32,10 +37,11 @@ instance FromTType' BeamI.Notification Domain.Notification where
       Just
         Notification
           { id = Id id,
+            shortId,
             sourceAmount,
             txnDate,
-            mandateId,
-            driverFeeId,
+            mandateId = Id mandateId,
+            driverFeeId = Id driverFeeId,
             juspayProvidedId,
             providerName,
             notificationType,
@@ -51,14 +57,15 @@ instance ToTType' BeamI.Notification Domain.Notification where
   toTType' Notification {..} = do
     BeamI.NotificationT
       { BeamI.id = id.getId,
+        BeamI.shortId = shortId,
         BeamI.sourceAmount = sourceAmount,
         BeamI.txnDate = txnDate,
         BeamI.juspayProvidedId = juspayProvidedId,
         BeamI.notificationType = notificationType,
         BeamI.description = description,
         BeamI.status = status,
-        BeamI.driverFeeId = driverFeeId,
-        BeamI.mandateId = mandateId,
+        BeamI.driverFeeId = driverFeeId.getId,
+        BeamI.mandateId = mandateId.getId,
         BeamI.providerName = providerName,
         BeamI.dateCreated = dateCreated,
         BeamI.lastUpdated = lastUpdated,

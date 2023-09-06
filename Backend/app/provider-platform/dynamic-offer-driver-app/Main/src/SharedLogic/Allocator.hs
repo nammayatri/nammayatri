@@ -18,6 +18,7 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
@@ -26,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver
+data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver | SendPDNNotificationToDriver | MandateExecution
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -38,6 +39,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendPaymentReminderToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPaymentReminderToDriver jobData
   restoreAnyJobInfo SUnsubscribeDriverForPaymentOverdue jobData = AnyJobInfo <$> restoreJobInfo SUnsubscribeDriverForPaymentOverdue jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
+  restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -79,3 +82,27 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
+data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
+  { startTime :: UTCTime,
+    endTime :: UTCTime,
+    merchantId :: Id Merchant
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendPDNNotificationToDriver
+
+type instance JobContent 'SendPDNNotificationToDriver = SendPDNNotificationToDriverJobData
+
+data MandateExecutionInfo = MandateExecutionInfo
+  { startTime :: UTCTime,
+    endTime :: UTCTime,
+    merchantId :: Id Merchant
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MandateExecution
+
+type instance JobContent 'MandateExecution = MandateExecutionInfo

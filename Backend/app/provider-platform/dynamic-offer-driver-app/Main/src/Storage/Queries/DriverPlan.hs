@@ -32,6 +32,9 @@ create = createWithKV
 findByDriverId :: MonadFlow m => Id Person -> m (Maybe DriverPlan)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
 
+findAllByDriverIdsAndPaymentMode :: MonadFlow m => [Id Person] -> PaymentMode -> m [DriverPlan]
+findAllByDriverIdsAndPaymentMode driverIds paymentMode = findAllWithKV [Se.And [Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds), Se.Is BeamDF.planType $ Se.Eq paymentMode]]
+
 findByMandateId :: MonadFlow m => Id Mandate -> m (Maybe DriverPlan)
 findByMandateId (Id mandateId) = findOneWithKV [Se.Is BeamDF.mandateId $ Se.Eq (Just mandateId)]
 

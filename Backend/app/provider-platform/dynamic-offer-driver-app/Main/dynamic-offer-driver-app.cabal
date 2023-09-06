@@ -255,6 +255,8 @@ library
       Lib.Utils
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+      SharedLogic.Allocator.Jobs.Mandate.Execution
+      SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal

@@ -56,6 +56,7 @@ instance IsString Payment.NotificationStatus where
 
 data NotificationT f = NotificationT
   { id :: B.C f Text,
+    shortId :: B.C f Text,
     sourceAmount :: B.C f HighPrecMoney,
     mandateId :: B.C f Text,
     driverFeeId :: B.C f Text,

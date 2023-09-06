@@ -97,6 +97,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            mandateNotificationRescheduleInterval = secondsToNominalDiffTime mandateNotificationRescheduleInterval,
+            mandateExecutionRescheduleInterval = secondsToNominalDiffTime mandateExecutionRescheduleInterval,
             ..
           }
 
@@ -133,6 +135,10 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverPaymentReminderInterval = nominalDiffTimeToSeconds driverPaymentReminderInterval,
         BeamTC.driverAutoPayNotificationTime = nominalDiffTimeToSeconds driverAutoPayNotificationTime,
         BeamTC.driverAutoPayExecutionTime = nominalDiffTimeToSeconds driverAutoPayExecutionTime,
+        BeamTC.mandateNotificationRescheduleInterval = nominalDiffTimeToSeconds mandateNotificationRescheduleInterval,
+        BeamTC.mandateExecutionRescheduleInterval = nominalDiffTimeToSeconds mandateExecutionRescheduleInterval,
+        BeamTC.driverFeeMandateNotificationBatchSize = driverFeeMandateNotificationBatchSize,
+        BeamTC.driverFeeMandateExecutionBatchSize = driverFeeMandateExecutionBatchSize,
         BeamTC.timeDiffFromUtc = timeDiffFromUtc,
         BeamTC.subscription = subscription,
         BeamTC.minLocationAccuracy = minLocationAccuracy,

@@ -79,10 +79,13 @@ getOrder (personId, _) orderId = do
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
-mkOrderAPIEntity :: DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
-  clientAuthToken_ <- decrypt clientAuthToken
-  return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
+  case clientAuthToken of
+    Just token -> do
+      clientAuthToken_ <- decrypt token
+      return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Just clientAuthToken_, ..}
+    Nothing -> return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Nothing, ..}
 
 -- order status -----------------------------------------------------
 
