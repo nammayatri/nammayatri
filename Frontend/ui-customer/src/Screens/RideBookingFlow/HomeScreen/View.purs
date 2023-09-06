@@ -287,7 +287,7 @@ view push state =
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     , visibility if state.props.isSrcServiceable then VISIBLE else GONE
                     ]
-                    []
+                    []]
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
@@ -328,7 +328,7 @@ view push state =
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
                     ]
-                ]]
+                ]
             , homeScreenView push state
             , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
