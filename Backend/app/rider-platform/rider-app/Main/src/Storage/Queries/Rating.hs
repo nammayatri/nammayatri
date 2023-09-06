@@ -18,7 +18,6 @@ module Storage.Queries.Rating where
 import Domain.Types.Person
 import Domain.Types.Rating as DR
 import Domain.Types.Ride
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
@@ -26,10 +25,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
-create :: (L.MonadFlow m, Log m) => DR.Rating -> m ()
+create :: MonadFlow m => DR.Rating -> m ()
 create = createWithKV
 
-updateRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
+updateRating :: MonadFlow m => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
 updateRating (Id ratingId) (Id riderId) newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   updateOneWithKV
@@ -39,10 +38,10 @@ updateRating (Id ratingId) (Id riderId) newRatingValue newFeedbackDetails = do
     ]
     [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.riderId (Se.Eq riderId)]]
 
-findAllRatingsForPerson :: (MonadFlow m, Log m) => Id Person -> m [Rating]
+findAllRatingsForPerson :: MonadFlow m => Id Person -> m [Rating]
 findAllRatingsForPerson riderId = findAllWithDb [Se.Is BeamR.riderId $ Se.Eq $ getId riderId]
 
-findRatingForRide :: (MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
+findRatingForRide :: MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
 -- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
