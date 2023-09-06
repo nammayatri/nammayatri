@@ -21,15 +21,10 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
-import qualified Data.Vector as V
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForList)
 
 data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   { batchSplitSize :: Int,
@@ -38,20 +33,7 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-instance FromField BatchSplitByPickupDistance where
-  fromField = fromFieldEnum
-
-instance FromField [BatchSplitByPickupDistance] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
-  sqlValueSyntax batchList =
-    let x = (show <$> batchList :: [Text])
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
-
-instance FromBackendRow Postgres [BatchSplitByPickupDistance]
+$(mkBeamInstancesForList ''BatchSplitByPickupDistance)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
