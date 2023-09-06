@@ -95,7 +95,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
-updateAverageRating :: (MonadFlow m) => Id Person -> Int -> Int -> Bool -> m ()
+updateAverageRating :: MonadFlow m => Id Person -> Int -> Int -> Bool -> m ()
 updateAverageRating (Id personId) totalRatingsCount' totalRatingScore' isValidRating' = do
   now <- getCurrentTime
   updateOneWithKV
@@ -106,7 +106,7 @@ updateAverageRating (Id personId) totalRatingsCount' totalRatingScore' isValidRa
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
+updateDeviceToken :: MonadFlow m => Id Person -> Maybe Text -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
   updateWithKV
