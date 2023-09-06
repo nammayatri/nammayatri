@@ -19,8 +19,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
@@ -76,6 +78,7 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
 
 public class LocationUpdateService extends Service {
@@ -85,6 +88,7 @@ public class LocationUpdateService extends Service {
     private static final String LAST_LOCATION_TIME = "LAST_LOCATION_TIME";
     final int notificationServiceId = 15082022; // ARDU pilot launch date : DDMMYYYY
     final int alertNotificationId = 07102022;
+    final int timeChangeNotificationId = 29082023;
     FusedLocationProviderClient fusedLocationProviderClient;
     LocationCallback locationCallback;
     double lastLatitudeValue;
@@ -112,6 +116,7 @@ public class LocationUpdateService extends Service {
     static JSONObject isOnCharge;
     static JSONObject triggerFunction;
     static JSONObject androidVersion;
+    private BroadcastReceiver timeChangeCallback = null;
 
     enum LocationSource {
         CurrentLocation,
@@ -128,6 +133,7 @@ public class LocationUpdateService extends Service {
 
     public interface UpdateTimeCallback {
         void triggerUpdateTimeCallBack(String time, String lat, String lng);
+        void invokeUICallBack(String event);
     }
 
     public static void registerCallback(UpdateTimeCallback timeUpdateCallback) {
@@ -155,6 +161,7 @@ public class LocationUpdateService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
         startForeground(notificationServiceId, createNotification());
+        registerDeviceTimeChangeReceiver(context);
         initialiseJSONObjects();
         updateDeviceDetails();
         updateConfigVariables();
@@ -165,6 +172,42 @@ public class LocationUpdateService extends Service {
             startLocationUpdates(delayForGNew, minDispDistanceNew, delayForTNew);
         }
         return START_STICKY;
+    }
+
+    private void registerDeviceTimeChangeReceiver(Context context) {
+        if (timeChangeCallback == null){
+            timeChangeCallback = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    for (UpdateTimeCallback cb : updateTimeCallbacks) {
+                        cb.invokeUICallBack("onTimeChanged");
+                    }
+                    validateTime();
+                }
+            };
+            context.registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED));
+        }
+    }
+
+    private void validateTime() {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            NetworkTimerProvider timerProvider = new NetworkTimerProvider((status, rawTimeInMs) -> {
+                if (status.equals("SUCCESS")) {
+                    long ONE_THOUSAND = 1000, TEN_SECONDS = 10;
+                    long deviceTime = System.currentTimeMillis() / ONE_THOUSAND;
+                    long networkTime = rawTimeInMs / ONE_THOUSAND;
+                    if (Math.abs(networkTime - deviceTime) > TEN_SECONDS) {
+                        showTimeChangeNotification();
+                    } else {
+                        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                        notificationManager.cancel(timeChangeNotificationId);
+                    }
+                }
+            });
+            String PROVIDER = "time.google.com";
+            int TIME_OUT = 500;
+            timerProvider.requestTime(PROVIDER, TIME_OUT);
+        });
     }
 
     private void updateDeviceDetails() {
@@ -247,6 +290,12 @@ public class LocationUpdateService extends Service {
         super.onDestroy();
         isLocationUpdating = false;
         cancelTimer();
+        try {
+            context.unregisterReceiver(timeChangeCallback);
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
         if (fusedLocationProviderClient != null && locationCallback != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         }
@@ -778,6 +827,30 @@ public class LocationUpdateService extends Service {
         notificationManager.notify(alertNotificationId, mBuilder.build());
 
         startGPSListeningService();
+    }
+
+    private void showTimeChangeNotification() {
+        System.out.println("Notification");
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        if (token.equals("null") || token.equals("__failed")) {
+            return;
+        }
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, timeChangeNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(getResources(), Utils.getResIdentifier(context,"ic_launcher", "drawable")));
+        mBuilder.setContentTitle(getString(R.string.device_time_is_incorrect))
+                .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "drawable"))
+                .setContentText(getString(R.string.please_correct_your_device_time_to_get_rides))
+                .setPriority(NotificationCompat.PRIORITY_MAX);
+        mBuilder.setContentIntent(pendingIntent);
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+            return;
+        }
+        notificationManager.notify(timeChangeNotificationId, mBuilder.build());
     }
 
     private void startGPSListeningService() {

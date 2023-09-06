@@ -98,6 +98,7 @@ import in.juspay.mobility.app.AudioRecorder;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
+import in.juspay.mobility.app.NetworkTimerProvider;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.Utils;
@@ -206,7 +207,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             Utils.registerCallback(callBack);
         }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            locationCallback = this::callUpdateTimeCallBack;
+            locationCallback = new LocationUpdateService.UpdateTimeCallback() {
+                @Override
+                public void triggerUpdateTimeCallBack(String time, String lat, String lng) {
+                    callUpdateTimeCallBack(time, lat, lng);
+                }
+
+                @Override
+                public void invokeUICallBack(String event) {
+                   invokeOnEvent(event);
+                }
+            };
             LocationUpdateService.registerCallback(locationCallback);
         }
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
@@ -1087,6 +1098,18 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    @JavascriptInterface
+    public void getNetworkTime(String provider, int timeOut, String callback) {
+        NetworkTimerProvider timerProvider = new NetworkTimerProvider((status, time) -> {
+            if (callback != null) {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%d');",
+                        callback, status, time);
+                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            }
+        });
+        timerProvider.requestTime(provider, timeOut);
     }
     // endregion
 

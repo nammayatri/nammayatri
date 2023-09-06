@@ -44,4 +44,6 @@
     <string name="and">और</string>
     <string name="tip_included">टिप शामिल है!</string>
     <string name="message_from_customer">"ग्राहक की ओर से संदेश "</string>
+    <string name="device_time_is_incorrect">डिवाइस का समय ग़लत है</string>
+    <string name="please_correct_your_device_time_to_get_rides">कृपया सवारी पाने के लिए अपने डिवाइस का समय ठीक करें</string>
 </resources>

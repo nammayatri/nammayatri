@@ -216,19 +216,20 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (event == "onPause") {
-    previousDateObject = new Date();
+    let validTime = window.JBridge.getKeysInSharedPref("IS_VALID_TIME"); 
+    if (validTime === "true") previousDateObject = new Date();
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
   } 
-  // else if (event == "onTimeChanged") {
-  //   if(window.dateCallback != undefined) {
-  //     window.dateCallback();
-  //   } else {
-  //     purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-  //   }
-  // }   -- Need To Refactor 
+  else if (event == "onTimeChanged") {
+    if(window.dateCallback != undefined) {
+      window.dateCallback();
+    } else {
+      purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
+    }
+  }
 }
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
@@ -261,7 +262,8 @@ function refreshFlow(){
   let currentDate = new Date();
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
   let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
-  if ((diff > refreshThreshold) && (token != "__failed")){
+  let validTime = window.JBridge.getKeysInSharedPref("IS_VALID_TIME"); 
+  if ((diff > refreshThreshold) && (token != "__failed") && (validTime === "true")){
     if(window.storeCallBackMessageUpdated){
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }

@@ -44,4 +44,6 @@
     <string name="and">மற்றும்</string>
     <string name="tip_included">டிப் சேர்க்கப்பட்டுள்ளது!</string>
     <string name="message_from_customer">வாடிக்கையாளரிடமிருந்து செய்தி</string>
+    <string name="device_time_is_incorrect">சாதன நேரம் தவறானது</string>
+    <string name="please_correct_your_device_time_to_get_rides">சவாரிகளைப் பெற உங்கள் சாதன நேரத்தைச் சரிசெய்யவும்</string>
 </resources>

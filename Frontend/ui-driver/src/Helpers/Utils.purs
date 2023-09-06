@@ -114,7 +114,7 @@ foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
-
+foreign import getNetworkTime ::forall action. EffectFn4 String Int (action -> Effect Unit) (String -> Number -> action) Unit
 foreign import isYesterday :: String -> Boolean
 
 -- -- ####### MAP FFI ######## -----

@@ -49,7 +49,7 @@ import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn4)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
@@ -58,8 +58,8 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..))
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getNetworkTime)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams, restartLocationPolling)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -103,7 +103,7 @@ baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    -- checkDateAndTime -- Need To Refactor
+    checkDateAndTime
     (GlobalState state) <- getState
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
@@ -169,30 +169,37 @@ checkVersion versioncode = do
       UpdateNow -> checkVersion versioncode
       Later -> pure unit
 
+data NetworkTime = NetworkTime String Number
+
 checkDateAndTime :: FlowBT String Unit
 checkDateAndTime = do
   _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "false"
-  (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
-  if(current == {timestamp : Nothing}) then pure unit
-  else do
-    let currentTimeStamp = current.timestamp
-    let deviceDateTimeStamp = getCurrentTimeStamp unit
-    let timeDiff = (((fromMaybe ( toNumber 0) currentTimeStamp )) - deviceDateTimeStamp)
-    let timeDiffInMins = (timeDiff) / toNumber (1000)
-    let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
-    if (absTimeDiff < toNumber 10 ) then do
-      setValueToLocalStore IS_VALID_TIME "true"
-      liftFlowBT $ unregisterDateAndTime
-      liftFlowBT $ stopLocationPollingAPI
-      liftFlowBT $ startLocationPollingAPI
-    else
-      when (absTimeDiff >= toNumber 10 ) do
-        _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
-        setValueToLocalStore IS_VALID_TIME "false"
-        modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-        lift $ lift $ doAff do liftEffect hideSplash
-        _ <- UI.handleAppUpdatePopUp
-        checkDateAndTime
+  (NetworkTime status currentTime) <- lift $ lift $ doAff $ makeAff (\cb -> runEffectFn4 getNetworkTime "time.google.com" 500 (cb <<< Right) NetworkTime $> nonCanceler)
+  case status of
+    "SUCCESS" -> validateTime currentTime
+    "NOT_FOUND" -> do
+      (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
+      if(isNothing current.timestamp) then pure unit else validateTime (fromMaybe 0.0 current.timestamp)
+    _ -> pure unit
+
+validateTime :: Number -> FlowBT String Unit
+validateTime currentTime = do  
+  let deviceDateTimeStamp = getCurrentTimeStamp unit
+      timeDiff = (currentTime - deviceDateTimeStamp)
+      timeDiffInMins = (timeDiff) / toNumber (1000)
+      absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
+  if (absTimeDiff < toNumber 10 ) then do
+    setValueToLocalStore IS_VALID_TIME "true"
+    liftFlowBT $ unregisterDateAndTime
+    liftFlowBT $ restartLocationPolling
+  else
+    when (absTimeDiff >= toNumber 10 ) do
+      _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
+      setValueToLocalStore IS_VALID_TIME "false"
+      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
+      lift $ lift $ doAff do liftEffect hideSplash
+      _ <- UI.handleAppUpdatePopUp
+      checkDateAndTime
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =

@@ -5,6 +5,7 @@ var mainFiber = null;
 let suggestions = require("../Engineering.Helpers.Suggestions")
 var timer;
 let locationPollingTimer;
+let restartLocationPollingTimer;
 const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
 
 // exports._keyStoreEntryPresent = function(alias) {
@@ -1214,6 +1215,17 @@ export const startLocationPollingAPI = function () {
     locationPollingTimer = undefined;
   }
   return window.JBridge.startLocationPollingAPI();
+}
+
+export const restartLocationPolling = function () {
+  if (restartLocationPollingTimer) return;
+  let cb = function() {
+    if (locationPollingTimer) return;
+    window.JBridge.stopLocationPollingAPI();
+    window.JBridge.startLocationPollingAPI();
+    restartLocationPollingTimer = undefined;
+  }
+  restartLocationPollingTimer = setTimeout(cb,5000);
 }
 
 export const generatePDF = function (state) {

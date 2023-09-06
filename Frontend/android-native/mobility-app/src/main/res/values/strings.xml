@@ -45,4 +45,6 @@
     <string name="service" translatable="false">for_compilation</string>
     <string name="tip_included">" tip included!"</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="device_time_is_incorrect">Device time is incorrect</string>
+    <string name="please_correct_your_device_time_to_get_rides">Please correct your device time to get rides</string>
 </resources>

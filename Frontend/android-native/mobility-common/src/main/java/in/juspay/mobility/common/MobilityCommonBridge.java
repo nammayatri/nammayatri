@@ -240,6 +240,12 @@ public class MobilityCommonBridge extends HyperBridge {
     public void storeCallBackDriverLocationPermission(String callback) {
         receivers.storeLocationCallBack = callback;
     }
+
+    protected void invokeOnEvent(String event) {
+        String encoded = Base64.encodeToString("{}".getBytes(), Base64.NO_WRAP);
+        String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
+        bridgeComponents.getJsCallback().addJsToWebView(command);
+    }
     // endregion
 
     // region Location
@@ -1961,7 +1967,6 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static class Receivers {
         BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
-        BroadcastReceiver timeChangeCallback;
         String storeInternetActionCallBack = null;
         String storeLocationCallBack = null;
         BridgeComponents bridgeComponents;
@@ -1993,13 +1998,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 }
             };
-            timeChangeCallback = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    invokeOnEvent(bridgeComponents.getJsCallback(), "onTimeChanged");
-                }
-            };
-            bridgeComponents.getContext().registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED));
             bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
             bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
@@ -2038,7 +2036,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 Context context = bridgeComponents.getContext().getApplicationContext();
                 context.unregisterReceiver(gpsReceiver);
                 context.unregisterReceiver(internetActionReceiver);
-                context.unregisterReceiver(timeChangeCallback);
             } catch (Exception ignored) {
             }
         }

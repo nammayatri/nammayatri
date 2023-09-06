@@ -44,5 +44,7 @@
     <string name="and">ಮತ್ತು</string>
     <string name="tip_included">ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!</string>
     <string name="message_from_customer">ಗ್ರಾಹಕರಿಂದ ಸಂದೇಶ</string>
+    <string name="device_time_is_incorrect">ಮೊಬೈಲ್ ಸಮಯ ತಪ್ಪಾಗಿದೆ</string>
+    <string name="please_correct_your_device_time_to_get_rides">ರೈಡ್‌ಗಳನ್ನು ಪಡೆಯಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಮಯವನ್ನು ಸರಿಪಡಿಸಿ</string>
 
 </resources>

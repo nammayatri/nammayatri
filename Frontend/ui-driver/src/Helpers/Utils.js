@@ -817,3 +817,15 @@ export const killPP = function () {
     window.ppInitiateCallback = undefined;
   }
 }
+
+export const getNetworkTime = function (provider, timeOut, cb, action) {
+  if (JBridge.getNetworkTime) {
+    var callback = callbackMapper.map(
+      function (status, time) {
+        cb(action(status)(time))();
+      })
+    JBridge.getNetworkTime(provider, timeOut, callback)
+  } else {
+    cb(action("NOT_FOUND")(0))();
+  }
+}
