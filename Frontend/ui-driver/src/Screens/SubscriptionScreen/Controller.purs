@@ -6,14 +6,22 @@ import Components.BottomNavBar as BottomNavBar
 import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Control.Monad.Except (runExcept)
 import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Int as DI
+import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
+import Data.Number (fromString) as Number
 import Data.String (toLower)
-import Engineering.Helpers.Commons (convertUTCtoISC)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (convertUTCtoISC)
+import Foreign.Generic (decodeJSON)
+import Helpers.Utils (getDistanceBwCordinates)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare)
@@ -22,20 +30,11 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
-import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig, KioskLocation(..))
+import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), KioskLocationRes(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
-import Foreign.Generic (decodeJSON)
-import Control.Monad.Except (runExcept)
-import Data.Either (Either(..))
-import Helpers.Utils (getDistanceBwCordinates)
-import Data.Number (fromString) as Number
-import Services.Accessor (_distance)
-import Data.Lens ((^.))
-import Language.Strings (getString)
-import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -60,7 +59,7 @@ data Action = BackPressed
             | ViewPaymentHistory
             | ViewHelpCentre
             | PopUpModalAC PopUpModal.Action
-            | HeaderRightClick
+            | HeaderRightClick OptionsMenuState
             | CancelAutoPayAC
             | ViewAutopayDetails
             | ResumeAutoPay PrimaryButton.Action
@@ -102,7 +101,7 @@ eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput Subscripti
 eval BackPressed state = 
   if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
   else if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
-  else if state.props.optionsMenuExpanded then continue state{props{optionsMenuExpanded = false}}
+  else if state.props.optionsMenuState /= ALL_COLLAPSED then continue state{props{optionsMenuState = ALL_COLLAPSED}}
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
@@ -118,7 +117,7 @@ eval (ClearDue PrimaryButton.OnClick) state = continue state
 
 eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
   let merchant = getMerchant FunctionCall
-  continueWithCmd state{props{optionsMenuExpanded = false}} [do
+  continueWithCmd state{props{optionsMenuState = ALL_COLLAPSED}} [do
     case item of 
       "manage_plan" -> pure ManagePlanAC 
       "payment_history" -> pure ViewPaymentHistory 
@@ -135,7 +134,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
 
 eval (OptionsMenuAction (OptionsMenu.BackgroundClick)) state = do
   _ <- pure $ spy "menu background clicked" ""
-  continue state{props{optionsMenuExpanded = false}}
+  continue state{props{optionsMenuState = ALL_COLLAPSED}}
 
 eval (SwitchPlan PrimaryButton.OnClick) state = do
   let planId = state.props.managePlanProps.selectedPlanItem.id
@@ -150,7 +149,7 @@ eval ManagePlanAC state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
   _ <- pure $ metaLogEvent "ny_driver_manage_plan_clicked"
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_manage_plan_clicked"
-  updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuExpanded = false}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuExpanded = false }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+  updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuState = ALL_COLLAPSED}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuState = ALL_COLLAPSED }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
 eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
 
@@ -158,7 +157,9 @@ eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selecte
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ JoinPlanExit state
 
-eval HeaderRightClick state =  continue state {props{ optionsMenuExpanded = not state.props.optionsMenuExpanded}}
+eval (HeaderRightClick menuType) state =  if state.props.optionsMenuState == menuType 
+                                             then continue state {props{ optionsMenuState = ALL_COLLAPSED}}
+                                          else continue state {props{ optionsMenuState = menuType}}
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
@@ -200,27 +201,30 @@ eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
-    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuExpanded = false}}
+  let newState = state{props{optionsMenuState = ALL_COLLAPSED}}
+  _ <- pure $ spy "screeen" screen
+  if screen == "Join" then continue state
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
+    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED}}
   else do case screen of
-            "Home" -> exit $ HomeScreen state{props{optionsMenuExpanded = false}}
-            "Rides" -> exit $ RideHistory state{props{optionsMenuExpanded = false}}
+            "Home" -> exit $ HomeScreen newState
+            "Rides" -> exit $ RideHistory newState
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
               _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts state{props{optionsMenuExpanded = false}}
+              exit $ Alerts newState
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest state{props{optionsMenuExpanded = false}}
+              exit $ Contest newState
             _ -> continue state
 
-eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuExpanded = false}}
+eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED}}
 
 eval ViewHelpCentre state = do
   let prevSubViewState = state.props.subView
-  updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, prevSubView = prevSubViewState}} $ GotoFindHelpCentre state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, prevSubView = prevSubViewState}}
+  updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuState = ALL_COLLAPSED, prevSubView = prevSubViewState}} $ GotoFindHelpCentre state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuState = ALL_COLLAPSED, prevSubView = prevSubViewState}}
 
-eval (OpenGoogleMap dstLt dstLn) state = updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false}} $ GoToOpenGoogleMaps state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, destLat = dstLt, destLon = dstLn}}
+eval (OpenGoogleMap dstLt dstLn) state = updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuState = ALL_COLLAPSED}} $ GoToOpenGoogleMaps state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuState = ALL_COLLAPSED, destLat = dstLt, destLon = dstLn}}
 
 eval RefreshPage state = exit $ Refresh
 

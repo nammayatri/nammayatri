@@ -275,13 +275,20 @@ driverMapsHeaderView push state =
                 , orientation VERTICAL
                 , weight 1.0
                 ][  if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
-                  , viewRecenterAndSupport state push
+                  , linearLayout [
+                    height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , gravity RIGHT
+                  ][
+                    if (state.props.autoPayBanner && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                    , viewRecenterAndSupport state push
+                  ]
                 ]
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && not state.props.autoPayBanner) then genderBannerView state push else linearLayout[][]
             , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push else dummyTextView
+            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
             ]
         ]
         , bottomNavBar push state
@@ -370,15 +377,16 @@ genderBannerView state push =
       ]
     ]
 
-autoPayBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-autoPayBannerView state push =
+autoPayBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
+autoPayBannerView state push configureImage =
   linearLayout
     [ height MATCH_PARENT
-    , width MATCH_PARENT
+    , width  MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
     , visibility if state.props.autoPayBanner then VISIBLE else GONE
     , gravity BOTTOM
+    , weight 1.0
     ][
     linearLayout
       [ height WRAP_CONTENT
@@ -386,7 +394,7 @@ autoPayBannerView state push =
       , orientation VERTICAL
       , gravity RIGHT
       ][
-        Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state)
+        Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
       ]
     ]
 
@@ -749,6 +757,7 @@ viewRecenterAndSupport state push =
   , height WRAP_CONTENT
   , margin (Margin 0 20 20 0)
   , orientation VERTICAL
+  , gravity RIGHT
   ][
     -- imageView -- TODO:: ADDING SAFETY/ SUPPORT
     -- [ width ( V 40 )

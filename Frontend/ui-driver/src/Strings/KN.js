@@ -343,7 +343,7 @@ const kannadaStrings = {
   ACTIVATED_CUSTOMERS: "ಸಕ್ರಿಯ ಗ್ರಾಹಕರು",
   REFERRAL_CODE_LINKING: "ರೆಫರಲ್ ಕೋಡ್ ಲಿಂಕ್ ಮಾಡುವುದು",
   CONTACT_SUPPORT: "ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ",
-  CALL_SUPPORT: "ಕರೆ ಬೆಂಬಲ",
+  CALL_SUPPORT: "ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT: "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
   REFERRAL_ENROLMENT: "ರೆಫರಲ್ ದಾಖಲಾತಿ",
   REFERRALS: "ಉಲ್ಲೇಖಗಳು",
@@ -749,12 +749,12 @@ const kannadaStrings = {
   HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "ಸಹಾಯ ಕೇಂದ್ರಗಳ ಸ್ಥಳಗಳು ಸಕ್ರಿಯವಾದ ನಂತರ ಇಲ್ಲಿ ಗೋಚರಿಸುತ್ತವೆ",
   SUPPORT : "ಬೆಂಬಲ",
 	NEED_HELP_JOINING_THE_PLAN : "ಯೋಜನೆ ಅಥವಾ ಆಟೋಪೇಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ?",
-  NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>",
-  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡ",
-  SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ",
   HELP_STR : "ಸಹಾಯ", 
   GO_TO_VEHICLE_DETAILS : "ವಾಹನದ ವಿವರಗಳಿಗೆ ಹೋಗಿ",
   CLOSE: "ಮುಚ್ಚಿ", 
   RC_DEACTIVATED : "RC ನಿಷ್ಕ್ರಿಯಗೊಂಡಿದೆ", 
-  RC_DEACTIVATED_DETAILS : "ನಿಮ್ಮ RC ಪ್ರಸ್ತುತ ಮತ್ತೊಂದು ಚಾಲಕ ಖಾತೆಯಲ್ಲಿ ಸಕ್ರಿಯವಾಗಿದೆ. ಸವಾರಿಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು RC ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
+  RC_DEACTIVATED_DETAILS : "ನಿಮ್ಮ RC ಪ್ರಸ್ತುತ ಮತ್ತೊಂದು ಚಾಲಕ ಖಾತೆಯಲ್ಲಿ ಸಕ್ರಿಯವಾಗಿದೆ. ಸವಾರಿಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು RC ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  NEED_HELP : "ಸಹಾಯ ಬೇಕೇ?",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ಡಿಸ್ಕೌಂಟ್ಸ್ ಪಡೆಯಲು ಆಟೋಪೆ ಸೆಟಪ್ ಮಾಡಿ",
+	SETUP_NOW : "ಈಗ ಸೆಟಪ್ ಮಾಡಿ"
 }
