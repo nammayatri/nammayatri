@@ -2,6 +2,8 @@ import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
 const { JBridge } = window;
 var mainFiber = null;
+const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
+let locationPollingTimer = undefined;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -1136,6 +1138,10 @@ export const showDialer = function (str) {
 };
 
 export const startLocationPollingAPI = function () {
+  if(locationPollingTimer != undefined) {
+    clearTimeout(locationPollingTimer);
+    locationPollingTimer = undefined;
+  }
   return window.JBridge.startLocationPollingAPI();
 }
 
@@ -1148,7 +1154,21 @@ export const generatePDF = function (state) {
 };
 
 export const stopLocationPollingAPI = function () {
-  window.JBridge.stopLocationPollingAPI()
+  if(locationPollingTimer == undefined && window.JBridge.isServiceRunning && window.JBridge.isServiceRunning(locationUpdateServiceName)) {
+    const cb = () => window.JBridge.stopLocationPollingAPI()
+    locationPollingTimer = setTimeout(cb, 5000);
+  }
+  return;
+}
+
+export const restartLocationPollingAPI = function () {
+  if(window.JBridge.isServiceRunning && window.JBridge.isServiceRunning(locationUpdateServiceName)) {
+    const cb = () => { 
+      window.JBridge.stopLocationPollingAPI()
+      window.JBridge.startLocationPollingAPI()
+    }
+    setTimeout(cb, 5000);
+  }
 }
 
 export const removeAllPolylines = function(str){

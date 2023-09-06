@@ -52,7 +52,7 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, getNetworkTime)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, unregisterDateAndTime, withinTimeRange, cleverTapCustomEvent)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, restartLocationPollingAPI, toast, unregisterDateAndTime, withinTimeRange, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
@@ -169,8 +169,9 @@ validateTime currentTime = do
   if (absTimeDiff < toNumber 10 ) then do
     setValueToLocalStore IS_VALID_TIME "true"
     liftFlowBT $ unregisterDateAndTime
-    liftFlowBT $ stopLocationPollingAPI
-    liftFlowBT $ startLocationPollingAPI
+    -- Some issue with this below two lines when uncommented, Please check
+    -- liftFlowBT $ stopLocationPollingAPI
+    -- liftFlowBT $ startLocationPollingAPI
   else
     when (absTimeDiff >= toNumber 10 ) do
       setValueToLocalStore IS_VALID_TIME "false"

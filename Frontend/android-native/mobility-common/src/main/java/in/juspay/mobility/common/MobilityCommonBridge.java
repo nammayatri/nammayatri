@@ -1334,6 +1334,19 @@ public class MobilityCommonBridge extends HyperBridge {
         DisplayMetrics displayMetrics = bridgeComponents.getContext().getResources().getDisplayMetrics();
         return Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
+
+    @JavascriptInterface
+    public boolean isServiceRunning(String serviceClassName, Context context){
+        final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
+
+        for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
+            if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
+                return true;
+            }
+        }
+        return false;
+    }
     //endregion
 
     @JavascriptInterface

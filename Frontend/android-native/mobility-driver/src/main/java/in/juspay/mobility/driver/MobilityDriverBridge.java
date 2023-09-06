@@ -208,7 +208,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             Utils.registerCallback(callBack);
         }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            locationCallback = this::callUpdateTimeCallBack;
+            locationCallback = new LocationUpdateService.UpdateTimeCallback() {
+                @Override
+                public void triggerUpdateTimeCallBack(String time, String lat, String lng) {
+                    callUpdateTimeCallBack(time, lat, lng);
+                }
+
+                @Override
+                public void invokeUICallBack(String event) {
+//                    invokeOnEvent(bridgeComponents.getJsCallback(), event);
+                }
+            };
             LocationUpdateService.registerCallback(locationCallback);
         }
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
@@ -270,15 +280,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void stopLocationPollingAPI() {
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            if (in.juspay.mobility.common.Utils.stopLocationService(bridgeComponents.getContext())) {
-                WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-                mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update));
-                Log.i(LOCATION, "Stop Location Update Polling");
-            } else {
-                Log.i(LOCATION, "Service not Started yet");
-            }
-        }
+        Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+        bridgeComponents.getContext().stopService(locationUpdateService);
+        WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(R.string.location_update));
+        Log.i(LOCATION, "Stop Location Update Polling");
     }
 
     //endregion

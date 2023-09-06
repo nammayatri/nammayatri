@@ -14,18 +14,6 @@ import in.juspay.mobility.app.LocationUpdateService;
 
 public class Utils {
 
-    public static boolean isServiceRunning(String serviceClassName, Context context){
-        final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
-
-        for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
-            if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static void updateLocaleResource(String languageKey, Context context) {
         Locale locale;
         switch (languageKey) {
@@ -58,18 +46,4 @@ public class Utils {
         configuration.setLocale(locale);
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
-
-    public static boolean stopLocationService (Context context) {
-            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
-            if (in.juspay.mobility.common.Utils.isServiceRunning(LocationUpdateService.class.getName(), context)) {
-                Handler stopServiceHandler = new Handler(context.getMainLooper());
-                stopServiceHandler.postDelayed(() -> {
-                    context.stopService(locationUpdateService);
-                }, 5000);
-                return true;
-            } else {
-                return false;
-        }
-    }
-
 }
