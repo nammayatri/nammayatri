@@ -44,9 +44,9 @@ data MessageReportT f = MessageReportT
 
 instance B.Table MessageReportT where
   data PrimaryKey MessageReportT f
-    = Id (B.C f Text)
+    = Id (B.C f Text) (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . driverId
+  primaryKey = Id <$> driverId <*> messageId
 
 type MessageReport = MessageReportT Identity
 
@@ -64,5 +64,5 @@ messageReportTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''MessageReportT ['driverId, 'messageId] [['messageId], ['driverId]])
+$(enableKVPG ''MessageReportT ['driverId, 'messageId] [])
 $(mkTableInstances ''MessageReportT "message_report" "atlas_driver_offer_bpp")
