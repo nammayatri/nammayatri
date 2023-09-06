@@ -16,14 +16,9 @@
 
 module Domain.Types.Maps.PlaceNameCache where
 
-import qualified Data.Vector as V
-import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForList)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data PlaceNameCache = PlaceNameCache
@@ -48,17 +43,4 @@ data AddressResp = AddressResp
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance FromField [AddressResp] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance FromField AddressResp where
-  fromField = fromFieldEnum
-
-instance (HasSqlValueSyntax be (V.Vector String)) => HasSqlValueSyntax be [AddressResp] where
-  sqlValueSyntax addressRespList =
-    let x = show <$> addressRespList
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [AddressResp]
-
-instance FromBackendRow Postgres [AddressResp]
+$(mkBeamInstancesForList ''AddressResp)
