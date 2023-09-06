@@ -766,12 +766,12 @@ const bengaliStrings = {
 	HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "সহায়তা কেন্দ্রগুলির অবস্থানগুলি সক্রিয় হয়ে গেলে এখানে উপস্থিত হবে৷",  
 	SUPPORT : "সমর্থন",
 	NEED_HELP_JOINING_THE_PLAN : "পরিকল্পনা বা অটোপেতে যোগদানের জন্য সহায়তা দরকার?",
-  NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>",
-  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "বিশেষ ছাড় পেতে এখনই অটোপে সেটআপ করুন",
-  SETUP_NOW : "এখন সেটআপ",
-  HELP_STR : "HELP", 
-  GO_TO_VEHICLE_DETAILS : "যানবাহনের বিবরণে যান",
-  CLOSE: "বন্ধ", 
-  RC_DEACTIVATED : "RC নিষ্ক্রিয় করা হয়েছে", 
-  RC_DEACTIVATED_DETAILS : "আপনার আরসি বর্তমানে অন্য ড্রাইভারের অ্যাকাউন্টে সক্রিয় আছে। রাইড নেওয়া শুরু করতে একটি RC সক্রিয় করুন"
-}
+	HELP_STR : "HELP", 
+	GO_TO_VEHICLE_DETAILS : "যানবাহনের বিবরণে যান",
+	CLOSE: "বন্ধ", 
+	RC_DEACTIVATED : "RC নিষ্ক্রিয় করা হয়েছে", 
+	RC_DEACTIVATED_DETAILS : "আপনার আরসি বর্তমানে অন্য ড্রাইভারের অ্যাকাউন্টে সক্রিয় আছে। রাইড নেওয়া শুরু করতে একটি RC সক্রিয় করুন",
+  	NEED_HELP : "সাহায্য দরকার?",
+	SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "বিশেষ ছাড় পেতে এখনই অটোপে সেটআপ করুন",
+	SETUP_NOW : "এখন সেটআপ"
+	}

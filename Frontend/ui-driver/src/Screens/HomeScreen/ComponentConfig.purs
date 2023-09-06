@@ -46,7 +46,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
 import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map, (&&), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..), Padding(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..))
@@ -226,10 +226,17 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     , width = V 204
     }
   , optionWithHtml  {
-    text = getString MAYBE_LATER
+    textOpt1 {
+      text = getString MAYBE_LATER
+    , visibility = VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
     , visibility = true
-    , margin = MarginTop 5
-    , padding = Padding 5 5 5 10
+    , background = Color.white900
+    , strokeColor = Color.white900
   }
 }
 
@@ -629,8 +636,8 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         _ -> item.component
     } ) paymentBreakUpArr
 
-autopayBannerConfig :: ST.HomeScreenState -> Banner.Config
-autopayBannerConfig state =
+autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
+autopayBannerConfig state configureImage =
   let
     config = Banner.config
     config' = config
@@ -641,6 +648,10 @@ autopayBannerConfig state =
         actionText = (getString SETUP_NOW),
         actionTextColor = Color.white900,
         imageUrl = "ny_ic_autopay_setup_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_autopay_setup_banner.png",
-        isBanner = state.props.autoPayBanner
+        isBanner = state.props.autoPayBanner,
+        imageHeight = if configureImage then (V 75) else (V 95),
+        imageWidth = if configureImage then (V 98) else (V 118),
+        actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
+        titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
       }
   in config'

@@ -18,7 +18,7 @@ module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (AutoPayStatus(..), KeyValType, PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PromoConfig)
+import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
@@ -76,15 +76,15 @@ initData = {
         managePlanProps : {
             selectedPlanItem : dummyPlanConfig
         },
-        optionsMenuExpanded : false,
-        redirectToNav : "",
         currentLat : 0.0,
         currentLon : 0.0,
         destLat : 0.0,
         destLon : 0.0,
         kioskLocation : [],
         prevSubView : NoSubView,
-        noKioskLocation : false
+        noKioskLocation : false,
+        optionsMenuState : ALL_COLLAPSED,
+        redirectToNav : ""
     }
 }
 

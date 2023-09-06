@@ -27,12 +27,16 @@ import Components.BottomNavBar as BottomNavBar
 import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, elem, length, filter, (!!))
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber, pow, ceil)
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Data.Maybe as Mb
+import Data.Number (fromString) as Number
 import Data.String as DS
 import Data.Time.Duration (Seconds(..))
 import Debug (spy)
@@ -51,23 +55,19 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, maxLines, ellipsize)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getPlanPrice, getAllFareFromArray)
-import Screens.Types (AutoPayStatus(..), GlobalProps, MyPlanData, PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..), KioskLocation(..))
+import Screens.Types (AutoPayStatus(..), GlobalProps, KioskLocation(..), MyPlanData, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
-import Data.Number (fromString) as Number
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Monad.Trans.Class (lift)
-import Control.Transformers.Back.Trans (runBackT)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -169,7 +169,7 @@ view push state =
                 , myPlanView push state (state.props.subView == MyPlan)
                 , autoPayDetailsView push state (state.props.subView == PlanDetails)
                 , findHelpCentreView push state (state.props.subView == FindHelpCentre)
-                , if state.props.optionsMenuExpanded then 
+                , if state.props.optionsMenuState /= ALL_COLLAPSED then
                       OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) 
                   else linearLayout[][]
               ]
@@ -332,10 +332,20 @@ paymentPendingView push state =
           width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity CENTER
+          , onClick push $ const $ CallSupport
       ][
         textView $ [
-          textFromHtml $ getString NEED_HELP_CALL_SUPPORT
-          , onClick push $ const $ CallSupport
+          textFromHtml $ getString NEED_HELP
+        ] <> FontStyle.tags TypoGraphy
+        , imageView [
+          imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          , height $ V 12
+          , width $ V 12
+          , margin $ Margin 2 1 2 0
+        ]
+        , textView $ [
+          textFromHtml $ getString CALL_SUPPORT
+          , color Color.blue800
         ] <> FontStyle.tags TypoGraphy
       ]
   ]
@@ -399,7 +409,7 @@ plansBottomView push state =
               , visibility GONE
               ] <> FontStyle.body1 TypoGraphy 
             , imageView [
-                imageWithFallback "ny_ic_play_circle,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_play_circle.png"
+                imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
@@ -521,16 +531,17 @@ headerView push state =
       ]
     , linearLayout [
         height WRAP_CONTENT
-        , onClick push $ const HeaderRightClick
+        , onClick push $ const $ if state.props.subView == JoinPlan then HeaderRightClick SUPPORT_MENU else NoAction
         , padding $ Padding 10 10 10 10
         , gravity CENTER_VERTICAL
+        , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
       ][
         imageView [
           imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
-          , height $ V 15
-          , width $ V 15
-          , visibility if state.props.subView == JoinPlan then VISIBLE else GONE
+          , height $ V if state.props.subView == JoinPlan then 15 else 24
+          , width $ V if state.props.subView == JoinPlan then 15 else 24
           , margin $ MarginRight 3
+          , onClick push $ const $ HeaderRightClick if state.props.subView == JoinPlan then SUPPORT_MENU else CALL_MENU
           ]
         , textView
           $ [ textFromHtml config.actionText
@@ -538,14 +549,21 @@ headerView push state =
           , padding $ PaddingBottom 3
           , color Color.blue800
           ] <> FontStyle.body1 TypoGraphy
+        , linearLayout [
+            height $ V 20
+            , width $ V 1
+            , background Color.grey900
+            , visibility if state.props.subView == MyPlan then VISIBLE else GONE
+            , margin $ MarginHorizontal 13 13
+          ][]
         , imageView [
-          imageWithFallback if state.props.subView == JoinPlan && state.props.optionsMenuExpanded then "ny_ic_chevronup_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevronup_blue.png"
+          imageWithFallback if state.props.subView == JoinPlan && state.props.optionsMenuState == SUPPORT_MENU then "ny_ic_chevronup_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevronup_blue.png"
                             else if state.props.subView == JoinPlan then "ny_ic_chevrondown_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevrondown_blue.png"
-                            else "ny_ic_kebab_menu,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_kebab_menu.png"
+                            else "ny_ic_settings_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_filled_blue.png"
           , height $ V if state.props.subView == JoinPlan then 15 else 24
           , width $ V if state.props.subView == JoinPlan then 15 else 24
-          , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
           , margin $ MarginLeft 3
+          , onClick push $ const $ HeaderRightClick if state.props.subView == JoinPlan then SUPPORT_MENU else PLAN_MENU
           ]
       ]
     ]
@@ -580,11 +598,11 @@ myPlanBodyview push state =
             , padding $ PaddingBottom 5
             ]
           , imageView
-            [ width $ V 20
-            , height $ V 20
+            [ width $ V 22
+            , height $ V 22
             , margin (MarginLeft 4)
             , padding $ Padding 2 2 2 2
-            , imageWithFallback (getImageURL "ny_ic_warning_blue")
+            , imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
             , onClick (\action -> do
                         _<- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"

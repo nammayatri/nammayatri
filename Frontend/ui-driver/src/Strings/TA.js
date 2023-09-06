@@ -746,7 +746,7 @@ const tamilStrings = {
   HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "உதவி மையங்கள் செயல்பட்டவுடன் அவற்றின் இருப்பிடங்கள் இங்கே தோன்றும்",
   SUPPORT : "ஆதரவு",
 	NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
-  NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
+  NEED_HELP : "திட்டத்தில் சேர உதவி வேண்டுமா?",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "சிறப்பு தள்ளுபடியைப் பெற இப்போதே ஆட்டோ பேயை அமைக்கவும்",
   SETUP_NOW : "இப்போதே அமைக்கவும்",
   HELP_STR : "உதவி", 
