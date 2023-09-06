@@ -1551,15 +1551,15 @@ type SubscriptionScreenProps = {
   refreshPaymentStatus :: Boolean,
   confirmCancel :: Boolean,
   isSelectedLangTamil :: Boolean,
-  optionsMenuExpanded :: Boolean,
-  redirectToNav :: String,
   currentLat :: Number,
   currentLon :: Number,
   destLat :: Number,
   destLon :: Number,
   kioskLocation :: Array KioskLocation,
   prevSubView :: SubscriptionSubview,
-  noKioskLocation :: Boolean
+  noKioskLocation :: Boolean,
+  optionsMenuState :: OptionsMenuState,
+  redirectToNav :: String
 }
 
 type JoinPlanData = {
@@ -1655,6 +1655,11 @@ instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
 instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
 instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
 
+data OptionsMenuState = ALL_COLLAPSED | SUPPORT_MENU | PLAN_MENU | CALL_MENU
+
+derive instance genericOptionsMenuState :: Generic OptionsMenuState _
+instance showOptionsMenuState :: Show OptionsMenuState where show = genericShow
+instance eqOptionsMenuState :: Eq OptionsMenuState where eq = genericEq
 
 ---------------------------------------------------- PaymentHistoryScreen ----------------------------------
 

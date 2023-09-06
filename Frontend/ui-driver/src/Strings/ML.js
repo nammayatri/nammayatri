@@ -724,7 +724,7 @@ const mlStrings = {
   HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "സഹായ കേന്ദ്രങ്ങൾ സജീവമായാൽ അവയുടെ ലൊക്കേഷനുകൾ ഇവിടെ ദൃശ്യമാകും",
   SUPPORT : "പിന്തുണ",
 	NEED_HELP_JOINING_THE_PLAN : "പദ്ധതിയിലോ ഓട്ടോപേയ്യിലോ ചേരാൻ സഹായം ആവശ്യമുണ്ടോ?",
-  NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>",
+  NEED_HELP : "സഹായം ആവശ്യമുണ്ട്?",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "പ്രത്യേക കിഴിവുകൾ ലഭിക്കുന്നതിന് ഇപ്പോൾ ഓട്ടോപേ അപ്പ് സജ്ജമാക്കുക",
   SETUP_NOW : "ഇപ്പോൾ സജ്ജീകരണം",
   GO_TO_VEHICLE_DETAILS : "വാഹന വിശദാംശങ്ങളിലേക്ക് പോകുക",

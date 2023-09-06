@@ -36,7 +36,7 @@ import JBridge as JB
 import Language.Types (STR(..))
 import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (PlanCardConfig(..), SubscribePopupType(..))
+import Screens.Types (OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -178,6 +178,13 @@ popupModalConfig state = let
       , width = case state.props.popUpState of
                   Mb.Just SupportPopup -> MATCH_PARENT
                   _                    -> (V 156)
+      , image {
+          imageUrl = "ny_ic_phone_filled_yellow,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_yellow.png"
+          , height = (V 16)
+          , width = (V 16)
+          , visibility = if Mb.Just SupportPopup == state.props.popUpState then VISIBLE else GONE
+          , margin = MarginRight 8
+        }
       },
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
@@ -217,11 +224,31 @@ popupModalConfig state = let
       , margin = (Margin 0 0 0 0)
     },
     optionWithHtml {
-      text = if state.props.popUpState == Mb.Just FailedPopup then getString NEED_HELP_CALL_SUPPORT else ""
-      , color = Color.black650
+      textOpt1 {
+        color = Color.black650
+        , text = getString NEED_HELP
+        , textStyle = SubHeading2
+        , visibility = VISIBLE
+      }
+      , textOpt2 {
+        color = Color.blue800
+        , textStyle = SubHeading2
+        , text = getString CALL_SUPPORT
+        , visibility = VISIBLE
+      } 
+      , image {
+          imageUrl = "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          , height = (V 16)
+          , width = (V 16)
+          , visibility = VISIBLE
+          , margin = Margin 3 1 3 0
+        }
+      , strokeColor = Color.white900
       , margin = Margin 16 4 16 0
+      , background = Color.white900
       , visibility = state.props.popUpState == Mb.Just FailedPopup
-    },
+      , isClickable = true
+      },
     dismissPopup = DA.any (_ == state.props.popUpState) [Mb.Just SupportPopup, Mb.Just FailedPopup]
     }
   in popUpConf'
@@ -299,16 +326,16 @@ optionsMenuConfig :: ST.SubscriptionScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = 
   OptionsMenuConfig.config {
   menuItems = [
-    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : state.props.subView == ST.MyPlan},
+    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : DA.any (_ == state.props.optionsMenuState)[PLAN_MENU]},
     {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : false},
-    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible : true},
+    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  DA.any (_ == state.props.optionsMenuState)[SUPPORT_MENU, CALL_MENU]},
     -- {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true}, -- TODO:: Removed for some time
-    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true},
-    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : true}],
+    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : DA.any (_ == state.props.optionsMenuState)[SUPPORT_MENU, CALL_MENU]},
+    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : DA.any (_ == state.props.optionsMenuState)[SUPPORT_MENU]}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,
-  menuExpanded = state.props.optionsMenuExpanded,
+  menuExpanded = state.props.optionsMenuState /= ALL_COLLAPSED,
   width = 170,
   marginRight = 16,
   itemHeight = 50,

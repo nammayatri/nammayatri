@@ -35,61 +35,59 @@ view push config =
     , margin $ MarginTop 12
     , background config.backgroundColor
     , visibility if config.isBanner then VISIBLE else GONE
+    , gravity CENTER_VERTICAL
     , onClick push (const OnClick)
     ]
     [  linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
-        , padding $ Padding 20 7 0 0
+        , padding $ Padding 20 0 0 0
         , orientation VERTICAL
         ]
-        [ textView
+        [ textView $
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
           , text config.title
           , color config.titleColor
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
+          , padding $ PaddingBottom 2
+          ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
           ]
           [
-            textView
+            textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
             , text config.actionText
             , color config.actionTextColor
-            , textSize FontSize.a_13
-            , fontStyle $ FontStyle.regular LanguageStyle
-            ]
-          , textView
+            , padding $ PaddingBottom 2
+            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+          , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
             , text "→"
             , color config.actionTextColor
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.regular LanguageStyle
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5
-            ]
+            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
           ]
         ]
     ,   linearLayout
-     [
-        height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-     ][imageView
         [
-          height $ V 95
-        , width $ V 118
-        , margin $ MarginRight 5
-        , imageWithFallback config.imageUrl
-        ]]
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , padding $ PaddingVertical 5 5
+        ][imageView
+            [
+              height config.imageHeight
+            , width config.imageWidth
+            , margin $ MarginRight 5
+            , imageWithFallback config.imageUrl
+            ]]
     ]

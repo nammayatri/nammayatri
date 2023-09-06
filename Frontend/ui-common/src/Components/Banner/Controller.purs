@@ -16,6 +16,9 @@
 module Components.Banner.Controller where
 
 import Styles.Colors as Color
+import PrestoDOM (Length(..))
+import Font.Style(Style(..))
+
 
 data Action = OnClick
             | NoAction
@@ -28,7 +31,11 @@ type Config = {
   actionText :: String,
   actionTextColor :: String,
   imageUrl :: String,
-  isBanner :: Boolean
+  imageHeight :: Length,
+  imageWidth :: Length,
+  isBanner :: Boolean,
+  actionTextStyle :: Style,
+  titleStyle :: Style
 }
 
 config :: Config
@@ -39,5 +46,9 @@ config = {
     actionText : "",
     actionTextColor : Color.darkGreen,
     imageUrl : "",
-    isBanner : true
+    imageHeight : (V 95),
+    imageWidth : (V 118),
+    isBanner : true,
+    actionTextStyle : ParagraphText,
+    titleStyle : Body7
 }

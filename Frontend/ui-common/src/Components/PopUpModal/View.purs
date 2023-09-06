@@ -207,7 +207,16 @@ view push state =
                         )
                         (const OnButton1Click)
                     ]
-                    [ textView $
+                    [   
+                        imageView [
+                            imageWithFallback state.option1.image.imageUrl
+                            , height state.option1.image.height
+                            , width state.option1.image.width
+                            , margin state.option1.image.margin
+                            , visibility state.option1.image.visibility
+                            , padding state.option1.image.padding
+                        ]
+                        , textView $
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , accessibility ENABLE
@@ -239,7 +248,15 @@ view push state =
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
                     ]
-                    [ textView $ 
+                    [   imageView [
+                            imageWithFallback state.option2.image.imageUrl
+                            , height state.option2.image.height
+                            , width state.option2.image.width
+                            , margin state.option2.image.margin
+                            , visibility state.option2.image.visibility
+                            , padding state.option2.image.padding
+                        ]
+                        , textView $ 
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , accessibility ENABLE
@@ -252,33 +269,50 @@ view push state =
                 ]
             ]
         , linearLayout [
-            height WRAP_CONTENT
-            , width MATCH_PARENT
-            , margin $ MarginTop 5
+            height state.optionWithHtml.height
+            , width  state.optionWithHtml.width
+            , margin state.optionWithHtml.margin
             , clickable state.optionWithHtml.isClickable
+            , background state.optionWithHtml.background
+            , cornerRadius state.optionWithHtml.cornerRadius
+            , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
+            , stroke ("1," <> state.optionWithHtml.strokeColor)
+            , gravity CENTER
+            , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
             , onClick
-                        ( \action -> do
-                            _ <- push action
-                            clearTheTimer state
-                            pure unit
-                        )
-                        (const OptionWithHtmlClick)
+                ( \action -> do
+                    _ <- push action
+                    clearTheTimer state
+                    pure unit
+                )
+                (const OptionWithHtmlClick)
           ][
                 textView $
-                    [ width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , background state.optionWithHtml.background
-                    , cornerRadius 8.0
-                    , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
-                    , stroke ("1," <> state.optionWithHtml.strokeColor)
-                    , margin state.optionWithHtml.margin
-                    , color $ state.optionWithHtml.color
-                    , gravity CENTER
-                    , padding state.optionWithHtml.padding
-                    , orientation VERTICAL
-                    , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
-                    , textFromHtml state.optionWithHtml.text
-                    ] <> (FontStyle.subHeading2 LanguageStyle)
+                [ textFromHtml $ state.optionWithHtml.textOpt1.text
+                , accessibilityHint state.optionWithHtml.textOpt1.text
+                , accessibility ENABLE
+                , color $ state.optionWithHtml.textOpt1.color
+                , margin $ state.optionWithHtml.textOpt1.margin
+                , gravity $ state.optionWithHtml.textOpt1.gravity
+                , visibility $ state.optionWithHtml.textOpt1.visibility
+                ] <> (FontStyle.getFontStyle state.optionWithHtml.textOpt1.textStyle LanguageStyle)
+                , imageView [
+                    imageWithFallback state.optionWithHtml.image.imageUrl
+                    , height state.optionWithHtml.image.height
+                    , width state.optionWithHtml.image.width
+                    , margin state.optionWithHtml.image.margin
+                    , visibility state.optionWithHtml.image.visibility
+                    , padding state.optionWithHtml.image.padding
+                ]
+                , textView $
+                [ textFromHtml $ state.optionWithHtml.textOpt2.text
+                , accessibilityHint state.optionWithHtml.textOpt2.text
+                , accessibility ENABLE
+                , color $ state.optionWithHtml.textOpt2.color
+                , margin $ state.optionWithHtml.textOpt2.margin
+                , gravity $ state.optionWithHtml.textOpt2.gravity
+                , visibility $ state.optionWithHtml.textOpt2.visibility
+                ] <> (FontStyle.getFontStyle state.optionWithHtml.textOpt2.textStyle LanguageStyle)
             ]
         ]
     ]

@@ -56,7 +56,7 @@ type Config = {
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
     dismissPopupConfig :: DismissPopupConfig,
-    coverImageConfig :: CoverImageConfig,
+    coverImageConfig :: ImageConfig,
     contactViewConfig :: ContactViewConfig,
     contactViewPadding :: Padding,
     contactViewMargin :: Margin,
@@ -69,7 +69,7 @@ type Config = {
     fareEstimateText :: String,
     tipSelectedText :: String,
     backgroundColor  :: String,
-    optionWithHtml :: ButtonConfig,
+    optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: Mb.Maybe String
 }
 
@@ -104,7 +104,8 @@ type ButtonConfig = {
   enableTimer :: Boolean,
   timerID :: String,
   textStyle :: Style,
-  height :: Length
+  height :: Length,
+  image :: ImageConfig
 }
 
 type DismissPopupConfig =
@@ -117,7 +118,7 @@ type DismissPopupConfig =
   , visibility :: Visibility
   }
 
-type CoverImageConfig =
+type ImageConfig =
   {
     visibility :: Visibility
   , imageUrl :: String
@@ -126,6 +127,22 @@ type CoverImageConfig =
   , margin :: Margin
   , padding :: Padding
   }
+
+type OptionWithHtmlConfig = {
+  background :: String,
+  strokeColor :: String,
+  textOpt1 :: TextConfig,
+  textOpt2 :: TextConfig,
+  visibility :: Boolean,
+  margin :: Margin,
+  isClickable :: Boolean,
+  width :: Length,
+  height :: Length,
+  padding :: Padding,
+  textStyle :: Style,
+  image :: ImageConfig,
+  cornerRadius :: Number
+}
 
 config :: Config
 config = {
@@ -179,6 +196,14 @@ config = {
     , timerID : ""
     , textStyle : Body3
     , height : (V 48)
+    , image : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+    }
   } 
   , option1 : {
       background : Color.white900
@@ -195,6 +220,14 @@ config = {
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
+    , image : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+    }
     }
   , option2 : {
       background : Color.black900
@@ -211,22 +244,54 @@ config = {
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
+    , image : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+    }
     }
   , optionWithHtml : {
-      background : Color.white900
-    , text : "OptionWithHtml"
-    , strokeColor : Color.white900
-    , color : Color.black650
-    , visibility : false
-    , margin : (Margin 12 0 0 16)
-    , isClickable : true
-    , width : (V 156)
-    , padding : (Padding 0 0 0 0)
-    , timerValue : 5
-    , enableTimer : false
-    , timerID : ""
-    , height : (V 48)
-    , textStyle : SubHeading2
+      background : Color.black900,
+      strokeColor : Color.black900,
+      textOpt1 : {
+        text : "",
+        color : Color.black800,
+        gravity : CENTER,
+        padding : (Padding 0 0 0 0),
+        margin : (Margin 0 0 0 0),
+        visibility : GONE,
+        textStyle : Heading2,
+        accessibilityHint : ""
+      },
+      textOpt2 : {
+        text : "",
+        color : Color.black800,
+        gravity : CENTER,
+        padding : (Padding 0 0 0 0),
+        margin : (Margin 0 0 0 0),
+        visibility : GONE,
+        textStyle : Heading2,
+        accessibilityHint : ""
+      },
+      visibility : false,
+      margin : (Margin 0 0 0 0),
+      isClickable : true,
+      width : MATCH_PARENT,
+      height : (V 48),
+      padding : (Padding 0 0 0 0),
+      textStyle : Heading2,
+      cornerRadius : 8.0,
+      image : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
     }
     , dismissPopupConfig : 
     { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
