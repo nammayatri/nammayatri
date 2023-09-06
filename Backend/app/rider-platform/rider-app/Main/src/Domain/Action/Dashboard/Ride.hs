@@ -160,7 +160,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  rideItems <- QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -204,7 +204,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
   mbNumberHash <- getDbHash `traverse` mbPhoneNumber
   now <- getCurrentTime
-  rideItems <- QRide.findAllRideItems merchant.id totalRides 0 Nothing mbShortId mbNumberHash Nothing Nothing Nothing now
+  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id totalRides 0 Nothing mbShortId mbNumberHash Nothing Nothing Nothing now
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
