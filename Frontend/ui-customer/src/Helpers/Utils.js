@@ -724,16 +724,14 @@ export const adjacentGeohash = function (geohash, direction) {
  * @throws  Invalid geohash.
  */
 export const geohashNeighbours = function (geohash) {
-  return {
-    n: adjacentGeohash(geohash, 'n'),
-    ne: adjacentGeohash(adjacentGeohash(geohash, 'n'), 'e'),
-    e: adjacentGeohash(geohash, 'e'),
-    se: adjacentGeohash(adjacentGeohash(geohash, 's'), 'e'),
-    s: adjacentGeohash(geohash, 's'),
-    sw: adjacentGeohash(adjacentGeohash(geohash, 's'), 'w'),
-    w: adjacentGeohash(geohash, 'w'),
-    nw: adjacentGeohash(adjacentGeohash(geohash, 'n'), 'w'),
-  };
+  let nDirection = adjacentGeohash(geohash, 'n');
+  let sDirection = adjacentGeohash(geohash, 's');
+  let eDirection = adjacentGeohash(geohash, 'e');
+  let wDirection = adjacentGeohash(geohash, 'w');
+  let neighbours = [nDirection, sDirection, eDirection, wDirection ,adjacentGeohash(nDirection, 'e'), adjacentGeohash(sDirection, 'e'),
+                    adjacentGeohash(sDirection, 'w'), adjacentGeohash(nDirection, 'w')]
+  console.log("geohashNeighbours", neighbours);
+  return neighbours;
 }
 export const storeInLocal = function (map) {
     console.log("zxc ",map);
