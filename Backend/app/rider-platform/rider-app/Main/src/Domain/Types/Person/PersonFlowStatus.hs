@@ -13,6 +13,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Person.PersonFlowStatus
@@ -23,19 +24,15 @@ where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
 -- deriving stock instance Ord Maps.LatLong
@@ -92,15 +89,7 @@ data FlowStatus
       }
   deriving (Show, Eq, Ord, Generic)
 
-instance FromField FlowStatus where
-  fromField = fromFieldJSON
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be FlowStatus where
-  sqlValueSyntax = sqlValueSyntax . encodeToText
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowStatus
-
-instance FromBackendRow Postgres FlowStatus
+$(mkBeamInstancesForJSON ''FlowStatus)
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =
