@@ -1574,28 +1574,34 @@ helpCentreCardView push state =
   , margin $ MarginBottom 16
   , cornerRadius 8.0
   , orientation VERTICAL
-  ][  textView
-      [ text state.landmark
-      , color Color.black800
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.bold LanguageStyle
-      , weight 1.0
-      ]
-    , textView
-      [ text state.address
-      , color Color.black700
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , weight 1.0
-      , maxLines 2
-      , margin $ MarginVertical 3 3
-      , ellipsize true
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick push $ const $ OpenGoogleMap state.latitude state.longitude
+      ][  textView
+          [ text state.landmark
+          , color Color.black800
+          , textSize FontSize.a_14
+          , fontStyle $ FontStyle.bold LanguageStyle
+          , weight 1.0
+          ]
+        , textView
+          [ text state.address
+          , color Color.black700
+          , textSize FontSize.a_14
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , weight 1.0
+          , maxLines 2
+          , margin $ MarginVertical 3 3
+          , ellipsize true
+          ]
       ]
     , linearLayout
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
       , orientation $ HORIZONTAL
-      , margin $ MarginVertical 15 15
+      , padding $ PaddingVertical 15 15
       , gravity CENTER_VERTICAL
       , onClick push $ const $ OpenGoogleMap state.latitude state.longitude
       ][  commonImageView "ny_ic_loc_grey" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
@@ -1618,7 +1624,7 @@ helpCentreCardView push state =
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
       , orientation $ HORIZONTAL
-      , margin $ MarginVertical 15 15
+      , padding $ PaddingVertical 15 15
       , gravity CENTER_VERTICAL
       , onClick push $ const $ CallHelpCenter (fromMaybe "" state.contact)
       , visibility $ case state.contact of 
@@ -1680,7 +1686,7 @@ showOfferApplicable state =
 commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
 commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPadding =
   imageView $
-      [ imageWithFallback $ imageName <> "," <> (getAssetStoreLink FunctionCall) <> imageName
+      [ imageWithFallback $ imageName <> "," <> (getAssetStoreLink FunctionCall) <> imageName <> ".png"
       , height $ V imageHeight
       , width $ V imageWidth
       , margin imageViewMargin
