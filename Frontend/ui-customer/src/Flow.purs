@@ -46,7 +46,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, fetchSuggestionsFromLocal, mapSetSuggestedDestinations, addToPrevCurrLoc,encodeGeohash ,addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint)
+import Helpers.Utils (decodeError, fetchSuggestionsFromLocal, mapSetSuggestedDestinations, addToPrevCurrLoc,encodeGeohash , geohashNeighbours ,addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent, setFCMTokenWithTimeOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -838,7 +838,7 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
         modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", defaultPickUpPoint = pickUpLoc, findingQuotesProgress = 0.0, sourceSelectedOnMap = false }})
-        if (addToRecents) then
+        if (addToRecents) then do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           _ <- fetchOrModifyLocationLists bothLocationChangedState.data.savedLocations
           pure unit
@@ -1030,7 +1030,7 @@ homeScreenFlow = do
                                                       frequencyCount : Just 1,
                                                       isSpecialZone : state.props.isSpecialZone
                                                       }
-                                      let currentSourceGeohash = encodeGeohash srcLat srcLon 8
+                                      let currentSourceGeohash = encodeGeohash srcLat srcLon 7
                                       let currentMap = currentState.homeScreen.data.suggestedDestinations.suggestedDestinationsMap
                                       let updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap)
                                       _ <- pure $ mapSetSuggestedDestinations updatedMap
@@ -1926,7 +1926,7 @@ savedLocationFlow = do
       (GlobalState newState) <- getState
       resp <- lift $ lift $ getRecentSearches newState.addNewAddressScreen
       -- Add array acc to curr loc here
-      let currentGeoHash = encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 8 
+      let currentGeoHash = encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 7
           mmap = getSuggestedDestsMapFromLocal FunctionCall
           suggestionObj = (fromMaybe dummySuggestionsObject (getSuggestedDestinations currentGeoHash mmap))
           suggestedDestinationsArr = (differenceOfLocationLists suggestionObj.destinationSuggestions (AddNewAddress.getSavedLocations savedLocationResp.list))
@@ -2294,7 +2294,7 @@ saveToSuggestedDestinationsMap :: LocationListItemState -> Number -> Number -> B
 saveToSuggestedDestinationsMap item lat lon serviceability = do
     (GlobalState currentState) <- getState
     when (serviceability) $ do
-      let currentSourceGeohash = encodeGeohash currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong 8
+      let currentSourceGeohash = encodeGeohash currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong 7
       let destinationWithLatLong = item{lat = Just lat, lon = Just lon}
       let currentMap = currentState.homeScreen.data.suggestedDestinations.suggestedDestinationsMap
       let updatedMap = (addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap)
@@ -2321,7 +2321,9 @@ fetchOrModifyLocationLists savedLocationResp = do
         recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
         savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png")) (savedLocationResp))
         mmap = getSuggestedDestsMapFromLocal FunctionCall
-        currentGeoHash = if (state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0) then encodeGeohash state.props.sourceLat state.props.sourceLong 8 else encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 8 
+        currentGeoHash = if (state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0) 
+                          then encodeGeohash state.props.sourceLat state.props.sourceLong 7
+                          else encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 7 
         destArr = (fromMaybe dummySuggestionsObject (getSuggestedDestinations currentGeoHash mmap))
         suggestedDestinationsArr = (differenceOfLocationLists destArr.destinationSuggestions savedLocationWithHomeOrWorkTag)
         recentSearchesWithoutSuggested =  (differenceOfLocationLists (recents) suggestedDestinationsArr)
@@ -2338,6 +2340,7 @@ fetchOrModifyLocationLists savedLocationResp = do
     _ <- pure $ spy "state.props.sourceLong abcde " state.props.sourceLong
     _ <- pure $ spy "map arr abcde " (getSuggestedDestinations currentGeoHash mmap)
     _ <- pure $ spy "sugestedFinalList abcde " sugestedFinalList
+    _ <- pure $ spy "geohashNeighbours" (geohashNeighbours currentGeoHash)
     _ <- pure $ spy "recentSearchesWithoutSuggested abcde " recentSearchesWithoutSuggested
     _ <- pure $ spy "updatedList abcde " updatedList
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data
@@ -2349,6 +2352,7 @@ fetchOrModifyLocationLists savedLocationResp = do
                                                                         }
                                                                       })
     pure unit
+
 
 
 addLocToCurrLoc :: Number -> Number -> String -> FlowBT String Unit

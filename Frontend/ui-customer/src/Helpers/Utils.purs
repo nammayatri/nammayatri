@@ -514,6 +514,7 @@ fetchDefaultPickupPoint locations lati longi =
 foreign import mapSetSuggestedDestinationsJson :: Json -> Json
 
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
+foreign import geohashNeighbours :: String -> Array String
 
 fetchSuggestionsFromLocal :: String -> Either JsonDecodeError SuggestedDestinations
 fetchSuggestionsFromLocal key = Decode.decodeJson $ getSuggestedDestinationsJsonFromLocal key
