@@ -276,18 +276,11 @@ public class MainActivity extends AppCompatActivity {
         activity = this;
         try {
             setContentView(R.layout.activity_main);
-        } catch (Resources.NotFoundException e){
-            Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
-            mFirebaseAnalytics.logEvent("res_not_found_exception",bundle);
-        } catch (InflateException e){
-            Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
-            mFirebaseAnalytics.logEvent("inflate_exception",bundle);
-        }  catch (Exception e){
+        } catch (Exception e){
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
             mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
+            setContentView(R.layout.activity_main_without_bg);
         }
 //        String key = getResources().getString(R.string.service);
 //        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
@@ -359,7 +352,7 @@ public class MainActivity extends AppCompatActivity {
                             // The current activity making the update request.
                             this,
                             // Include a request code to later monitor this update request.
-                            getResources().getInteger(REQUEST_CODE_UPDATE_APP)
+                            REQUEST_CODE_UPDATE_APP
                     );
                 } catch (IntentSender.SendIntentException e) {
                     e.printStackTrace();
@@ -660,21 +653,23 @@ public class MainActivity extends AppCompatActivity {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onResume").apply();
             sharedPref.edit().putString("MAPS_OPENED", "null").apply();
         }
-        appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                // If an in-app update is already running, resume the update.
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                            appUpdateInfo,
-                            AppUpdateType.IMMEDIATE,
-                            this,
-                            getResources().getInteger(REQUEST_CODE_UPDATE_APP)
-                    );
-                } catch (IntentSender.SendIntentException e) {
-                    e.printStackTrace();
+        if (appUpdateManager != null){
+            appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
+                if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                    // If an in-app update is already running, resume the update.
+                    try {
+                        appUpdateManager.startUpdateFlowForResult(
+                                appUpdateInfo,
+                                AppUpdateType.IMMEDIATE,
+                                this,
+                                REQUEST_CODE_UPDATE_APP
+                        );
+                    } catch (IntentSender.SendIntentException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-        });
+            });
+        }
         if (MERCHANT_TYPE.equals("DRIVER")) {
             if (NotificationUtils.overlayFeatureNotAvailable(this)) {
                 checkRideRequest();
