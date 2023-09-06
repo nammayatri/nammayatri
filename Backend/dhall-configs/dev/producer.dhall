@@ -72,7 +72,7 @@ in  { hedisCfg
     , entryId = "*"
     , reviverInterval = +1000
     , reviveThreshold = +3600
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased
     , maxShards = +5
     , tables
     }

@@ -246,5 +246,5 @@ in  { esqDBCfg
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.RedisBased
+    , schedulerType = common.schedulerType.DbBased
     }
