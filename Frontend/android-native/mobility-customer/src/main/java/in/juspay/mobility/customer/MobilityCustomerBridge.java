@@ -255,10 +255,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     googleMap.setOnCameraMoveListener(null);
                     googleMap.setOnCameraIdleListener(null);
                 }
-                for (Marker m : pickupPointsZoneMarkers) {
-                    m.setVisible(false);
+                if (pickupPointsZoneMarkers != null) {
+                    for (Marker m : pickupPointsZoneMarkers) {
+                        m.setVisible(false);
+                    }
                 }
-
                 if (layer != null) {
                     layer.removeLayerFromMap();
                 }
@@ -273,8 +274,15 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         try {
             ExecutorManager.runOnMainThread(() -> {
                 removeMarker("ny_ic_customer_current_location");
-                final LatLng position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                if (goToCurrentLocation) {
+                LatLng position = new LatLng(0.0, 0.0);
+                boolean moveToCurrentPosition = goToCurrentLocation;
+                try {
+                    position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    moveToCurrentPosition = true;
+                }
+                if (moveToCurrentPosition) {
                     LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
                 } else {
@@ -289,7 +297,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
                     }
                 });
-                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     if (googleMap != null)
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
@@ -513,8 +521,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 @Override
                 public void run() {
                     try {
-                        for (Marker m : pickupPointsZoneMarkers) {
-                            m.setVisible(false);
+                        if (pickupPointsZoneMarkers != null) {
+                            for (Marker m : pickupPointsZoneMarkers) {
+                                m.setVisible(false);
+                            }
                         }
                         drawPolygon(geoJson, "");
                         JSONObject geo = new JSONObject(geoJson);
