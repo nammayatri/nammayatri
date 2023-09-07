@@ -907,7 +907,7 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
   case res of
     Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
     Nothing -> do
-      aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
+      aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True Nothing
       AV.create aadhaarEntity
   QDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success

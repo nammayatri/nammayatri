@@ -51,7 +51,8 @@ data OnUpdateBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
         ride :: DRide.Ride,
-        booking :: DRB.Booking
+        booking :: DRB.Booking,
+        image :: Maybe Text
       }
   | RideStartedBuildReq
       { driver :: SP.Person,
@@ -99,9 +100,10 @@ mkFullfillment ::
   DRide.Ride ->
   DRB.Booking ->
   Maybe SVeh.Vehicle ->
+  Maybe Text ->
   Maybe Tags.TagGroups ->
   m RideFulfillment.FulfillmentInfo
-mkFullfillment mbDriver ride booking mbVehicle tags = do
+mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
   agent <-
     flip mapM mbDriver $ \driver -> do
       let agentTags =
@@ -122,6 +124,7 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
           { name = name,
             rateable = True,
             phone = Just mobileNumber,
+            image = mbImage,
             tags = Just $ Tags.TG agentTags
           }
   let veh =
@@ -169,7 +172,7 @@ buildOnUpdateMessage ::
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) image Nothing
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -182,7 +185,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -209,7 +212,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 ]
             }
         ]
-  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG tagGroups)
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
       price =
@@ -292,7 +295,7 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -312,7 +315,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
             }
         ]
-  fulfillment <- mkFullfillment Nothing ride booking Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups)
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage
@@ -334,7 +337,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "message") (Just "New Message") (Just message)]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage
       { update_target = "order.fufillment.state.code, order.fulfillment.tags",

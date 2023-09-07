@@ -77,6 +77,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         driverMobileNumber = agentPhone,
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
         driverRating = realToFrac <$> rating,
+        driverImage = agent.image,
         driverRegisteredAt = registeredAt,
         vehicleNumber = vehicle.registration,
         vehicleColor = vehicle.color,

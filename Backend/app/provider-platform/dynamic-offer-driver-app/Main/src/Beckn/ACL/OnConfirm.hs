@@ -163,7 +163,8 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
               { name = dName,
                 rateable = True,
                 tags = Nothing,
-                phone = Nothing
+                phone = Nothing,
+                image = Nothing
               }
     }
 
