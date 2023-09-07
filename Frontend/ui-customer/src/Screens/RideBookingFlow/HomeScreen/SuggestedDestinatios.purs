@@ -39,7 +39,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestedDestinations 
 
         updatedDestinations = map updateExisting destinations
         destinationExists = any (\d -> d.placeId == destination.placeId) destinations
-        sortedDestinations = reverse (sortWith (\d -> fromMaybe 0.0 d.locationScore) updatedDestinations)
+        sortedDestinations = sortDestinationsByScore updatedDestinations
       in
         if destinationExists
         then sortedDestinations
@@ -93,7 +93,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestedDestinations =
         updatedDestinations = map updateExisting trips
         destinationExists = any (\d -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong d.sourceLat d.sourceLong) < 11.0
           && (getDistanceBwCordinates trip.destLat trip.destLong d.destLat d.destLong) < 11.0) trips
-        sortedDestinations = reverse (sortWith (\d -> fromMaybe 0.0 d.locationScore) updatedDestinations)
+        sortedDestinations = sortTripsByScore updatedDestinations
       in
         if destinationExists
         then sortedDestinations
@@ -131,3 +131,9 @@ calculateScore frequency recencyDate =
     score = (frequencyWeight * normalizedFrequency) + (recencyWeight * normalizedRecency)
   in
     score
+
+sortDestinationsByScore :: Array LocationListItemState -> Array LocationListItemState
+sortDestinationsByScore destinations = reverse (sortWith (\d -> fromMaybe 0.0 d.locationScore) destinations)
+
+sortTripsByScore :: Array Trip -> Array Trip
+sortTripsByScore trips = reverse (sortWith (\d -> fromMaybe 0.0 d.locationScore) trips)
