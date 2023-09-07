@@ -1161,12 +1161,6 @@ homeScreenFlow = do
     RETRY  -> homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
-      -- let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-      -- if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && ((MU.getValueFromConfig "specialLocationView") == "true" && (getMerchant FunctionCall) == JATRISAATHI || updatedState.props.currentStage == ConfirmingLocation)) then do
-      --     _ <- pure $ spy "debug nexus inside CHECK_SERVICEABILITY" "."
-      --     lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
-      --   else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
-      _ <-  pure $ spy "CHECK_SERVICEABILITY output" "before "
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
