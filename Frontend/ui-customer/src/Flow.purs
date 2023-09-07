@@ -25,7 +25,7 @@ import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
@@ -2324,14 +2324,19 @@ fetchOrModifyLocationLists savedLocationResp = do
         currentGeoHash = if (state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0) 
                           then encodeGeohash state.props.sourceLat state.props.sourceLong 7
                           else encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 7 
+        geohashNeighbors = Arr.cons currentGeoHash (geohashNeighbours currentGeoHash)
         destArr = (fromMaybe dummySuggestionsObject (getSuggestedDestinations currentGeoHash mmap))
-        suggestedDestinationsArr = (differenceOfLocationLists destArr.destinationSuggestions savedLocationWithHomeOrWorkTag)
+        arrWithNeighbors = spy "arrWithNeighbors abcde " (concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedDestinations hash mmap)).destinationSuggestions) geohashNeighbors)) 
+        sortedList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
+        -- suggestedDestinationsArr = (differenceOfLocationLists destArr.destinationSuggestions savedLocationWithHomeOrWorkTag)
+        suggestedDestinationsArr = (differenceOfLocationLists sortedList savedLocationWithHomeOrWorkTag)
         recentSearchesWithoutSuggested =  (differenceOfLocationLists (recents) suggestedDestinationsArr)
         lengthOfSuggested = length suggestedDestinationsArr
         sugestedFinalList =  suggestedDestinationsArr <> (Arr.take (30 - lengthOfSuggested) recentSearchesWithoutSuggested)
         updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
                                                                         else "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png" }) (sugestedFinalList))
               
+    
     _ <- pure $ spy "map abcde " mmap
     _ <- pure $ spy "geohash abcde " currentGeoHash
     _ <- pure $ spy "LAST_KNOWN_LAT abcde " (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)
