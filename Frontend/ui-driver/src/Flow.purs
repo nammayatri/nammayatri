@@ -2021,6 +2021,7 @@ homeScreenFlow = do
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
 nyPaymentFlow planCardConfig fromJoinPlan = do
+  liftFlowBT $ runEffectFn1 initiatePP unit
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
@@ -2040,7 +2041,9 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       _ <- pure $ metaLogEvent "ny_driver_payment_page_opened"
       liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       _ <- paymentPageUI sdkPayload
+      liftFlowBT killPP
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
       setValueToLocalStore DISABLE_WIDGET "false"
@@ -2082,6 +2085,7 @@ paymentHistoryFlow = do
 
 ysPaymentFlow :: FlowBT String Unit
 ysPaymentFlow = do
+  liftFlowBT $ runEffectFn1 initiatePP unit
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
   response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.driverFeeId
@@ -2089,7 +2093,10 @@ ysPaymentFlow = do
     Right (CreateOrderRes listResp) -> do
       let (PaymentPagePayload sdk_payload) = listResp.sdk_payload
       setValueToLocalStore DISABLE_WIDGET "true"
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       paymentPageOutput <- paymentPageUI listResp.sdk_payload
+      liftFlowBT killPP
+      pure $ toggleBtnLoader "" false
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
       if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL

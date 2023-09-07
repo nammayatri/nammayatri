@@ -31,7 +31,7 @@ import MerchantConfig.Utils
 import Common.Types.App (LazyCheck(..))
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!)) as DA
+import Data.Array ((!!), fold) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
@@ -45,7 +45,7 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
+import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC) as ReExport
 import Foreign (Foreign)
@@ -72,8 +72,8 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PaymentPagePayload, PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout)
-import Effect.Uncurried(EffectFn1, EffectFn4)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..))
 import Styles.Colors as Color
 
@@ -126,6 +126,10 @@ foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
 
+foreign import preFetch :: Effect (Array RenewFile)
+
+foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
+
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
@@ -135,6 +139,10 @@ type Period
     , periodType :: String
     }
 
+type RenewFile = {
+  filePath :: String ,
+  location :: String
+}
 
 otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {
@@ -371,3 +379,15 @@ getCategorizedVariant variant = case variant of
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
       _ -> var
   Nothing -> ""
+
+
+fetchFiles :: Effect Unit
+fetchFiles = do
+  files <- preFetch
+  DA.fold $ map (\item -> launchAff_ $ do 
+    result <- download item.filePath item.location
+    if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
+  
+
+download :: String -> String -> Aff Boolean
+download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
