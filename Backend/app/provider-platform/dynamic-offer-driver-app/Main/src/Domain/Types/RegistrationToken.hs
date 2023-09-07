@@ -18,8 +18,8 @@ module Domain.Types.RegistrationToken where
 import Data.Aeson
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Medium
   = SMS

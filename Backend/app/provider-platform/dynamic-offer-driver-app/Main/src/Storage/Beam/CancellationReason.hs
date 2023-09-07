@@ -20,9 +20,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data CancellationReasonT f = CancellationReasonT
   { reasonCode :: B.C f Text,
@@ -40,15 +40,6 @@ instance B.Table CancellationReasonT where
 
 type CancellationReason = CancellationReasonT Identity
 
-cancellationReasonTMod :: CancellationReasonT (B.FieldModification (B.TableField CancellationReasonT))
-cancellationReasonTMod =
-  B.tableModification
-    { reasonCode = B.fieldNamed "reason_code",
-      description = B.fieldNamed "description",
-      enabled = B.fieldNamed "enabled",
-      priority = B.fieldNamed "priority"
-    }
-
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])
 
-$(mkTableInstances ''CancellationReasonT "cancellation_reason" "atlas_driver_offer_bpp")
+$(mkTableInstances ''CancellationReasonT "cancellation_reason")

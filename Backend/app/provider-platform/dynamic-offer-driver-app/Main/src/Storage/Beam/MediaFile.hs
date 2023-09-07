@@ -22,10 +22,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.MediaFile as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,
@@ -43,15 +43,6 @@ instance B.Table MediaFileT where
 
 type MediaFile = MediaFileT Identity
 
-mediaFileTMod :: MediaFileT (B.FieldModification (B.TableField MediaFileT))
-mediaFileTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      fileType = B.fieldNamed "type",
-      url = B.fieldNamed "url",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MediaFileT ['id] [])
 
-$(mkTableInstances ''MediaFileT "media_file" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''MediaFileT "media_file" [("fileType", "type")])

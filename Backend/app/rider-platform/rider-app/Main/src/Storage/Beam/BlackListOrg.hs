@@ -23,10 +23,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.BlackListOrg as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data BlackListOrgT f = BlackListOrgT
   { id :: B.C f Text,
@@ -43,14 +43,6 @@ instance B.Table BlackListOrgT where
 
 type BlackListOrg = BlackListOrgT Identity
 
-blackListOrgTMod :: BlackListOrgT (B.FieldModification (B.TableField BlackListOrgT))
-blackListOrgTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      subscriberId = B.fieldNamed "subscriber_id",
-      orgType = B.fieldNamed "type"
-    }
-
 $(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstances ''BlackListOrgT "black_list_org" "atlas_app")
+$(mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("orgType", "type")])

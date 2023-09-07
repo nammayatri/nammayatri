@@ -22,10 +22,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Exophone as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,
@@ -47,19 +47,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-exophoneTMod :: ExophoneT (B.FieldModification (B.TableField ExophoneT))
-exophoneTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      primaryPhone = B.fieldNamed "primary_phone",
-      backupPhone = B.fieldNamed "backup_phone",
-      isPrimaryDown = B.fieldNamed "is_primary_down",
-      exophoneType = B.fieldNamed "exophone_type",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
 
-$(mkTableInstances ''ExophoneT "exophone" "atlas_driver_offer_bpp")
+$(mkTableInstances ''ExophoneT "exophone")

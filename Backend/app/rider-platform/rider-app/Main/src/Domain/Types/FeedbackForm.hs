@@ -19,11 +19,11 @@ module Domain.Types.FeedbackForm where
 
 import Data.List (groupBy)
 import Domain.Types.Ride (Ride)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Id Ride,

@@ -22,12 +22,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
+import Tools.Beam.UtilsTH
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -57,27 +57,6 @@ instance B.Table DriverLicenseT where
 
 type DriverLicense = DriverLicenseT Identity
 
-driverLicenseTMod :: DriverLicenseT (B.FieldModification (B.TableField DriverLicenseT))
-driverLicenseTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      documentImageId1 = B.fieldNamed "document_image_id1",
-      documentImageId2 = B.fieldNamed "document_image_id2",
-      driverDob = B.fieldNamed "driver_dob",
-      driverName = B.fieldNamed "driver_name",
-      licenseNumberEncrypted = B.fieldNamed "license_number_encrypted",
-      licenseNumberHash = B.fieldNamed "license_number_hash",
-      licenseExpiry = B.fieldNamed "license_expiry",
-      classOfVehicles = B.fieldNamed "class_of_vehicles",
-      failedRules = B.fieldNamed "failed_rules",
-      verificationStatus = B.fieldNamed "verification_status",
-      consent = B.fieldNamed "consent",
-      consentTimestamp = B.fieldNamed "consent_timestamp",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])
 
-$(mkTableInstances ''DriverLicenseT "driver_license" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverLicenseT "driver_license")

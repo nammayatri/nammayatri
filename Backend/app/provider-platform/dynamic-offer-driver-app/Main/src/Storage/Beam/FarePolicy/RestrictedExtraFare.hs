@@ -21,11 +21,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,
@@ -44,16 +44,6 @@ instance B.Table RestrictedExtraFareT where
 
 type RestrictedExtraFare = RestrictedExtraFareT Identity
 
-restrictedExtraFareTMod :: RestrictedExtraFareT (B.FieldModification (B.TableField RestrictedExtraFareT))
-restrictedExtraFareTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      minTripDistance = B.fieldNamed "min_trip_distance",
-      driverMaxExtraFare = B.fieldNamed "driver_max_extra_fare"
-    }
-
 $(enableKVPG ''RestrictedExtraFareT ['id] [])
 
-$(mkTableInstances ''RestrictedExtraFareT "restricted_extra_fare" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RestrictedExtraFareT "restricted_extra_fare")

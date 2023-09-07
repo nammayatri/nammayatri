@@ -21,12 +21,12 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
@@ -58,29 +58,6 @@ instance B.Table DriverIntelligentPoolConfigT where
 
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
 
-driverIntelligentPoolConfigTMod :: DriverIntelligentPoolConfigT (B.FieldModification (B.TableField DriverIntelligentPoolConfigT))
-driverIntelligentPoolConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      actualPickupDistanceWeightage = B.fieldNamed "actual_pickup_distance_weightage",
-      availabilityTimeWeightage = B.fieldNamed "availability_time_weightage",
-      availabilityTimeWindowOption = B.fieldNamed "availability_time_window_option",
-      acceptanceRatioWeightage = B.fieldNamed "acceptance_ratio_weightage",
-      acceptanceRatioWindowOption = B.fieldNamed "acceptance_ratio_window_option",
-      cancellationRatioWeightage = B.fieldNamed "cancellation_ratio_weightage",
-      cancellationRatioWindowOption = B.fieldNamed "cancellation_ratio_window_option",
-      minQuotesToQualifyForIntelligentPool = B.fieldNamed "min_quotes_to_qualify_for_intelligent_pool",
-      minQuotesToQualifyForIntelligentPoolWindowOption = B.fieldNamed "min_quotes_to_qualify_for_intelligent_pool_window_option",
-      intelligentPoolPercentage = B.fieldNamed "intelligent_pool_percentage",
-      speedNormalizer = B.fieldNamed "speed_normalizer",
-      driverSpeedWeightage = B.fieldNamed "driver_speed_weightage",
-      locationUpdateSampleTime = B.fieldNamed "location_update_sample_time",
-      minLocationUpdates = B.fieldNamed "min_location_updates",
-      defaultDriverSpeed = B.fieldNamed "default_driver_speed",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
 
-$(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")

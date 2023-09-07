@@ -25,9 +25,10 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 -- import Lib.Utils
-import Kernel.Beam.Lib.UtilsTH
+
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverBlockReasonT f = DriverBlockReasonT
   { reasonCode :: B.C f Text,
@@ -44,14 +45,6 @@ instance B.Table DriverBlockReasonT where
 
 type DriverBlockReason = DriverBlockReasonT Identity
 
-driverBlockReasonTMod :: DriverBlockReasonT (B.FieldModification (B.TableField DriverBlockReasonT))
-driverBlockReasonTMod =
-  B.tableModification
-    { reasonCode = B.fieldNamed "reason_code",
-      blockReason = B.fieldNamed "block_reason",
-      blockTimeInHours = B.fieldNamed "block_time_in_hours"
-    }
-
 $(enableKVPG ''DriverBlockReasonT ['reasonCode] [])
 
-$(mkTableInstances ''DriverBlockReasonT "driver_block_reason" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverBlockReasonT "driver_block_reason")

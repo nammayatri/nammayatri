@@ -28,11 +28,11 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH
 
 data BookingStatus
   = NEW

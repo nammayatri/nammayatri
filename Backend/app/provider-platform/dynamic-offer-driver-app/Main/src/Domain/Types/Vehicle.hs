@@ -25,10 +25,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
   deriving stock (Show, Eq, Read, Ord, Generic)

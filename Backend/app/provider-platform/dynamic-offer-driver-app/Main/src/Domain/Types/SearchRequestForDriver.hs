@@ -24,12 +24,12 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverSearchRequestStatus = Active | Inactive
   deriving stock (Show, Eq, Read, Ord, Generic)

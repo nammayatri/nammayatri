@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
@@ -51,22 +51,6 @@ instance B.Table FarePolicyT where
 
 type FarePolicy = FarePolicyT Identity
 
-farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
-farePolicyTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      farePolicyType = B.fieldNamed "fare_policy_type",
-      serviceCharge = B.fieldNamed "service_charge",
-      nightShiftStart = B.fieldNamed "night_shift_start",
-      nightShiftEnd = B.fieldNamed "night_shift_end",
-      maxAllowedTripDistance = B.fieldNamed "max_allowed_trip_distance",
-      minAllowedTripDistance = B.fieldNamed "min_allowed_trip_distance",
-      govtCharges = B.fieldNamed "govt_charges",
-      description = B.fieldNamed "description",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''FarePolicyT ['id] [[]])
 
-$(mkTableInstances ''FarePolicyT "fare_policy" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FarePolicyT "fare_policy")

@@ -22,12 +22,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FareParameters as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KId
 import Lib.Utils ()
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,
@@ -47,15 +47,6 @@ type FareParametersSlabDetails = FareParametersSlabDetailsT Identity
 
 type FullFareParametersSlabDetails = (KId.Id Domain.FareParameters, Domain.FParamsSlabDetails)
 
-fareParametersSlabDetailsTMod :: FareParametersSlabDetailsT (B.FieldModification (B.TableField FareParametersSlabDetailsT))
-fareParametersSlabDetailsTMod =
-  B.tableModification
-    { fareParametersId = B.fieldNamed "fare_parameters_id",
-      platformFee = B.fieldNamed "platform_fee",
-      sgst = B.fieldNamed "sgst",
-      cgst = B.fieldNamed "cgst"
-    }
-
 $(enableKVPG ''FareParametersSlabDetailsT ['fareParametersId] [])
 
-$(mkTableInstances ''FareParametersSlabDetailsT "fare_parameters_slab_details" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FareParametersSlabDetailsT "fare_parameters_slab_details")

@@ -22,11 +22,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data EstimateBreakupT f = EstimateBreakupT
   { id :: B.C f Text,
@@ -45,16 +45,6 @@ instance B.Table EstimateBreakupT where
 
 type EstimateBreakup = EstimateBreakupT Identity
 
-estimateBreakupTMod :: EstimateBreakupT (B.FieldModification (B.TableField EstimateBreakupT))
-estimateBreakupTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      estimateId = B.fieldNamed "estimate_id",
-      title = B.fieldNamed "title",
-      priceCurrency = B.fieldNamed "price_currency",
-      priceValue = B.fieldNamed "price_value"
-    }
-
 $(enableKVPG ''EstimateBreakupT ['id] [['estimateId]])
 
-$(mkTableInstances ''EstimateBreakupT "estimate_breakup" "atlas_app")
+$(mkTableInstances ''EstimateBreakupT "estimate_breakup")

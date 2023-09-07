@@ -23,13 +23,13 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PaymentOrderT f = PaymentOrderT
   { id :: B.C f Text,
@@ -60,28 +60,6 @@ instance B.Table PaymentOrderT where
 
 type PaymentOrder = PaymentOrderT Identity
 
-paymentOrderTMod :: PaymentOrderT (B.FieldModification (B.TableField PaymentOrderT))
-paymentOrderTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      shortId = B.fieldNamed "short_id",
-      customerId = B.fieldNamed "customer_id",
-      merchantId = B.fieldNamed "merchant_id",
-      amount = B.fieldNamed "amount",
-      currency = B.fieldNamed "currency",
-      status = B.fieldNamed "status",
-      webPaymentLink = B.fieldNamed "web_payment_link",
-      iframePaymentLink = B.fieldNamed "iframe_payment_link",
-      mobilePaymentLink = B.fieldNamed "mobile_payment_link",
-      clientAuthTokenEncrypted = B.fieldNamed "client_auth_token_encrypted",
-      clientAuthTokenHash = B.fieldNamed "client_auth_token_hash",
-      clientAuthTokenExpiry = B.fieldNamed "client_auth_token_expiry",
-      getUpiDeepLinksOption = B.fieldNamed "get_upi_deep_links_option",
-      environment = B.fieldNamed "environment",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''PaymentOrderT ['id] [])
 
-$(mkTableInstances ''PaymentOrderT "payment_order" "atlas_app")
+$(mkTableInstances ''PaymentOrderT "payment_order")

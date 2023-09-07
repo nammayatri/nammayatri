@@ -20,12 +20,12 @@ import qualified Data.Text as T
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FlowType
   = RIDE_OTP

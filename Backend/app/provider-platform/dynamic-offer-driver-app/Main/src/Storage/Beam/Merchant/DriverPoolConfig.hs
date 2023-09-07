@@ -21,12 +21,12 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
+import Tools.Beam.UtilsTH
 
 data DriverPoolConfigT f = DriverPoolConfigT
   { merchantId :: B.C f Text,
@@ -61,32 +61,6 @@ instance B.Table DriverPoolConfigT where
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-driverPoolConfigTMod :: DriverPoolConfigT (B.FieldModification (B.TableField DriverPoolConfigT))
-driverPoolConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      distanceBasedBatchSplit = B.fieldNamed "distance_based_batch_split",
-      minRadiusOfSearch = B.fieldNamed "min_radius_of_search",
-      maxRadiusOfSearch = B.fieldNamed "max_radius_of_search",
-      radiusStepSize = B.fieldNamed "radius_step_size",
-      driverPositionInfoExpiry = B.fieldNamed "driver_position_info_expiry",
-      actualDistanceThreshold = B.fieldNamed "actual_distance_threshold",
-      maxDriverQuotesRequired = B.fieldNamed "max_driver_quotes_required",
-      maxParallelSearchRequests = B.fieldNamed "max_parallel_search_requests",
-      driverQuoteLimit = B.fieldNamed "driver_quote_limit",
-      driverRequestCountLimit = B.fieldNamed "driver_request_count_limit",
-      driverBatchSize = B.fieldNamed "driver_batch_size",
-      maxNumberOfBatches = B.fieldNamed "max_number_of_batches",
-      poolSortingType = B.fieldNamed "pool_sorting_type",
-      singleBatchProcessTime = B.fieldNamed "single_batch_process_time",
-      tripDistance = B.fieldNamed "trip_distance",
-      radiusShrinkValueForDriversOnRide = B.fieldNamed "radius_shrink_value_for_drivers_on_ride",
-      driverToDestinationDistanceThreshold = B.fieldNamed "driver_to_destination_distance_threshold",
-      driverToDestinationDuration = B.fieldNamed "driver_to_destination_duration",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverPoolConfigT ['merchantId] [])
 
-$(mkTableInstances ''DriverPoolConfigT "driver_pool_config" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverPoolConfigT "driver_pool_config")

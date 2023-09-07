@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data TripTermsT f = TripTermsT
   { id :: B.C f Text,
@@ -40,13 +40,6 @@ instance B.Table TripTermsT where
 
 type TripTerms = TripTermsT Identity
 
-tripTermsTMod :: TripTermsT (B.FieldModification (B.TableField TripTermsT))
-tripTermsTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      descriptions = B.fieldNamed "descriptions"
-    }
-
 $(enableKVPG ''TripTermsT ['id] [])
 
-$(mkTableInstances ''TripTermsT "trip_terms" "atlas_app")
+$(mkTableInstances ''TripTermsT "trip_terms")

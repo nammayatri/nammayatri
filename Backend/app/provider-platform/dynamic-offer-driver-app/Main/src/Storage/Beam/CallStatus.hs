@@ -21,11 +21,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
@@ -47,19 +47,6 @@ instance B.Table CallStatusT where
 
 type CallStatus = CallStatusT Identity
 
-callStatusTMod :: CallStatusT (B.FieldModification (B.TableField CallStatusT))
-callStatusTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      callId = B.fieldNamed "call_id",
-      entityId = B.fieldNamed "entity_id",
-      dtmfNumberUsed = B.fieldNamed "dtmf_number_used",
-      status = B.fieldNamed "status",
-      recordingUrl = B.fieldNamed "recording_url",
-      conversationDuration = B.fieldNamed "conversation_duration",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''CallStatusT ['id] [['callId]])
 
-$(mkTableInstances ''CallStatusT "call_status" "atlas_driver_offer_bpp")
+$(mkTableInstances ''CallStatusT "call_status")

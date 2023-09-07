@@ -4,9 +4,9 @@ module Domain.Types.Sos where
 
 import Domain.Types.Person (Person)
 import Domain.Types.Ride (Ride)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Sos = Sos
   { id :: Id Sos,

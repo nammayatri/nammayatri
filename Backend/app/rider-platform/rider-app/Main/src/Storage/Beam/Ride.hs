@@ -25,11 +25,11 @@ import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -70,38 +70,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-rideTMod :: RideT (B.FieldModification (B.TableField RideT))
-rideTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      bppRideId = B.fieldNamed "bpp_ride_id",
-      bookingId = B.fieldNamed "booking_id",
-      shortId = B.fieldNamed "short_id",
-      merchantId = B.fieldNamed "merchant_id",
-      status = B.fieldNamed "status",
-      driverName = B.fieldNamed "driver_name",
-      driverRating = B.fieldNamed "driver_rating",
-      driverMobileNumber = B.fieldNamed "driver_mobile_number",
-      driverRegisteredAt = B.fieldNamed "driver_registered_at",
-      vehicleNumber = B.fieldNamed "vehicle_number",
-      vehicleModel = B.fieldNamed "vehicle_model",
-      vehicleColor = B.fieldNamed "vehicle_color",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      otp = B.fieldNamed "otp",
-      trackingUrl = B.fieldNamed "tracking_url",
-      fare = B.fieldNamed "fare",
-      totalFare = B.fieldNamed "total_fare",
-      chargeableDistance = B.fieldNamed "chargeable_distance",
-      traveledDistance = B.fieldNamed "traveled_distance",
-      driverArrivalTime = B.fieldNamed "driver_arrival_time",
-      rideStartTime = B.fieldNamed "ride_start_time",
-      rideEndTime = B.fieldNamed "ride_end_time",
-      rideRating = B.fieldNamed "ride_rating",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      driverMobileCountryCode = B.fieldNamed "driver_mobile_country_code"
-    }
-
 $(enableKVPG ''RideT ['id] [['bppRideId], ['bookingId]])
 
-$(mkTableInstances ''RideT "ride" "atlas_app")
+$(mkTableInstances ''RideT "ride")

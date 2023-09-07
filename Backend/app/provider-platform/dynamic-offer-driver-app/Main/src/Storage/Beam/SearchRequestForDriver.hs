@@ -26,11 +26,11 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Types
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 extractValue :: KVDBAnswer [ByteString] -> [ByteString]
 extractValue (Right value) = value
@@ -80,40 +80,6 @@ instance B.Table SearchRequestForDriverT where
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
 
-searchRequestForDriverTMod :: SearchRequestForDriverT (B.FieldModification (B.TableField SearchRequestForDriverT))
-searchRequestForDriverTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "search_request_id",
-      searchTryId = B.fieldNamed "search_try_id",
-      merchantId = B.fieldNamed "merchant_id",
-      startTime = B.fieldNamed "start_time",
-      actualDistanceToPickup = B.fieldNamed "actual_distance_to_pickup",
-      straightLineDistanceToPickup = B.fieldNamed "straight_line_distance_to_pickup",
-      durationToPickup = B.fieldNamed "duration_to_pickup",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      batchNumber = B.fieldNamed "batch_number",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      searchRequestValidTill = B.fieldNamed "search_request_valid_till",
-      driverId = B.fieldNamed "driver_id",
-      status = B.fieldNamed "status",
-      response = B.fieldNamed "response",
-      driverMinExtraFee = B.fieldNamed "driver_min_extra_fee",
-      driverMaxExtraFee = B.fieldNamed "driver_max_extra_fee",
-      rideRequestPopupDelayDuration = B.fieldNamed "ride_request_popup_delay_duration",
-      isPartOfIntelligentPool = B.fieldNamed "is_part_of_intelligent_pool",
-      cancellationRatio = B.fieldNamed "cancellation_ratio",
-      acceptanceRatio = B.fieldNamed "acceptance_ratio",
-      driverAvailableTime = B.fieldNamed "driver_available_time",
-      parallelSearchRequestCount = B.fieldNamed "parallel_search_request_count",
-      driverSpeed = B.fieldNamed "driver_speed",
-      keepHiddenForSeconds = B.fieldNamed "keep_hidden_for_seconds",
-      mode = B.fieldNamed "mode",
-      goHomeRequestId = B.fieldNamed "go_home_request_id",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''SearchRequestForDriverT ['id] [['searchTryId], ['requestId]])
 
-$(mkTableInstances ''SearchRequestForDriverT "search_request_for_driver" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])

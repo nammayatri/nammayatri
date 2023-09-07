@@ -26,13 +26,13 @@ import Database.Beam.MySQL ()
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Schema
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverLocationT f = DriverLocationT
   { driverId :: B.C f Text,

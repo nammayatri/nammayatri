@@ -21,7 +21,6 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
@@ -33,6 +32,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
@@ -66,31 +66,6 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-merchantServiceUsageConfigTMod :: MerchantServiceUsageConfigT (B.FieldModification (B.TableField MerchantServiceUsageConfigT))
-merchantServiceUsageConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      initiateCall = B.fieldNamed "initiate_call",
-      getDistances = B.fieldNamed "get_distances",
-      getEstimatedPickupDistances = B.fieldNamed "get_estimated_pickup_distances",
-      getRoutes = B.fieldNamed "get_routes",
-      getPickupRoutes = B.fieldNamed "get_pickup_routes",
-      getTripRoutes = B.fieldNamed "get_trip_routes",
-      snapToRoad = B.fieldNamed "snap_to_road",
-      getPlaceName = B.fieldNamed "get_place_name",
-      getPlaceDetails = B.fieldNamed "get_place_details",
-      autoComplete = B.fieldNamed "auto_complete",
-      getDistancesForCancelRide = B.fieldNamed "get_distances_for_cancel_ride",
-      smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
-      whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
-      verificationService = B.fieldNamed "verification_service",
-      faceVerificationService = B.fieldNamed "face_verification_service",
-      aadhaarVerificationService = B.fieldNamed "aadhaar_verification_service",
-      issueTicketService = B.fieldNamed "issue_ticket_service",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
 
-$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")

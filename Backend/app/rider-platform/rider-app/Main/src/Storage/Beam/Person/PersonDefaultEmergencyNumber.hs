@@ -23,11 +23,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
   { personId :: B.C f Text,
@@ -47,17 +47,6 @@ instance B.Table PersonDefaultEmergencyNumberT where
 
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 
-personDefaultEmergencyNumberTMod :: PersonDefaultEmergencyNumberT (B.FieldModification (B.TableField PersonDefaultEmergencyNumberT))
-personDefaultEmergencyNumberTMod =
-  B.tableModification
-    { personId = B.fieldNamed "person_id",
-      name = B.fieldNamed "name",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      mobileNumberEncrypted = B.fieldNamed "mobile_number_encrypted",
-      mobileNumberHash = B.fieldNamed "mobile_number_hash",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''PersonDefaultEmergencyNumberT ['personId] [])
 
-$(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number" "atlas_app")
+$(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")

@@ -25,10 +25,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonFlowStatusT f = PersonFlowStatusT
   { personId :: B.C f Text,
@@ -45,14 +45,6 @@ instance B.Table PersonFlowStatusT where
 
 type PersonFlowStatus = PersonFlowStatusT Identity
 
-personFlowStatusTMod :: PersonFlowStatusT (B.FieldModification (B.TableField PersonFlowStatusT))
-personFlowStatusTMod =
-  B.tableModification
-    { personId = B.fieldNamed "person_id",
-      flowStatus = B.fieldNamed "flow_status",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''PersonFlowStatusT ['personId] [])
 
-$(mkTableInstances ''PersonFlowStatusT "person_flow_status" "atlas_app")
+$(mkTableInstances ''PersonFlowStatusT "person_flow_status")

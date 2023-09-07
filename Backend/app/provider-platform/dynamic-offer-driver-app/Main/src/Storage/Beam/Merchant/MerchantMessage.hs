@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
@@ -45,16 +45,6 @@ instance B.Table MerchantMessageT where
 
 type MerchantMessage = MerchantMessageT Identity
 
-merchantMessageTMod :: MerchantMessageT (B.FieldModification (B.TableField MerchantMessageT))
-merchantMessageTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      messageKey = B.fieldNamed "message_key",
-      message = B.fieldNamed "message",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
 
-$(mkTableInstances ''MerchantMessageT "merchant_message" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MerchantMessageT "merchant_message")

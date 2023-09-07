@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT
   { id :: B.C f Text,
@@ -40,14 +40,6 @@ instance B.Table BapMetadataT where
 
 type BapMetadata = BapMetadataT Identity
 
-bapMetadataTMod :: BapMetadataT (B.FieldModification (B.TableField BapMetadataT))
-bapMetadataTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      name = B.fieldNamed "name",
-      logoUrl = B.fieldNamed "logo_url"
-    }
-
 $(enableKVPG ''BapMetadataT ['id] [])
 
-$(mkTableInstances ''BapMetadataT "bap_metadata" "atlas_driver_offer_bpp")
+$(mkTableInstances ''BapMetadataT "bap_metadata")

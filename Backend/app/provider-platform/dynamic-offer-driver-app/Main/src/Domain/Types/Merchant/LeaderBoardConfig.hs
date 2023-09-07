@@ -15,10 +15,10 @@
 module Domain.Types.Merchant.LeaderBoardConfig where
 
 import qualified Domain.Types.Merchant as DMerchant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data LeaderBoardType
   = WEEKLY

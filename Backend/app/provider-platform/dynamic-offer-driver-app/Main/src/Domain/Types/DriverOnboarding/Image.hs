@@ -17,9 +17,9 @@ module Domain.Types.DriverOnboarding.Image where
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.Merchant
 import Domain.Types.Person
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema, Ord)

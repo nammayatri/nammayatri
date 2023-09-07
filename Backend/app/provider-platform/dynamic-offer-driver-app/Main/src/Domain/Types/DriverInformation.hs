@@ -25,13 +25,13 @@ import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
+import Tools.Beam.UtilsTH
 
 data DriverMode
   = ONLINE

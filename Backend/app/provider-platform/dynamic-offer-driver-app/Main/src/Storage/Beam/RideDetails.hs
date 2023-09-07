@@ -21,11 +21,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,
@@ -49,21 +49,6 @@ instance B.Table RideDetailsT where
 
 type RideDetails = RideDetailsT Identity
 
-rideDetailsTMod :: RideDetailsT (B.FieldModification (B.TableField RideDetailsT))
-rideDetailsTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverName = B.fieldNamed "driver_name",
-      driverNumberEncrypted = B.fieldNamed "driver_number_encrypted",
-      driverNumberHash = B.fieldNamed "driver_number_hash",
-      driverCountryCode = B.fieldNamed "driver_country_code",
-      vehicleNumber = B.fieldNamed "vehicle_number",
-      vehicleColor = B.fieldNamed "vehicle_color",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      vehicleModel = B.fieldNamed "vehicle_model",
-      vehicleClass = B.fieldNamed "vehicle_class"
-    }
-
 $(enableKVPG ''RideDetailsT ['id] [])
 
-$(mkTableInstances ''RideDetailsT "ride_details" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RideDetailsT "ride_details")

@@ -26,11 +26,11 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -58,20 +58,6 @@ getConfigJSON = \case
   Domain.DLValidClasses cfg -> encodeToText cfg
   Domain.RCValidClasses cfg -> encodeToText cfg
 
-onboardingDocumentConfigTMod :: OnboardingDocumentConfigT (B.FieldModification (B.TableField OnboardingDocumentConfigT))
-onboardingDocumentConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      documentType = B.fieldNamed "document_type",
-      checkExtraction = B.fieldNamed "check_extraction",
-      checkExpiry = B.fieldNamed "check_expiry",
-      supportedVehicleClassesJSON = B.fieldNamed "supported_vehicle_classes_json",
-      rcNumberPrefix = B.fieldNamed "rc_number_prefix",
-      vehicleClassCheckType = B.fieldNamed "vehicle_class_check_type",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])
 
-$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs" "atlas_driver_offer_bpp")
+$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")
