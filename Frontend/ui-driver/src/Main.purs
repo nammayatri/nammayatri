@@ -52,7 +52,7 @@ main event = do
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ runEffectFn1 Utils.initiatePP unit
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ Utils.fetchFiles
   pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
@@ -111,7 +111,7 @@ onNewIntent event = do
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
       _ -> Flow.baseAppFlow false Nothing
     pure unit
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ runEffectFn1 Utils.initiatePP unit
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ Utils.fetchFiles
   JBridge.storeMainFiberOb mainFiber
   pure unit
 
