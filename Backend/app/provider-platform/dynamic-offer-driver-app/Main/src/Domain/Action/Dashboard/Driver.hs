@@ -46,6 +46,8 @@ module Domain.Action.Dashboard.Driver
     incrementDriverGoToCount,
     getPaymentHistoryEntityDetails,
     getPaymentHistory,
+    addVehicleForFleet,
+    getAllVehicleForFleet,
   )
 where
 
@@ -77,6 +79,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -672,7 +675,7 @@ addVehicle merchantShortId reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
-  void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
+  void $ try @_ @SomeException (runVerifyRCFlow personId merchant req) -- ignore if throws error
   checkIfVehicleCreatedInRC <- QVehicle.findById personId
   unless (isJust checkIfVehicleCreatedInRC) $ do
     vehicle <- buildVehicle merchantId personId req
@@ -681,18 +684,40 @@ addVehicle merchantShortId reqDriverId req = do
 
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
-  where
-    runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Flow ()
-    runVerifyRCFlow personId merchant = do
-      let rcReq =
-            DomainRC.DriverRCReq
-              { vehicleRegistrationCertNumber = req.registrationNo,
-                imageId = "",
-                operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
-                dateOfRegistration = Nothing,
-                multipleRC = Nothing
-              }
-      void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id) rcReq (Just $ castVehicleVariant req.variant)
+
+---------------------------------------------------------------------
+
+addVehicleForFleet :: ShortId DM.Merchant -> Text -> Text -> Common.AddVehicleReq -> Flow APISuccess
+addVehicleForFleet merchantShortId reqDriverPhoneNo fleetOwnerId req = do
+  runRequestValidation Common.validateAddVehicleReq req
+  merchant <- findMerchantByShortId merchantShortId
+  phoneNumberHash <- getDbHash reqDriverPhoneNo
+  driver <- QPerson.findByMobileNumberAndMerchant "+91" phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  -- merchant access checking
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist driver.id.getId)
+  mbLinkedVehicle <- B.runInReplica $ QVehicle.findByAnyOf (Just req.registrationNo) Nothing
+  mbLinkeddriver <- QVehicle.findById driver.id
+  whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
+  whenJust mbLinkeddriver $ \vehicle -> throwError $ DriverAlreadyLinkedWithVehicle vehicle.registrationNo
+  let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
+  _ <- QPerson.updatePersonRec driver.id updDriver
+  Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+  void $ runVerifyRCFlow driver.id merchant req
+  logTagInfo "dashboard -> addVehicle : " (show driver.id)
+  pure Success
+
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Common.AddVehicleReq -> Flow ()
+runVerifyRCFlow personId merchant req = do
+  let rcReq =
+        DomainRC.DriverRCReq
+          { vehicleRegistrationCertNumber = req.registrationNo,
+            imageId = "",
+            operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
+            dateOfRegistration = Nothing,
+            multipleRC = Nothing
+          }
+  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id) rcReq (Just $ castVehicleVariant req.variant)
 
 buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
 buildVehicle merchantId personId req = do
@@ -712,6 +737,7 @@ buildVehicle merchantId personId req = do
         size = Nothing,
         energyType = req.energyType,
         registrationCategory = Nothing,
+        fleetOwnerId = Nothing,
         vehicleClass = req.vehicleClass,
         createdAt = now,
         updatedAt = now
@@ -725,6 +751,32 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+
+castVehicleVariantDashboard :: DVeh.Variant -> Common.Variant
+castVehicleVariantDashboard = \case
+  DVeh.SUV -> Common.SUV
+  DVeh.HATCHBACK -> Common.HATCHBACK
+  DVeh.SEDAN -> Common.SEDAN
+  DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  DVeh.TAXI -> Common.TAXI
+  DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+
+---------------------------------------------------------------------
+getAllVehicleForFleet :: ShortId DM.Merchant -> Text -> Flow Common.ListVehicleRes
+getAllVehicleForFleet _ fleetOwnerId = do
+  vehicleList <- QVehicle.findByFleetOwnerId (Just fleetOwnerId)
+  return $ Common.ListVehicleRes {vehicles = map convertToVehicleAPIEntity vehicleList}
+
+convertToVehicleAPIEntity :: DVeh.Vehicle -> Common.VehicleAPIEntity
+convertToVehicleAPIEntity vehicleRes =
+  Common.VehicleAPIEntity
+    { driverId = vehicleRes.driverId.getId,
+      variant = castVehicleVariantDashboard vehicleRes.variant,
+      model = vehicleRes.model,
+      color = vehicleRes.color,
+      vehicleName = vehicleRes.vehicleName,
+      registrationNo = vehicleRes.registrationNo
+    }
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess

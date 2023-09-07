@@ -48,7 +48,7 @@ findByEmail email = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
-      person ^. PersonEmailHash ==. val emailDbHash
+      person ^. PersonEmailHash ==. val (Just emailDbHash)
     return person
 
 findByEmailAndPassword ::
@@ -62,8 +62,8 @@ findByEmailAndPassword email password = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
-      person ^. PersonEmailHash ==. val emailDbHash
-        &&. person ^. PersonPasswordHash ==. val passwordDbHash
+      person ^. PersonEmailHash ==. val (Just emailDbHash)
+        &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
     return person
 
 findByMobileNumber ::
@@ -151,7 +151,7 @@ updatePersonPassword personId newPasswordHash = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonPasswordHash =. val newPasswordHash,
+      [ PersonPasswordHash =. val (Just newPasswordHash),
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
@@ -162,8 +162,8 @@ updatePersonEmail personId encEmail = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonEmailEncrypted =. val (unEncrypted encEmail.encrypted),
-        PersonEmailHash =. val encEmail.hash,
+      [ PersonEmailEncrypted =. val (Just (unEncrypted encEmail.encrypted)),
+        PersonEmailHash =. val (Just encEmail.hash),
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)

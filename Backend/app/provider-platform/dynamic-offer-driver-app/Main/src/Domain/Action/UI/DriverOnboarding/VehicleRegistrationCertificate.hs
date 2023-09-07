@@ -29,6 +29,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     activateRC,
     validateRCActivation,
     convertTextToUTC,
+    makeFleetOwnerKey,
   )
 where
 
@@ -349,7 +350,9 @@ activateRC driverId merchantId now rc = do
   where
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
-      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
+      fleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
+      Redis.del $ makeFleetOwnerKey rcNumber
+      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc fleetOwnerId
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()
@@ -480,3 +483,6 @@ convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m
 
 rcVerificationLockKey :: Text -> Text
 rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
+
+makeFleetOwnerKey :: Text -> Text
+makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> vehicleNo

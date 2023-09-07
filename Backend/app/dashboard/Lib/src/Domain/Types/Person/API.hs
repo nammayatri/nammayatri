@@ -25,7 +25,7 @@ data PersonAPIEntity = PersonAPIEntity
     firstName :: Text,
     lastName :: Text,
     role :: DRole.RoleAPIEntity,
-    email :: Text,
+    email :: Maybe Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
     availableMerchants :: [ShortId DMerchant.Merchant],

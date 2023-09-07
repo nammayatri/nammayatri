@@ -25,10 +25,10 @@ data PersonE e = Person
     firstName :: Text,
     lastName :: Text,
     roleId :: Id DRole.Role,
-    email :: EncryptedHashedField e Text,
+    email :: Maybe (EncryptedHashedField e Text),
     mobileNumber :: EncryptedHashedField e Text,
     mobileCountryCode :: Text,
-    passwordHash :: DbHash,
+    passwordHash :: Maybe DbHash,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -42,11 +42,11 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem (mobileNumber, salt)
-    email_ <- encryptItem (email, salt)
+    email_ <- encryptItem $ (,salt) <$> email
     return Person {mobileNumber = mobileNumber_, email = email_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fst <$> decryptItem mobileNumber
-    email_ <- fst <$> decryptItem email
+    email_ <- fmap fst <$> decryptItem email
     return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
 
 instance EncryptedItem' Person where

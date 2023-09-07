@@ -23,7 +23,7 @@ import Kernel.Types.Id
 
 -- DASHBOARD_ADMIN is superuser, who can can create and assign other roles
 
-data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN
+data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER
   deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 genSingletons [''DashboardAccessType]

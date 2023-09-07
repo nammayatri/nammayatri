@@ -34,12 +34,12 @@ mkPersist
       firstName Text
       lastName Text
       roleId RoleTId
-      emailEncrypted Text
-      emailHash DbHash
+      emailEncrypted Text Maybe
+      emailHash DbHash Maybe
       mobileNumberEncrypted Text
       mobileNumberHash DbHash
       mobileCountryCode Text
-      passwordHash DbHash
+      passwordHash DbHash Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -58,7 +58,9 @@ instance FromTType PersonT Domain.Person where
       Domain.Person
         { id = Id id,
           roleId = fromKey roleId,
-          email = EncryptedHashed (Encrypted emailEncrypted) emailHash,
+          email = case (emailEncrypted, emailHash) of
+            (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
+            _ -> Nothing,
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
           ..
         }
@@ -68,8 +70,8 @@ instance ToTType PersonT Domain.Person where
     PersonT
       { id = getId id,
         roleId = toKey roleId,
-        emailEncrypted = email & unEncrypted . (.encrypted),
-        emailHash = email.hash,
+        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
+        emailHash = email <&> (.hash),
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber.hash,
         ..

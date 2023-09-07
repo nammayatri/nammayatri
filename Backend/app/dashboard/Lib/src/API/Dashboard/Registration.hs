@@ -17,6 +17,7 @@ module API.Dashboard.Registration where
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth
@@ -40,14 +41,20 @@ type API =
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
              :> Post '[JSON] DReg.LoginRes
        )
+    :<|> "fleet"
+      :> "register"
+      :> ReqBody '[JSON] DReg.FleetRegisterReq
+      :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
-  login
-    :<|> logout
-    :<|> logoutAllMerchants
-    :<|> enable2fa
-    :<|> switchMerchant
+  ( login
+      :<|> logout
+      :<|> logoutAllMerchants
+      :<|> enable2fa
+      :<|> switchMerchant
+  )
+    :<|> registerFleetOwner
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login
@@ -63,3 +70,6 @@ enable2fa = withFlowHandlerAPI . DReg.enable2fa
 
 switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI . DReg.switchMerchant token
+
+registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
+registerFleetOwner = withFlowHandlerAPI . DReg.registerFleetOwner

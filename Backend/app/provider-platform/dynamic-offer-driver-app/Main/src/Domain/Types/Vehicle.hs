@@ -70,6 +70,7 @@ data Vehicle = Vehicle
     energyType :: Maybe Text,
     registrationCategory :: Maybe RegistrationCategory,
     vehicleClass :: Text,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
