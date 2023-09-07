@@ -1101,11 +1101,6 @@ homeScreenFlow = do
                                                     address : item.address
                                                   }) srcSpecialLocation.gates
             if (sourceServiceabilityResp.serviceable ) then do
-              -- if (isJust sourceServiceabilityResp.geoJson /= state.homeScreen.polygonCoordinates || ) then do
-              --   let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-                -- _ <- pure $ spy "debug nexus inside RELOAD" "."
-                -- lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
-                -- else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints } ,props{ isSrcServiceable = true, showlocUnserviceablePopUp = false}})
               if (saveToCurrLocs && state.homeScreen.props.storeCurrentLocs) then
                 addLocToCurrLoc state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong state.homeScreen.data.source
@@ -1120,11 +1115,6 @@ homeScreenFlow = do
     RETRY  -> homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
-      -- let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-      -- if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && ((MU.getValueFromConfig "specialLocationView") == "true" && (getMerchant FunctionCall) == JATRISAATHI || updatedState.props.currentStage == ConfirmingLocation)) then do
-      --     _ <- pure $ spy "debug nexus inside CHECK_SERVICEABILITY" "."
-      --     lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
-      --   else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
@@ -1235,7 +1225,7 @@ homeScreenFlow = do
           sourceLng = (resp^._lon)
           destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
           destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation sourceLat sourceLng destLat destLng
+      _ <- lift $ lift $ fork $ liftFlow $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
       homeScreenFlow
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of

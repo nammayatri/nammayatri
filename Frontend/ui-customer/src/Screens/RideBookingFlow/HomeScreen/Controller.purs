@@ -1167,11 +1167,11 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryActi
     continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
@@ -1180,7 +1180,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
-eval (CancelSearchAction PopUpModal.OnButton1Click) state = continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
+eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
+  if length state.data.config.callOptions > 1 then
+    continue state { props { showCallPopUp = true, cancelSearchCallDriver = false } }
+  else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }

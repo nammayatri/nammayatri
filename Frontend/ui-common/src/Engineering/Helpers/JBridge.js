@@ -991,13 +991,15 @@ export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
       return function (dlong) {
-        if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
-          var query = window.appConfig.navigationAppConfig.query;
-          var packageName = window.appConfig.navigationAppConfig.packageName;
-          return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
-        } else {
-          return window.JBridge.openNavigation(slat, slong, dlat, dlong);
-        }
+        return function (mode) {
+          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
+            var query = mode == "WALK" ? window.appConfig.navigationAppConfig.walkQuery : window.appConfig.navigationAppConfig.query;
+            var packageName = window.appConfig.navigationAppConfig.packageName;
+            return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+          } else {
+            return window.JBridge.openNavigation(slat, slong, dlat, dlong);
+          }
+        };
       };
     };
   };
