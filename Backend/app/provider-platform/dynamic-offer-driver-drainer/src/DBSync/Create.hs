@@ -1,18 +1,26 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module DBSync.Create where
 
-import Config.Env
+-- import qualified Database.Beam as B
+-- import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
+
+import qualified AWS.S3 as S3
+import Config.Env as Env
+import qualified Data.Aeson as A
 import Data.Maybe
+import qualified Data.Text as T
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
 
-runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
+runCreateCommands :: (Show b, MonadReader r0 EL.Flow, GHC.Records.Extra.HasField "s3Env" r0 (S3.S3Env EL.Flow)) => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
 runCreateCommands cmds = do
   dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
   runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
@@ -91,7 +99,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreate dbConf ("Feedback" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
     |::| runCreate dbConf ("FeedbackBadge" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
-    |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+    |::| runCreate' dbConf ("BecknRequest" :: Text) [(obj, val, entryId, tag) | (CreateDBCommand entryId _ tag _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreate dbConf ("RegistryMapFallback" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistryMapFallbackObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverGoHomeRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverGoHomeRequestObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverHomeLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverHomeLocationObject obj), val) <- cmds]
@@ -129,3 +137,37 @@ runCreateCommands cmds = do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" model
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
+
+    runCreate' _ _ object = do
+      let dbObjects = map (\(dbObject, _, _, _) -> toJSON dbObject) object
+          entryIds = map (\(_, _, entryId, _) -> entryId) object
+          ids = map (\(_, _, _, tag) -> tag) object
+      let y = zip ids dbObjects
+      if null object
+        then pure [Right []]
+        else do
+          let _ =
+                ( \(id, object') -> do
+                    filePath <- createFilePath "driver-drainer" id
+                    let objectNew = show $ A.encode object'
+                    S3.put (T.unpack filePath) objectNew
+                )
+                  <$> y
+          pure [Right entryIds]
+
+-- uploadFile :: Text -> a1 ->  a ->  IO ()
+-- uploadFile id object _ = do
+--   filePath <- createFilePath "driver-drainer"  id
+--   _ <- pure $ S3.put (T.unpack filePath) object "" :: ()
+--   pure ()
+
+createFilePath ::
+  Text ->
+  Text ->
+  IO Text
+createFilePath drainerType id = do
+  -- pathPrefix <- Env.getS3Prefix
+  pure
+    ( "org-" <> drainerType <> "/"
+        <> id
+    )

@@ -1,5 +1,6 @@
 module DBSync.DBSync where
 
+import qualified AWS.S3 as S3
 import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
@@ -16,6 +17,7 @@ import qualified Database.Redis as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
+import GHC.Records.Compat (HasField)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -102,7 +104,7 @@ dropDBCommand dbStreamKey entryId = do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
-runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
+runCriticalDBSyncOperations :: (MonadReader r0 IO, HasField "s3Env" r0 (S3.S3Env IO)) => Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
@@ -182,7 +184,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 
     pureRightExceptT = ExceptT . (Right <$>)
 
-process :: Text -> Integer -> Flow Int
+process :: (MonadReader r0 IO, HasField "s3Env" r0 (S3.S3Env IO)) => Text -> Integer -> Flow Int
 process dbStreamKey count = do
   {- TODO: Need To write CPU Latencies -}
   _beforeProcess <- EL.getCurrentDateInMillis
@@ -214,7 +216,7 @@ process dbStreamKey count = do
           pure cnt
         Right cnt -> pure cnt
 
-startDBSync :: Flow ()
+startDBSync :: (MonadReader r0 IO, HasField "s3Env" r0 (S3.S3Env IO)) => Flow ()
 startDBSync = do
   sessionId <- EL.runIO genSessionId
   EL.setLoggerContext "session-id" (DTE.decodeUtf8 sessionId)

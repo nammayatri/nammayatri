@@ -1,6 +1,8 @@
 module Main where
 
 -- import Config.Config as Config
+
+import qualified AWS.S3 as S3
 import Config.Env as Env
 import qualified Constants as C
 import Control.Concurrent (forkIO)
@@ -18,6 +20,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
+import GHC.Records.Compat (HasField)
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Utils.Dhall hiding (void)
@@ -27,7 +30,7 @@ import System.Environment (lookupEnv)
 import Types.DBSync as TDB
 import Utils.Utils
 
-main :: IO ()
+main :: (MonadReader r0 IO, HasField "s3Env" r0 (S3.S3Env IO)) => IO ()
 main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
@@ -54,10 +57,9 @@ main = do
           threadPerPodCount <- Env.getThreadPerPodCount
           let environment = Env (T.pack C.kvRedis) dbSyncMetric
           spawnDrainerThread threadPerPodCount flowRt environment
-          R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
 
-spawnDrainerThread :: Int -> R.FlowRuntime -> TDB.Env -> IO ()
+spawnDrainerThread :: (MonadReader r0 IO, HasField "s3Env" r0 (S3.S3Env IO)) => Int -> R.FlowRuntime -> TDB.Env -> IO ()
 spawnDrainerThread 0 _ _ = pure ()
 spawnDrainerThread count flowRt env = do
   void . forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)

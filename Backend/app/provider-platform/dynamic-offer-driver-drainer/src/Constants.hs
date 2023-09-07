@@ -189,3 +189,6 @@ drainerExecutionDelayEnvKey = "DRAINER_EXECUTION_DELAY"
 
 threadPerPodCount :: String
 threadPerPodCount = "THREAD_PER_POD_COUNT"
+
+s3PrefixEnvKey :: String
+s3PrefixEnvKey = "S3_PREFIX"

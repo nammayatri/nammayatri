@@ -83,6 +83,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , bytestring
     , casing
     , connection
@@ -168,6 +169,7 @@ executable dynamic-offer-driver-drainer-exe
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , bytestring
     , casing
     , connection

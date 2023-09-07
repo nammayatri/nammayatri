@@ -41,3 +41,6 @@ defaultDBSyncConfig =
 
 getThreadPerPodCount :: IO Int
 getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
+
+getS3Prefix :: IO Text
+getS3Prefix = T.pack . fromMaybe "driver" <$> SE.lookupEnv s3PrefixEnvKey
