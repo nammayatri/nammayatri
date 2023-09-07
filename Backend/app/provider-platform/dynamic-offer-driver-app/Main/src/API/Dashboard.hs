@@ -19,6 +19,7 @@ import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.Driver.Registration as DriverRegistration
 import qualified API.Dashboard.DriverReferral as DriverReferral
 import qualified API.Dashboard.Exotel as Exotel
+import qualified API.Dashboard.Fleet.Registration as Fleet
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
@@ -38,6 +39,7 @@ type API =
            :> API'
        )
     :<|> ExotelAPI
+    :<|> FleetAPI
 
 type API' =
   DashboardTokenAuth
@@ -70,11 +72,20 @@ handler =
         :<|> Revenue.handler merchantId
   )
     :<|> exotelHandler
+    :<|> fleetHandler
 
 type ExotelAPI =
   DashboardTokenAuth
     :> Exotel.API
 
+type FleetAPI =
+  DashboardTokenAuth
+    :> Fleet.API
+
 exotelHandler :: FlowServer ExotelAPI
 exotelHandler _dashboard =
   Exotel.handler
+
+fleetHandler :: FlowServer FleetAPI
+fleetHandler _dashboard =
+  Fleet.handler

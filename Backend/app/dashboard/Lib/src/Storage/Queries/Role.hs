@@ -39,6 +39,17 @@ findByName name = findOne $ do
     role ^. RoleName ==. val name
   return role
 
+findByDashboardAccessType ::
+  Transactionable m =>
+  Role.DashboardAccessType ->
+  m (Maybe Role)
+findByDashboardAccessType dashboardAccessType =
+  findOne $ do
+    role <- from $ table @RoleT
+    where_ $
+      role ^. RoleDashboardAccessType ==. val dashboardAccessType
+    return role
+
 findAllByLimitOffset ::
   Transactionable m =>
   Maybe Integer ->

@@ -16,6 +16,7 @@
 module ProviderPlatformClient.DynamicOfferDriver
   ( callDriverOfferBPP,
     callDynamicOfferDriverAppExotelApi,
+    callDynamicOfferDriverAppFleetApi,
   )
 where
 
@@ -33,6 +34,7 @@ import qualified Dashboard.ProviderPlatform.Revenue as Revenue
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
@@ -88,6 +90,8 @@ data DriversAPIs = DriversAPIs
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
+    addVehicleForFleet :: Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
+    getAllVehicleForFleet :: Text -> Euler.EulerClient Driver.ListVehicleRes,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
@@ -255,6 +259,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updatePhoneNumber
       :<|> updateByPhoneNumber
       :<|> addVehicle
+      :<|> addVehicleForFleet
+      :<|> getAllVehicleForFleet
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
@@ -368,3 +374,25 @@ callDynamicOfferDriverAppExotelApi ::
   (ExotelAPIs -> b) ->
   c
 callDynamicOfferDriverAppExotelApi = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDynamicOfferDriverAppExotelAPIs "callDynamicOfferDriverAppExotelApi"
+
+data FleetAPIs = FleetAPIs
+  { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
+    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess
+  }
+
+mkDynamicOfferDriverAppFleetAPIs :: Text -> FleetAPIs
+mkDynamicOfferDriverAppFleetAPIs token = do
+  FleetAPIs {..}
+  where
+    fleetOwnerLogin
+      :<|> fleetOwnerVerify = Euler.client (Proxy :: Proxy BPP.FleetAPI) token
+
+callDynamicOfferDriverAppFleetApi ::
+  forall m r b c.
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    CallServerAPI FleetAPIs m r b c
+  ) =>
+  (FleetAPIs -> b) ->
+  c
+callDynamicOfferDriverAppFleetApi = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDynamicOfferDriverAppFleetAPIs "callDynamicOfferDriverAppFleetApi"

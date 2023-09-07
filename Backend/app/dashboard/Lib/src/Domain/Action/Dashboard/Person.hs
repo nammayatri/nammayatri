@@ -222,7 +222,7 @@ changePassword tokenInfo req = do
   newHash <- getDbHash req.newPassword
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
-  unless (oldActual == oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
+  unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
   Esq.runTransaction $
     QP.updatePersonPassword tokenInfo.personId newHash
   pure Success
@@ -325,10 +325,10 @@ buildPerson req = do
         firstName = req.firstName,
         lastName = req.lastName,
         roleId = req.roleId,
-        email = email,
+        email = Just email,
         mobileNumber = mobileNumber,
         mobileCountryCode = req.mobileCountryCode,
-        passwordHash = passwordHash,
+        passwordHash = Just passwordHash,
         createdAt = now,
         updatedAt = now
       }

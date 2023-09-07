@@ -662,6 +662,41 @@ instance HideSecrets AddVehicleReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
+
+-- add vehicle for fleet ------------------------------------------
+
+type AddVehicleForFleetAPI =
+  Capture "mobileNo" Text
+    :> "addVehicle"
+    :> "fleet"
+    :> ReqBody '[JSON] AddVehicleReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+
+-- get vehicle for fleet  ------------------------------------------
+
+type GetAllVehicleForFleetAPI =
+  "getAllVehicle"
+    :> "fleet"
+    :> Get '[JSON] ListVehicleRes
+
+newtype ListVehicleRes = ListVehicleRes
+  {vehicles :: [VehicleAPIEntity]}
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data VehicleAPIEntity = VehicleAPIEntity
+  { driverId :: Text,
+    variant :: Reexport.Variant,
+    model :: Text,
+    color :: Text,
+    vehicleName :: Maybe Text,
+    registrationNo :: Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+---------------------------------------------------------
+
 -- update driver name -----------------------------------
 
 type UpdateDriverNameAPI =

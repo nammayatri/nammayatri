@@ -52,7 +52,8 @@ data UpdateVehicleReq = UpdateVehicleReq
     size :: Maybe Text,
     energyType :: Maybe Text,
     registrationNo :: Maybe Text,
-    registrationCategory :: Maybe RegistrationCategory
+    registrationCategory :: Maybe RegistrationCategory,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -124,7 +125,8 @@ updateVehicle admin driverId req = do
                 size = req.size <|> vehicle.size,
                 energyType = req.energyType <|> vehicle.energyType,
                 registrationNo = fromMaybe vehicle.registrationNo req.registrationNo,
-                registrationCategory = req.registrationCategory <|> vehicle.registrationCategory
+                registrationCategory = req.registrationCategory <|> vehicle.registrationCategory,
+                fleetOwnerId = req.fleetOwnerId <|> vehicle.fleetOwnerId
                }
 
   _ <- QV.updateVehicleRec updatedVehicle
