@@ -29,10 +29,14 @@ import qualified Storage.Queries.GoHomeConfig as Queries
 import Tools.Error (GenericError (..))
 
 findByMerchantId :: (CacheFlow m r, MonadFlow m) => Id Merchant -> m GoHomeConfig
-findByMerchantId id =
+findByMerchantId id = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.safeGet (makeGoHomeKey id) >>= \case
     Just cfg -> return cfg
-    Nothing -> fromMaybeM (InternalError "Could not find config corresponding to the stated merchant id") =<< Queries.findByMerchantId id
+    Nothing -> do
+      cfg <- fromMaybeM (InternalError "Could not find Go-To config corresponding to the stated merchant id") =<< Queries.findByMerchantId id
+      Hedis.setExp (makeGoHomeKey id) cfg expTime
+      return cfg
 
 makeGoHomeKey :: Id Merchant -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantId-" <> id.getId

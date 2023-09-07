@@ -59,7 +59,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds
+  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds
+  return res
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -76,7 +77,7 @@ sendSearchRequestToDrivers' ::
   SearchTry ->
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
-  m ExecutionResult
+  m (ExecutionResult, Bool)
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds = do
   handler handle
   where

@@ -109,7 +109,7 @@ deactivateDriverGoHomeRequest merchantId driverId stat ghInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   driverGoHomeReqId <- fromMaybeM (InternalError "Could not Find DriverGoHomeRequestId") ghInfo.driverGoHomeRequestId
   QDGR.finishWithStatus driverGoHomeReqId stat
-  Hedis.setExp ghKey (templateGoHomeData Nothing (bool (ghInfo.cnt - 1) ghInfo.cnt (stat == DDGR.SUCCESS)) Nothing Nothing False (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  Hedis.setExp ghKey (templateGoHomeData Nothing (bool ghInfo.cnt (ghInfo.cnt - 1) (stat == DDGR.SUCCESS)) Nothing Nothing False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
 resetDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> GoHomeConfig -> CachedGoHomeRequest -> m ()
 resetDriverGoHomeRequest merchantId driverId goHomeConfig ghInfo = do

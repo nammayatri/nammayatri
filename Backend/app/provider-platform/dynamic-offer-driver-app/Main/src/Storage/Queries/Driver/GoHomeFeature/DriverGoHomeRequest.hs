@@ -19,7 +19,7 @@ import Database.Beam as B
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Person
 import qualified EulerHS.Language as L
-import Kernel.Beam.Functions (findAllWithKV, findAllWithOptionsKV, findOneWithKV, getLocationDbBeamConfig, updateOneWithKV)
+import Kernel.Beam.Functions (findAllWithKV, findAllWithOptionsKV, findOneWithKV, getMasterBeamConfig, updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Types.Common
@@ -31,7 +31,7 @@ import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal ()
 
 create :: MonadFlow m => DDGR.DriverGoHomeRequest -> m ()
 create newDriverGoHomeRequest = do
-  dbConf <- getLocationDbBeamConfig
+  dbConf <- getMasterBeamConfig
   void $
     L.runDB dbConf $
       L.insertRows $
