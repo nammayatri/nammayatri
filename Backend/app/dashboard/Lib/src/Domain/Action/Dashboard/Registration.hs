@@ -15,31 +15,41 @@
 module Domain.Action.Dashboard.Registration where
 
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import Domain.Types.Person as DP
+import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
+import Domain.Types.Role as DRole
 import qualified EulerHS.Language as L
+import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
+import Tools.Error
 import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
-  { email :: Text,
+  { email :: Maybe Text,
     password :: Text,
     merchantId :: ShortId DMerchant.Merchant,
     otp :: Maybe Text
@@ -75,6 +85,15 @@ data SwitchMerchantReq = SwitchMerchantReq
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+data FleetRegisterReq = FleetRegisterReq
+  { firstName :: Text,
+    lastName :: Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
+    merchantId :: ShortId DMerchant.Merchant
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 login ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
@@ -89,7 +108,8 @@ login LoginReq {..} = do
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
-  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
+  email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
+  person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
   generateLoginRes person merchant otp
 
 switchMerchant ::
@@ -234,3 +254,55 @@ buildRegistrationToken personId merchantId = do
         merchantId = merchantId,
         createdAt = now
       }
+
+registerFleetOwner ::
+  ( EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
+  ) =>
+  FleetRegisterReq ->
+  m APISuccess
+registerFleetOwner req = do
+  runRequestValidation validateFleetOwner req
+  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+  fleetOwner <- buildFleetOwner req fleetOwnerRole.id
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
+  availableServers <- asks (.dataServers)
+  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
+    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id
+  Esq.runTransaction $ do
+    QP.create fleetOwner
+    QAccess.create merchantAccess
+  return Success
+
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> m PT.Person
+buildFleetOwner req roleId = do
+  pid <- generateGUID
+  now <- getCurrentTime
+  mobileNumber <- encrypt req.mobileNumber
+  return
+    PT.Person
+      { id = pid,
+        firstName = req.firstName,
+        lastName = req.lastName,
+        roleId = roleId,
+        email = Nothing,
+        mobileNumber = mobileNumber,
+        mobileCountryCode = req.mobileCountryCode,
+        passwordHash = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
+
+validateFleetOwner :: Validate FleetRegisterReq
+validateFleetOwner FleetRegisterReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+      validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]

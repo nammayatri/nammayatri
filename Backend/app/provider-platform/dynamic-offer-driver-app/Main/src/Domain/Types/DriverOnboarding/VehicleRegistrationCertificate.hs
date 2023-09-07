@@ -92,8 +92,8 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
-makeVehicleFromRC now driverId merchantId certificateNumber rc =
+makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Maybe Text -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc fleetOwnerId =
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -108,6 +108,7 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc =
       registrationNo = certificateNumber,
       registrationCategory = Nothing,
       vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
+      fleetOwnerId = fleetOwnerId,
       vehicleName = Nothing,
       createdAt = now,
       updatedAt = now

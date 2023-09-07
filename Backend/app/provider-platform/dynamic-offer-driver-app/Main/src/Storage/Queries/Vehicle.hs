@@ -48,6 +48,7 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.color color,
           Se.Set BeamV.energyType energyType,
           Se.Set BeamV.registrationCategory registrationCategory,
+          Se.Set BeamV.fleetOwnerId fleetOwnerId,
           Se.Set BeamV.updatedAt updatedAt
         ]
         [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
@@ -55,6 +56,9 @@ upsert a@Vehicle {..} = do
 
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
+
+findByFleetOwnerId :: (MonadFlow m) => Maybe Text -> m [Vehicle]
+findByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq fleetOwnerId]
 
 updateVehicleRec :: MonadFlow m => Vehicle -> m ()
 updateVehicleRec vehicle = do
@@ -139,6 +143,7 @@ instance FromTType' BeamV.Vehicle Vehicle where
             energyType = energyType,
             registrationCategory = registrationCategory,
             vehicleClass = vehicleClass,
+            fleetOwnerId = fleetOwnerId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -160,6 +165,7 @@ instance ToTType' BeamV.Vehicle Vehicle where
         BeamV.energyType = energyType,
         BeamV.registrationCategory = registrationCategory,
         BeamV.vehicleClass = vehicleClass,
+        BeamV.fleetOwnerId = fleetOwnerId,
         BeamV.createdAt = createdAt,
         BeamV.updatedAt = updatedAt
       }

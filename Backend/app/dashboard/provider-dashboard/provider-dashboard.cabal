@@ -23,6 +23,7 @@ library
   exposed-modules:
       API
       API.Exotel
+      API.Fleet.Registration
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.Booking
