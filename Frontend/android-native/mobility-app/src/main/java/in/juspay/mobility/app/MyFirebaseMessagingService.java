@@ -205,12 +205,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             break;
 
                         case NotificationTypes.NEW_RIDE_AVAILABLE:
-                            sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-                            if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
-                                startWidgetService(null, payload, entity_payload);
-                            } else {
-                                NotificationUtils.showAllocationNotification(this, payload, entity_payload);
-                            }
+                            if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
+                                if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
+                            }else showRR(entity_payload, payload);
                             break;
 
                         case NotificationTypes.CLEARED_FARE:
@@ -363,6 +360,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
         } catch (Exception e) {
             firebaseLogEventWithParams("exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
+        }
+    }
+
+    private void showRR(JSONObject entity_payload, JSONObject payload){
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
+        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
+            startWidgetService(null, payload, entity_payload);
+        } else {
+            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
         }
     }
 
