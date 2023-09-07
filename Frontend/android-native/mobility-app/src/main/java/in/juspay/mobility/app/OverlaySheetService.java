@@ -117,12 +117,21 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+    private void updateTipView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            if (model.getCustomerTip() > 0) {
-                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip_included));
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag()) {
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " Tip");
+                if (model.getDisabilityTag()) {
+                    holder.accessibilityTag.setVisibility(View.VISIBLE);
+                }  else{
+                    holder.accessibilityTag.setVisibility(View.GONE);
+                }
+                
+                if(model.getCustomerTip() > 0){
+                    holder.customerTipTag.setVisibility(View.VISIBLE);
+                    holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
+                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " Tip");
+                }
             } else {
                 holder.customerTipBlock.setVisibility(View.GONE);
                 holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
@@ -471,6 +480,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String destinationPinCode = rideRequestBundle.getString("destinationPinCode");
                     DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
                     String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
+                    Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -503,7 +513,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             specialLocationTag,
                             sourcePinCode,
                             destinationPinCode,
-                            requestedVehicleVariant);
+                            requestedVehicleVariant,
+                            disabilityTag);
                     if (floatyView == null) {
                         startTimer();
                         showOverLayPopup();

@@ -1926,7 +1926,11 @@ homeScreenFlow = do
           _ <- updateStage $ HomeScreenStage HomeScreen
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
           homeScreenFlow
-        "DRIVER_ASSIGNMENT" -> currentRideFlow
+        "DRIVER_ASSIGNMENT" -> do
+          let (GlobalState defGlobalState) = defaultGlobalState
+          when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true}})
+          currentRideFlow
         "RIDE_REQUESTED"    -> do
           _ <- updateStage $ HomeScreenStage RideRequested
           homeScreenFlow

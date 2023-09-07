@@ -36,22 +36,76 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="#FEEBB9"
+                        android:background="@color/grey900"
                         android:visibility="gone"
                         android:id="@+id/customer_tip_block"
-                        android:paddingVertical="3dp"
-                        android:gravity="center">
-
-                        <TextView
+                        android:padding="10dp">
+                    <HorizontalScrollView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@color/grey900">
+                        <LinearLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="₹ 10 tip included !"
-                            android:id="@+id/customer_tip_text"
-                            android:textSize="16dp"
-                            android:lineHeight="20dp"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:textColor="@color/Black900" />
-                    </LinearLayout>
+                            android:layout_height="wrap_content">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_tip_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingHorizontal="3dp"
+                                android:visibility="gone"
+                                android:id="@+id/customerTipTag"
+                                android:layout_marginEnd="10dp"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_tip_icon"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/tip_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="₹10 Tip"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/Black900"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_accessibility_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:id="@+id/accessibilityTag"
+                                android:visibility="gone"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_wheelchair"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/accessibilityTagText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="Assistance Required"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                        </LinearLayout>
+
 
                     <LinearLayout
                         android:layout_width="match_parent"

@@ -37,9 +37,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday)
-import Helpers.Utils (getMerchantVehicleSize)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -49,10 +47,10 @@ import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, ma
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..))
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Styles.Colors as Color
+import Font.Style (Style(..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -81,7 +79,8 @@ rideActionModalConfig state = let
     specialLocationTag = state.data.activeRide.specialLocationTag,
     waitTime = state.data.activeRide.waitingTime,
     isChatOpened = state.props.isChatOpened,
-    requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant
+    requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
+    accessbilityTag = state.data.activeRide.disabilityTag
   }
   in rideActionModalConfig'
 
@@ -158,6 +157,23 @@ genderBannerConfig state =
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
         imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
+        isBanner = true
+      }
+  in config'
+
+
+accessbilityBannerConfig :: ST.HomeScreenState -> Banner.Config
+accessbilityBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config  
+      {
+        backgroundColor = Color.lightPurple,
+        title = getString LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE,
+        titleColor = Color.purple,
+        actionText = "Learn More",
+        actionTextColor = Color.purple,
+        imageUrl = "ny_ic_purple_badge,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_purple_badge.png",
         isBanner = true
       }
   in config'
@@ -260,7 +276,7 @@ cancelConfirmationConfig state = let
     primaryText {
       text = case state.data.activeRide.specialLocationTag of
               Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
-              Just specialLocationTag -> getString $ getCancelAlertText $ HU.getSpecialZoneConfig  "cancelText" (Just specialLocationTag)
+              Just specialLocationTag -> getString $ getCancelAlertText $ HU.getRideLabelData  "cancelText" (Just specialLocationTag) state.data.activeRide.disabilityTag
     , margin = Margin 16 24 16 24 },
     secondaryText {visibility = GONE},
     option1 {
@@ -284,8 +300,8 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
-                  else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag state.data.activeRide.disabilityTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
+                  else HU.getRideLabelData "cancelConfirmImage" (state.data.activeRide.specialLocationTag) state.data.activeRide.disabilityTag
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
@@ -371,6 +387,7 @@ chatViewConfig state = let
     , black800 = Color.black800
     , black700 = Color.black700
     , canSendSuggestion = state.props.canSendSuggestion
+    , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
   }
   in chatViewConfig'
 
@@ -655,3 +672,106 @@ autopayBannerConfig state configureImage =
         titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
       }
   in config'
+  
+accessibilityPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+accessibilityPopUpConfig state = 
+  let 
+    config = PopUpModal.config
+    popupData = getAccessibilityPopupData state.data.activeRide.disabilityTag state.data.activeRide.isDriverArrived
+    config' = config
+      {
+        gravity = CENTER,
+        margin = MarginHorizontal 24 24 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        primaryText {
+          text = popupData.primaryText
+        , margin = Margin 16 24 16 4 },
+        secondaryText {
+          text = popupData.secondaryText
+        , textStyle = SubHeading2
+        , margin = MarginBottom 24},
+        option1 {
+          text = getString GOT_IT
+        , background = Color.black900
+        , color = Color.yellow900
+        },
+        option2 {
+          visibility = false
+        },
+        backgroundClickable = false,
+        cornerRadius = (PTD.Corners 15.0 true true true true),
+        coverImageConfig {
+          imageUrl = popupData.imageUrl
+        , visibility = VISIBLE
+        , height = V 160
+        , width = MATCH_PARENT
+        , margin = Margin 16 16 16 0
+        }
+      }
+  in config'
+
+type ContentConfig = 
+  { primaryText :: String,
+    secondaryText :: String,
+    imageUrl :: String
+  }
+
+accessibilityConfig :: LazyCheck -> ContentConfig
+accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_illustration.png"}
+
+getAccessibilityPopupData :: Maybe ST.DisabilityType -> Boolean -> ContentConfig
+getAccessibilityPopupData pwdtype isDriverArrived = 
+  let accessibilityConfig' = accessibilityConfig Config
+  in case pwdtype, isDriverArrived of 
+      Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
+                                              { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
+                                                imageUrl = "ny_ic_blind_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_arrival.png"
+                                              }   
+      Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
+                                              { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
+                                                imageUrl = "ny_ic_blind_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_pickup.png"
+                                              }
+      Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
+                                              { secondaryText = getString CUSTOMER_HAS_POOR_HEARING_MESSAGE_THEM_AT_PICKUP,
+                                                imageUrl = "ny_ic_deaf_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_arrival.png"
+                                              }   
+      Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
+                                              { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
+                                                imageUrl = "ny_ic_deaf_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_pickup.png"
+                                              }
+      Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
+                                              { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_STORE_THEIR_SUPPORT_AT_PICKUP ,
+                                                imageUrl = "ny_ic_locomotor_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_arrival.png"
+                                              }    
+      Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
+                                              { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
+                                                imageUrl = "ny_ic_locomotor_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_pickup.png"
+                                              }
+      Just ST.OTHER_DISABILITY, true ->      accessibilityConfig'   
+      Just ST.OTHER_DISABILITY, false ->     accessibilityConfig' 
+      _ , _-> accessibilityConfig' 
+
+
+
+getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
+getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
+                        case state.data.activeRide.disabilityTag, state.data.activeRide.isDriverArrived of   
+                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png"} 
+                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png"}
+                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                      -- else if state.data.activeRide.isDriverArrived then
+                          -- case state.data.activeRide.disabilityTag of   
+                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png"}
+                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png"}
+                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                      else 
+                        case state.data.activeRide.disabilityTag of   
+                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png"} 
+                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png"}
+                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
