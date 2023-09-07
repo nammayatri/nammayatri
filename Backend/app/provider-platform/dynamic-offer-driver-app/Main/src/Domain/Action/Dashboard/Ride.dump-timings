@@ -1,0 +1,28 @@
+Parser [Domain.Action.Dashboard.Ride]: alloc=13894664 time=2.744
+Renamer/typechecker [Domain.Action.Dashboard.Ride]: alloc=855098584 time=183.676
+Desugar [Domain.Action.Dashboard.Ride]: alloc=325518872 time=51.256
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=315844776 time=94.300
+Specialise [Domain.Action.Dashboard.Ride]: alloc=14744032 time=4.999
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Ride]: alloc=48434536 time=17.087
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=636816568 time=191.056
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=364739824 time=102.972
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=443169552 time=131.229
+Float inwards [Domain.Action.Dashboard.Ride]: alloc=21704 time=0.005
+Called arity analysis [Domain.Action.Dashboard.Ride]: alloc=23280 time=0.006
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=450869576 time=144.633
+Demand analysis [Domain.Action.Dashboard.Ride]: alloc=164221840 time=44.754
+Worker Wrapper binds [Domain.Action.Dashboard.Ride]: alloc=2971544 time=1.303
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=525626456 time=153.234
+Exitification transformation [Domain.Action.Dashboard.Ride]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Ride]: alloc=101008960 time=30.149
+Common sub-expression [Domain.Action.Dashboard.Ride]: alloc=22808 time=0.007
+Float inwards [Domain.Action.Dashboard.Ride]: alloc=21704 time=0.004
+Simplifier [Domain.Action.Dashboard.Ride]: alloc=287904304 time=145.593
+Demand analysis [Domain.Action.Dashboard.Ride]: alloc=178680840 time=36.957
+CoreTidy [Domain.Action.Dashboard.Ride]: alloc=46267336 time=14.437
+CorePrep [Domain.Action.Dashboard.Ride]: alloc=22680 time=0.027
+CodeGen [Domain.Action.Dashboard.Ride]: alloc=1143718136 time=292.757
+systool:as: alloc=104144 time=0.295
+CorePrep [Domain.Action.Dashboard.Ride]: alloc=22680 time=0.014
+CodeGen [Domain.Action.Dashboard.Ride]: alloc=1182251104 time=277.235
+systool:as: alloc=107016 time=0.268

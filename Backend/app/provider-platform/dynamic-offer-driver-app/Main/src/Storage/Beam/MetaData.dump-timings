@@ -1,0 +1,34 @@
+Parser [Storage.Beam.MetaData]: alloc=1455352 time=0.392
+Simplify [expr]: alloc=97256 time=0.052
+CorePrep [expr]: alloc=43488 time=0.031
+ByteCodeGen [Ghci1]: alloc=217456 time=0.103
+Simplify [expr]: alloc=47024 time=0.031
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.063
+Renamer/typechecker [Storage.Beam.MetaData]: alloc=153221184 time=43.881
+Desugar [Storage.Beam.MetaData]: alloc=22673336 time=6.198
+Simplifier [Storage.Beam.MetaData]: alloc=239629208 time=71.090
+Specialise [Storage.Beam.MetaData]: alloc=16867664 time=5.176
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.MetaData]: alloc=56412112 time=17.903
+Simplifier [Storage.Beam.MetaData]: alloc=430435064 time=138.241
+Simplifier [Storage.Beam.MetaData]: alloc=385186328 time=138.343
+Simplifier [Storage.Beam.MetaData]: alloc=345958184 time=125.238
+Float inwards [Storage.Beam.MetaData]: alloc=19624 time=0.004
+Called arity analysis [Storage.Beam.MetaData]: alloc=21200 time=0.006
+Simplifier [Storage.Beam.MetaData]: alloc=257007744 time=91.011
+Demand analysis [Storage.Beam.MetaData]: alloc=54793664 time=14.517
+Worker Wrapper binds [Storage.Beam.MetaData]: alloc=2118256 time=1.189
+Simplifier [Storage.Beam.MetaData]: alloc=369173744 time=126.629
+Exitification transformation [Storage.Beam.MetaData]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.MetaData]: alloc=44560360 time=14.115
+Common sub-expression [Storage.Beam.MetaData]: alloc=20728 time=0.006
+Float inwards [Storage.Beam.MetaData]: alloc=19624 time=0.004
+Simplifier [Storage.Beam.MetaData]: alloc=256122384 time=74.498
+Demand analysis [Storage.Beam.MetaData]: alloc=39516968 time=11.504
+CoreTidy [Storage.Beam.MetaData]: alloc=27216424 time=10.770
+CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.027
+CodeGen [Storage.Beam.MetaData]: alloc=311829448 time=93.971
+systool:as: alloc=103632 time=0.228
+CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.016
+CodeGen [Storage.Beam.MetaData]: alloc=326766592 time=96.613
+systool:as: alloc=106504 time=0.205

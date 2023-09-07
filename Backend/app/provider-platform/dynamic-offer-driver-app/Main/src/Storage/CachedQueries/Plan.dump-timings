@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.Plan]: alloc=2834336 time=0.575
+Renamer/typechecker [Storage.CachedQueries.Plan]: alloc=915667536 time=156.289
+Desugar [Storage.CachedQueries.Plan]: alloc=1179600600 time=175.858
+Simplifier [Storage.CachedQueries.Plan]: alloc=25343832 time=5.533
+Specialise [Storage.CachedQueries.Plan]: alloc=3262288 time=0.953
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Plan]: alloc=15237200 time=3.921
+Simplifier [Storage.CachedQueries.Plan]: alloc=80886840 time=22.513
+Simplifier [Storage.CachedQueries.Plan]: alloc=171034056 time=55.400
+Simplifier [Storage.CachedQueries.Plan]: alloc=192408936 time=63.284
+Float inwards [Storage.CachedQueries.Plan]: alloc=21096 time=0.005
+Called arity analysis [Storage.CachedQueries.Plan]: alloc=22672 time=0.006
+Simplifier [Storage.CachedQueries.Plan]: alloc=166524960 time=49.736
+Demand analysis [Storage.CachedQueries.Plan]: alloc=53551992 time=12.025
+Worker Wrapper binds [Storage.CachedQueries.Plan]: alloc=2673888 time=1.219
+Simplifier [Storage.CachedQueries.Plan]: alloc=184969712 time=59.852
+Exitification transformation [Storage.CachedQueries.Plan]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Plan]: alloc=46971368 time=13.669
+Common sub-expression [Storage.CachedQueries.Plan]: alloc=22200 time=0.008
+Float inwards [Storage.CachedQueries.Plan]: alloc=21096 time=0.005
+Simplifier [Storage.CachedQueries.Plan]: alloc=80311952 time=25.946
+Demand analysis [Storage.CachedQueries.Plan]: alloc=52359656 time=10.758
+CoreTidy [Storage.CachedQueries.Plan]: alloc=7341232 time=3.614
+CorePrep [Storage.CachedQueries.Plan]: alloc=22088 time=0.024
+CodeGen [Storage.CachedQueries.Plan]: alloc=246472728 time=90.385
+systool:as: alloc=103976 time=0.284
+CorePrep [Storage.CachedQueries.Plan]: alloc=22088 time=0.017
+CodeGen [Storage.CachedQueries.Plan]: alloc=257611288 time=65.269
+systool:as: alloc=106856 time=0.287

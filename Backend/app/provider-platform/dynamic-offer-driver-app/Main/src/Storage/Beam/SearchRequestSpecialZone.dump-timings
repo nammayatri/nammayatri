@@ -1,0 +1,34 @@
+Parser [Storage.Beam.SearchRequestSpecialZone]: alloc=2339608 time=0.532
+Simplify [expr]: alloc=246216 time=0.097
+CorePrep [expr]: alloc=96344 time=0.074
+ByteCodeGen [Ghci1]: alloc=527152 time=0.140
+Simplify [expr]: alloc=47024 time=0.047
+CorePrep [expr]: alloc=26752 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.051
+Renamer/typechecker [Storage.Beam.SearchRequestSpecialZone]: alloc=298219856 time=76.958
+Desugar [Storage.Beam.SearchRequestSpecialZone]: alloc=72636632 time=16.663
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=593681408 time=170.539
+Specialise [Storage.Beam.SearchRequestSpecialZone]: alloc=30389600 time=13.415
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequestSpecialZone]: alloc=90881760 time=28.638
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=862166344 time=284.761
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=790398224 time=261.275
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=716022080 time=232.471
+Float inwards [Storage.Beam.SearchRequestSpecialZone]: alloc=24392 time=0.005
+Called arity analysis [Storage.Beam.SearchRequestSpecialZone]: alloc=25968 time=0.006
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=545923648 time=177.975
+Demand analysis [Storage.Beam.SearchRequestSpecialZone]: alloc=86262984 time=28.258
+Worker Wrapper binds [Storage.Beam.SearchRequestSpecialZone]: alloc=4297192 time=2.748
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=769756376 time=223.133
+Exitification transformation [Storage.Beam.SearchRequestSpecialZone]: alloc=26896 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequestSpecialZone]: alloc=75389568 time=26.140
+Common sub-expression [Storage.Beam.SearchRequestSpecialZone]: alloc=25496 time=0.037
+Float inwards [Storage.Beam.SearchRequestSpecialZone]: alloc=24392 time=0.005
+Simplifier [Storage.Beam.SearchRequestSpecialZone]: alloc=553386144 time=203.790
+Demand analysis [Storage.Beam.SearchRequestSpecialZone]: alloc=67541176 time=25.312
+CoreTidy [Storage.Beam.SearchRequestSpecialZone]: alloc=100170016 time=66.561
+CorePrep [Storage.Beam.SearchRequestSpecialZone]: alloc=25352 time=0.015
+CodeGen [Storage.Beam.SearchRequestSpecialZone]: alloc=604348720 time=175.862
+systool:as: alloc=104608 time=0.235
+CorePrep [Storage.Beam.SearchRequestSpecialZone]: alloc=25352 time=0.049
+CodeGen [Storage.Beam.SearchRequestSpecialZone]: alloc=632504872 time=175.864
+systool:as: alloc=107480 time=0.269

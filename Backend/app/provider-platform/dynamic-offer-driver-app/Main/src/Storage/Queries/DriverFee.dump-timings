@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverFee]: alloc=6798616 time=1.351
+Renamer/typechecker [Storage.Queries.DriverFee]: alloc=986122720 time=263.899
+Desugar [Storage.Queries.DriverFee]: alloc=25603784 time=5.574
+Simplifier [Storage.Queries.DriverFee]: alloc=1125851432 time=387.007
+Specialise [Storage.Queries.DriverFee]: alloc=173085120 time=46.743
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverFee]: alloc=99117576 time=41.399
+Simplifier [Storage.Queries.DriverFee]: alloc=1063349224 time=360.124
+Simplifier [Storage.Queries.DriverFee]: alloc=432188944 time=160.449
+Simplifier [Storage.Queries.DriverFee]: alloc=409796936 time=153.979
+Float inwards [Storage.Queries.DriverFee]: alloc=20808 time=0.005
+Called arity analysis [Storage.Queries.DriverFee]: alloc=22384 time=0.006
+Simplifier [Storage.Queries.DriverFee]: alloc=207516264 time=69.646
+Demand analysis [Storage.Queries.DriverFee]: alloc=74117568 time=18.479
+Worker Wrapper binds [Storage.Queries.DriverFee]: alloc=3737536 time=2.094
+Simplifier [Storage.Queries.DriverFee]: alloc=298755664 time=104.989
+Exitification transformation [Storage.Queries.DriverFee]: alloc=23312 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverFee]: alloc=80508352 time=38.094
+Common sub-expression [Storage.Queries.DriverFee]: alloc=21912 time=0.019
+Float inwards [Storage.Queries.DriverFee]: alloc=20808 time=0.004
+Simplifier [Storage.Queries.DriverFee]: alloc=284695056 time=100.026
+Demand analysis [Storage.Queries.DriverFee]: alloc=29380096 time=8.244
+CoreTidy [Storage.Queries.DriverFee]: alloc=24489032 time=10.057
+CorePrep [Storage.Queries.DriverFee]: alloc=21784 time=0.035
+CodeGen [Storage.Queries.DriverFee]: alloc=243662144 time=73.234
+systool:as: alloc=103888 time=0.250
+CorePrep [Storage.Queries.DriverFee]: alloc=21784 time=0.016
+CodeGen [Storage.Queries.DriverFee]: alloc=265983456 time=79.369
+systool:as: alloc=106792 time=0.249

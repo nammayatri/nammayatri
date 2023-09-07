@@ -1,0 +1,28 @@
+Parser [Tools.Metrics.ARDUBPPMetrics]: alloc=2236632 time=0.550
+Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics]: alloc=109146488 time=24.794
+Desugar [Tools.Metrics.ARDUBPPMetrics]: alloc=29161512 time=6.492
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=20211872 time=6.760
+Specialise [Tools.Metrics.ARDUBPPMetrics]: alloc=1766992 time=0.549
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics.ARDUBPPMetrics]: alloc=3257528 time=1.085
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=26897664 time=11.467
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=14109232 time=4.343
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=4561088 time=1.443
+Float inwards [Tools.Metrics.ARDUBPPMetrics]: alloc=21704 time=0.004
+Called arity analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=23280 time=0.006
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=11739600 time=3.570
+Demand analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=4829768 time=1.241
+Worker Wrapper binds [Tools.Metrics.ARDUBPPMetrics]: alloc=698448 time=0.251
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=15959664 time=4.854
+Exitification transformation [Tools.Metrics.ARDUBPPMetrics]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics.ARDUBPPMetrics]: alloc=4988040 time=1.661
+Common sub-expression [Tools.Metrics.ARDUBPPMetrics]: alloc=22808 time=0.005
+Float inwards [Tools.Metrics.ARDUBPPMetrics]: alloc=21704 time=0.004
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=14879224 time=4.544
+Demand analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=6245776 time=1.559
+CoreTidy [Tools.Metrics.ARDUBPPMetrics]: alloc=3140512 time=1.144
+CorePrep [Tools.Metrics.ARDUBPPMetrics]: alloc=22680 time=0.010
+CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=63631608 time=19.580
+systool:as: alloc=104064 time=0.254
+CorePrep [Tools.Metrics.ARDUBPPMetrics]: alloc=22680 time=0.017
+CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=66752936 time=20.399
+systool:as: alloc=106936 time=0.226

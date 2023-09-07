@@ -1,0 +1,28 @@
+Parser [Domain.Types.DriverLocation]: alloc=572496 time=0.213
+Renamer/typechecker [Domain.Types.DriverLocation]: alloc=55517296 time=18.170
+Desugar [Domain.Types.DriverLocation]: alloc=3151400 time=1.700
+Simplifier [Domain.Types.DriverLocation]: alloc=82938632 time=28.027
+Specialise [Domain.Types.DriverLocation]: alloc=5030832 time=1.445
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverLocation]: alloc=18569472 time=6.268
+Simplifier [Domain.Types.DriverLocation]: alloc=128041784 time=42.920
+Simplifier [Domain.Types.DriverLocation]: alloc=110129184 time=35.431
+Simplifier [Domain.Types.DriverLocation]: alloc=93255000 time=30.718
+Float inwards [Domain.Types.DriverLocation]: alloc=21416 time=0.005
+Called arity analysis [Domain.Types.DriverLocation]: alloc=22992 time=0.007
+Simplifier [Domain.Types.DriverLocation]: alloc=69275608 time=34.426
+Demand analysis [Domain.Types.DriverLocation]: alloc=16269064 time=3.772
+Worker Wrapper binds [Domain.Types.DriverLocation]: alloc=507544 time=0.345
+Simplifier [Domain.Types.DriverLocation]: alloc=76250920 time=22.311
+Exitification transformation [Domain.Types.DriverLocation]: alloc=23904 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverLocation]: alloc=16712728 time=5.155
+Common sub-expression [Domain.Types.DriverLocation]: alloc=22520 time=0.006
+Float inwards [Domain.Types.DriverLocation]: alloc=21416 time=0.004
+Simplifier [Domain.Types.DriverLocation]: alloc=58790264 time=18.373
+Demand analysis [Domain.Types.DriverLocation]: alloc=15398632 time=3.876
+CoreTidy [Domain.Types.DriverLocation]: alloc=7721304 time=2.887
+CorePrep [Domain.Types.DriverLocation]: alloc=22376 time=0.009
+CodeGen [Domain.Types.DriverLocation]: alloc=111626272 time=33.525
+systool:as: alloc=104000 time=0.231
+CorePrep [Domain.Types.DriverLocation]: alloc=22376 time=0.017
+CodeGen [Domain.Types.DriverLocation]: alloc=116247544 time=35.984
+systool:as: alloc=106872 time=0.221

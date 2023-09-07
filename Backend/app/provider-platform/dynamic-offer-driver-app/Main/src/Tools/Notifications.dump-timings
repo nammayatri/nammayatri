@@ -1,0 +1,28 @@
+Parser [Tools.Notifications]: alloc=13781120 time=2.033
+Renamer/typechecker [Tools.Notifications]: alloc=4383285976 time=699.344
+Desugar [Tools.Notifications]: alloc=1441738984 time=214.001
+Simplifier [Tools.Notifications]: alloc=124081560 time=29.017
+Specialise [Tools.Notifications]: alloc=9272408 time=2.087
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Notifications]: alloc=36748208 time=9.390
+Simplifier [Tools.Notifications]: alloc=167001984 time=41.623
+Simplifier [Tools.Notifications]: alloc=206026760 time=55.585
+Simplifier [Tools.Notifications]: alloc=232988192 time=71.462
+Float inwards [Tools.Notifications]: alloc=19032 time=0.004
+Called arity analysis [Tools.Notifications]: alloc=20608 time=0.005
+Simplifier [Tools.Notifications]: alloc=189162880 time=56.570
+Demand analysis [Tools.Notifications]: alloc=71145696 time=15.313
+Worker Wrapper binds [Tools.Notifications]: alloc=6482200 time=2.428
+Simplifier [Tools.Notifications]: alloc=215726432 time=62.824
+Exitification transformation [Tools.Notifications]: alloc=21520 time=0.008
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Notifications]: alloc=54631360 time=14.136
+Common sub-expression [Tools.Notifications]: alloc=20136 time=0.019
+Float inwards [Tools.Notifications]: alloc=19032 time=0.004
+Simplifier [Tools.Notifications]: alloc=98640576 time=28.420
+Demand analysis [Tools.Notifications]: alloc=63334144 time=12.580
+CoreTidy [Tools.Notifications]: alloc=16898056 time=6.453
+CorePrep [Tools.Notifications]: alloc=19992 time=0.010
+CodeGen [Tools.Notifications]: alloc=329753000 time=85.880
+systool:as: alloc=103480 time=0.190
+CorePrep [Tools.Notifications]: alloc=19992 time=0.013
+CodeGen [Tools.Notifications]: alloc=346990656 time=88.062
+systool:as: alloc=106352 time=0.202

@@ -1,0 +1,28 @@
+Parser [Domain.Action.Dashboard.Merchant]: alloc=18697544 time=3.152
+Renamer/typechecker [Domain.Action.Dashboard.Merchant]: alloc=1332276192 time=314.303
+Desugar [Domain.Action.Dashboard.Merchant]: alloc=29032736 time=8.164
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=532718664 time=162.250
+Specialise [Domain.Action.Dashboard.Merchant]: alloc=13983072 time=4.814
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Merchant]: alloc=44700544 time=15.545
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=646355376 time=184.833
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=200991792 time=65.264
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=529251072 time=159.957
+Float inwards [Domain.Action.Dashboard.Merchant]: alloc=22888 time=0.006
+Called arity analysis [Domain.Action.Dashboard.Merchant]: alloc=24464 time=0.006
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=554211760 time=174.296
+Demand analysis [Domain.Action.Dashboard.Merchant]: alloc=195315880 time=43.691
+Worker Wrapper binds [Domain.Action.Dashboard.Merchant]: alloc=3325216 time=2.460
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=622387296 time=220.473
+Exitification transformation [Domain.Action.Dashboard.Merchant]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Merchant]: alloc=121421120 time=36.852
+Common sub-expression [Domain.Action.Dashboard.Merchant]: alloc=23992 time=0.007
+Float inwards [Domain.Action.Dashboard.Merchant]: alloc=22888 time=0.004
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=326618600 time=144.409
+Demand analysis [Domain.Action.Dashboard.Merchant]: alloc=214637224 time=43.449
+CoreTidy [Domain.Action.Dashboard.Merchant]: alloc=50165456 time=27.251
+CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.040
+CodeGen [Domain.Action.Dashboard.Merchant]: alloc=1251407936 time=317.727
+systool:as: alloc=104360 time=0.216
+CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.041
+CodeGen [Domain.Action.Dashboard.Merchant]: alloc=1295707352 time=317.481
+systool:as: alloc=107240 time=0.226

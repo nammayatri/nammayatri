@@ -1,0 +1,28 @@
+Parser [API.Dashboard.Booking]: alloc=800952 time=0.224
+Renamer/typechecker [API.Dashboard.Booking]: alloc=9363816 time=4.389
+Desugar [API.Dashboard.Booking]: alloc=342200 time=0.864
+Simplifier [API.Dashboard.Booking]: alloc=6088128 time=1.515
+Specialise [API.Dashboard.Booking]: alloc=247200 time=0.068
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Booking]: alloc=760896 time=0.194
+Simplifier [API.Dashboard.Booking]: alloc=1006616 time=0.226
+Simplifier [API.Dashboard.Booking]: alloc=981480 time=0.206
+Simplifier [API.Dashboard.Booking]: alloc=981480 time=0.254
+Float inwards [API.Dashboard.Booking]: alloc=19624 time=0.004
+Called arity analysis [API.Dashboard.Booking]: alloc=21200 time=0.005
+Simplifier [API.Dashboard.Booking]: alloc=1145064 time=0.279
+Demand analysis [API.Dashboard.Booking]: alloc=1877504 time=0.344
+Worker Wrapper binds [API.Dashboard.Booking]: alloc=30704 time=0.014
+Simplifier [API.Dashboard.Booking]: alloc=1925184 time=0.374
+Exitification transformation [API.Dashboard.Booking]: alloc=22128 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Booking]: alloc=751168 time=0.194
+Common sub-expression [API.Dashboard.Booking]: alloc=20728 time=0.004
+Float inwards [API.Dashboard.Booking]: alloc=19624 time=0.004
+Simplifier [API.Dashboard.Booking]: alloc=2412856 time=0.499
+Demand analysis [API.Dashboard.Booking]: alloc=1880456 time=0.341
+CoreTidy [API.Dashboard.Booking]: alloc=620024 time=0.190
+CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.009
+CodeGen [API.Dashboard.Booking]: alloc=9881496 time=3.138
+systool:as: alloc=103640 time=0.160
+CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.009
+CodeGen [API.Dashboard.Booking]: alloc=10142400 time=3.039
+systool:as: alloc=106512 time=0.116

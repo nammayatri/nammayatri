@@ -1,0 +1,34 @@
+Parser [SharedLogic.Allocator]: alloc=2027544 time=0.511
+Simplify [expr]: alloc=190024 time=0.114
+CorePrep [expr]: alloc=36032 time=0.058
+ByteCodeGen [Ghci1]: alloc=143176 time=0.087
+Simplify [expr]: alloc=44952 time=0.029
+CorePrep [expr]: alloc=25128 time=0.017
+ByteCodeGen [Ghci1]: alloc=97376 time=0.043
+Renamer/typechecker [SharedLogic.Allocator]: alloc=730967888 time=321.447
+Desugar [SharedLogic.Allocator]: alloc=6334400 time=3.033
+Simplifier [SharedLogic.Allocator]: alloc=221467888 time=81.531
+Specialise [SharedLogic.Allocator]: alloc=14565832 time=4.688
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator]: alloc=31827096 time=11.812
+Simplifier [SharedLogic.Allocator]: alloc=268442560 time=110.351
+Simplifier [SharedLogic.Allocator]: alloc=262978544 time=116.259
+Simplifier [SharedLogic.Allocator]: alloc=251757184 time=107.160
+Float inwards [SharedLogic.Allocator]: alloc=19624 time=0.005
+Called arity analysis [SharedLogic.Allocator]: alloc=21200 time=0.006
+Simplifier [SharedLogic.Allocator]: alloc=186408912 time=70.875
+Demand analysis [SharedLogic.Allocator]: alloc=47500032 time=11.934
+Worker Wrapper binds [SharedLogic.Allocator]: alloc=1779928 time=1.045
+Simplifier [SharedLogic.Allocator]: alloc=212412352 time=85.943
+Exitification transformation [SharedLogic.Allocator]: alloc=22128 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator]: alloc=44233136 time=14.039
+Common sub-expression [SharedLogic.Allocator]: alloc=20728 time=0.006
+Float inwards [SharedLogic.Allocator]: alloc=19624 time=0.004
+Simplifier [SharedLogic.Allocator]: alloc=145063496 time=48.702
+Demand analysis [SharedLogic.Allocator]: alloc=40511720 time=10.771
+CoreTidy [SharedLogic.Allocator]: alloc=22009536 time=8.713
+CorePrep [SharedLogic.Allocator]: alloc=20584 time=0.028
+CodeGen [SharedLogic.Allocator]: alloc=359306768 time=111.805
+systool:as: alloc=103632 time=0.259
+CorePrep [SharedLogic.Allocator]: alloc=20584 time=0.016
+CodeGen [SharedLogic.Allocator]: alloc=371366184 time=114.875
+systool:as: alloc=106504 time=0.253

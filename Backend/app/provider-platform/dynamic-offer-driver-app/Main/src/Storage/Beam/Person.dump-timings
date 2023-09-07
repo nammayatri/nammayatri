@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Person]: alloc=3387432 time=0.604
+Simplify [expr]: alloc=184296 time=0.087
+CorePrep [expr]: alloc=74104 time=0.067
+ByteCodeGen [Ghci1]: alloc=379864 time=0.099
+Simplify [expr]: alloc=47024 time=0.048
+CorePrep [expr]: alloc=26752 time=0.021
+ByteCodeGen [Ghci1]: alloc=131880 time=0.052
+Renamer/typechecker [Storage.Beam.Person]: alloc=581529200 time=138.341
+Desugar [Storage.Beam.Person]: alloc=54037256 time=12.622
+Simplifier [Storage.Beam.Person]: alloc=755169488 time=257.926
+Specialise [Storage.Beam.Person]: alloc=82704152 time=17.873
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Person]: alloc=188843568 time=56.935
+Simplifier [Storage.Beam.Person]: alloc=1493870848 time=514.456
+Simplifier [Storage.Beam.Person]: alloc=1417826496 time=505.875
+Simplifier [Storage.Beam.Person]: alloc=1194546808 time=396.679
+Float inwards [Storage.Beam.Person]: alloc=19032 time=0.017
+Called arity analysis [Storage.Beam.Person]: alloc=20608 time=0.005
+Simplifier [Storage.Beam.Person]: alloc=897647472 time=299.742
+Demand analysis [Storage.Beam.Person]: alloc=258064240 time=52.827
+Worker Wrapper binds [Storage.Beam.Person]: alloc=8155080 time=7.323
+Simplifier [Storage.Beam.Person]: alloc=1296456416 time=438.318
+Exitification transformation [Storage.Beam.Person]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Person]: alloc=211716072 time=85.558
+Common sub-expression [Storage.Beam.Person]: alloc=20136 time=0.007
+Float inwards [Storage.Beam.Person]: alloc=19032 time=0.004
+Simplifier [Storage.Beam.Person]: alloc=835840392 time=304.531
+Demand analysis [Storage.Beam.Person]: alloc=169420992 time=37.755
+CoreTidy [Storage.Beam.Person]: alloc=142423096 time=39.212
+CorePrep [Storage.Beam.Person]: alloc=19992 time=0.028
+CodeGen [Storage.Beam.Person]: alloc=1369067104 time=411.409
+systool:as: alloc=103512 time=0.251
+CorePrep [Storage.Beam.Person]: alloc=19992 time=0.029
+CodeGen [Storage.Beam.Person]: alloc=1431841464 time=388.295
+systool:as: alloc=106384 time=0.293

@@ -1,0 +1,28 @@
+Parser [API.UI.Driver]: alloc=7743120 time=1.190
+Renamer/typechecker [API.UI.Driver]: alloc=430889880 time=91.459
+Desugar [API.UI.Driver]: alloc=2014360 time=1.377
+Simplifier [API.UI.Driver]: alloc=315979968 time=95.572
+Specialise [API.UI.Driver]: alloc=9673984 time=8.460
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Driver]: alloc=26497384 time=10.152
+Simplifier [API.UI.Driver]: alloc=302731448 time=88.790
+Simplifier [API.UI.Driver]: alloc=36584632 time=10.954
+Simplifier [API.UI.Driver]: alloc=36584632 time=10.788
+Float inwards [API.UI.Driver]: alloc=17240 time=0.005
+Called arity analysis [API.UI.Driver]: alloc=18816 time=0.006
+Simplifier [API.UI.Driver]: alloc=94953504 time=31.148
+Demand analysis [API.UI.Driver]: alloc=51880136 time=9.822
+Worker Wrapper binds [API.UI.Driver]: alloc=739712 time=0.392
+Simplifier [API.UI.Driver]: alloc=536140712 time=165.868
+Exitification transformation [API.UI.Driver]: alloc=19744 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Driver]: alloc=26186464 time=10.280
+Common sub-expression [API.UI.Driver]: alloc=18344 time=0.006
+Float inwards [API.UI.Driver]: alloc=17240 time=0.004
+Simplifier [API.UI.Driver]: alloc=174617896 time=52.835
+Demand analysis [API.UI.Driver]: alloc=55377144 time=12.729
+CoreTidy [API.UI.Driver]: alloc=35305088 time=11.082
+CorePrep [API.UI.Driver]: alloc=18200 time=0.013
+CodeGen [API.UI.Driver]: alloc=256794640 time=61.963
+systool:as: alloc=103128 time=0.247
+CorePrep [API.UI.Driver]: alloc=18200 time=0.015
+CodeGen [API.UI.Driver]: alloc=264481552 time=65.092
+systool:as: alloc=106000 time=0.231

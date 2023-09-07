@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.FarePolicy]: alloc=1567752 time=0.394
+Renamer/typechecker [Storage.CachedQueries.FarePolicy]: alloc=419907376 time=77.601
+Desugar [Storage.CachedQueries.FarePolicy]: alloc=252230448 time=40.360
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=13046464 time=3.080
+Specialise [Storage.CachedQueries.FarePolicy]: alloc=827912 time=0.268
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.FarePolicy]: alloc=4098432 time=0.979
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=9034952 time=2.430
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=5513592 time=1.407
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=40258920 time=12.660
+Float inwards [Storage.CachedQueries.FarePolicy]: alloc=22888 time=0.005
+Called arity analysis [Storage.CachedQueries.FarePolicy]: alloc=24464 time=0.006
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=23016032 time=6.900
+Demand analysis [Storage.CachedQueries.FarePolicy]: alloc=16228592 time=4.339
+Worker Wrapper binds [Storage.CachedQueries.FarePolicy]: alloc=854968 time=0.419
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=48177808 time=15.717
+Exitification transformation [Storage.CachedQueries.FarePolicy]: alloc=25408 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.FarePolicy]: alloc=14848536 time=4.004
+Common sub-expression [Storage.CachedQueries.FarePolicy]: alloc=23992 time=0.018
+Float inwards [Storage.CachedQueries.FarePolicy]: alloc=22888 time=0.004
+Simplifier [Storage.CachedQueries.FarePolicy]: alloc=29793336 time=8.496
+Demand analysis [Storage.CachedQueries.FarePolicy]: alloc=28369872 time=5.787
+CoreTidy [Storage.CachedQueries.FarePolicy]: alloc=3153752 time=1.385
+CorePrep [Storage.CachedQueries.FarePolicy]: alloc=23880 time=0.011
+CodeGen [Storage.CachedQueries.FarePolicy]: alloc=122623000 time=31.636
+systool:as: alloc=104360 time=0.202
+CorePrep [Storage.CachedQueries.FarePolicy]: alloc=23880 time=0.013
+CodeGen [Storage.CachedQueries.FarePolicy]: alloc=126892064 time=32.443
+systool:as: alloc=107240 time=0.202

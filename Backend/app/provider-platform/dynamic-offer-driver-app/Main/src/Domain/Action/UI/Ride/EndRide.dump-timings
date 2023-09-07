@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Ride.EndRide]: alloc=12721672 time=2.327
+Renamer/typechecker [Domain.Action.UI.Ride.EndRide]: alloc=2101600384 time=385.880
+Desugar [Domain.Action.UI.Ride.EndRide]: alloc=2822128864 time=415.196
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=489356168 time=151.297
+Specialise [Domain.Action.UI.Ride.EndRide]: alloc=20082352 time=12.327
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.EndRide]: alloc=57261248 time=25.266
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=424465648 time=151.051
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=191109408 time=58.584
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=355525080 time=135.000
+Float inwards [Domain.Action.UI.Ride.EndRide]: alloc=22008 time=0.005
+Called arity analysis [Domain.Action.UI.Ride.EndRide]: alloc=23584 time=0.006
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=386480104 time=120.417
+Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=129455976 time=27.743
+Worker Wrapper binds [Domain.Action.UI.Ride.EndRide]: alloc=2548112 time=1.400
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=846630336 time=283.883
+Exitification transformation [Domain.Action.UI.Ride.EndRide]: alloc=24512 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.EndRide]: alloc=102485496 time=33.133
+Common sub-expression [Domain.Action.UI.Ride.EndRide]: alloc=23112 time=0.006
+Float inwards [Domain.Action.UI.Ride.EndRide]: alloc=22008 time=0.004
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=346445784 time=174.295
+Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=169830136 time=35.299
+CoreTidy [Domain.Action.UI.Ride.EndRide]: alloc=65125768 time=20.318
+CorePrep [Domain.Action.UI.Ride.EndRide]: alloc=22968 time=0.013
+CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=910433256 time=255.988
+systool:as: alloc=104168 time=0.261
+CorePrep [Domain.Action.UI.Ride.EndRide]: alloc=22968 time=0.015
+CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=943698072 time=230.487
+systool:as: alloc=107040 time=0.278

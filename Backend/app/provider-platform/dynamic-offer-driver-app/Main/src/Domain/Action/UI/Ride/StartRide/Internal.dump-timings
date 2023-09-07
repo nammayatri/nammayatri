@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Ride.StartRide.Internal]: alloc=1218440 time=0.314
+Renamer/typechecker [Domain.Action.UI.Ride.StartRide.Internal]: alloc=307536824 time=54.973
+Desugar [Domain.Action.UI.Ride.StartRide.Internal]: alloc=65526240 time=10.854
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=8980544 time=2.434
+Specialise [Domain.Action.UI.Ride.StartRide.Internal]: alloc=457496 time=0.163
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2944192 time=0.718
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=4948496 time=1.207
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=1841360 time=0.470
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=1841360 time=0.457
+Float inwards [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25272 time=0.005
+Called arity analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26848 time=0.006
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=5028784 time=1.130
+Demand analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2519960 time=0.564
+Worker Wrapper binds [Domain.Action.UI.Ride.StartRide.Internal]: alloc=199744 time=0.063
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=4156184 time=0.951
+Exitification transformation [Domain.Action.UI.Ride.StartRide.Internal]: alloc=27792 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2183176 time=0.541
+Common sub-expression [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26376 time=0.005
+Float inwards [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25272 time=0.004
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=5119024 time=1.196
+Demand analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2489728 time=0.507
+CoreTidy [Domain.Action.UI.Ride.StartRide.Internal]: alloc=814384 time=0.251
+CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.011
+CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=23661384 time=6.380
+systool:as: alloc=104888 time=0.166
+CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.015
+CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25333752 time=6.967
+systool:as: alloc=107768 time=0.170

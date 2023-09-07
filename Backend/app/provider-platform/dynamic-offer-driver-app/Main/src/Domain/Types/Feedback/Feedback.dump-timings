@@ -1,0 +1,28 @@
+Parser [Domain.Types.Feedback.Feedback]: alloc=645128 time=0.218
+Renamer/typechecker [Domain.Types.Feedback.Feedback]: alloc=64008552 time=21.269
+Desugar [Domain.Types.Feedback.Feedback]: alloc=4799032 time=2.267
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=93002992 time=31.785
+Specialise [Domain.Types.Feedback.Feedback]: alloc=6594320 time=1.843
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Feedback.Feedback]: alloc=17760392 time=6.044
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=138319440 time=46.613
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=116708632 time=56.403
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=101347664 time=32.129
+Float inwards [Domain.Types.Feedback.Feedback]: alloc=22296 time=0.005
+Called arity analysis [Domain.Types.Feedback.Feedback]: alloc=23872 time=0.006
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=77132808 time=29.457
+Demand analysis [Domain.Types.Feedback.Feedback]: alloc=18177232 time=4.507
+Worker Wrapper binds [Domain.Types.Feedback.Feedback]: alloc=590200 time=0.417
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=87185408 time=27.152
+Exitification transformation [Domain.Types.Feedback.Feedback]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Feedback.Feedback]: alloc=17446592 time=5.709
+Common sub-expression [Domain.Types.Feedback.Feedback]: alloc=23400 time=0.006
+Float inwards [Domain.Types.Feedback.Feedback]: alloc=22296 time=0.004
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=65795728 time=21.726
+Demand analysis [Domain.Types.Feedback.Feedback]: alloc=17163704 time=4.664
+CoreTidy [Domain.Types.Feedback.Feedback]: alloc=9160152 time=3.815
+CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.010
+CodeGen [Domain.Types.Feedback.Feedback]: alloc=136655776 time=45.714
+systool:as: alloc=104216 time=0.219
+CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.016
+CodeGen [Domain.Types.Feedback.Feedback]: alloc=141852952 time=44.198
+systool:as: alloc=107112 time=0.235

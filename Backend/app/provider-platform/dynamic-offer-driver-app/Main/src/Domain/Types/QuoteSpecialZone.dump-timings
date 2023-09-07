@@ -1,0 +1,28 @@
+Parser [Domain.Types.QuoteSpecialZone]: alloc=778056 time=0.280
+Renamer/typechecker [Domain.Types.QuoteSpecialZone]: alloc=36561768 time=11.410
+Desugar [Domain.Types.QuoteSpecialZone]: alloc=4945016 time=2.072
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=32355720 time=8.580
+Specialise [Domain.Types.QuoteSpecialZone]: alloc=1194880 time=0.274
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.QuoteSpecialZone]: alloc=6740008 time=1.769
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=15773648 time=4.143
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=25739488 time=6.583
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=5483576 time=1.500
+Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.005
+Called arity analysis [Domain.Types.QuoteSpecialZone]: alloc=23584 time=0.006
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=6769144 time=1.701
+Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=5553656 time=1.200
+Worker Wrapper binds [Domain.Types.QuoteSpecialZone]: alloc=272128 time=0.141
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=8429608 time=1.985
+Exitification transformation [Domain.Types.QuoteSpecialZone]: alloc=24512 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.QuoteSpecialZone]: alloc=4582976 time=1.256
+Common sub-expression [Domain.Types.QuoteSpecialZone]: alloc=23112 time=0.005
+Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.004
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=11495808 time=3.124
+Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=5594760 time=1.279
+CoreTidy [Domain.Types.QuoteSpecialZone]: alloc=4207856 time=1.237
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.011
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=70245360 time=20.375
+systool:as: alloc=104120 time=0.182
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.017
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=72443776 time=20.903
+systool:as: alloc=106992 time=0.183

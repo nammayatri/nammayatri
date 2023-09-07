@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=4576856 time=1.009
+Renamer/typechecker [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=144382720 time=39.450
+Desugar [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=22979392 time=4.984
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=106764504 time=27.671
+Specialise [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=9768240 time=2.496
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=11559648 time=3.304
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=222394160 time=63.579
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=78619376 time=22.882
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=77399720 time=22.736
+Float inwards [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=27064 time=0.008
+Called arity analysis [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=28640 time=0.007
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=44396504 time=10.972
+Demand analysis [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=10660808 time=3.444
+Worker Wrapper binds [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=509680 time=0.310
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=121430664 time=37.758
+Exitification transformation [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=29584 time=0.035
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=10432304 time=3.141
+Common sub-expression [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=28168 time=0.018
+Float inwards [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=27064 time=0.004
+Simplifier [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=83679576 time=22.243
+Demand analysis [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=9184168 time=3.114
+CoreTidy [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=8917336 time=3.236
+CorePrep [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=28040 time=0.011
+CodeGen [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=109744168 time=33.345
+systool:as: alloc=105224 time=0.185
+CorePrep [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=28040 time=0.018
+CodeGen [Storage.Queries.Merchant.MerchantServiceConfig]: alloc=118154512 time=36.385
+systool:as: alloc=108096 time=0.234

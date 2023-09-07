@@ -1,0 +1,28 @@
+Parser [Storage.Queries.FareParameters]: alloc=2924184 time=0.645
+Renamer/typechecker [Storage.Queries.FareParameters]: alloc=254494824 time=71.776
+Desugar [Storage.Queries.FareParameters]: alloc=14213248 time=3.555
+Simplifier [Storage.Queries.FareParameters]: alloc=188327744 time=61.078
+Specialise [Storage.Queries.FareParameters]: alloc=24373688 time=7.218
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FareParameters]: alloc=23636544 time=8.470
+Simplifier [Storage.Queries.FareParameters]: alloc=629663496 time=187.862
+Simplifier [Storage.Queries.FareParameters]: alloc=567309560 time=187.811
+Simplifier [Storage.Queries.FareParameters]: alloc=559239248 time=184.972
+Float inwards [Storage.Queries.FareParameters]: alloc=22296 time=0.005
+Called arity analysis [Storage.Queries.FareParameters]: alloc=23872 time=0.005
+Simplifier [Storage.Queries.FareParameters]: alloc=425347888 time=143.645
+Demand analysis [Storage.Queries.FareParameters]: alloc=23433080 time=14.578
+Worker Wrapper binds [Storage.Queries.FareParameters]: alloc=1130312 time=0.814
+Simplifier [Storage.Queries.FareParameters]: alloc=431357296 time=143.154
+Exitification transformation [Storage.Queries.FareParameters]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FareParameters]: alloc=20782256 time=10.075
+Common sub-expression [Storage.Queries.FareParameters]: alloc=23400 time=0.005
+Float inwards [Storage.Queries.FareParameters]: alloc=22296 time=0.004
+Simplifier [Storage.Queries.FareParameters]: alloc=272396776 time=101.092
+Demand analysis [Storage.Queries.FareParameters]: alloc=14018128 time=11.292
+CoreTidy [Storage.Queries.FareParameters]: alloc=25549680 time=10.084
+CorePrep [Storage.Queries.FareParameters]: alloc=23272 time=0.014
+CodeGen [Storage.Queries.FareParameters]: alloc=128508952 time=43.734
+systool:as: alloc=104216 time=0.221
+CorePrep [Storage.Queries.FareParameters]: alloc=23272 time=0.016
+CodeGen [Storage.Queries.FareParameters]: alloc=136564256 time=44.052
+systool:as: alloc=107088 time=0.248

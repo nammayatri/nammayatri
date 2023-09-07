@@ -1,0 +1,28 @@
+Parser [Domain.Action.Internal.DriverReferee]: alloc=1902704 time=0.436
+Renamer/typechecker [Domain.Action.Internal.DriverReferee]: alloc=177578568 time=40.117
+Desugar [Domain.Action.Internal.DriverReferee]: alloc=318273120 time=49.887
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=63305040 time=20.914
+Specialise [Domain.Action.Internal.DriverReferee]: alloc=4867616 time=1.345
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Internal.DriverReferee]: alloc=14331216 time=4.647
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=107682936 time=34.865
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=95192544 time=41.262
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=87749264 time=30.946
+Float inwards [Domain.Action.Internal.DriverReferee]: alloc=24088 time=0.005
+Called arity analysis [Domain.Action.Internal.DriverReferee]: alloc=25664 time=0.006
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=68008752 time=19.488
+Demand analysis [Domain.Action.Internal.DriverReferee]: alloc=15994808 time=3.838
+Worker Wrapper binds [Domain.Action.Internal.DriverReferee]: alloc=676608 time=0.390
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=70857528 time=29.984
+Exitification transformation [Domain.Action.Internal.DriverReferee]: alloc=26608 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Internal.DriverReferee]: alloc=15370536 time=4.532
+Common sub-expression [Domain.Action.Internal.DriverReferee]: alloc=25192 time=0.018
+Float inwards [Domain.Action.Internal.DriverReferee]: alloc=24088 time=0.004
+Simplifier [Domain.Action.Internal.DriverReferee]: alloc=52794088 time=15.952
+Demand analysis [Domain.Action.Internal.DriverReferee]: alloc=14529520 time=3.603
+CoreTidy [Domain.Action.Internal.DriverReferee]: alloc=6619288 time=2.736
+CorePrep [Domain.Action.Internal.DriverReferee]: alloc=25064 time=0.010
+CodeGen [Domain.Action.Internal.DriverReferee]: alloc=117958376 time=35.242
+systool:as: alloc=104608 time=0.231
+CorePrep [Domain.Action.Internal.DriverReferee]: alloc=25064 time=0.017
+CodeGen [Domain.Action.Internal.DriverReferee]: alloc=123664800 time=36.595
+systool:as: alloc=107480 time=0.186

@@ -1,0 +1,31 @@
+Parser [API.Dashboard.Subscription]: alloc=2302144 time=0.505
+Simplify [expr]: alloc=19176 time=0.014
+CorePrep [expr]: alloc=16448 time=0.011
+ByteCodeGen [Ghci1]: alloc=39272 time=0.034
+Renamer/typechecker [API.Dashboard.Subscription]: alloc=19667560 time=9.436
+Desugar [API.Dashboard.Subscription]: alloc=888112 time=1.024
+Simplifier [API.Dashboard.Subscription]: alloc=16721304 time=4.655
+Specialise [API.Dashboard.Subscription]: alloc=626720 time=0.139
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Subscription]: alloc=2752288 time=0.767
+Simplifier [API.Dashboard.Subscription]: alloc=13584120 time=3.516
+Simplifier [API.Dashboard.Subscription]: alloc=8041288 time=2.167
+Simplifier [API.Dashboard.Subscription]: alloc=28540976 time=7.977
+Float inwards [API.Dashboard.Subscription]: alloc=21096 time=0.004
+Called arity analysis [API.Dashboard.Subscription]: alloc=22672 time=0.005
+Simplifier [API.Dashboard.Subscription]: alloc=9402784 time=2.468
+Demand analysis [API.Dashboard.Subscription]: alloc=9372000 time=1.920
+Worker Wrapper binds [API.Dashboard.Subscription]: alloc=199088 time=0.118
+Simplifier [API.Dashboard.Subscription]: alloc=37496704 time=10.079
+Exitification transformation [API.Dashboard.Subscription]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Subscription]: alloc=9005272 time=2.332
+Common sub-expression [API.Dashboard.Subscription]: alloc=22200 time=0.005
+Float inwards [API.Dashboard.Subscription]: alloc=21096 time=0.004
+Simplifier [API.Dashboard.Subscription]: alloc=22877696 time=6.014
+Demand analysis [API.Dashboard.Subscription]: alloc=14758000 time=2.696
+CoreTidy [API.Dashboard.Subscription]: alloc=3207560 time=1.139
+CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.009
+CodeGen [API.Dashboard.Subscription]: alloc=89314384 time=24.471
+systool:as: alloc=103936 time=0.182
+CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.015
+CodeGen [API.Dashboard.Subscription]: alloc=93001240 time=25.240
+systool:as: alloc=106816 time=0.251

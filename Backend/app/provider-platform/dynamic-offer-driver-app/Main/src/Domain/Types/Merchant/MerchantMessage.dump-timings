@@ -1,0 +1,31 @@
+Parser [Domain.Types.Merchant.MerchantMessage]: alloc=953248 time=0.275
+Simplify [expr]: alloc=34464 time=0.032
+CorePrep [expr]: alloc=22952 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.063
+Renamer/typechecker [Domain.Types.Merchant.MerchantMessage]: alloc=98723432 time=28.893
+Desugar [Domain.Types.Merchant.MerchantMessage]: alloc=44689280 time=10.813
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=151607608 time=49.164
+Specialise [Domain.Types.Merchant.MerchantMessage]: alloc=7966056 time=2.217
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.MerchantMessage]: alloc=25681216 time=7.850
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=181534152 time=68.201
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=163518576 time=61.483
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=144786072 time=53.837
+Float inwards [Domain.Types.Merchant.MerchantMessage]: alloc=24392 time=0.006
+Called arity analysis [Domain.Types.Merchant.MerchantMessage]: alloc=25968 time=0.006
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=113042752 time=32.240
+Demand analysis [Domain.Types.Merchant.MerchantMessage]: alloc=24196136 time=5.914
+Worker Wrapper binds [Domain.Types.Merchant.MerchantMessage]: alloc=1916936 time=0.798
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=135956072 time=55.575
+Exitification transformation [Domain.Types.Merchant.MerchantMessage]: alloc=26896 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.MerchantMessage]: alloc=26675344 time=7.908
+Common sub-expression [Domain.Types.Merchant.MerchantMessage]: alloc=25496 time=0.006
+Float inwards [Domain.Types.Merchant.MerchantMessage]: alloc=24392 time=0.004
+Simplifier [Domain.Types.Merchant.MerchantMessage]: alloc=91054176 time=27.542
+Demand analysis [Domain.Types.Merchant.MerchantMessage]: alloc=21711536 time=5.603
+CoreTidy [Domain.Types.Merchant.MerchantMessage]: alloc=15676320 time=5.527
+CorePrep [Domain.Types.Merchant.MerchantMessage]: alloc=25352 time=0.012
+CodeGen [Domain.Types.Merchant.MerchantMessage]: alloc=198630664 time=64.025
+systool:as: alloc=104672 time=0.263
+CorePrep [Domain.Types.Merchant.MerchantMessage]: alloc=25352 time=0.018
+CodeGen [Domain.Types.Merchant.MerchantMessage]: alloc=206863632 time=60.313
+systool:as: alloc=107520 time=0.246

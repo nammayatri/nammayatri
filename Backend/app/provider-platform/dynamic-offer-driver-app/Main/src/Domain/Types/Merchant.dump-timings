@@ -1,0 +1,31 @@
+Parser [Domain.Types.Merchant]: alloc=2021720 time=0.517
+Simplify [expr]: alloc=34464 time=0.015
+CorePrep [expr]: alloc=22952 time=0.020
+ByteCodeGen [Ghci1]: alloc=94056 time=0.060
+Renamer/typechecker [Domain.Types.Merchant]: alloc=212162696 time=60.845
+Desugar [Domain.Types.Merchant]: alloc=56380864 time=12.992
+Simplifier [Domain.Types.Merchant]: alloc=426604144 time=148.793
+Specialise [Domain.Types.Merchant]: alloc=35751816 time=8.338
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant]: alloc=88433024 time=26.642
+Simplifier [Domain.Types.Merchant]: alloc=564848024 time=211.399
+Simplifier [Domain.Types.Merchant]: alloc=471656776 time=166.526
+Simplifier [Domain.Types.Merchant]: alloc=372331248 time=139.998
+Float inwards [Domain.Types.Merchant]: alloc=19624 time=0.005
+Called arity analysis [Domain.Types.Merchant]: alloc=21200 time=0.006
+Simplifier [Domain.Types.Merchant]: alloc=295502360 time=103.666
+Demand analysis [Domain.Types.Merchant]: alloc=77653832 time=17.886
+Worker Wrapper binds [Domain.Types.Merchant]: alloc=3489944 time=1.636
+Simplifier [Domain.Types.Merchant]: alloc=446900400 time=161.006
+Exitification transformation [Domain.Types.Merchant]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant]: alloc=79784408 time=22.849
+Common sub-expression [Domain.Types.Merchant]: alloc=20728 time=0.006
+Float inwards [Domain.Types.Merchant]: alloc=19624 time=0.004
+Simplifier [Domain.Types.Merchant]: alloc=347873920 time=125.339
+Demand analysis [Domain.Types.Merchant]: alloc=71278280 time=27.145
+CoreTidy [Domain.Types.Merchant]: alloc=40429080 time=11.809
+CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.040
+CodeGen [Domain.Types.Merchant]: alloc=567159752 time=183.535
+systool:as: alloc=103632 time=0.245
+CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.015
+CodeGen [Domain.Types.Merchant]: alloc=588986968 time=170.302
+systool:as: alloc=106504 time=0.266

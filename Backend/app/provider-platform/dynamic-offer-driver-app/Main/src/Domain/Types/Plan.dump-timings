@@ -1,0 +1,40 @@
+Parser [Domain.Types.Plan]: alloc=3617632 time=0.699
+Simplify [expr]: alloc=34464 time=0.030
+CorePrep [expr]: alloc=22952 time=0.018
+ByteCodeGen [Ghci1]: alloc=94056 time=0.051
+Simplify [expr]: alloc=34464 time=0.014
+CorePrep [expr]: alloc=22952 time=0.013
+ByteCodeGen [Ghci1]: alloc=94056 time=0.053
+Simplify [expr]: alloc=34464 time=0.012
+CorePrep [expr]: alloc=22952 time=0.011
+ByteCodeGen [Ghci1]: alloc=94056 time=0.032
+Simplify [expr]: alloc=34464 time=0.012
+CorePrep [expr]: alloc=22952 time=0.023
+ByteCodeGen [Ghci1]: alloc=94056 time=0.031
+Renamer/typechecker [Domain.Types.Plan]: alloc=313203336 time=94.944
+Desugar [Domain.Types.Plan]: alloc=176364376 time=37.713
+Simplifier [Domain.Types.Plan]: alloc=487652776 time=177.387
+Specialise [Domain.Types.Plan]: alloc=87626144 time=18.260
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Plan]: alloc=81449496 time=26.370
+Simplifier [Domain.Types.Plan]: alloc=664952256 time=263.379
+Simplifier [Domain.Types.Plan]: alloc=591733056 time=226.801
+Simplifier [Domain.Types.Plan]: alloc=550105520 time=207.535
+Float inwards [Domain.Types.Plan]: alloc=18424 time=0.004
+Called arity analysis [Domain.Types.Plan]: alloc=20000 time=0.005
+Simplifier [Domain.Types.Plan]: alloc=461703368 time=159.816
+Demand analysis [Domain.Types.Plan]: alloc=115573936 time=28.022
+Worker Wrapper binds [Domain.Types.Plan]: alloc=8011584 time=2.812
+Simplifier [Domain.Types.Plan]: alloc=692447272 time=258.410
+Exitification transformation [Domain.Types.Plan]: alloc=20928 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Plan]: alloc=104742968 time=32.952
+Common sub-expression [Domain.Types.Plan]: alloc=19528 time=0.006
+Float inwards [Domain.Types.Plan]: alloc=18424 time=0.004
+Simplifier [Domain.Types.Plan]: alloc=474732288 time=190.012
+Demand analysis [Domain.Types.Plan]: alloc=95620296 time=23.412
+CoreTidy [Domain.Types.Plan]: alloc=52179576 time=19.872
+CorePrep [Domain.Types.Plan]: alloc=19400 time=0.013
+CodeGen [Domain.Types.Plan]: alloc=794785432 time=283.107
+systool:as: alloc=103384 time=0.316
+CorePrep [Domain.Types.Plan]: alloc=19400 time=0.037
+CodeGen [Domain.Types.Plan]: alloc=826355624 time=252.185
+systool:as: alloc=106264 time=0.287

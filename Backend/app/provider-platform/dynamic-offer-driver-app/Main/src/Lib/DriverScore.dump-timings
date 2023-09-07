@@ -1,0 +1,28 @@
+Parser [Lib.DriverScore]: alloc=6999784 time=1.449
+Renamer/typechecker [Lib.DriverScore]: alloc=1161856144 time=215.239
+Desugar [Lib.DriverScore]: alloc=2067789792 time=315.156
+Simplifier [Lib.DriverScore]: alloc=56094432 time=15.131
+Specialise [Lib.DriverScore]: alloc=2896584 time=0.670
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.DriverScore]: alloc=13317448 time=3.617
+Simplifier [Lib.DriverScore]: alloc=44601032 time=12.273
+Simplifier [Lib.DriverScore]: alloc=40613208 time=11.316
+Simplifier [Lib.DriverScore]: alloc=59293544 time=16.917
+Float inwards [Lib.DriverScore]: alloc=17832 time=0.004
+Called arity analysis [Lib.DriverScore]: alloc=19408 time=0.006
+Simplifier [Lib.DriverScore]: alloc=41982888 time=11.000
+Demand analysis [Lib.DriverScore]: alloc=23557104 time=5.368
+Worker Wrapper binds [Lib.DriverScore]: alloc=894928 time=0.384
+Simplifier [Lib.DriverScore]: alloc=67804024 time=19.497
+Exitification transformation [Lib.DriverScore]: alloc=20336 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.DriverScore]: alloc=20260504 time=5.877
+Common sub-expression [Lib.DriverScore]: alloc=18936 time=0.006
+Float inwards [Lib.DriverScore]: alloc=17832 time=0.004
+Simplifier [Lib.DriverScore]: alloc=41496816 time=12.292
+Demand analysis [Lib.DriverScore]: alloc=27755008 time=6.581
+CoreTidy [Lib.DriverScore]: alloc=5274984 time=1.970
+CorePrep [Lib.DriverScore]: alloc=18792 time=0.008
+CodeGen [Lib.DriverScore]: alloc=224338680 time=66.969
+systool:as: alloc=103224 time=0.201
+CorePrep [Lib.DriverScore]: alloc=18792 time=0.015
+CodeGen [Lib.DriverScore]: alloc=236136568 time=60.835
+systool:as: alloc=106104 time=0.189

@@ -1,0 +1,31 @@
+Parser [Domain.Types.Message.Message]: alloc=1484232 time=0.360
+Simplify [expr]: alloc=34464 time=0.032
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.063
+Renamer/typechecker [Domain.Types.Message.Message]: alloc=155896904 time=46.662
+Desugar [Domain.Types.Message.Message]: alloc=52451896 time=12.998
+Simplifier [Domain.Types.Message.Message]: alloc=194535984 time=77.472
+Specialise [Domain.Types.Message.Message]: alloc=26915224 time=7.519
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Message.Message]: alloc=48892264 time=16.835
+Simplifier [Domain.Types.Message.Message]: alloc=342042992 time=141.268
+Simplifier [Domain.Types.Message.Message]: alloc=307492384 time=121.941
+Simplifier [Domain.Types.Message.Message]: alloc=274748432 time=100.184
+Float inwards [Domain.Types.Message.Message]: alloc=21704 time=0.006
+Called arity analysis [Domain.Types.Message.Message]: alloc=23280 time=0.020
+Simplifier [Domain.Types.Message.Message]: alloc=212627440 time=92.629
+Demand analysis [Domain.Types.Message.Message]: alloc=51805128 time=12.804
+Worker Wrapper binds [Domain.Types.Message.Message]: alloc=2841680 time=1.329
+Simplifier [Domain.Types.Message.Message]: alloc=334603736 time=132.123
+Exitification transformation [Domain.Types.Message.Message]: alloc=24224 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Message.Message]: alloc=52598864 time=17.125
+Common sub-expression [Domain.Types.Message.Message]: alloc=22808 time=0.007
+Float inwards [Domain.Types.Message.Message]: alloc=21704 time=0.005
+Simplifier [Domain.Types.Message.Message]: alloc=249539344 time=101.035
+Demand analysis [Domain.Types.Message.Message]: alloc=46046760 time=12.143
+CoreTidy [Domain.Types.Message.Message]: alloc=25714416 time=18.976
+CorePrep [Domain.Types.Message.Message]: alloc=22680 time=0.026
+CodeGen [Domain.Types.Message.Message]: alloc=359109040 time=126.085
+systool:as: alloc=104096 time=0.247
+CorePrep [Domain.Types.Message.Message]: alloc=22680 time=0.017
+CodeGen [Domain.Types.Message.Message]: alloc=373647896 time=119.623
+systool:as: alloc=106968 time=0.262

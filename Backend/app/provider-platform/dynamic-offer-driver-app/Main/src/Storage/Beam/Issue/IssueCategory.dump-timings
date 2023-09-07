@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Issue.IssueCategory]: alloc=1100688 time=0.338
+Simplify [expr]: alloc=184136 time=0.079
+CorePrep [expr]: alloc=74024 time=0.081
+ByteCodeGen [Ghci1]: alloc=379864 time=0.100
+Simplify [expr]: alloc=47024 time=0.042
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.055
+Renamer/typechecker [Storage.Beam.Issue.IssueCategory]: alloc=90915032 time=30.943
+Desugar [Storage.Beam.Issue.IssueCategory]: alloc=18341928 time=5.148
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=108017128 time=34.145
+Specialise [Storage.Beam.Issue.IssueCategory]: alloc=8960472 time=2.402
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Issue.IssueCategory]: alloc=36946896 time=11.288
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=173981024 time=55.531
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=140879304 time=53.431
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=128670712 time=47.697
+Float inwards [Storage.Beam.Issue.IssueCategory]: alloc=22888 time=0.005
+Called arity analysis [Storage.Beam.Issue.IssueCategory]: alloc=24464 time=0.006
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=98560416 time=29.365
+Demand analysis [Storage.Beam.Issue.IssueCategory]: alloc=22226712 time=5.723
+Worker Wrapper binds [Storage.Beam.Issue.IssueCategory]: alloc=1219648 time=0.667
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=148783552 time=63.248
+Exitification transformation [Storage.Beam.Issue.IssueCategory]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Issue.IssueCategory]: alloc=19859464 time=6.532
+Common sub-expression [Storage.Beam.Issue.IssueCategory]: alloc=23992 time=0.006
+Float inwards [Storage.Beam.Issue.IssueCategory]: alloc=22888 time=0.004
+Simplifier [Storage.Beam.Issue.IssueCategory]: alloc=108179496 time=41.198
+Demand analysis [Storage.Beam.Issue.IssueCategory]: alloc=19281456 time=5.154
+CoreTidy [Storage.Beam.Issue.IssueCategory]: alloc=9626720 time=3.986
+CorePrep [Storage.Beam.Issue.IssueCategory]: alloc=23880 time=0.037
+CodeGen [Storage.Beam.Issue.IssueCategory]: alloc=157868592 time=49.724
+systool:as: alloc=104328 time=0.177
+CorePrep [Storage.Beam.Issue.IssueCategory]: alloc=23880 time=0.015
+CodeGen [Storage.Beam.Issue.IssueCategory]: alloc=165091296 time=51.308
+systool:as: alloc=107232 time=0.200

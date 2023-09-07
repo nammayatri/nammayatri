@@ -1,0 +1,28 @@
+Parser [Lib.DriverScore.Types]: alloc=1244448 time=0.316
+Renamer/typechecker [Lib.DriverScore.Types]: alloc=55165632 time=17.703
+Desugar [Lib.DriverScore.Types]: alloc=5998568 time=2.480
+Simplifier [Lib.DriverScore.Types]: alloc=45995920 time=12.302
+Specialise [Lib.DriverScore.Types]: alloc=1372344 time=0.310
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.DriverScore.Types]: alloc=7423888 time=2.036
+Simplifier [Lib.DriverScore.Types]: alloc=20181272 time=5.418
+Simplifier [Lib.DriverScore.Types]: alloc=26928920 time=7.122
+Simplifier [Lib.DriverScore.Types]: alloc=5407528 time=1.436
+Float inwards [Lib.DriverScore.Types]: alloc=19624 time=0.004
+Called arity analysis [Lib.DriverScore.Types]: alloc=21200 time=0.010
+Simplifier [Lib.DriverScore.Types]: alloc=7186760 time=1.815
+Demand analysis [Lib.DriverScore.Types]: alloc=5067872 time=1.089
+Worker Wrapper binds [Lib.DriverScore.Types]: alloc=330272 time=0.138
+Simplifier [Lib.DriverScore.Types]: alloc=35290896 time=9.182
+Exitification transformation [Lib.DriverScore.Types]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.DriverScore.Types]: alloc=4892712 time=1.355
+Common sub-expression [Lib.DriverScore.Types]: alloc=20728 time=0.005
+Float inwards [Lib.DriverScore.Types]: alloc=19624 time=0.004
+Simplifier [Lib.DriverScore.Types]: alloc=18689640 time=5.111
+Demand analysis [Lib.DriverScore.Types]: alloc=5002712 time=1.107
+CoreTidy [Lib.DriverScore.Types]: alloc=3427432 time=1.107
+CorePrep [Lib.DriverScore.Types]: alloc=20584 time=0.009
+CodeGen [Lib.DriverScore.Types]: alloc=111623688 time=33.490
+systool:as: alloc=103656 time=0.201
+CorePrep [Lib.DriverScore.Types]: alloc=20584 time=0.013
+CodeGen [Lib.DriverScore.Types]: alloc=115405816 time=33.949
+systool:as: alloc=106528 time=0.185

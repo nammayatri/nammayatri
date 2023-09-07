@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Issue.Comment]: alloc=1217016 time=0.370
+Simplify [expr]: alloc=184136 time=0.084
+CorePrep [expr]: alloc=74104 time=0.070
+ByteCodeGen [Ghci1]: alloc=379864 time=0.099
+Simplify [expr]: alloc=47024 time=0.043
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.042
+Renamer/typechecker [Storage.Beam.Issue.Comment]: alloc=120733144 time=36.663
+Desugar [Storage.Beam.Issue.Comment]: alloc=20402472 time=5.627
+Simplifier [Storage.Beam.Issue.Comment]: alloc=164565720 time=50.294
+Specialise [Storage.Beam.Issue.Comment]: alloc=11283072 time=3.352
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Issue.Comment]: alloc=44616256 time=13.897
+Simplifier [Storage.Beam.Issue.Comment]: alloc=258646584 time=80.131
+Simplifier [Storage.Beam.Issue.Comment]: alloc=209183632 time=82.642
+Simplifier [Storage.Beam.Issue.Comment]: alloc=190812552 time=66.486
+Float inwards [Storage.Beam.Issue.Comment]: alloc=21096 time=0.005
+Called arity analysis [Storage.Beam.Issue.Comment]: alloc=22672 time=0.006
+Simplifier [Storage.Beam.Issue.Comment]: alloc=147776160 time=50.489
+Demand analysis [Storage.Beam.Issue.Comment]: alloc=29974208 time=7.966
+Worker Wrapper binds [Storage.Beam.Issue.Comment]: alloc=1377832 time=0.777
+Simplifier [Storage.Beam.Issue.Comment]: alloc=210345264 time=67.993
+Exitification transformation [Storage.Beam.Issue.Comment]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Issue.Comment]: alloc=26353472 time=8.736
+Common sub-expression [Storage.Beam.Issue.Comment]: alloc=22200 time=0.006
+Float inwards [Storage.Beam.Issue.Comment]: alloc=21096 time=0.004
+Simplifier [Storage.Beam.Issue.Comment]: alloc=159867584 time=60.907
+Demand analysis [Storage.Beam.Issue.Comment]: alloc=27594480 time=7.482
+CoreTidy [Storage.Beam.Issue.Comment]: alloc=15226888 time=6.076
+CorePrep [Storage.Beam.Issue.Comment]: alloc=22088 time=0.038
+CodeGen [Storage.Beam.Issue.Comment]: alloc=209937152 time=64.207
+systool:as: alloc=103960 time=0.225
+CorePrep [Storage.Beam.Issue.Comment]: alloc=22088 time=0.015
+CodeGen [Storage.Beam.Issue.Comment]: alloc=220010032 time=65.982
+systool:as: alloc=106840 time=0.247

@@ -1,0 +1,28 @@
+Parser [Domain.Types.Maps.PlaceNameCache]: alloc=1492984 time=0.422
+Renamer/typechecker [Domain.Types.Maps.PlaceNameCache]: alloc=171590048 time=49.288
+Desugar [Domain.Types.Maps.PlaceNameCache]: alloc=46665584 time=11.646
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=190668408 time=61.411
+Specialise [Domain.Types.Maps.PlaceNameCache]: alloc=18396104 time=4.493
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Maps.PlaceNameCache]: alloc=37946480 time=13.215
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=289340576 time=105.561
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=270119512 time=105.078
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=228630064 time=94.751
+Float inwards [Domain.Types.Maps.PlaceNameCache]: alloc=22888 time=0.005
+Called arity analysis [Domain.Types.Maps.PlaceNameCache]: alloc=24464 time=0.006
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=171961664 time=52.546
+Demand analysis [Domain.Types.Maps.PlaceNameCache]: alloc=41525000 time=29.719
+Worker Wrapper binds [Domain.Types.Maps.PlaceNameCache]: alloc=2570512 time=0.670
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=212699488 time=61.965
+Exitification transformation [Domain.Types.Maps.PlaceNameCache]: alloc=25408 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Maps.PlaceNameCache]: alloc=41622728 time=13.482
+Common sub-expression [Domain.Types.Maps.PlaceNameCache]: alloc=23992 time=0.006
+Float inwards [Domain.Types.Maps.PlaceNameCache]: alloc=22888 time=0.004
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=137883632 time=63.027
+Demand analysis [Domain.Types.Maps.PlaceNameCache]: alloc=34428256 time=8.465
+CoreTidy [Domain.Types.Maps.PlaceNameCache]: alloc=19529152 time=17.517
+CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.013
+CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=265906728 time=82.172
+systool:as: alloc=104320 time=0.231
+CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.042
+CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=277161904 time=86.909
+systool:as: alloc=107200 time=0.197

@@ -1,0 +1,28 @@
+Parser [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=4412592 time=0.978
+Renamer/typechecker [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=963066040 time=170.040
+Desugar [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=2923263968 time=427.702
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=48483816 time=12.271
+Specialise [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=2755448 time=0.578
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=10139256 time=2.582
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=21416528 time=5.521
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=21855248 time=5.154
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=95427304 time=27.375
+Float inwards [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=29160 time=0.006
+Called arity analysis [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=30736 time=0.007
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=98370408 time=27.166
+Demand analysis [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=40477432 time=10.232
+Worker Wrapper binds [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=1570800 time=0.673
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=98146568 time=29.567
+Exitification transformation [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=31664 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=31978424 time=9.338
+Common sub-expression [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=30264 time=0.007
+Float inwards [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=29160 time=0.006
+Simplifier [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=58645752 time=17.493
+Demand analysis [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=56843088 time=13.344
+CoreTidy [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=8416128 time=3.033
+CorePrep [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=30120 time=0.011
+CodeGen [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=273903528 time=80.507
+systool:as: alloc=105768 time=0.219
+CorePrep [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=30120 time=0.030
+CodeGen [SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee]: alloc=286443384 time=70.448
+systool:as: alloc=108616 time=0.193

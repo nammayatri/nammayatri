@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.DriverOnboarding.Referral]: alloc=1039432 time=0.391
+Renamer/typechecker [Domain.Action.UI.DriverOnboarding.Referral]: alloc=75587232 time=23.874
+Desugar [Domain.Action.UI.DriverOnboarding.Referral]: alloc=1269880 time=1.280
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=110054352 time=35.717
+Specialise [Domain.Action.UI.DriverOnboarding.Referral]: alloc=5916048 time=2.676
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverOnboarding.Referral]: alloc=13722800 time=5.371
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=181452112 time=58.609
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=115446256 time=37.598
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=117043160 time=37.304
+Float inwards [Domain.Action.UI.DriverOnboarding.Referral]: alloc=25864 time=0.005
+Called arity analysis [Domain.Action.UI.DriverOnboarding.Referral]: alloc=27440 time=0.007
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=88553488 time=28.505
+Demand analysis [Domain.Action.UI.DriverOnboarding.Referral]: alloc=27822160 time=5.992
+Worker Wrapper binds [Domain.Action.UI.DriverOnboarding.Referral]: alloc=610408 time=0.377
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=180821704 time=55.611
+Exitification transformation [Domain.Action.UI.DriverOnboarding.Referral]: alloc=28384 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverOnboarding.Referral]: alloc=16565104 time=5.280
+Common sub-expression [Domain.Action.UI.DriverOnboarding.Referral]: alloc=26968 time=0.006
+Float inwards [Domain.Action.UI.DriverOnboarding.Referral]: alloc=25864 time=0.005
+Simplifier [Domain.Action.UI.DriverOnboarding.Referral]: alloc=82108632 time=25.444
+Demand analysis [Domain.Action.UI.DriverOnboarding.Referral]: alloc=26845864 time=5.879
+CoreTidy [Domain.Action.UI.DriverOnboarding.Referral]: alloc=9719872 time=3.579
+CorePrep [Domain.Action.UI.DriverOnboarding.Referral]: alloc=26856 time=0.010
+CodeGen [Domain.Action.UI.DriverOnboarding.Referral]: alloc=119231680 time=36.808
+systool:as: alloc=105016 time=0.212
+CorePrep [Domain.Action.UI.DriverOnboarding.Referral]: alloc=26856 time=0.013
+CodeGen [Domain.Action.UI.DriverOnboarding.Referral]: alloc=122672160 time=32.548
+systool:as: alloc=107896 time=0.184

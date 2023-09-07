@@ -1,0 +1,28 @@
+Parser [API.UI.Transporter]: alloc=1025856 time=0.295
+Renamer/typechecker [API.UI.Transporter]: alloc=53440000 time=16.887
+Desugar [API.UI.Transporter]: alloc=382160 time=0.942
+Simplifier [API.UI.Transporter]: alloc=18658600 time=4.369
+Specialise [API.UI.Transporter]: alloc=2477880 time=0.529
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Transporter]: alloc=7556904 time=1.677
+Simplifier [API.UI.Transporter]: alloc=16997592 time=3.106
+Simplifier [API.UI.Transporter]: alloc=8326048 time=1.578
+Simplifier [API.UI.Transporter]: alloc=8326048 time=1.502
+Float inwards [API.UI.Transporter]: alloc=18712 time=0.004
+Called arity analysis [API.UI.Transporter]: alloc=20288 time=0.032
+Simplifier [API.UI.Transporter]: alloc=9971208 time=1.787
+Demand analysis [API.UI.Transporter]: alloc=19608824 time=3.110
+Worker Wrapper binds [API.UI.Transporter]: alloc=68256 time=0.082
+Simplifier [API.UI.Transporter]: alloc=17241840 time=2.848
+Exitification transformation [API.UI.Transporter]: alloc=21232 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Transporter]: alloc=7557048 time=1.758
+Common sub-expression [API.UI.Transporter]: alloc=19816 time=0.005
+Float inwards [API.UI.Transporter]: alloc=18712 time=0.004
+Simplifier [API.UI.Transporter]: alloc=39633480 time=6.975
+Demand analysis [API.UI.Transporter]: alloc=19570496 time=3.139
+CoreTidy [API.UI.Transporter]: alloc=6540176 time=2.016
+CorePrep [API.UI.Transporter]: alloc=19704 time=0.012
+CodeGen [API.UI.Transporter]: alloc=74138552 time=17.383
+systool:as: alloc=103424 time=0.217
+CorePrep [API.UI.Transporter]: alloc=19704 time=0.041
+CodeGen [API.UI.Transporter]: alloc=75150952 time=17.236
+systool:as: alloc=106328 time=0.255

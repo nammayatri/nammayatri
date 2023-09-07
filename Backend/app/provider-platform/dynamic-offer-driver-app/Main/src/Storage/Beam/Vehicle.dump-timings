@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Vehicle]: alloc=1977312 time=0.439
+Simplify [expr]: alloc=184216 time=0.076
+CorePrep [expr]: alloc=74144 time=0.055
+ByteCodeGen [Ghci1]: alloc=379904 time=0.146
+Simplify [expr]: alloc=47024 time=0.032
+CorePrep [expr]: alloc=26752 time=0.029
+ByteCodeGen [Ghci1]: alloc=131880 time=0.048
+Renamer/typechecker [Storage.Beam.Vehicle]: alloc=307871480 time=76.077
+Desugar [Storage.Beam.Vehicle]: alloc=32984512 time=8.841
+Simplifier [Storage.Beam.Vehicle]: alloc=577803080 time=163.520
+Specialise [Storage.Beam.Vehicle]: alloc=37309768 time=15.760
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Vehicle]: alloc=101447224 time=31.459
+Simplifier [Storage.Beam.Vehicle]: alloc=1057399440 time=353.765
+Simplifier [Storage.Beam.Vehicle]: alloc=1038219952 time=344.813
+Simplifier [Storage.Beam.Vehicle]: alloc=930446976 time=301.591
+Float inwards [Storage.Beam.Vehicle]: alloc=19320 time=0.005
+Called arity analysis [Storage.Beam.Vehicle]: alloc=20896 time=0.005
+Simplifier [Storage.Beam.Vehicle]: alloc=692015664 time=219.553
+Demand analysis [Storage.Beam.Vehicle]: alloc=120300920 time=29.354
+Worker Wrapper binds [Storage.Beam.Vehicle]: alloc=4415448 time=3.093
+Simplifier [Storage.Beam.Vehicle]: alloc=966357016 time=296.602
+Exitification transformation [Storage.Beam.Vehicle]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Vehicle]: alloc=101596296 time=31.932
+Common sub-expression [Storage.Beam.Vehicle]: alloc=20424 time=0.033
+Float inwards [Storage.Beam.Vehicle]: alloc=19320 time=0.004
+Simplifier [Storage.Beam.Vehicle]: alloc=654753456 time=223.007
+Demand analysis [Storage.Beam.Vehicle]: alloc=74853272 time=29.627
+CoreTidy [Storage.Beam.Vehicle]: alloc=116254344 time=42.377
+CorePrep [Storage.Beam.Vehicle]: alloc=20296 time=0.016
+CodeGen [Storage.Beam.Vehicle]: alloc=702955616 time=288.197
+systool:as: alloc=103568 time=0.261
+CorePrep [Storage.Beam.Vehicle]: alloc=20296 time=0.015
+CodeGen [Storage.Beam.Vehicle]: alloc=736525800 time=207.031
+systool:as: alloc=106440 time=0.265

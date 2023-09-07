@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Instances.Person]: alloc=2805368 time=0.527
+Renamer/typechecker [Storage.Queries.Instances.Person]: alloc=27609272 time=9.677
+Desugar [Storage.Queries.Instances.Person]: alloc=1439232 time=1.146
+Simplifier [Storage.Queries.Instances.Person]: alloc=8346392 time=2.188
+Specialise [Storage.Queries.Instances.Person]: alloc=285360 time=0.120
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Instances.Person]: alloc=1765504 time=0.463
+Simplifier [Storage.Queries.Instances.Person]: alloc=5229280 time=1.474
+Simplifier [Storage.Queries.Instances.Person]: alloc=1634776 time=0.436
+Simplifier [Storage.Queries.Instances.Person]: alloc=1634776 time=0.389
+Float inwards [Storage.Queries.Instances.Person]: alloc=22888 time=0.005
+Called arity analysis [Storage.Queries.Instances.Person]: alloc=24464 time=0.006
+Simplifier [Storage.Queries.Instances.Person]: alloc=3800240 time=0.905
+Demand analysis [Storage.Queries.Instances.Person]: alloc=2341256 time=0.427
+Worker Wrapper binds [Storage.Queries.Instances.Person]: alloc=579672 time=0.116
+Simplifier [Storage.Queries.Instances.Person]: alloc=6999888 time=1.820
+Exitification transformation [Storage.Queries.Instances.Person]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Instances.Person]: alloc=1869856 time=0.520
+Common sub-expression [Storage.Queries.Instances.Person]: alloc=23992 time=0.005
+Float inwards [Storage.Queries.Instances.Person]: alloc=22888 time=0.004
+Simplifier [Storage.Queries.Instances.Person]: alloc=4314016 time=1.154
+Demand analysis [Storage.Queries.Instances.Person]: alloc=2383616 time=0.444
+CoreTidy [Storage.Queries.Instances.Person]: alloc=1215256 time=0.395
+CorePrep [Storage.Queries.Instances.Person]: alloc=23880 time=0.010
+CodeGen [Storage.Queries.Instances.Person]: alloc=25074744 time=6.715
+systool:as: alloc=104368 time=0.212
+CorePrep [Storage.Queries.Instances.Person]: alloc=23880 time=0.016
+CodeGen [Storage.Queries.Instances.Person]: alloc=26300616 time=7.149
+systool:as: alloc=107248 time=0.175

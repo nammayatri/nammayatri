@@ -1,0 +1,28 @@
+Parser [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=1140128 time=0.311
+Renamer/typechecker [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=48374528 time=16.353
+Desugar [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=3555176 time=1.746
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=22250296 time=7.611
+Specialise [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=3308352 time=1.049
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=5438496 time=1.698
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=120514192 time=38.225
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=37132336 time=12.030
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=36347896 time=11.262
+Float inwards [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=32136 time=0.006
+Called arity analysis [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=33712 time=0.007
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=20664216 time=6.198
+Demand analysis [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=5706568 time=2.156
+Worker Wrapper binds [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=375280 time=0.236
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=39990032 time=12.451
+Exitification transformation [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=34640 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=5904056 time=2.198
+Common sub-expression [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=33240 time=0.005
+Float inwards [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=32136 time=0.005
+Simplifier [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=44324512 time=14.273
+Demand analysis [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=5304824 time=1.918
+CoreTidy [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=4820648 time=2.014
+CorePrep [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=33096 time=0.011
+CodeGen [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=49727608 time=17.753
+systool:as: alloc=106288 time=0.225
+CorePrep [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=33096 time=0.016
+CodeGen [Storage.Queries.FareParameters.FareParametersProgressiveDetails]: alloc=53214672 time=18.248
+systool:as: alloc=109168 time=0.237

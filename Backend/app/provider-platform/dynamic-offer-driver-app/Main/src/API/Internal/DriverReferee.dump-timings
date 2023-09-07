@@ -1,0 +1,28 @@
+Parser [API.Internal.DriverReferee]: alloc=596600 time=0.269
+Renamer/typechecker [API.Internal.DriverReferee]: alloc=49782320 time=13.806
+Desugar [API.Internal.DriverReferee]: alloc=371392 time=0.918
+Simplifier [API.Internal.DriverReferee]: alloc=72892472 time=20.625
+Specialise [API.Internal.DriverReferee]: alloc=2043536 time=1.341
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Internal.DriverReferee]: alloc=8690816 time=3.382
+Simplifier [API.Internal.DriverReferee]: alloc=58097560 time=18.542
+Simplifier [API.Internal.DriverReferee]: alloc=9939968 time=2.707
+Simplifier [API.Internal.DriverReferee]: alloc=9939968 time=2.529
+Float inwards [API.Internal.DriverReferee]: alloc=21096 time=0.004
+Called arity analysis [API.Internal.DriverReferee]: alloc=22672 time=0.006
+Simplifier [API.Internal.DriverReferee]: alloc=23228584 time=7.296
+Demand analysis [API.Internal.DriverReferee]: alloc=20317480 time=3.562
+Worker Wrapper binds [API.Internal.DriverReferee]: alloc=157240 time=0.128
+Simplifier [API.Internal.DriverReferee]: alloc=133552328 time=51.474
+Exitification transformation [API.Internal.DriverReferee]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Internal.DriverReferee]: alloc=8706656 time=2.358
+Common sub-expression [API.Internal.DriverReferee]: alloc=22200 time=0.005
+Float inwards [API.Internal.DriverReferee]: alloc=21096 time=0.004
+Simplifier [API.Internal.DriverReferee]: alloc=29507024 time=6.807
+Demand analysis [API.Internal.DriverReferee]: alloc=21280304 time=3.763
+CoreTidy [API.Internal.DriverReferee]: alloc=10026752 time=2.354
+CorePrep [API.Internal.DriverReferee]: alloc=22088 time=0.037
+CodeGen [API.Internal.DriverReferee]: alloc=85656848 time=20.516
+systool:as: alloc=103960 time=0.197
+CorePrep [API.Internal.DriverReferee]: alloc=22088 time=0.014
+CodeGen [API.Internal.DriverReferee]: alloc=87339568 time=19.341
+systool:as: alloc=106816 time=0.174

@@ -1,0 +1,31 @@
+Parser [Storage.Beam.DriverLocation]: alloc=2589552 time=0.524
+Simplify [expr]: alloc=97336 time=0.053
+CorePrep [expr]: alloc=43528 time=0.027
+ByteCodeGen [Ghci1]: alloc=217456 time=0.101
+Renamer/typechecker [Storage.Beam.DriverLocation]: alloc=278264448 time=70.952
+Desugar [Storage.Beam.DriverLocation]: alloc=32248512 time=8.877
+Simplifier [Storage.Beam.DriverLocation]: alloc=275526960 time=81.408
+Specialise [Storage.Beam.DriverLocation]: alloc=17025248 time=5.661
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverLocation]: alloc=56162344 time=17.951
+Simplifier [Storage.Beam.DriverLocation]: alloc=413095432 time=126.809
+Simplifier [Storage.Beam.DriverLocation]: alloc=325159712 time=102.284
+Simplifier [Storage.Beam.DriverLocation]: alloc=301879344 time=126.444
+Float inwards [Storage.Beam.DriverLocation]: alloc=21416 time=0.005
+Called arity analysis [Storage.Beam.DriverLocation]: alloc=22992 time=0.005
+Simplifier [Storage.Beam.DriverLocation]: alloc=235304032 time=92.276
+Demand analysis [Storage.Beam.DriverLocation]: alloc=43589088 time=12.912
+Worker Wrapper binds [Storage.Beam.DriverLocation]: alloc=1675448 time=0.966
+Simplifier [Storage.Beam.DriverLocation]: alloc=330257504 time=110.873
+Exitification transformation [Storage.Beam.DriverLocation]: alloc=23904 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverLocation]: alloc=36067272 time=11.789
+Common sub-expression [Storage.Beam.DriverLocation]: alloc=22520 time=0.006
+Float inwards [Storage.Beam.DriverLocation]: alloc=21416 time=0.004
+Simplifier [Storage.Beam.DriverLocation]: alloc=176283296 time=51.389
+Demand analysis [Storage.Beam.DriverLocation]: alloc=40757656 time=11.441
+CoreTidy [Storage.Beam.DriverLocation]: alloc=29739624 time=10.259
+CorePrep [Storage.Beam.DriverLocation]: alloc=22376 time=0.017
+CodeGen [Storage.Beam.DriverLocation]: alloc=293727840 time=115.273
+systool:as: alloc=104032 time=0.253
+CorePrep [Storage.Beam.DriverLocation]: alloc=22376 time=0.034
+CodeGen [Storage.Beam.DriverLocation]: alloc=307960400 time=89.350
+systool:as: alloc=106880 time=0.238

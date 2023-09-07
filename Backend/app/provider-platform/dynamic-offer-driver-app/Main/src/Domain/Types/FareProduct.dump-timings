@@ -1,0 +1,34 @@
+Parser [Domain.Types.FareProduct]: alloc=1764304 time=0.437
+Simplify [expr]: alloc=34464 time=0.028
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.050
+Simplify [expr]: alloc=34464 time=0.014
+CorePrep [expr]: alloc=22952 time=0.013
+ByteCodeGen [Ghci1]: alloc=94056 time=0.035
+Renamer/typechecker [Domain.Types.FareProduct]: alloc=138768488 time=45.599
+Desugar [Domain.Types.FareProduct]: alloc=86675000 time=19.405
+Simplifier [Domain.Types.FareProduct]: alloc=180690040 time=60.236
+Specialise [Domain.Types.FareProduct]: alloc=18677624 time=4.620
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FareProduct]: alloc=29553120 time=10.073
+Simplifier [Domain.Types.FareProduct]: alloc=261459768 time=99.444
+Simplifier [Domain.Types.FareProduct]: alloc=230471432 time=86.270
+Simplifier [Domain.Types.FareProduct]: alloc=225851848 time=91.789
+Float inwards [Domain.Types.FareProduct]: alloc=20504 time=0.005
+Called arity analysis [Domain.Types.FareProduct]: alloc=22080 time=0.006
+Simplifier [Domain.Types.FareProduct]: alloc=177529480 time=71.872
+Demand analysis [Domain.Types.FareProduct]: alloc=44282584 time=10.687
+Worker Wrapper binds [Domain.Types.FareProduct]: alloc=3545832 time=1.271
+Simplifier [Domain.Types.FareProduct]: alloc=223655936 time=79.607
+Exitification transformation [Domain.Types.FareProduct]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FareProduct]: alloc=39666384 time=12.418
+Common sub-expression [Domain.Types.FareProduct]: alloc=21608 time=0.005
+Float inwards [Domain.Types.FareProduct]: alloc=20504 time=0.004
+Simplifier [Domain.Types.FareProduct]: alloc=194258808 time=76.743
+Demand analysis [Domain.Types.FareProduct]: alloc=36518048 time=8.970
+CoreTidy [Domain.Types.FareProduct]: alloc=20259656 time=7.679
+CorePrep [Domain.Types.FareProduct]: alloc=21496 time=0.014
+CodeGen [Domain.Types.FareProduct]: alloc=317998784 time=108.907
+systool:as: alloc=103808 time=0.233
+CorePrep [Domain.Types.FareProduct]: alloc=21496 time=0.016
+CodeGen [Domain.Types.FareProduct]: alloc=330890336 time=100.665
+systool:as: alloc=106688 time=0.286

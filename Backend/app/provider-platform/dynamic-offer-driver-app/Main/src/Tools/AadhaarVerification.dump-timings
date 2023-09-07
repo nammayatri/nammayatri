@@ -1,0 +1,28 @@
+Parser [Tools.AadhaarVerification]: alloc=1353008 time=0.355
+Renamer/typechecker [Tools.AadhaarVerification]: alloc=329453184 time=57.024
+Desugar [Tools.AadhaarVerification]: alloc=512397968 time=78.926
+Simplifier [Tools.AadhaarVerification]: alloc=13272936 time=4.653
+Specialise [Tools.AadhaarVerification]: alloc=845048 time=0.266
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.AadhaarVerification]: alloc=2986120 time=0.756
+Simplifier [Tools.AadhaarVerification]: alloc=5974944 time=1.602
+Simplifier [Tools.AadhaarVerification]: alloc=6393152 time=1.570
+Simplifier [Tools.AadhaarVerification]: alloc=19795352 time=5.494
+Float inwards [Tools.AadhaarVerification]: alloc=20808 time=0.005
+Called arity analysis [Tools.AadhaarVerification]: alloc=22384 time=0.005
+Simplifier [Tools.AadhaarVerification]: alloc=13513424 time=3.364
+Demand analysis [Tools.AadhaarVerification]: alloc=8038480 time=1.753
+Worker Wrapper binds [Tools.AadhaarVerification]: alloc=261624 time=0.145
+Simplifier [Tools.AadhaarVerification]: alloc=22383952 time=6.142
+Exitification transformation [Tools.AadhaarVerification]: alloc=23312 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.AadhaarVerification]: alloc=5948560 time=1.569
+Common sub-expression [Tools.AadhaarVerification]: alloc=21912 time=0.005
+Float inwards [Tools.AadhaarVerification]: alloc=20808 time=0.004
+Simplifier [Tools.AadhaarVerification]: alloc=14703312 time=3.988
+Demand analysis [Tools.AadhaarVerification]: alloc=10742384 time=2.167
+CoreTidy [Tools.AadhaarVerification]: alloc=1471880 time=0.717
+CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.010
+CodeGen [Tools.AadhaarVerification]: alloc=51436712 time=14.057
+systool:as: alloc=103840 time=0.205
+CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.015
+CodeGen [Tools.AadhaarVerification]: alloc=54309512 time=15.016
+systool:as: alloc=106720 time=0.175

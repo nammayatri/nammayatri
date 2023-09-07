@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=2123328 time=0.571
+Renamer/typechecker [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=290517208 time=83.359
+Desugar [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=8344192 time=2.475
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=157078672 time=46.173
+Specialise [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=3514464 time=1.425
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=9576240 time=2.627
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=111497600 time=31.635
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=71845592 time=22.927
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=67265824 time=21.261
+Float inwards [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=30040 time=0.006
+Called arity analysis [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=31616 time=0.007
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=50187576 time=15.321
+Demand analysis [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=13894408 time=3.718
+Worker Wrapper binds [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=810752 time=0.420
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=49621080 time=16.089
+Exitification transformation [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=32560 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=12813216 time=3.705
+Common sub-expression [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=31144 time=0.006
+Float inwards [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=30040 time=0.005
+Simplifier [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=36722072 time=12.323
+Demand analysis [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=7667056 time=1.946
+CoreTidy [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=5005416 time=1.742
+CorePrep [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=31032 time=0.037
+CodeGen [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=71578376 time=22.619
+systool:as: alloc=105888 time=0.189
+CorePrep [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=31032 time=0.015
+CodeGen [Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest]: alloc=77071336 time=23.832
+systool:as: alloc=108768 time=0.157

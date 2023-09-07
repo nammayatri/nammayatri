@@ -1,0 +1,31 @@
+Parser [Domain.Types.Merchant.LeaderBoardConfig]: alloc=697672 time=0.258
+Simplify [expr]: alloc=34464 time=0.020
+CorePrep [expr]: alloc=22952 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Merchant.LeaderBoardConfig]: alloc=93240616 time=27.033
+Desugar [Domain.Types.Merchant.LeaderBoardConfig]: alloc=44954112 time=10.298
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=121840936 time=40.399
+Specialise [Domain.Types.Merchant.LeaderBoardConfig]: alloc=12698216 time=3.105
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.LeaderBoardConfig]: alloc=24552376 time=8.134
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=195052880 time=76.063
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=167130304 time=54.054
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=149286216 time=48.625
+Float inwards [Domain.Types.Merchant.LeaderBoardConfig]: alloc=24984 time=0.005
+Called arity analysis [Domain.Types.Merchant.LeaderBoardConfig]: alloc=26560 time=0.006
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=115908952 time=55.588
+Demand analysis [Domain.Types.Merchant.LeaderBoardConfig]: alloc=25938000 time=6.146
+Worker Wrapper binds [Domain.Types.Merchant.LeaderBoardConfig]: alloc=1886176 time=0.766
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=144587264 time=42.154
+Exitification transformation [Domain.Types.Merchant.LeaderBoardConfig]: alloc=27488 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.LeaderBoardConfig]: alloc=25964008 time=8.663
+Common sub-expression [Domain.Types.Merchant.LeaderBoardConfig]: alloc=26088 time=0.007
+Float inwards [Domain.Types.Merchant.LeaderBoardConfig]: alloc=24984 time=0.004
+Simplifier [Domain.Types.Merchant.LeaderBoardConfig]: alloc=95902280 time=52.553
+Demand analysis [Domain.Types.Merchant.LeaderBoardConfig]: alloc=22360112 time=5.301
+CoreTidy [Domain.Types.Merchant.LeaderBoardConfig]: alloc=14066464 time=4.606
+CorePrep [Domain.Types.Merchant.LeaderBoardConfig]: alloc=25944 time=0.009
+CodeGen [Domain.Types.Merchant.LeaderBoardConfig]: alloc=164662736 time=52.420
+systool:as: alloc=104768 time=0.228
+CorePrep [Domain.Types.Merchant.LeaderBoardConfig]: alloc=25944 time=0.033
+CodeGen [Domain.Types.Merchant.LeaderBoardConfig]: alloc=172507784 time=55.723
+systool:as: alloc=107648 time=0.261

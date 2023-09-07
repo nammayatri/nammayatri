@@ -1,0 +1,28 @@
+Parser [API.UI.OrgAdmin]: alloc=845744 time=0.248
+Renamer/typechecker [API.UI.OrgAdmin]: alloc=72484896 time=21.713
+Desugar [API.UI.OrgAdmin]: alloc=390080 time=0.935
+Simplifier [API.UI.OrgAdmin]: alloc=75355616 time=21.025
+Specialise [API.UI.OrgAdmin]: alloc=2073992 time=1.415
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.OrgAdmin]: alloc=8828080 time=3.318
+Simplifier [API.UI.OrgAdmin]: alloc=58368168 time=18.096
+Simplifier [API.UI.OrgAdmin]: alloc=10072576 time=2.847
+Simplifier [API.UI.OrgAdmin]: alloc=10072576 time=2.626
+Float inwards [API.UI.OrgAdmin]: alloc=17832 time=0.004
+Called arity analysis [API.UI.OrgAdmin]: alloc=19408 time=0.006
+Simplifier [API.UI.OrgAdmin]: alloc=23698528 time=7.842
+Demand analysis [API.UI.OrgAdmin]: alloc=20452576 time=3.691
+Worker Wrapper binds [API.UI.OrgAdmin]: alloc=153664 time=0.144
+Simplifier [API.UI.OrgAdmin]: alloc=134236680 time=40.971
+Exitification transformation [API.UI.OrgAdmin]: alloc=20336 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.OrgAdmin]: alloc=8823768 time=3.018
+Common sub-expression [API.UI.OrgAdmin]: alloc=18936 time=0.005
+Float inwards [API.UI.OrgAdmin]: alloc=17832 time=0.004
+Simplifier [API.UI.OrgAdmin]: alloc=29638448 time=8.446
+Demand analysis [API.UI.OrgAdmin]: alloc=21308616 time=17.349
+CoreTidy [API.UI.OrgAdmin]: alloc=10026984 time=2.611
+CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.011
+CodeGen [API.UI.OrgAdmin]: alloc=85587144 time=19.844
+systool:as: alloc=103248 time=0.220
+CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.013
+CodeGen [API.UI.OrgAdmin]: alloc=87288384 time=19.699
+systool:as: alloc=106128 time=0.235

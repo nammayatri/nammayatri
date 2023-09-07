@@ -1,0 +1,28 @@
+Parser [Domain.Types.Estimate]: alloc=2207296 time=0.517
+Renamer/typechecker [Domain.Types.Estimate]: alloc=100196296 time=33.616
+Desugar [Domain.Types.Estimate]: alloc=49403568 time=11.825
+Simplifier [Domain.Types.Estimate]: alloc=122127248 time=39.058
+Specialise [Domain.Types.Estimate]: alloc=7524224 time=1.928
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Estimate]: alloc=24203544 time=7.842
+Simplifier [Domain.Types.Estimate]: alloc=184785824 time=57.897
+Simplifier [Domain.Types.Estimate]: alloc=183302504 time=58.702
+Simplifier [Domain.Types.Estimate]: alloc=168009080 time=55.572
+Float inwards [Domain.Types.Estimate]: alloc=19624 time=0.005
+Called arity analysis [Domain.Types.Estimate]: alloc=21200 time=0.006
+Simplifier [Domain.Types.Estimate]: alloc=124518664 time=67.527
+Demand analysis [Domain.Types.Estimate]: alloc=30442256 time=7.596
+Worker Wrapper binds [Domain.Types.Estimate]: alloc=2340872 time=0.848
+Simplifier [Domain.Types.Estimate]: alloc=184683440 time=81.115
+Exitification transformation [Domain.Types.Estimate]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Estimate]: alloc=31228704 time=9.439
+Common sub-expression [Domain.Types.Estimate]: alloc=20728 time=0.006
+Float inwards [Domain.Types.Estimate]: alloc=19624 time=0.004
+Simplifier [Domain.Types.Estimate]: alloc=117020072 time=46.506
+Demand analysis [Domain.Types.Estimate]: alloc=29192904 time=7.504
+CoreTidy [Domain.Types.Estimate]: alloc=17313944 time=6.292
+CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.012
+CodeGen [Domain.Types.Estimate]: alloc=259781184 time=82.594
+systool:as: alloc=103640 time=0.152
+CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.026
+CodeGen [Domain.Types.Estimate]: alloc=269351672 time=83.839
+systool:as: alloc=106512 time=0.182

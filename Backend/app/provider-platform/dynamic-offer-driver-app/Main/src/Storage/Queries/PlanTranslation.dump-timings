@@ -1,0 +1,28 @@
+Parser [Storage.Queries.PlanTranslation]: alloc=1152816 time=0.292
+Renamer/typechecker [Storage.Queries.PlanTranslation]: alloc=51529656 time=16.183
+Desugar [Storage.Queries.PlanTranslation]: alloc=3585088 time=1.596
+Simplifier [Storage.Queries.PlanTranslation]: alloc=25295176 time=8.508
+Specialise [Storage.Queries.PlanTranslation]: alloc=5222312 time=1.420
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.PlanTranslation]: alloc=7330672 time=2.064
+Simplifier [Storage.Queries.PlanTranslation]: alloc=184714912 time=54.561
+Simplifier [Storage.Queries.PlanTranslation]: alloc=50839032 time=15.738
+Simplifier [Storage.Queries.PlanTranslation]: alloc=49885368 time=15.285
+Float inwards [Storage.Queries.PlanTranslation]: alloc=22600 time=0.005
+Called arity analysis [Storage.Queries.PlanTranslation]: alloc=24176 time=0.006
+Simplifier [Storage.Queries.PlanTranslation]: alloc=28064744 time=8.446
+Demand analysis [Storage.Queries.PlanTranslation]: alloc=6901352 time=2.543
+Worker Wrapper binds [Storage.Queries.PlanTranslation]: alloc=426576 time=0.285
+Simplifier [Storage.Queries.PlanTranslation]: alloc=52987160 time=15.855
+Exitification transformation [Storage.Queries.PlanTranslation]: alloc=25104 time=0.008
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.PlanTranslation]: alloc=6832680 time=2.576
+Common sub-expression [Storage.Queries.PlanTranslation]: alloc=23704 time=0.005
+Float inwards [Storage.Queries.PlanTranslation]: alloc=22600 time=0.004
+Simplifier [Storage.Queries.PlanTranslation]: alloc=59262040 time=18.732
+Demand analysis [Storage.Queries.PlanTranslation]: alloc=6487544 time=2.567
+CoreTidy [Storage.Queries.PlanTranslation]: alloc=6069592 time=2.578
+CorePrep [Storage.Queries.PlanTranslation]: alloc=23560 time=0.024
+CodeGen [Storage.Queries.PlanTranslation]: alloc=58442616 time=19.117
+systool:as: alloc=104264 time=0.244
+CorePrep [Storage.Queries.PlanTranslation]: alloc=23560 time=0.029
+CodeGen [Storage.Queries.PlanTranslation]: alloc=62840288 time=20.670
+systool:as: alloc=107144 time=0.219

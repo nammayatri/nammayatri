@@ -1,0 +1,34 @@
+Parser [Storage.Beam.DriverStats]: alloc=1651968 time=0.389
+Simplify [expr]: alloc=97256 time=0.041
+CorePrep [expr]: alloc=43488 time=0.047
+ByteCodeGen [Ghci1]: alloc=217496 time=0.075
+Simplify [expr]: alloc=47024 time=0.027
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.058
+Renamer/typechecker [Storage.Beam.DriverStats]: alloc=219282048 time=57.272
+Desugar [Storage.Beam.DriverStats]: alloc=26979480 time=7.103
+Simplifier [Storage.Beam.DriverStats]: alloc=390219216 time=112.558
+Specialise [Storage.Beam.DriverStats]: alloc=22549464 time=8.612
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverStats]: alloc=73490904 time=23.512
+Simplifier [Storage.Beam.DriverStats]: alloc=764742096 time=247.580
+Simplifier [Storage.Beam.DriverStats]: alloc=676363240 time=236.425
+Simplifier [Storage.Beam.DriverStats]: alloc=619725776 time=228.655
+Float inwards [Storage.Beam.DriverStats]: alloc=20504 time=0.004
+Called arity analysis [Storage.Beam.DriverStats]: alloc=22080 time=0.006
+Simplifier [Storage.Beam.DriverStats]: alloc=466863232 time=157.501
+Demand analysis [Storage.Beam.DriverStats]: alloc=75985192 time=25.168
+Worker Wrapper binds [Storage.Beam.DriverStats]: alloc=2722008 time=1.448
+Simplifier [Storage.Beam.DriverStats]: alloc=641562968 time=222.235
+Exitification transformation [Storage.Beam.DriverStats]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverStats]: alloc=60089336 time=20.620
+Common sub-expression [Storage.Beam.DriverStats]: alloc=21608 time=0.007
+Float inwards [Storage.Beam.DriverStats]: alloc=20504 time=0.004
+Simplifier [Storage.Beam.DriverStats]: alloc=466219080 time=161.418
+Demand analysis [Storage.Beam.DriverStats]: alloc=58158360 time=21.741
+CoreTidy [Storage.Beam.DriverStats]: alloc=65485272 time=24.424
+CorePrep [Storage.Beam.DriverStats]: alloc=21496 time=0.029
+CodeGen [Storage.Beam.DriverStats]: alloc=426096824 time=179.578
+systool:as: alloc=103808 time=0.257
+CorePrep [Storage.Beam.DriverStats]: alloc=21496 time=0.030
+CodeGen [Storage.Beam.DriverStats]: alloc=446612232 time=131.012
+systool:as: alloc=106688 time=0.261

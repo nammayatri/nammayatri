@@ -1,0 +1,28 @@
+Parser [Beckn.ACL.Status]: alloc=772576 time=0.264
+Renamer/typechecker [Beckn.ACL.Status]: alloc=65335984 time=18.765
+Desugar [Beckn.ACL.Status]: alloc=5401000 time=1.875
+Simplifier [Beckn.ACL.Status]: alloc=6516440 time=2.135
+Specialise [Beckn.ACL.Status]: alloc=256408 time=0.112
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Status]: alloc=927456 time=0.333
+Simplifier [Beckn.ACL.Status]: alloc=2235016 time=0.773
+Simplifier [Beckn.ACL.Status]: alloc=2216240 time=0.703
+Simplifier [Beckn.ACL.Status]: alloc=983456 time=0.289
+Float inwards [Beckn.ACL.Status]: alloc=18120 time=0.004
+Called arity analysis [Beckn.ACL.Status]: alloc=19696 time=0.005
+Simplifier [Beckn.ACL.Status]: alloc=1354608 time=0.393
+Demand analysis [Beckn.ACL.Status]: alloc=1097704 time=0.296
+Worker Wrapper binds [Beckn.ACL.Status]: alloc=82192 time=0.041
+Simplifier [Beckn.ACL.Status]: alloc=1014576 time=0.323
+Exitification transformation [Beckn.ACL.Status]: alloc=20640 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Status]: alloc=928624 time=0.279
+Common sub-expression [Beckn.ACL.Status]: alloc=19224 time=0.004
+Float inwards [Beckn.ACL.Status]: alloc=18120 time=0.003
+Simplifier [Beckn.ACL.Status]: alloc=1509048 time=0.463
+Demand analysis [Beckn.ACL.Status]: alloc=1093000 time=0.255
+CoreTidy [Beckn.ACL.Status]: alloc=686072 time=0.260
+CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.009
+CodeGen [Beckn.ACL.Status]: alloc=12945456 time=4.343
+systool:as: alloc=103336 time=0.186
+CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.013
+CodeGen [Beckn.ACL.Status]: alloc=13607520 time=4.472
+systool:as: alloc=106192 time=0.126

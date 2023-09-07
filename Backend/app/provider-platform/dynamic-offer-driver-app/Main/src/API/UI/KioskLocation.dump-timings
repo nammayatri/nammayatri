@@ -1,0 +1,28 @@
+Parser [API.UI.KioskLocation]: alloc=655992 time=0.249
+Renamer/typechecker [API.UI.KioskLocation]: alloc=8815224 time=4.915
+Desugar [API.UI.KioskLocation]: alloc=315160 time=0.937
+Simplifier [API.UI.KioskLocation]: alloc=5408112 time=1.390
+Specialise [API.UI.KioskLocation]: alloc=226360 time=0.090
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.KioskLocation]: alloc=671240 time=0.195
+Simplifier [API.UI.KioskLocation]: alloc=811080 time=0.210
+Simplifier [API.UI.KioskLocation]: alloc=786872 time=0.181
+Simplifier [API.UI.KioskLocation]: alloc=786872 time=0.149
+Float inwards [API.UI.KioskLocation]: alloc=19320 time=0.004
+Called arity analysis [API.UI.KioskLocation]: alloc=20896 time=0.004
+Simplifier [API.UI.KioskLocation]: alloc=907312 time=0.268
+Demand analysis [API.UI.KioskLocation]: alloc=1933104 time=0.383
+Worker Wrapper binds [API.UI.KioskLocation]: alloc=28016 time=0.014
+Simplifier [API.UI.KioskLocation]: alloc=1571720 time=0.346
+Exitification transformation [API.UI.KioskLocation]: alloc=21840 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.KioskLocation]: alloc=676784 time=0.158
+Common sub-expression [API.UI.KioskLocation]: alloc=20424 time=0.004
+Float inwards [API.UI.KioskLocation]: alloc=19320 time=0.004
+Simplifier [API.UI.KioskLocation]: alloc=2019760 time=0.373
+Demand analysis [API.UI.KioskLocation]: alloc=1936968 time=0.302
+CoreTidy [API.UI.KioskLocation]: alloc=533368 time=0.141
+CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.007
+CodeGen [API.UI.KioskLocation]: alloc=7718176 time=2.089
+systool:as: alloc=103552 time=0.191
+CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.010
+CodeGen [API.UI.KioskLocation]: alloc=7887952 time=2.116
+systool:as: alloc=106424 time=0.159

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=1893280 time=0.447
+Simplify [expr]: alloc=183976 time=0.065
+CorePrep [expr]: alloc=73944 time=0.056
+ByteCodeGen [Ghci1]: alloc=379864 time=0.114
+Simplify [expr]: alloc=47024 time=0.030
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.065
+Renamer/typechecker [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=215352320 time=60.628
+Desugar [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=26327744 time=6.868
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=359994456 time=104.655
+Specialise [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=34151648 time=10.078
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=83094440 time=25.296
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=932185560 time=293.052
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=969767960 time=333.246
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=855464480 time=305.632
+Float inwards [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=34520 time=0.006
+Called arity analysis [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=36096 time=0.007
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=608454048 time=203.861
+Demand analysis [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=135916400 time=36.154
+Worker Wrapper binds [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=5026768 time=2.524
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=882446576 time=295.943
+Exitification transformation [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=37024 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=104101016 time=31.666
+Common sub-expression [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=35624 time=0.008
+Float inwards [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=34520 time=0.017
+Simplifier [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=526813528 time=175.917
+Demand analysis [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=65437352 time=21.219
+CoreTidy [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=63118432 time=24.700
+CorePrep [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=35480 time=0.030
+CodeGen [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=548458416 time=163.235
+systool:as: alloc=106840 time=0.214
+CorePrep [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=35480 time=0.029
+CodeGen [Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab]: alloc=573472976 time=166.459
+systool:as: alloc=109720 time=0.243

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.SearchTry]: alloc=2199936 time=0.523
+Simplify [expr]: alloc=183976 time=0.086
+CorePrep [expr]: alloc=73944 time=0.056
+ByteCodeGen [Ghci1]: alloc=379944 time=0.106
+Simplify [expr]: alloc=47024 time=0.045
+CorePrep [expr]: alloc=26752 time=0.031
+ByteCodeGen [Ghci1]: alloc=131880 time=0.055
+Renamer/typechecker [Storage.Beam.SearchTry]: alloc=313599904 time=89.702
+Desugar [Storage.Beam.SearchTry]: alloc=72778184 time=18.428
+Simplifier [Storage.Beam.SearchTry]: alloc=596905296 time=192.531
+Specialise [Storage.Beam.SearchTry]: alloc=31965176 time=14.938
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchTry]: alloc=91267936 time=31.598
+Simplifier [Storage.Beam.SearchTry]: alloc=871647800 time=332.116
+Simplifier [Storage.Beam.SearchTry]: alloc=744534008 time=262.070
+Simplifier [Storage.Beam.SearchTry]: alloc=690028056 time=239.780
+Float inwards [Storage.Beam.SearchTry]: alloc=19912 time=0.005
+Called arity analysis [Storage.Beam.SearchTry]: alloc=21488 time=0.006
+Simplifier [Storage.Beam.SearchTry]: alloc=535480360 time=189.225
+Demand analysis [Storage.Beam.SearchTry]: alloc=79975720 time=28.952
+Worker Wrapper binds [Storage.Beam.SearchTry]: alloc=3982688 time=2.693
+Simplifier [Storage.Beam.SearchTry]: alloc=754927736 time=267.860
+Exitification transformation [Storage.Beam.SearchTry]: alloc=22432 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchTry]: alloc=70174176 time=24.475
+Common sub-expression [Storage.Beam.SearchTry]: alloc=21016 time=0.006
+Float inwards [Storage.Beam.SearchTry]: alloc=19912 time=0.004
+Simplifier [Storage.Beam.SearchTry]: alloc=554969336 time=201.101
+Demand analysis [Storage.Beam.SearchTry]: alloc=68030888 time=26.777
+CoreTidy [Storage.Beam.SearchTry]: alloc=99658672 time=37.239
+CorePrep [Storage.Beam.SearchTry]: alloc=20888 time=0.015
+CodeGen [Storage.Beam.SearchTry]: alloc=604384672 time=261.807
+systool:as: alloc=103696 time=0.281
+CorePrep [Storage.Beam.SearchTry]: alloc=20888 time=0.022
+CodeGen [Storage.Beam.SearchTry]: alloc=633736592 time=192.170
+systool:as: alloc=106568 time=0.209

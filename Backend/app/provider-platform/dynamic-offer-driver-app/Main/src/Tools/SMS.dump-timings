@@ -1,0 +1,28 @@
+Parser [Tools.SMS]: alloc=3289776 time=0.769
+Renamer/typechecker [Tools.SMS]: alloc=787607448 time=139.066
+Desugar [Tools.SMS]: alloc=1126081328 time=166.424
+Simplifier [Tools.SMS]: alloc=32224176 time=8.770
+Specialise [Tools.SMS]: alloc=2654888 time=0.574
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.SMS]: alloc=8734280 time=2.172
+Simplifier [Tools.SMS]: alloc=34076928 time=8.670
+Simplifier [Tools.SMS]: alloc=21162848 time=5.422
+Simplifier [Tools.SMS]: alloc=67649240 time=19.123
+Float inwards [Tools.SMS]: alloc=16040 time=0.004
+Called arity analysis [Tools.SMS]: alloc=17616 time=0.005
+Simplifier [Tools.SMS]: alloc=45435784 time=11.659
+Demand analysis [Tools.SMS]: alloc=28149872 time=5.876
+Worker Wrapper binds [Tools.SMS]: alloc=764376 time=0.400
+Simplifier [Tools.SMS]: alloc=75657168 time=22.129
+Exitification transformation [Tools.SMS]: alloc=18544 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.SMS]: alloc=18854896 time=5.321
+Common sub-expression [Tools.SMS]: alloc=17144 time=0.005
+Float inwards [Tools.SMS]: alloc=16040 time=0.004
+Simplifier [Tools.SMS]: alloc=43963104 time=11.485
+Demand analysis [Tools.SMS]: alloc=25678376 time=4.965
+CoreTidy [Tools.SMS]: alloc=4422624 time=1.899
+CorePrep [Tools.SMS]: alloc=17016 time=0.009
+CodeGen [Tools.SMS]: alloc=154446544 time=40.119
+systool:as: alloc=102864 time=0.193
+CorePrep [Tools.SMS]: alloc=17016 time=0.013
+CodeGen [Tools.SMS]: alloc=161205704 time=40.886
+systool:as: alloc=105744 time=0.201

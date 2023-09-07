@@ -1,0 +1,37 @@
+Parser [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=3707784 time=0.843
+Simplify [expr]: alloc=34464 time=0.028
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.063
+Simplify [expr]: alloc=34464 time=0.029
+CorePrep [expr]: alloc=22952 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.062
+Simplify [expr]: alloc=34464 time=0.014
+CorePrep [expr]: alloc=22952 time=0.012
+ByteCodeGen [Ghci1]: alloc=94056 time=0.046
+Renamer/typechecker [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=410109088 time=117.955
+Desugar [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=131739272 time=28.725
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=255991936 time=91.825
+Specialise [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=26346128 time=5.804
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=42299472 time=14.325
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=336299176 time=124.771
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=323936976 time=137.313
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=296323208 time=114.049
+Float inwards [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=26184 time=0.005
+Called arity analysis [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=27760 time=0.006
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=229548128 time=83.924
+Demand analysis [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=55201128 time=13.282
+Worker Wrapper binds [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=5209656 time=1.705
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=394494624 time=148.355
+Exitification transformation [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=28672 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=57523568 time=18.209
+Common sub-expression [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=27288 time=0.007
+Float inwards [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=26184 time=0.017
+Simplifier [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=263939968 time=101.903
+Demand analysis [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=51921488 time=25.902
+CoreTidy [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=29723216 time=8.867
+CorePrep [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.026
+CodeGen [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=488867856 time=165.946
+systool:as: alloc=105040 time=0.319
+CorePrep [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.031
+CodeGen [Domain.Types.Merchant.MerchantPaymentMethod]: alloc=506557656 time=159.500
+systool:as: alloc=107888 time=0.323

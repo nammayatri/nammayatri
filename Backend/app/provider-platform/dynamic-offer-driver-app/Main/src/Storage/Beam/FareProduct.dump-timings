@@ -1,0 +1,34 @@
+Parser [Storage.Beam.FareProduct]: alloc=1360128 time=0.333
+Simplify [expr]: alloc=210944 time=0.066
+CorePrep [expr]: alloc=84040 time=0.043
+ByteCodeGen [Ghci1]: alloc=480528 time=0.111
+Simplify [expr]: alloc=47024 time=0.019
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.044
+Renamer/typechecker [Storage.Beam.FareProduct]: alloc=141857056 time=42.225
+Desugar [Storage.Beam.FareProduct]: alloc=21482288 time=6.106
+Simplifier [Storage.Beam.FareProduct]: alloc=202308280 time=61.415
+Specialise [Storage.Beam.FareProduct]: alloc=15826432 time=4.547
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FareProduct]: alloc=51443296 time=16.223
+Simplifier [Storage.Beam.FareProduct]: alloc=341570904 time=114.790
+Simplifier [Storage.Beam.FareProduct]: alloc=256353920 time=77.227
+Simplifier [Storage.Beam.FareProduct]: alloc=234824472 time=86.769
+Float inwards [Storage.Beam.FareProduct]: alloc=20504 time=0.005
+Called arity analysis [Storage.Beam.FareProduct]: alloc=22080 time=0.006
+Simplifier [Storage.Beam.FareProduct]: alloc=182921544 time=66.397
+Demand analysis [Storage.Beam.FareProduct]: alloc=35253576 time=9.911
+Worker Wrapper binds [Storage.Beam.FareProduct]: alloc=1477488 time=0.845
+Simplifier [Storage.Beam.FareProduct]: alloc=259745448 time=86.012
+Exitification transformation [Storage.Beam.FareProduct]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FareProduct]: alloc=30541304 time=10.288
+Common sub-expression [Storage.Beam.FareProduct]: alloc=21608 time=0.033
+Float inwards [Storage.Beam.FareProduct]: alloc=20504 time=0.004
+Simplifier [Storage.Beam.FareProduct]: alloc=195484888 time=75.369
+Demand analysis [Storage.Beam.FareProduct]: alloc=32153056 time=8.969
+CoreTidy [Storage.Beam.FareProduct]: alloc=20230688 time=7.809
+CorePrep [Storage.Beam.FareProduct]: alloc=21496 time=0.040
+CodeGen [Storage.Beam.FareProduct]: alloc=242901720 time=73.724
+systool:as: alloc=103808 time=0.261
+CorePrep [Storage.Beam.FareProduct]: alloc=21496 time=0.020
+CodeGen [Storage.Beam.FareProduct]: alloc=254438568 time=76.603
+systool:as: alloc=106688 time=0.272

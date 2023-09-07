@@ -1,0 +1,28 @@
+Parser [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=1466664 time=0.368
+Renamer/typechecker [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=85564616 time=22.841
+Desugar [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=3813816 time=1.684
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=67640136 time=20.352
+Specialise [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=14105032 time=3.339
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=16041200 time=4.407
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=333073648 time=106.016
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=74410064 time=25.925
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=72067800 time=33.775
+Float inwards [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=27368 time=0.008
+Called arity analysis [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=28944 time=0.011
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=44793640 time=11.967
+Demand analysis [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=15548688 time=4.186
+Worker Wrapper binds [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=896648 time=0.528
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=75889280 time=23.166
+Exitification transformation [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=29872 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=17115656 time=5.578
+Common sub-expression [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=28472 time=0.019
+Float inwards [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=27368 time=0.005
+Simplifier [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=159205920 time=60.449
+Demand analysis [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=16047400 time=4.350
+CoreTidy [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=15409008 time=5.181
+CorePrep [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=28328 time=0.042
+CodeGen [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=140411344 time=43.487
+systool:as: alloc=105304 time=0.231
+CorePrep [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=28328 time=0.016
+CodeGen [Storage.Queries.SearchRequest.SearchReqLocation]: alloc=150857792 time=45.668
+systool:as: alloc=108208 time=0.248

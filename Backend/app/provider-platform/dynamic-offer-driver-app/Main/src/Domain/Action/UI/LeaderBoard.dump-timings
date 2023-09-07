@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.LeaderBoard]: alloc=5563584 time=1.174
+Renamer/typechecker [Domain.Action.UI.LeaderBoard]: alloc=1147136920 time=208.700
+Desugar [Domain.Action.UI.LeaderBoard]: alloc=4246898632 time=623.562
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=189604688 time=62.363
+Specialise [Domain.Action.UI.LeaderBoard]: alloc=20464744 time=4.957
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.LeaderBoard]: alloc=33781504 time=11.100
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=230024040 time=83.725
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=208433928 time=76.732
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=187648960 time=72.733
+Float inwards [Domain.Action.UI.LeaderBoard]: alloc=21704 time=0.004
+Called arity analysis [Domain.Action.UI.LeaderBoard]: alloc=23280 time=0.006
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=151625792 time=54.259
+Demand analysis [Domain.Action.UI.LeaderBoard]: alloc=36830384 time=9.048
+Worker Wrapper binds [Domain.Action.UI.LeaderBoard]: alloc=1655424 time=0.833
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=154772488 time=46.481
+Exitification transformation [Domain.Action.UI.LeaderBoard]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.LeaderBoard]: alloc=36827352 time=11.383
+Common sub-expression [Domain.Action.UI.LeaderBoard]: alloc=22808 time=0.006
+Float inwards [Domain.Action.UI.LeaderBoard]: alloc=21704 time=0.006
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=111562952 time=33.051
+Demand analysis [Domain.Action.UI.LeaderBoard]: alloc=29679480 time=7.094
+CoreTidy [Domain.Action.UI.LeaderBoard]: alloc=12960032 time=5.291
+CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.010
+CodeGen [Domain.Action.UI.LeaderBoard]: alloc=280157664 time=80.553
+systool:as: alloc=104112 time=0.269
+CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.028
+CodeGen [Domain.Action.UI.LeaderBoard]: alloc=294344208 time=82.488
+systool:as: alloc=106984 time=0.225

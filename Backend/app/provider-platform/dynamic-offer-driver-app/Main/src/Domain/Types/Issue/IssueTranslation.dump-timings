@@ -1,0 +1,28 @@
+Parser [Domain.Types.Issue.IssueTranslation]: alloc=424424 time=0.141
+Renamer/typechecker [Domain.Types.Issue.IssueTranslation]: alloc=35509264 time=13.436
+Desugar [Domain.Types.Issue.IssueTranslation]: alloc=1921976 time=1.780
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=50547312 time=19.852
+Specialise [Domain.Types.Issue.IssueTranslation]: alloc=2545120 time=0.993
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueTranslation]: alloc=11438520 time=6.323
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=84356000 time=224.558
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=76996952 time=23.713
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=69057600 time=21.693
+Float inwards [Domain.Types.Issue.IssueTranslation]: alloc=23800 time=0.031
+Called arity analysis [Domain.Types.Issue.IssueTranslation]: alloc=25376 time=0.006
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=50612752 time=15.186
+Demand analysis [Domain.Types.Issue.IssueTranslation]: alloc=11867456 time=2.969
+Worker Wrapper binds [Domain.Types.Issue.IssueTranslation]: alloc=403672 time=0.333
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=55353160 time=16.822
+Exitification transformation [Domain.Types.Issue.IssueTranslation]: alloc=26288 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueTranslation]: alloc=11774656 time=3.816
+Common sub-expression [Domain.Types.Issue.IssueTranslation]: alloc=24904 time=0.019
+Float inwards [Domain.Types.Issue.IssueTranslation]: alloc=23800 time=0.005
+Simplifier [Domain.Types.Issue.IssueTranslation]: alloc=41428240 time=24.238
+Demand analysis [Domain.Types.Issue.IssueTranslation]: alloc=10881000 time=2.763
+CoreTidy [Domain.Types.Issue.IssueTranslation]: alloc=5418552 time=1.917
+CorePrep [Domain.Types.Issue.IssueTranslation]: alloc=24760 time=0.008
+CodeGen [Domain.Types.Issue.IssueTranslation]: alloc=74805208 time=23.527
+systool:as: alloc=104520 time=0.225
+CorePrep [Domain.Types.Issue.IssueTranslation]: alloc=24760 time=0.027
+CodeGen [Domain.Types.Issue.IssueTranslation]: alloc=77750776 time=24.102
+systool:as: alloc=107392 time=0.193

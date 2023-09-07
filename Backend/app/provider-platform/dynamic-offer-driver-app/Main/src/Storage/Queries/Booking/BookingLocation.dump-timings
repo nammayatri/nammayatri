@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Booking.BookingLocation]: alloc=1930528 time=0.428
+Renamer/typechecker [Storage.Queries.Booking.BookingLocation]: alloc=134400896 time=37.450
+Desugar [Storage.Queries.Booking.BookingLocation]: alloc=6208864 time=1.959
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=99397496 time=30.879
+Specialise [Storage.Queries.Booking.BookingLocation]: alloc=18461520 time=4.635
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Booking.BookingLocation]: alloc=18365624 time=5.417
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=334966992 time=109.677
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=77249400 time=33.576
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=74795144 time=24.020
+Float inwards [Storage.Queries.Booking.BookingLocation]: alloc=24984 time=0.005
+Called arity analysis [Storage.Queries.Booking.BookingLocation]: alloc=26560 time=0.006
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=47521752 time=19.576
+Demand analysis [Storage.Queries.Booking.BookingLocation]: alloc=18196352 time=5.574
+Worker Wrapper binds [Storage.Queries.Booking.BookingLocation]: alloc=996280 time=0.545
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=79776592 time=28.666
+Exitification transformation [Storage.Queries.Booking.BookingLocation]: alloc=27488 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Booking.BookingLocation]: alloc=18193504 time=5.678
+Common sub-expression [Storage.Queries.Booking.BookingLocation]: alloc=26088 time=0.018
+Float inwards [Storage.Queries.Booking.BookingLocation]: alloc=24984 time=0.004
+Simplifier [Storage.Queries.Booking.BookingLocation]: alloc=153366664 time=48.524
+Demand analysis [Storage.Queries.Booking.BookingLocation]: alloc=15981568 time=4.527
+CoreTidy [Storage.Queries.Booking.BookingLocation]: alloc=14958800 time=5.699
+CorePrep [Storage.Queries.Booking.BookingLocation]: alloc=25944 time=0.015
+CodeGen [Storage.Queries.Booking.BookingLocation]: alloc=139186080 time=42.793
+systool:as: alloc=104784 time=0.254
+CorePrep [Storage.Queries.Booking.BookingLocation]: alloc=25944 time=0.032
+CodeGen [Storage.Queries.Booking.BookingLocation]: alloc=149599792 time=45.672
+systool:as: alloc=107664 time=0.220

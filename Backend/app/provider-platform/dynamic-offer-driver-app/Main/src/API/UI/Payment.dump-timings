@@ -1,0 +1,28 @@
+Parser [API.UI.Payment]: alloc=1116888 time=0.335
+Renamer/typechecker [API.UI.Payment]: alloc=13727280 time=6.890
+Desugar [API.UI.Payment]: alloc=375176 time=0.889
+Simplifier [API.UI.Payment]: alloc=7708952 time=1.909
+Specialise [API.UI.Payment]: alloc=242016 time=0.106
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Payment]: alloc=769360 time=0.186
+Simplifier [API.UI.Payment]: alloc=1051560 time=0.244
+Simplifier [API.UI.Payment]: alloc=1026856 time=0.233
+Simplifier [API.UI.Payment]: alloc=1026856 time=0.219
+Float inwards [API.UI.Payment]: alloc=17528 time=0.004
+Called arity analysis [API.UI.Payment]: alloc=19104 time=0.007
+Simplifier [API.UI.Payment]: alloc=1163088 time=0.316
+Demand analysis [API.UI.Payment]: alloc=1967312 time=0.330
+Worker Wrapper binds [API.UI.Payment]: alloc=29824 time=0.015
+Simplifier [API.UI.Payment]: alloc=6070864 time=1.155
+Exitification transformation [API.UI.Payment]: alloc=20048 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Payment]: alloc=853704 time=0.258
+Common sub-expression [API.UI.Payment]: alloc=18632 time=0.004
+Float inwards [API.UI.Payment]: alloc=17528 time=0.003
+Simplifier [API.UI.Payment]: alloc=2602496 time=0.563
+Demand analysis [API.UI.Payment]: alloc=2032568 time=0.335
+CoreTidy [API.UI.Payment]: alloc=699640 time=0.206
+CorePrep [API.UI.Payment]: alloc=18504 time=0.007
+CodeGen [API.UI.Payment]: alloc=11142768 time=3.316
+systool:as: alloc=103184 time=0.167
+CorePrep [API.UI.Payment]: alloc=18504 time=0.010
+CodeGen [API.UI.Payment]: alloc=11547736 time=3.493
+systool:as: alloc=106056 time=0.121

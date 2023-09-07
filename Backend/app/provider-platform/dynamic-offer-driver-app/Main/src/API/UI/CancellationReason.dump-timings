@@ -1,0 +1,28 @@
+Parser [API.UI.CancellationReason]: alloc=728152 time=0.251
+Renamer/typechecker [API.UI.CancellationReason]: alloc=16898480 time=6.614
+Desugar [API.UI.CancellationReason]: alloc=325568 time=0.914
+Simplifier [API.UI.CancellationReason]: alloc=7416408 time=1.893
+Specialise [API.UI.CancellationReason]: alloc=776120 time=0.235
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.CancellationReason]: alloc=2207952 time=0.488
+Simplifier [API.UI.CancellationReason]: alloc=7338568 time=1.883
+Simplifier [API.UI.CancellationReason]: alloc=3104128 time=0.805
+Simplifier [API.UI.CancellationReason]: alloc=1433568 time=0.361
+Float inwards [API.UI.CancellationReason]: alloc=20808 time=0.004
+Called arity analysis [API.UI.CancellationReason]: alloc=22384 time=0.006
+Simplifier [API.UI.CancellationReason]: alloc=1748912 time=0.485
+Demand analysis [API.UI.CancellationReason]: alloc=2129152 time=0.390
+Worker Wrapper binds [API.UI.CancellationReason]: alloc=38320 time=0.020
+Simplifier [API.UI.CancellationReason]: alloc=1529072 time=0.435
+Exitification transformation [API.UI.CancellationReason]: alloc=23312 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.CancellationReason]: alloc=960392 time=0.269
+Common sub-expression [API.UI.CancellationReason]: alloc=21912 time=0.004
+Float inwards [API.UI.CancellationReason]: alloc=20808 time=0.003
+Simplifier [API.UI.CancellationReason]: alloc=3408632 time=0.967
+Demand analysis [API.UI.CancellationReason]: alloc=2174752 time=0.425
+CoreTidy [API.UI.CancellationReason]: alloc=721032 time=0.215
+CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.008
+CodeGen [API.UI.CancellationReason]: alloc=11296096 time=3.546
+systool:as: alloc=103880 time=0.223
+CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.011
+CodeGen [API.UI.CancellationReason]: alloc=11607696 time=3.594
+systool:as: alloc=106736 time=0.157

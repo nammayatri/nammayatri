@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.BapMetadata]: alloc=1219136 time=0.346
+Renamer/typechecker [Storage.CachedQueries.BapMetadata]: alloc=327223392 time=59.089
+Desugar [Storage.CachedQueries.BapMetadata]: alloc=230648024 time=35.521
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=11995536 time=2.769
+Specialise [Storage.CachedQueries.BapMetadata]: alloc=870584 time=0.299
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.BapMetadata]: alloc=3949832 time=0.925
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=10594240 time=2.671
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=6362632 time=1.477
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=34678536 time=9.990
+Float inwards [Storage.CachedQueries.BapMetadata]: alloc=23192 time=0.005
+Called arity analysis [Storage.CachedQueries.BapMetadata]: alloc=24768 time=0.006
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=21446912 time=5.599
+Demand analysis [Storage.CachedQueries.BapMetadata]: alloc=13778872 time=3.145
+Worker Wrapper binds [Storage.CachedQueries.BapMetadata]: alloc=798240 time=0.317
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=40408832 time=12.138
+Exitification transformation [Storage.CachedQueries.BapMetadata]: alloc=25696 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.BapMetadata]: alloc=11698120 time=3.231
+Common sub-expression [Storage.CachedQueries.BapMetadata]: alloc=24296 time=0.018
+Float inwards [Storage.CachedQueries.BapMetadata]: alloc=23192 time=0.004
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=24522984 time=7.217
+Demand analysis [Storage.CachedQueries.BapMetadata]: alloc=22489888 time=4.411
+CoreTidy [Storage.CachedQueries.BapMetadata]: alloc=2628680 time=1.091
+CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.038
+CodeGen [Storage.CachedQueries.BapMetadata]: alloc=98140000 time=25.366
+systool:as: alloc=104400 time=0.237
+CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.018
+CodeGen [Storage.CachedQueries.BapMetadata]: alloc=101764688 time=26.206
+systool:as: alloc=107280 time=0.194

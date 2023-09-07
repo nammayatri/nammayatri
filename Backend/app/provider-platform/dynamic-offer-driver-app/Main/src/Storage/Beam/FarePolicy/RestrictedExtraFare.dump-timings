@@ -1,0 +1,34 @@
+Parser [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=1340312 time=0.370
+Simplify [expr]: alloc=97336 time=0.062
+CorePrep [expr]: alloc=43528 time=0.044
+ByteCodeGen [Ghci1]: alloc=217456 time=0.093
+Simplify [expr]: alloc=47024 time=0.020
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.047
+Renamer/typechecker [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=131041240 time=39.686
+Desugar [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=20463400 time=5.635
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=167335256 time=50.244
+Specialise [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=14376984 time=3.894
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=46782928 time=14.352
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=288682976 time=96.761
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=213859904 time=77.322
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=197752112 time=72.634
+Float inwards [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26184 time=0.005
+Called arity analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27760 time=0.006
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=153665392 time=52.603
+Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=30872432 time=8.331
+Worker Wrapper binds [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=1386768 time=0.820
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=219264120 time=76.359
+Exitification transformation [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=28672 time=0.033
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26677568 time=8.810
+Common sub-expression [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27288 time=0.007
+Float inwards [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26184 time=0.004
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=165099024 time=62.445
+Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=28206184 time=7.512
+CoreTidy [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=15923688 time=6.343
+CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.040
+CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=214275488 time=65.771
+systool:as: alloc=105032 time=0.254
+CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.016
+CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=224129176 time=67.311
+systool:as: alloc=107904 time=0.181

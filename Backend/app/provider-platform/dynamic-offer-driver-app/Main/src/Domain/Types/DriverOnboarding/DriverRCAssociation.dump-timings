@@ -1,0 +1,28 @@
+Parser [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=887632 time=0.290
+Renamer/typechecker [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=68157792 time=20.655
+Desugar [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=3749712 time=1.838
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=91653256 time=34.089
+Specialise [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=9116240 time=2.291
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=19544672 time=6.391
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=154069760 time=60.314
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=122778704 time=45.477
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=109527208 time=47.453
+Float inwards [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=27960 time=0.006
+Called arity analysis [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=29536 time=0.007
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=84153944 time=32.322
+Demand analysis [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=18646728 time=4.931
+Worker Wrapper binds [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=543272 time=0.466
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=91187656 time=39.843
+Exitification transformation [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=30464 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=18838536 time=6.021
+Common sub-expression [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=29064 time=0.007
+Float inwards [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=27960 time=0.005
+Simplifier [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=68951328 time=27.076
+Demand analysis [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=16907904 time=4.411
+CoreTidy [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=9510088 time=3.648
+CorePrep [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=28936 time=0.025
+CodeGen [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=106222280 time=36.174
+systool:as: alloc=105416 time=0.204
+CorePrep [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=28936 time=0.022
+CodeGen [Domain.Types.DriverOnboarding.DriverRCAssociation]: alloc=110485488 time=35.957
+systool:as: alloc=108296 time=0.216

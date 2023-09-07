@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverLocation]: alloc=5421256 time=0.996
+Renamer/typechecker [Storage.Queries.DriverLocation]: alloc=83779848 time=26.972
+Desugar [Storage.Queries.DriverLocation]: alloc=23005880 time=5.062
+Simplifier [Storage.Queries.DriverLocation]: alloc=131741872 time=38.930
+Specialise [Storage.Queries.DriverLocation]: alloc=17464896 time=4.081
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverLocation]: alloc=21542464 time=7.042
+Simplifier [Storage.Queries.DriverLocation]: alloc=472605256 time=132.778
+Simplifier [Storage.Queries.DriverLocation]: alloc=298185344 time=105.724
+Simplifier [Storage.Queries.DriverLocation]: alloc=287390944 time=87.390
+Float inwards [Storage.Queries.DriverLocation]: alloc=22296 time=0.005
+Called arity analysis [Storage.Queries.DriverLocation]: alloc=23872 time=0.008
+Simplifier [Storage.Queries.DriverLocation]: alloc=205908800 time=61.077
+Demand analysis [Storage.Queries.DriverLocation]: alloc=38031096 time=13.142
+Worker Wrapper binds [Storage.Queries.DriverLocation]: alloc=1596552 time=1.071
+Simplifier [Storage.Queries.DriverLocation]: alloc=303801752 time=89.543
+Exitification transformation [Storage.Queries.DriverLocation]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverLocation]: alloc=35903864 time=13.513
+Common sub-expression [Storage.Queries.DriverLocation]: alloc=23400 time=0.033
+Float inwards [Storage.Queries.DriverLocation]: alloc=22296 time=0.006
+Simplifier [Storage.Queries.DriverLocation]: alloc=297357720 time=88.713
+Demand analysis [Storage.Queries.DriverLocation]: alloc=31476328 time=11.544
+CoreTidy [Storage.Queries.DriverLocation]: alloc=20178544 time=21.167
+CorePrep [Storage.Queries.DriverLocation]: alloc=23272 time=0.039
+CodeGen [Storage.Queries.DriverLocation]: alloc=287100032 time=82.651
+systool:as: alloc=104224 time=0.248
+CorePrep [Storage.Queries.DriverLocation]: alloc=23272 time=0.016
+CodeGen [Storage.Queries.DriverLocation]: alloc=305852328 time=84.893
+systool:as: alloc=107072 time=0.253

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Rating]: alloc=1326192 time=0.372
+Simplify [expr]: alloc=184136 time=0.068
+CorePrep [expr]: alloc=74024 time=0.051
+ByteCodeGen [Ghci1]: alloc=379864 time=0.156
+Simplify [expr]: alloc=47024 time=0.031
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.064
+Renamer/typechecker [Storage.Beam.Rating]: alloc=152746000 time=44.066
+Desugar [Storage.Beam.Rating]: alloc=22589688 time=6.250
+Simplifier [Storage.Beam.Rating]: alloc=233314648 time=69.303
+Specialise [Storage.Beam.Rating]: alloc=15169272 time=4.915
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Rating]: alloc=54438160 time=17.235
+Simplifier [Storage.Beam.Rating]: alloc=394409352 time=129.922
+Simplifier [Storage.Beam.Rating]: alloc=309550592 time=95.356
+Simplifier [Storage.Beam.Rating]: alloc=284653832 time=113.084
+Float inwards [Storage.Beam.Rating]: alloc=19032 time=0.005
+Called arity analysis [Storage.Beam.Rating]: alloc=20608 time=0.005
+Simplifier [Storage.Beam.Rating]: alloc=221290896 time=92.318
+Demand analysis [Storage.Beam.Rating]: alloc=41404016 time=12.073
+Worker Wrapper binds [Storage.Beam.Rating]: alloc=1593992 time=0.881
+Simplifier [Storage.Beam.Rating]: alloc=311686440 time=100.443
+Exitification transformation [Storage.Beam.Rating]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Rating]: alloc=34934248 time=11.674
+Common sub-expression [Storage.Beam.Rating]: alloc=20136 time=0.004
+Float inwards [Storage.Beam.Rating]: alloc=19032 time=0.003
+Simplifier [Storage.Beam.Rating]: alloc=236996656 time=89.807
+Demand analysis [Storage.Beam.Rating]: alloc=37895448 time=10.844
+CoreTidy [Storage.Beam.Rating]: alloc=25834832 time=9.569
+CorePrep [Storage.Beam.Rating]: alloc=19992 time=0.015
+CodeGen [Storage.Beam.Rating]: alloc=289900104 time=89.138
+systool:as: alloc=103512 time=0.288
+CorePrep [Storage.Beam.Rating]: alloc=19992 time=0.043
+CodeGen [Storage.Beam.Rating]: alloc=303887368 time=90.568
+systool:as: alloc=106384 time=0.244

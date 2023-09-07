@@ -1,0 +1,34 @@
+Parser [Storage.Beam.BusinessEvent]: alloc=1691688 time=0.458
+Simplify [expr]: alloc=97336 time=0.063
+CorePrep [expr]: alloc=43528 time=0.045
+ByteCodeGen [Ghci1]: alloc=217456 time=0.103
+Simplify [expr]: alloc=47024 time=0.023
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.072
+Renamer/typechecker [Storage.Beam.BusinessEvent]: alloc=214185864 time=69.813
+Desugar [Storage.Beam.BusinessEvent]: alloc=26127232 time=7.265
+Simplifier [Storage.Beam.BusinessEvent]: alloc=354433112 time=123.849
+Specialise [Storage.Beam.BusinessEvent]: alloc=27069032 time=11.999
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BusinessEvent]: alloc=73927112 time=33.253
+Simplifier [Storage.Beam.BusinessEvent]: alloc=784107288 time=699.902
+Simplifier [Storage.Beam.BusinessEvent]: alloc=756720656 time=257.632
+Simplifier [Storage.Beam.BusinessEvent]: alloc=680455536 time=228.896
+Float inwards [Storage.Beam.BusinessEvent]: alloc=21096 time=0.005
+Called arity analysis [Storage.Beam.BusinessEvent]: alloc=22672 time=0.006
+Simplifier [Storage.Beam.BusinessEvent]: alloc=494536448 time=176.655
+Demand analysis [Storage.Beam.BusinessEvent]: alloc=100382552 time=28.329
+Worker Wrapper binds [Storage.Beam.BusinessEvent]: alloc=3712344 time=1.943
+Simplifier [Storage.Beam.BusinessEvent]: alloc=715986168 time=230.834
+Exitification transformation [Storage.Beam.BusinessEvent]: alloc=23616 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BusinessEvent]: alloc=77678552 time=25.086
+Common sub-expression [Storage.Beam.BusinessEvent]: alloc=22200 time=0.006
+Float inwards [Storage.Beam.BusinessEvent]: alloc=21096 time=0.004
+Simplifier [Storage.Beam.BusinessEvent]: alloc=458182136 time=159.820
+Demand analysis [Storage.Beam.BusinessEvent]: alloc=57859168 time=19.344
+CoreTidy [Storage.Beam.BusinessEvent]: alloc=57312360 time=22.493
+CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.030
+CodeGen [Storage.Beam.BusinessEvent]: alloc=462330696 time=134.244
+systool:as: alloc=103928 time=0.242
+CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.028
+CodeGen [Storage.Beam.BusinessEvent]: alloc=484073080 time=138.644
+systool:as: alloc=106808 time=0.247

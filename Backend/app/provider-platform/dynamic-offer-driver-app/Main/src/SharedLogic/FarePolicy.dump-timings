@@ -1,0 +1,28 @@
+Parser [SharedLogic.FarePolicy]: alloc=2016104 time=0.445
+Renamer/typechecker [SharedLogic.FarePolicy]: alloc=407818280 time=72.101
+Desugar [SharedLogic.FarePolicy]: alloc=396423112 time=61.598
+Simplifier [SharedLogic.FarePolicy]: alloc=22859112 time=5.827
+Specialise [SharedLogic.FarePolicy]: alloc=1282208 time=0.306
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FarePolicy]: alloc=6684424 time=1.705
+Simplifier [SharedLogic.FarePolicy]: alloc=12597224 time=3.011
+Simplifier [SharedLogic.FarePolicy]: alloc=13358168 time=3.278
+Simplifier [SharedLogic.FarePolicy]: alloc=24180408 time=5.500
+Float inwards [SharedLogic.FarePolicy]: alloc=19912 time=0.004
+Called arity analysis [SharedLogic.FarePolicy]: alloc=21488 time=0.005
+Simplifier [SharedLogic.FarePolicy]: alloc=13182800 time=2.629
+Demand analysis [SharedLogic.FarePolicy]: alloc=8340424 time=1.587
+Worker Wrapper binds [SharedLogic.FarePolicy]: alloc=590072 time=0.232
+Simplifier [SharedLogic.FarePolicy]: alloc=14306760 time=3.527
+Exitification transformation [SharedLogic.FarePolicy]: alloc=22432 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FarePolicy]: alloc=6116592 time=1.538
+Common sub-expression [SharedLogic.FarePolicy]: alloc=21016 time=0.005
+Float inwards [SharedLogic.FarePolicy]: alloc=19912 time=0.004
+Simplifier [SharedLogic.FarePolicy]: alloc=16745768 time=4.269
+Demand analysis [SharedLogic.FarePolicy]: alloc=6222336 time=1.427
+CoreTidy [SharedLogic.FarePolicy]: alloc=1854824 time=0.774
+CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.010
+CodeGen [SharedLogic.FarePolicy]: alloc=56301480 time=16.513
+systool:as: alloc=103688 time=0.213
+CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.019
+CodeGen [SharedLogic.FarePolicy]: alloc=59353008 time=17.760
+systool:as: alloc=106560 time=0.198

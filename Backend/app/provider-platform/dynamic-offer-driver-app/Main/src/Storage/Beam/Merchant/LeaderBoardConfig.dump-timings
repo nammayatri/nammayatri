@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1625464 time=0.486
+Simplify [expr]: alloc=211024 time=0.072
+CorePrep [expr]: alloc=84160 time=0.054
+ByteCodeGen [Ghci1]: alloc=480568 time=0.158
+Simplify [expr]: alloc=47024 time=0.015
+CorePrep [expr]: alloc=26752 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.048
+Renamer/typechecker [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=173592640 time=48.954
+Desugar [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=23702376 time=6.533
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=270631720 time=80.011
+Specialise [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=17148048 time=5.558
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=58450560 time=18.818
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=451003200 time=141.779
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=354069288 time=134.200
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=322940048 time=100.257
+Float inwards [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=24984 time=0.005
+Called arity analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=26560 time=0.019
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=250767136 time=75.250
+Demand analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=45655832 time=13.458
+Worker Wrapper binds [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1671752 time=1.012
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=351061784 time=104.783
+Exitification transformation [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=27488 time=0.017
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=38352904 time=11.240
+Common sub-expression [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=26088 time=0.006
+Float inwards [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=24984 time=0.004
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=268194760 time=74.554
+Demand analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=41735088 time=12.204
+CoreTidy [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=31392120 time=39.794
+CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.028
+CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=306078952 time=91.407
+systool:as: alloc=104768 time=0.229
+CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.016
+CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=322124504 time=94.180
+systool:as: alloc=107648 time=0.226

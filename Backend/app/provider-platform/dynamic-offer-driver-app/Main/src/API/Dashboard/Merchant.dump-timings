@@ -1,0 +1,28 @@
+Parser [API.Dashboard.Merchant]: alloc=4014640 time=0.682
+Renamer/typechecker [API.Dashboard.Merchant]: alloc=26753768 time=7.925
+Desugar [API.Dashboard.Merchant]: alloc=756264 time=0.945
+Simplifier [API.Dashboard.Merchant]: alloc=15673536 time=3.567
+Specialise [API.Dashboard.Merchant]: alloc=540640 time=0.130
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Merchant]: alloc=2128904 time=0.543
+Simplifier [API.Dashboard.Merchant]: alloc=8480080 time=1.842
+Simplifier [API.Dashboard.Merchant]: alloc=4224360 time=0.865
+Simplifier [API.Dashboard.Merchant]: alloc=4224360 time=0.924
+Float inwards [API.Dashboard.Merchant]: alloc=19912 time=0.004
+Called arity analysis [API.Dashboard.Merchant]: alloc=21488 time=0.005
+Simplifier [API.Dashboard.Merchant]: alloc=5293168 time=1.054
+Demand analysis [API.Dashboard.Merchant]: alloc=3406880 time=0.707
+Worker Wrapper binds [API.Dashboard.Merchant]: alloc=64584 time=0.030
+Simplifier [API.Dashboard.Merchant]: alloc=23625272 time=4.632
+Exitification transformation [API.Dashboard.Merchant]: alloc=22432 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Merchant]: alloc=2005304 time=0.518
+Common sub-expression [API.Dashboard.Merchant]: alloc=21016 time=0.004
+Float inwards [API.Dashboard.Merchant]: alloc=19912 time=0.004
+Simplifier [API.Dashboard.Merchant]: alloc=8729584 time=1.905
+Demand analysis [API.Dashboard.Merchant]: alloc=3220128 time=0.707
+CoreTidy [API.Dashboard.Merchant]: alloc=1846696 time=0.599
+CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.010
+CodeGen [API.Dashboard.Merchant]: alloc=29823408 time=10.055
+systool:as: alloc=103696 time=0.164
+CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.012
+CodeGen [API.Dashboard.Merchant]: alloc=31518648 time=10.310
+systool:as: alloc=106568 time=0.120

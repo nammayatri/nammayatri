@@ -1,0 +1,28 @@
+Parser [Domain.Types.Issue.Comment]: alloc=476912 time=0.224
+Renamer/typechecker [Domain.Types.Issue.Comment]: alloc=22497472 time=8.366
+Desugar [Domain.Types.Issue.Comment]: alloc=2306472 time=1.532
+Simplifier [Domain.Types.Issue.Comment]: alloc=15367184 time=4.527
+Specialise [Domain.Types.Issue.Comment]: alloc=526728 time=0.145
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.Comment]: alloc=2584400 time=0.805
+Simplifier [Domain.Types.Issue.Comment]: alloc=12197608 time=3.640
+Simplifier [Domain.Types.Issue.Comment]: alloc=11870224 time=3.667
+Simplifier [Domain.Types.Issue.Comment]: alloc=2941664 time=0.909
+Float inwards [Domain.Types.Issue.Comment]: alloc=21096 time=0.004
+Called arity analysis [Domain.Types.Issue.Comment]: alloc=22672 time=0.006
+Simplifier [Domain.Types.Issue.Comment]: alloc=3697296 time=1.089
+Demand analysis [Domain.Types.Issue.Comment]: alloc=2678632 time=0.696
+Worker Wrapper binds [Domain.Types.Issue.Comment]: alloc=129144 time=0.066
+Simplifier [Domain.Types.Issue.Comment]: alloc=8940832 time=2.405
+Exitification transformation [Domain.Types.Issue.Comment]: alloc=23616 time=0.017
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.Comment]: alloc=2267024 time=0.712
+Common sub-expression [Domain.Types.Issue.Comment]: alloc=22200 time=0.005
+Float inwards [Domain.Types.Issue.Comment]: alloc=21096 time=0.030
+Simplifier [Domain.Types.Issue.Comment]: alloc=10345696 time=3.014
+Demand analysis [Domain.Types.Issue.Comment]: alloc=2923144 time=0.725
+CoreTidy [Domain.Types.Issue.Comment]: alloc=1940112 time=0.737
+CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.010
+CodeGen [Domain.Types.Issue.Comment]: alloc=37271080 time=11.615
+systool:as: alloc=103960 time=0.223
+CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.017
+CodeGen [Domain.Types.Issue.Comment]: alloc=38354736 time=11.813
+systool:as: alloc=106840 time=0.189

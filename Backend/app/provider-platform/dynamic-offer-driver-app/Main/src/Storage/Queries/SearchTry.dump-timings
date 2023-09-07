@@ -1,0 +1,28 @@
+Parser [Storage.Queries.SearchTry]: alloc=2732920 time=0.593
+Renamer/typechecker [Storage.Queries.SearchTry]: alloc=350204128 time=99.750
+Desugar [Storage.Queries.SearchTry]: alloc=11338584 time=3.115
+Simplifier [Storage.Queries.SearchTry]: alloc=299774976 time=94.887
+Specialise [Storage.Queries.SearchTry]: alloc=27956480 time=8.638
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.SearchTry]: alloc=24053552 time=8.513
+Simplifier [Storage.Queries.SearchTry]: alloc=449975200 time=167.520
+Simplifier [Storage.Queries.SearchTry]: alloc=108228888 time=42.728
+Simplifier [Storage.Queries.SearchTry]: alloc=106951264 time=36.038
+Float inwards [Storage.Queries.SearchTry]: alloc=20808 time=0.005
+Called arity analysis [Storage.Queries.SearchTry]: alloc=22384 time=0.009
+Simplifier [Storage.Queries.SearchTry]: alloc=71635080 time=20.758
+Demand analysis [Storage.Queries.SearchTry]: alloc=23909312 time=7.262
+Worker Wrapper binds [Storage.Queries.SearchTry]: alloc=1490856 time=0.869
+Simplifier [Storage.Queries.SearchTry]: alloc=118403168 time=39.965
+Exitification transformation [Storage.Queries.SearchTry]: alloc=23312 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.SearchTry]: alloc=25609864 time=8.811
+Common sub-expression [Storage.Queries.SearchTry]: alloc=21912 time=0.006
+Float inwards [Storage.Queries.SearchTry]: alloc=20808 time=0.005
+Simplifier [Storage.Queries.SearchTry]: alloc=180429016 time=70.919
+Demand analysis [Storage.Queries.SearchTry]: alloc=17912384 time=5.221
+CoreTidy [Storage.Queries.SearchTry]: alloc=16958600 time=6.658
+CorePrep [Storage.Queries.SearchTry]: alloc=21784 time=0.043
+CodeGen [Storage.Queries.SearchTry]: alloc=145114112 time=48.293
+systool:as: alloc=103896 time=0.262
+CorePrep [Storage.Queries.SearchTry]: alloc=21784 time=0.021
+CodeGen [Storage.Queries.SearchTry]: alloc=157403736 time=50.331
+systool:as: alloc=106800 time=0.273

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=1469768 time=0.366
+Simplify [expr]: alloc=246616 time=0.078
+CorePrep [expr]: alloc=96704 time=0.048
+ByteCodeGen [Ghci1]: alloc=527232 time=0.138
+Simplify [expr]: alloc=47024 time=0.044
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.071
+Renamer/typechecker [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=168262760 time=47.731
+Desugar [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=23715968 time=6.459
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=272500008 time=80.385
+Specialise [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=17052152 time=5.610
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=59505064 time=18.684
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=467884544 time=159.348
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=424565840 time=130.366
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=378099056 time=148.534
+Float inwards [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=27960 time=0.006
+Called arity analysis [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=29536 time=0.007
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=281486600 time=84.123
+Demand analysis [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=57646552 time=15.998
+Worker Wrapper binds [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=2190968 time=1.240
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=402975984 time=154.321
+Exitification transformation [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=30464 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=47050640 time=15.230
+Common sub-expression [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=29064 time=0.008
+Float inwards [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=27960 time=0.005
+Simplifier [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=283815352 time=100.992
+Demand analysis [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=42880896 time=12.610
+CoreTidy [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=32563664 time=11.953
+CorePrep [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=28936 time=0.040
+CodeGen [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=324616320 time=97.726
+systool:as: alloc=105416 time=0.266
+CorePrep [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=28936 time=0.018
+CodeGen [Storage.Beam.DriverOnboarding.DriverRCAssociation]: alloc=339872384 time=99.522
+systool:as: alloc=108296 time=0.188

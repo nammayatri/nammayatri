@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverStats]: alloc=5733888 time=1.005
+Renamer/typechecker [Storage.Queries.DriverStats]: alloc=879591464 time=234.891
+Desugar [Storage.Queries.DriverStats]: alloc=29389128 time=6.200
+Simplifier [Storage.Queries.DriverStats]: alloc=595853144 time=193.396
+Specialise [Storage.Queries.DriverStats]: alloc=98551104 time=34.342
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverStats]: alloc=57573600 time=17.624
+Simplifier [Storage.Queries.DriverStats]: alloc=1081805608 time=333.935
+Simplifier [Storage.Queries.DriverStats]: alloc=897948104 time=327.213
+Simplifier [Storage.Queries.DriverStats]: alloc=877850208 time=275.476
+Float inwards [Storage.Queries.DriverStats]: alloc=21416 time=0.005
+Called arity analysis [Storage.Queries.DriverStats]: alloc=22992 time=0.006
+Simplifier [Storage.Queries.DriverStats]: alloc=679802008 time=249.726
+Demand analysis [Storage.Queries.DriverStats]: alloc=52013368 time=16.497
+Worker Wrapper binds [Storage.Queries.DriverStats]: alloc=2703800 time=1.684
+Simplifier [Storage.Queries.DriverStats]: alloc=672629256 time=222.797
+Exitification transformation [Storage.Queries.DriverStats]: alloc=23904 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverStats]: alloc=50908232 time=19.864
+Common sub-expression [Storage.Queries.DriverStats]: alloc=22520 time=0.006
+Float inwards [Storage.Queries.DriverStats]: alloc=21416 time=0.004
+Simplifier [Storage.Queries.DriverStats]: alloc=582694440 time=196.586
+Demand analysis [Storage.Queries.DriverStats]: alloc=25389976 time=16.555
+CoreTidy [Storage.Queries.DriverStats]: alloc=37599440 time=30.701
+CorePrep [Storage.Queries.DriverStats]: alloc=22376 time=0.028
+CodeGen [Storage.Queries.DriverStats]: alloc=204560080 time=66.243
+systool:as: alloc=104016 time=0.284
+CorePrep [Storage.Queries.DriverStats]: alloc=22376 time=0.015
+CodeGen [Storage.Queries.DriverStats]: alloc=221748784 time=68.186
+systool:as: alloc=106888 time=0.291

@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Booking]: alloc=5529072 time=1.019
+Renamer/typechecker [Storage.Queries.Booking]: alloc=872990104 time=240.380
+Desugar [Storage.Queries.Booking]: alloc=12758384 time=3.523
+Simplifier [Storage.Queries.Booking]: alloc=1280436144 time=356.901
+Specialise [Storage.Queries.Booking]: alloc=223250856 time=65.673
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Booking]: alloc=78289424 time=31.803
+Simplifier [Storage.Queries.Booking]: alloc=1332748280 time=447.475
+Simplifier [Storage.Queries.Booking]: alloc=284797896 time=96.622
+Simplifier [Storage.Queries.Booking]: alloc=575608400 time=215.079
+Float inwards [Storage.Queries.Booking]: alloc=20216 time=0.006
+Called arity analysis [Storage.Queries.Booking]: alloc=21792 time=0.006
+Simplifier [Storage.Queries.Booking]: alloc=350295976 time=108.213
+Demand analysis [Storage.Queries.Booking]: alloc=71811608 time=20.577
+Worker Wrapper binds [Storage.Queries.Booking]: alloc=3454672 time=1.012
+Simplifier [Storage.Queries.Booking]: alloc=471268008 time=170.339
+Exitification transformation [Storage.Queries.Booking]: alloc=22720 time=0.032
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Booking]: alloc=73266712 time=22.608
+Common sub-expression [Storage.Queries.Booking]: alloc=21320 time=0.007
+Float inwards [Storage.Queries.Booking]: alloc=20216 time=0.004
+Simplifier [Storage.Queries.Booking]: alloc=450113816 time=166.117
+Demand analysis [Storage.Queries.Booking]: alloc=55774912 time=14.747
+CoreTidy [Storage.Queries.Booking]: alloc=39924168 time=15.094
+CorePrep [Storage.Queries.Booking]: alloc=21176 time=0.043
+CodeGen [Storage.Queries.Booking]: alloc=433454440 time=125.218
+systool:as: alloc=103776 time=0.284
+CorePrep [Storage.Queries.Booking]: alloc=21176 time=0.017
+CodeGen [Storage.Queries.Booking]: alloc=465749592 time=133.666
+systool:as: alloc=106656 time=0.365

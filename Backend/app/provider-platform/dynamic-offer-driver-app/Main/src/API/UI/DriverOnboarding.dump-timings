@@ -1,0 +1,28 @@
+Parser [API.UI.DriverOnboarding]: alloc=3994640 time=0.763
+Renamer/typechecker [API.UI.DriverOnboarding]: alloc=26870656 time=9.269
+Desugar [API.UI.DriverOnboarding]: alloc=1554048 time=1.191
+Simplifier [API.UI.DriverOnboarding]: alloc=10637264 time=2.749
+Specialise [API.UI.DriverOnboarding]: alloc=473032 time=0.149
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.DriverOnboarding]: alloc=1508568 time=0.471
+Simplifier [API.UI.DriverOnboarding]: alloc=7940248 time=2.093
+Simplifier [API.UI.DriverOnboarding]: alloc=2538928 time=0.651
+Simplifier [API.UI.DriverOnboarding]: alloc=2538928 time=0.567
+Float inwards [API.UI.DriverOnboarding]: alloc=20216 time=0.004
+Called arity analysis [API.UI.DriverOnboarding]: alloc=21792 time=0.005
+Simplifier [API.UI.DriverOnboarding]: alloc=3329488 time=0.738
+Demand analysis [API.UI.DriverOnboarding]: alloc=3732480 time=0.664
+Worker Wrapper binds [API.UI.DriverOnboarding]: alloc=73960 time=0.030
+Simplifier [API.UI.DriverOnboarding]: alloc=9361904 time=1.955
+Exitification transformation [API.UI.DriverOnboarding]: alloc=22720 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.DriverOnboarding]: alloc=1577312 time=0.419
+Common sub-expression [API.UI.DriverOnboarding]: alloc=21320 time=0.004
+Float inwards [API.UI.DriverOnboarding]: alloc=20216 time=0.003
+Simplifier [API.UI.DriverOnboarding]: alloc=10168528 time=2.260
+Demand analysis [API.UI.DriverOnboarding]: alloc=3789296 time=0.738
+CoreTidy [API.UI.DriverOnboarding]: alloc=1809096 time=0.522
+CorePrep [API.UI.DriverOnboarding]: alloc=21176 time=0.010
+CodeGen [API.UI.DriverOnboarding]: alloc=25193640 time=8.597
+systool:as: alloc=103736 time=0.175
+CorePrep [API.UI.DriverOnboarding]: alloc=21176 time=0.012
+CodeGen [API.UI.DriverOnboarding]: alloc=26386704 time=9.045
+systool:as: alloc=106616 time=0.127

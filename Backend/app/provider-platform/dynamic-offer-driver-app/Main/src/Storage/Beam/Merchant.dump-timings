@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Merchant]: alloc=2626592 time=0.511
+Simplify [expr]: alloc=308512 time=0.085
+CorePrep [expr]: alloc=118928 time=0.064
+ByteCodeGen [Ghci1]: alloc=674144 time=0.144
+Simplify [expr]: alloc=47024 time=0.043
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.052
+Renamer/typechecker [Storage.Beam.Merchant]: alloc=466296944 time=113.102
+Desugar [Storage.Beam.Merchant]: alloc=45350632 time=10.985
+Simplifier [Storage.Beam.Merchant]: alloc=581424424 time=191.662
+Specialise [Storage.Beam.Merchant]: alloc=54005744 time=13.394
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant]: alloc=151345832 time=46.559
+Simplifier [Storage.Beam.Merchant]: alloc=1029933824 time=359.206
+Simplifier [Storage.Beam.Merchant]: alloc=911775688 time=317.232
+Simplifier [Storage.Beam.Merchant]: alloc=762682720 time=254.368
+Float inwards [Storage.Beam.Merchant]: alloc=19624 time=0.005
+Called arity analysis [Storage.Beam.Merchant]: alloc=21200 time=0.005
+Simplifier [Storage.Beam.Merchant]: alloc=587196160 time=195.304
+Demand analysis [Storage.Beam.Merchant]: alloc=161022112 time=37.958
+Worker Wrapper binds [Storage.Beam.Merchant]: alloc=5097440 time=5.532
+Simplifier [Storage.Beam.Merchant]: alloc=838249512 time=291.063
+Exitification transformation [Storage.Beam.Merchant]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant]: alloc=139288856 time=45.373
+Common sub-expression [Storage.Beam.Merchant]: alloc=20728 time=0.035
+Float inwards [Storage.Beam.Merchant]: alloc=19624 time=0.005
+Simplifier [Storage.Beam.Merchant]: alloc=596184040 time=228.735
+Demand analysis [Storage.Beam.Merchant]: alloc=124841072 time=27.638
+CoreTidy [Storage.Beam.Merchant]: alloc=98302504 time=27.543
+CorePrep [Storage.Beam.Merchant]: alloc=20584 time=0.043
+CodeGen [Storage.Beam.Merchant]: alloc=1053872640 time=308.604
+systool:as: alloc=103632 time=0.298
+CorePrep [Storage.Beam.Merchant]: alloc=20584 time=0.019
+CodeGen [Storage.Beam.Merchant]: alloc=1102766632 time=292.318
+systool:as: alloc=106504 time=0.297

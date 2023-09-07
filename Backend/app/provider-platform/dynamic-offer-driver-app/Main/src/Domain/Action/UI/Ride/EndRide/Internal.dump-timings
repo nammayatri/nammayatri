@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Ride.EndRide.Internal]: alloc=13144568 time=2.621
+Renamer/typechecker [Domain.Action.UI.Ride.EndRide.Internal]: alloc=4005226496 time=653.389
+Desugar [Domain.Action.UI.Ride.EndRide.Internal]: alloc=4866579560 time=721.176
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=120541824 time=30.582
+Specialise [Domain.Action.UI.Ride.EndRide.Internal]: alloc=8076496 time=1.799
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.EndRide.Internal]: alloc=42221840 time=11.414
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=176044216 time=54.335
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=345046456 time=120.116
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=369630424 time=135.850
+Float inwards [Domain.Action.UI.Ride.EndRide.Internal]: alloc=24680 time=0.005
+Called arity analysis [Domain.Action.UI.Ride.EndRide.Internal]: alloc=26256 time=0.006
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=372834920 time=113.625
+Demand analysis [Domain.Action.UI.Ride.EndRide.Internal]: alloc=114631944 time=23.726
+Worker Wrapper binds [Domain.Action.UI.Ride.EndRide.Internal]: alloc=3992760 time=1.858
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=359357248 time=119.627
+Exitification transformation [Domain.Action.UI.Ride.EndRide.Internal]: alloc=27200 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.EndRide.Internal]: alloc=95895544 time=25.862
+Common sub-expression [Domain.Action.UI.Ride.EndRide.Internal]: alloc=25784 time=0.007
+Float inwards [Domain.Action.UI.Ride.EndRide.Internal]: alloc=24680 time=0.004
+Simplifier [Domain.Action.UI.Ride.EndRide.Internal]: alloc=165897720 time=59.959
+Demand analysis [Domain.Action.UI.Ride.EndRide.Internal]: alloc=91658064 time=17.954
+CoreTidy [Domain.Action.UI.Ride.EndRide.Internal]: alloc=16025864 time=6.664
+CorePrep [Domain.Action.UI.Ride.EndRide.Internal]: alloc=25656 time=0.011
+CodeGen [Domain.Action.UI.Ride.EndRide.Internal]: alloc=562312664 time=145.076
+systool:as: alloc=104776 time=0.203
+CorePrep [Domain.Action.UI.Ride.EndRide.Internal]: alloc=25656 time=0.029
+CodeGen [Domain.Action.UI.Ride.EndRide.Internal]: alloc=586081552 time=143.196
+systool:as: alloc=107624 time=0.262

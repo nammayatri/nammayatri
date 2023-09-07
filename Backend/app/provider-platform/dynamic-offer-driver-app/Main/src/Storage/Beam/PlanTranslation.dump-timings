@@ -1,0 +1,34 @@
+Parser [Storage.Beam.PlanTranslation]: alloc=1216160 time=0.344
+Simplify [expr]: alloc=184296 time=0.066
+CorePrep [expr]: alloc=74104 time=0.055
+ByteCodeGen [Ghci1]: alloc=379864 time=0.142
+Simplify [expr]: alloc=47024 time=0.028
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.059
+Renamer/typechecker [Storage.Beam.PlanTranslation]: alloc=109720592 time=34.149
+Desugar [Storage.Beam.PlanTranslation]: alloc=19413496 time=5.476
+Simplifier [Storage.Beam.PlanTranslation]: alloc=134366768 time=42.334
+Specialise [Storage.Beam.PlanTranslation]: alloc=11190880 time=3.063
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.PlanTranslation]: alloc=41778296 time=13.008
+Simplifier [Storage.Beam.PlanTranslation]: alloc=221687872 time=76.412
+Simplifier [Storage.Beam.PlanTranslation]: alloc=172281976 time=60.113
+Simplifier [Storage.Beam.PlanTranslation]: alloc=157180080 time=55.147
+Float inwards [Storage.Beam.PlanTranslation]: alloc=21704 time=0.005
+Called arity analysis [Storage.Beam.PlanTranslation]: alloc=23280 time=0.006
+Simplifier [Storage.Beam.PlanTranslation]: alloc=121200720 time=35.970
+Demand analysis [Storage.Beam.PlanTranslation]: alloc=26386440 time=6.877
+Worker Wrapper binds [Storage.Beam.PlanTranslation]: alloc=1303416 time=0.695
+Simplifier [Storage.Beam.PlanTranslation]: alloc=178328824 time=60.856
+Exitification transformation [Storage.Beam.PlanTranslation]: alloc=24224 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.PlanTranslation]: alloc=23342520 time=7.604
+Common sub-expression [Storage.Beam.PlanTranslation]: alloc=22808 time=0.005
+Float inwards [Storage.Beam.PlanTranslation]: alloc=21704 time=0.004
+Simplifier [Storage.Beam.PlanTranslation]: alloc=130554768 time=48.218
+Demand analysis [Storage.Beam.PlanTranslation]: alloc=22929408 time=6.154
+CoreTidy [Storage.Beam.PlanTranslation]: alloc=12283336 time=5.048
+CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.039
+CodeGen [Storage.Beam.PlanTranslation]: alloc=184513944 time=57.809
+systool:as: alloc=104056 time=0.221
+CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.029
+CodeGen [Storage.Beam.PlanTranslation]: alloc=192952320 time=59.204
+systool:as: alloc=106928 time=0.275

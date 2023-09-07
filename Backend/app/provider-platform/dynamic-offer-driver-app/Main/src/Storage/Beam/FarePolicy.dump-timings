@@ -1,0 +1,34 @@
+Parser [Storage.Beam.FarePolicy]: alloc=1749744 time=0.417
+Simplify [expr]: alloc=132360 time=0.047
+CorePrep [expr]: alloc=54136 time=0.031
+ByteCodeGen [Ghci1]: alloc=263536 time=0.101
+Simplify [expr]: alloc=47024 time=0.042
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.051
+Renamer/typechecker [Storage.Beam.FarePolicy]: alloc=227135408 time=62.396
+Desugar [Storage.Beam.FarePolicy]: alloc=27321984 time=7.317
+Simplifier [Storage.Beam.FarePolicy]: alloc=404675632 time=128.257
+Specialise [Storage.Beam.FarePolicy]: alloc=30463904 time=19.966
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy]: alloc=82169864 time=23.368
+Simplifier [Storage.Beam.FarePolicy]: alloc=905330264 time=298.944
+Simplifier [Storage.Beam.FarePolicy]: alloc=829460912 time=300.003
+Simplifier [Storage.Beam.FarePolicy]: alloc=750849448 time=274.144
+Float inwards [Storage.Beam.FarePolicy]: alloc=20216 time=0.005
+Called arity analysis [Storage.Beam.FarePolicy]: alloc=21792 time=0.005
+Simplifier [Storage.Beam.FarePolicy]: alloc=553632512 time=183.071
+Demand analysis [Storage.Beam.FarePolicy]: alloc=103458344 time=37.311
+Worker Wrapper binds [Storage.Beam.FarePolicy]: alloc=3691328 time=1.730
+Simplifier [Storage.Beam.FarePolicy]: alloc=777430400 time=267.215
+Exitification transformation [Storage.Beam.FarePolicy]: alloc=22720 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy]: alloc=78372208 time=33.791
+Common sub-expression [Storage.Beam.FarePolicy]: alloc=21320 time=0.006
+Float inwards [Storage.Beam.FarePolicy]: alloc=20216 time=0.004
+Simplifier [Storage.Beam.FarePolicy]: alloc=522829248 time=186.324
+Demand analysis [Storage.Beam.FarePolicy]: alloc=64802416 time=25.363
+CoreTidy [Storage.Beam.FarePolicy]: alloc=70857008 time=29.630
+CorePrep [Storage.Beam.FarePolicy]: alloc=21176 time=0.027
+CodeGen [Storage.Beam.FarePolicy]: alloc=501325016 time=171.927
+systool:as: alloc=103776 time=0.270
+CorePrep [Storage.Beam.FarePolicy]: alloc=21176 time=0.016
+CodeGen [Storage.Beam.FarePolicy]: alloc=525000416 time=169.952
+systool:as: alloc=106632 time=0.254

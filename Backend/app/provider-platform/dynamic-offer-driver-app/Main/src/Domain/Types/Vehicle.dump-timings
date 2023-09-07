@@ -1,0 +1,34 @@
+Parser [Domain.Types.Vehicle]: alloc=2342088 time=0.567
+Simplify [expr]: alloc=34464 time=0.029
+CorePrep [expr]: alloc=22952 time=0.032
+ByteCodeGen [Ghci1]: alloc=94056 time=0.058
+Simplify [expr]: alloc=34464 time=0.026
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.055
+Renamer/typechecker [Domain.Types.Vehicle]: alloc=232592720 time=70.918
+Desugar [Domain.Types.Vehicle]: alloc=94872424 time=21.732
+Simplifier [Domain.Types.Vehicle]: alloc=368948488 time=133.147
+Specialise [Domain.Types.Vehicle]: alloc=36217712 time=8.100
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Vehicle]: alloc=58028416 time=18.563
+Simplifier [Domain.Types.Vehicle]: alloc=421985368 time=159.686
+Simplifier [Domain.Types.Vehicle]: alloc=356819952 time=136.778
+Simplifier [Domain.Types.Vehicle]: alloc=340070960 time=127.565
+Float inwards [Domain.Types.Vehicle]: alloc=19320 time=0.005
+Called arity analysis [Domain.Types.Vehicle]: alloc=20896 time=0.005
+Simplifier [Domain.Types.Vehicle]: alloc=278439304 time=96.891
+Demand analysis [Domain.Types.Vehicle]: alloc=74054000 time=17.795
+Worker Wrapper binds [Domain.Types.Vehicle]: alloc=4716008 time=1.775
+Simplifier [Domain.Types.Vehicle]: alloc=337451760 time=123.967
+Exitification transformation [Domain.Types.Vehicle]: alloc=21840 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Vehicle]: alloc=65716632 time=20.784
+Common sub-expression [Domain.Types.Vehicle]: alloc=20424 time=0.006
+Float inwards [Domain.Types.Vehicle]: alloc=19320 time=0.004
+Simplifier [Domain.Types.Vehicle]: alloc=313236712 time=123.711
+Demand analysis [Domain.Types.Vehicle]: alloc=67534960 time=16.074
+CoreTidy [Domain.Types.Vehicle]: alloc=37871136 time=13.747
+CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.026
+CodeGen [Domain.Types.Vehicle]: alloc=611147704 time=205.734
+systool:as: alloc=103568 time=0.230
+CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.043
+CodeGen [Domain.Types.Vehicle]: alloc=635361200 time=188.115
+systool:as: alloc=106440 time=0.243

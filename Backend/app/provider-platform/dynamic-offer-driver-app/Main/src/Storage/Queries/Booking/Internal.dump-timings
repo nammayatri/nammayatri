@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Booking.Internal]: alloc=732352 time=0.227
+Renamer/typechecker [Storage.Queries.Booking.Internal]: alloc=107580760 time=30.864
+Desugar [Storage.Queries.Booking.Internal]: alloc=901608 time=1.061
+Simplifier [Storage.Queries.Booking.Internal]: alloc=139337096 time=36.225
+Specialise [Storage.Queries.Booking.Internal]: alloc=1028208 time=0.526
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Booking.Internal]: alloc=3109376 time=0.889
+Simplifier [Storage.Queries.Booking.Internal]: alloc=14051256 time=4.044
+Simplifier [Storage.Queries.Booking.Internal]: alloc=13380472 time=3.966
+Simplifier [Storage.Queries.Booking.Internal]: alloc=13095080 time=3.719
+Float inwards [Storage.Queries.Booking.Internal]: alloc=22888 time=0.017
+Called arity analysis [Storage.Queries.Booking.Internal]: alloc=24464 time=0.006
+Simplifier [Storage.Queries.Booking.Internal]: alloc=8283304 time=2.166
+Demand analysis [Storage.Queries.Booking.Internal]: alloc=2973112 time=0.880
+Worker Wrapper binds [Storage.Queries.Booking.Internal]: alloc=148624 time=0.135
+Simplifier [Storage.Queries.Booking.Internal]: alloc=7115352 time=1.997
+Exitification transformation [Storage.Queries.Booking.Internal]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Booking.Internal]: alloc=2796704 time=0.717
+Common sub-expression [Storage.Queries.Booking.Internal]: alloc=23992 time=0.004
+Float inwards [Storage.Queries.Booking.Internal]: alloc=22888 time=0.004
+Simplifier [Storage.Queries.Booking.Internal]: alloc=15907848 time=4.515
+Demand analysis [Storage.Queries.Booking.Internal]: alloc=2956544 time=0.878
+CoreTidy [Storage.Queries.Booking.Internal]: alloc=5983272 time=1.701
+CorePrep [Storage.Queries.Booking.Internal]: alloc=23880 time=0.037
+CodeGen [Storage.Queries.Booking.Internal]: alloc=51461728 time=17.306
+systool:as: alloc=104360 time=0.236
+CorePrep [Storage.Queries.Booking.Internal]: alloc=23880 time=0.018
+CodeGen [Storage.Queries.Booking.Internal]: alloc=54093376 time=18.843
+systool:as: alloc=107240 time=0.217

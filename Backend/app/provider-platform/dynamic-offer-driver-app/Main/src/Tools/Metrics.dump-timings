@@ -1,0 +1,28 @@
+Parser [Tools.Metrics]: alloc=278040 time=0.095
+Renamer/typechecker [Tools.Metrics]: alloc=2011696 time=0.745
+Desugar [Tools.Metrics]: alloc=293384 time=0.802
+Simplifier [Tools.Metrics]: alloc=95696 time=0.075
+Specialise [Tools.Metrics]: alloc=23528 time=0.012
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics]: alloc=69200 time=0.032
+Simplifier [Tools.Metrics]: alloc=67680 time=0.029
+Simplifier [Tools.Metrics]: alloc=66416 time=0.020
+Simplifier [Tools.Metrics]: alloc=66416 time=0.017
+Float inwards [Tools.Metrics]: alloc=17240 time=0.004
+Called arity analysis [Tools.Metrics]: alloc=18816 time=0.004
+Simplifier [Tools.Metrics]: alloc=78224 time=0.027
+Demand analysis [Tools.Metrics]: alloc=42320 time=0.027
+Worker Wrapper binds [Tools.Metrics]: alloc=20912 time=0.007
+Simplifier [Tools.Metrics]: alloc=68328 time=0.022
+Exitification transformation [Tools.Metrics]: alloc=19744 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics]: alloc=67272 time=0.019
+Common sub-expression [Tools.Metrics]: alloc=18344 time=0.003
+Float inwards [Tools.Metrics]: alloc=17240 time=0.006
+Simplifier [Tools.Metrics]: alloc=84792 time=0.046
+Demand analysis [Tools.Metrics]: alloc=42320 time=0.011
+CoreTidy [Tools.Metrics]: alloc=57864 time=0.040
+CorePrep [Tools.Metrics]: alloc=18200 time=0.009
+CodeGen [Tools.Metrics]: alloc=639032 time=0.192
+systool:as: alloc=103112 time=0.150
+CorePrep [Tools.Metrics]: alloc=18200 time=0.011
+CodeGen [Tools.Metrics]: alloc=636104 time=0.204
+systool:as: alloc=105984 time=0.136

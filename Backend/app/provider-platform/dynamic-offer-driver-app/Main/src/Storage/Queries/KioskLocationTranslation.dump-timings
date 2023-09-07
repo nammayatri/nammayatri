@@ -1,0 +1,28 @@
+Parser [Storage.Queries.KioskLocationTranslation]: alloc=1222368 time=0.298
+Renamer/typechecker [Storage.Queries.KioskLocationTranslation]: alloc=51310680 time=15.785
+Desugar [Storage.Queries.KioskLocationTranslation]: alloc=3570896 time=1.491
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=25274896 time=8.138
+Specialise [Storage.Queries.KioskLocationTranslation]: alloc=5226592 time=1.370
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.KioskLocationTranslation]: alloc=7328184 time=2.004
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=184735512 time=53.416
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=50854928 time=15.647
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=49899712 time=15.151
+Float inwards [Storage.Queries.KioskLocationTranslation]: alloc=25272 time=0.005
+Called arity analysis [Storage.Queries.KioskLocationTranslation]: alloc=26848 time=0.006
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=28072880 time=8.167
+Demand analysis [Storage.Queries.KioskLocationTranslation]: alloc=6905144 time=2.450
+Worker Wrapper binds [Storage.Queries.KioskLocationTranslation]: alloc=429264 time=0.247
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=52994824 time=15.825
+Exitification transformation [Storage.Queries.KioskLocationTranslation]: alloc=27792 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.KioskLocationTranslation]: alloc=6829544 time=2.675
+Common sub-expression [Storage.Queries.KioskLocationTranslation]: alloc=26376 time=0.018
+Float inwards [Storage.Queries.KioskLocationTranslation]: alloc=25272 time=0.004
+Simplifier [Storage.Queries.KioskLocationTranslation]: alloc=59263928 time=18.611
+Demand analysis [Storage.Queries.KioskLocationTranslation]: alloc=6489400 time=2.374
+CoreTidy [Storage.Queries.KioskLocationTranslation]: alloc=6102760 time=2.468
+CorePrep [Storage.Queries.KioskLocationTranslation]: alloc=26264 time=0.038
+CodeGen [Storage.Queries.KioskLocationTranslation]: alloc=58517984 time=19.306
+systool:as: alloc=104808 time=0.178
+CorePrep [Storage.Queries.KioskLocationTranslation]: alloc=26264 time=0.015
+CodeGen [Storage.Queries.KioskLocationTranslation]: alloc=62888792 time=20.188
+systool:as: alloc=107688 time=0.158

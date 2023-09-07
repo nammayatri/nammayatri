@@ -1,0 +1,34 @@
+Parser [Storage.Beam.BapMetadata]: alloc=1161368 time=0.328
+Simplify [expr]: alloc=102448 time=0.092
+CorePrep [expr]: alloc=43528 time=0.028
+ByteCodeGen [Ghci1]: alloc=217456 time=0.105
+Simplify [expr]: alloc=47024 time=0.038
+CorePrep [expr]: alloc=26752 time=0.021
+ByteCodeGen [Ghci1]: alloc=131880 time=0.071
+Renamer/typechecker [Storage.Beam.BapMetadata]: alloc=155141208 time=57.718
+Desugar [Storage.Beam.BapMetadata]: alloc=22006904 time=6.026
+Simplifier [Storage.Beam.BapMetadata]: alloc=118488008 time=41.545
+Specialise [Storage.Beam.BapMetadata]: alloc=11850608 time=3.471
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BapMetadata]: alloc=36866584 time=16.134
+Simplifier [Storage.Beam.BapMetadata]: alloc=176342720 time=65.787
+Simplifier [Storage.Beam.BapMetadata]: alloc=140550296 time=53.329
+Simplifier [Storage.Beam.BapMetadata]: alloc=128366856 time=50.862
+Float inwards [Storage.Beam.BapMetadata]: alloc=20504 time=0.005
+Called arity analysis [Storage.Beam.BapMetadata]: alloc=22080 time=0.006
+Simplifier [Storage.Beam.BapMetadata]: alloc=98528880 time=34.059
+Demand analysis [Storage.Beam.BapMetadata]: alloc=22291504 time=11.221
+Worker Wrapper binds [Storage.Beam.BapMetadata]: alloc=1208320 time=0.483
+Simplifier [Storage.Beam.BapMetadata]: alloc=147728112 time=54.179
+Exitification transformation [Storage.Beam.BapMetadata]: alloc=23024 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BapMetadata]: alloc=19742040 time=6.962
+Common sub-expression [Storage.Beam.BapMetadata]: alloc=21608 time=0.007
+Float inwards [Storage.Beam.BapMetadata]: alloc=20504 time=0.004
+Simplifier [Storage.Beam.BapMetadata]: alloc=107348760 time=44.587
+Demand analysis [Storage.Beam.BapMetadata]: alloc=19118624 time=9.813
+CoreTidy [Storage.Beam.BapMetadata]: alloc=9486256 time=3.098
+CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.039
+CodeGen [Storage.Beam.BapMetadata]: alloc=156330992 time=60.477
+systool:as: alloc=103808 time=0.216
+CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.016
+CodeGen [Storage.Beam.BapMetadata]: alloc=163233664 time=54.819
+systool:as: alloc=106688 time=0.237

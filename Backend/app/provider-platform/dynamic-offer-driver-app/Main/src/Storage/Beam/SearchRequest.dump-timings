@@ -1,0 +1,34 @@
+Parser [Storage.Beam.SearchRequest]: alloc=2455288 time=0.541
+Simplify [expr]: alloc=183976 time=0.079
+CorePrep [expr]: alloc=73944 time=0.041
+ByteCodeGen [Ghci1]: alloc=379944 time=0.099
+Simplify [expr]: alloc=47024 time=0.044
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.050
+Renamer/typechecker [Storage.Beam.SearchRequest]: alloc=368957616 time=91.646
+Desugar [Storage.Beam.SearchRequest]: alloc=76681856 time=17.464
+Simplifier [Storage.Beam.SearchRequest]: alloc=426588680 time=131.395
+Specialise [Storage.Beam.SearchRequest]: alloc=46966200 time=12.019
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequest]: alloc=115875864 time=45.957
+Simplifier [Storage.Beam.SearchRequest]: alloc=888625768 time=301.436
+Simplifier [Storage.Beam.SearchRequest]: alloc=851846232 time=310.108
+Simplifier [Storage.Beam.SearchRequest]: alloc=723273056 time=261.032
+Float inwards [Storage.Beam.SearchRequest]: alloc=21096 time=0.031
+Called arity analysis [Storage.Beam.SearchRequest]: alloc=22672 time=0.006
+Simplifier [Storage.Beam.SearchRequest]: alloc=534049912 time=177.808
+Demand analysis [Storage.Beam.SearchRequest]: alloc=148008368 time=33.652
+Worker Wrapper binds [Storage.Beam.SearchRequest]: alloc=6373504 time=4.256
+Simplifier [Storage.Beam.SearchRequest]: alloc=792895960 time=292.540
+Exitification transformation [Storage.Beam.SearchRequest]: alloc=23616 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequest]: alloc=122382520 time=38.320
+Common sub-expression [Storage.Beam.SearchRequest]: alloc=22200 time=0.007
+Float inwards [Storage.Beam.SearchRequest]: alloc=21096 time=0.005
+Simplifier [Storage.Beam.SearchRequest]: alloc=489569512 time=184.091
+Demand analysis [Storage.Beam.SearchRequest]: alloc=90400912 time=22.743
+CoreTidy [Storage.Beam.SearchRequest]: alloc=65066272 time=22.260
+CorePrep [Storage.Beam.SearchRequest]: alloc=22088 time=0.014
+CodeGen [Storage.Beam.SearchRequest]: alloc=848839024 time=256.961
+systool:as: alloc=103936 time=0.280
+CorePrep [Storage.Beam.SearchRequest]: alloc=22088 time=0.018
+CodeGen [Storage.Beam.SearchRequest]: alloc=887908200 time=240.959
+systool:as: alloc=106816 time=0.307

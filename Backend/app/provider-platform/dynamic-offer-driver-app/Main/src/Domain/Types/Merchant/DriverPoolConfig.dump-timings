@@ -1,0 +1,28 @@
+Parser [Domain.Types.Merchant.DriverPoolConfig]: alloc=1052880 time=0.282
+Renamer/typechecker [Domain.Types.Merchant.DriverPoolConfig]: alloc=109023784 time=30.187
+Desugar [Domain.Types.Merchant.DriverPoolConfig]: alloc=9741064 time=3.284
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=236830376 time=82.751
+Specialise [Domain.Types.Merchant.DriverPoolConfig]: alloc=16035584 time=4.030
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.DriverPoolConfig]: alloc=57684128 time=17.448
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=354094936 time=130.888
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=302835064 time=108.959
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=220664712 time=89.904
+Float inwards [Domain.Types.Merchant.DriverPoolConfig]: alloc=24680 time=0.005
+Called arity analysis [Domain.Types.Merchant.DriverPoolConfig]: alloc=26256 time=0.006
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=168433496 time=59.291
+Demand analysis [Domain.Types.Merchant.DriverPoolConfig]: alloc=43213672 time=10.083
+Worker Wrapper binds [Domain.Types.Merchant.DriverPoolConfig]: alloc=1337904 time=0.843
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=244489696 time=89.018
+Exitification transformation [Domain.Types.Merchant.DriverPoolConfig]: alloc=27200 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.DriverPoolConfig]: alloc=46523448 time=25.567
+Common sub-expression [Domain.Types.Merchant.DriverPoolConfig]: alloc=25784 time=0.007
+Float inwards [Domain.Types.Merchant.DriverPoolConfig]: alloc=24680 time=0.004
+Simplifier [Domain.Types.Merchant.DriverPoolConfig]: alloc=149066088 time=53.338
+Demand analysis [Domain.Types.Merchant.DriverPoolConfig]: alloc=40122008 time=9.433
+CoreTidy [Domain.Types.Merchant.DriverPoolConfig]: alloc=22865544 time=7.797
+CorePrep [Domain.Types.Merchant.DriverPoolConfig]: alloc=25656 time=0.039
+CodeGen [Domain.Types.Merchant.DriverPoolConfig]: alloc=304717304 time=96.334
+systool:as: alloc=104704 time=0.264
+CorePrep [Domain.Types.Merchant.DriverPoolConfig]: alloc=25656 time=0.045
+CodeGen [Domain.Types.Merchant.DriverPoolConfig]: alloc=317089744 time=90.263
+systool:as: alloc=107576 time=0.214

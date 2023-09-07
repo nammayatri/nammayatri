@@ -1,0 +1,28 @@
+Parser [Domain.Types.KioskLocationTranslation]: alloc=445672 time=0.162
+Renamer/typechecker [Domain.Types.KioskLocationTranslation]: alloc=40729304 time=12.877
+Desugar [Domain.Types.KioskLocationTranslation]: alloc=1997000 time=1.384
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=59413736 time=20.367
+Specialise [Domain.Types.KioskLocationTranslation]: alloc=4550912 time=1.339
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.KioskLocationTranslation]: alloc=13074808 time=4.606
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=106662824 time=43.939
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=89748976 time=34.931
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=80699736 time=31.400
+Float inwards [Domain.Types.KioskLocationTranslation]: alloc=24392 time=0.005
+Called arity analysis [Domain.Types.KioskLocationTranslation]: alloc=25968 time=0.006
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=59651176 time=18.299
+Demand analysis [Domain.Types.KioskLocationTranslation]: alloc=13468160 time=8.752
+Worker Wrapper binds [Domain.Types.KioskLocationTranslation]: alloc=454056 time=0.230
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=64474856 time=20.124
+Exitification transformation [Domain.Types.KioskLocationTranslation]: alloc=26896 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.KioskLocationTranslation]: alloc=13186720 time=9.718
+Common sub-expression [Domain.Types.KioskLocationTranslation]: alloc=25496 time=0.006
+Float inwards [Domain.Types.KioskLocationTranslation]: alloc=24392 time=0.005
+Simplifier [Domain.Types.KioskLocationTranslation]: alloc=48168336 time=15.070
+Demand analysis [Domain.Types.KioskLocationTranslation]: alloc=12184072 time=3.315
+CoreTidy [Domain.Types.KioskLocationTranslation]: alloc=6664000 time=2.582
+CorePrep [Domain.Types.KioskLocationTranslation]: alloc=25352 time=0.010
+CodeGen [Domain.Types.KioskLocationTranslation]: alloc=86336152 time=29.695
+systool:as: alloc=104608 time=0.198
+CorePrep [Domain.Types.KioskLocationTranslation]: alloc=25352 time=0.015
+CodeGen [Domain.Types.KioskLocationTranslation]: alloc=89591024 time=29.825
+systool:as: alloc=107480 time=0.211

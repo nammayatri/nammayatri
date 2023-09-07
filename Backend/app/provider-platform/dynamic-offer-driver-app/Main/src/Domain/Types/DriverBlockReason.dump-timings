@@ -1,0 +1,28 @@
+Parser [Domain.Types.DriverBlockReason]: alloc=490136 time=0.140
+Renamer/typechecker [Domain.Types.DriverBlockReason]: alloc=29377672 time=9.682
+Desugar [Domain.Types.DriverBlockReason]: alloc=1599272 time=1.269
+Simplifier [Domain.Types.DriverBlockReason]: alloc=57183432 time=20.377
+Specialise [Domain.Types.DriverBlockReason]: alloc=3363304 time=1.092
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverBlockReason]: alloc=10812408 time=3.836
+Simplifier [Domain.Types.DriverBlockReason]: alloc=87984616 time=33.066
+Simplifier [Domain.Types.DriverBlockReason]: alloc=76135392 time=29.632
+Simplifier [Domain.Types.DriverBlockReason]: alloc=69052440 time=28.394
+Float inwards [Domain.Types.DriverBlockReason]: alloc=22296 time=0.005
+Called arity analysis [Domain.Types.DriverBlockReason]: alloc=23872 time=0.006
+Simplifier [Domain.Types.DriverBlockReason]: alloc=50604160 time=21.879
+Demand analysis [Domain.Types.DriverBlockReason]: alloc=11258032 time=2.892
+Worker Wrapper binds [Domain.Types.DriverBlockReason]: alloc=382744 time=0.232
+Simplifier [Domain.Types.DriverBlockReason]: alloc=54823912 time=23.392
+Exitification transformation [Domain.Types.DriverBlockReason]: alloc=24816 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverBlockReason]: alloc=11090864 time=3.383
+Common sub-expression [Domain.Types.DriverBlockReason]: alloc=23400 time=0.005
+Float inwards [Domain.Types.DriverBlockReason]: alloc=22296 time=0.004
+Simplifier [Domain.Types.DriverBlockReason]: alloc=40345784 time=13.180
+Demand analysis [Domain.Types.DriverBlockReason]: alloc=10089664 time=2.774
+CoreTidy [Domain.Types.DriverBlockReason]: alloc=5058552 time=1.896
+CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.009
+CodeGen [Domain.Types.DriverBlockReason]: alloc=72292352 time=25.357
+systool:as: alloc=104176 time=0.204
+CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.027
+CodeGen [Domain.Types.DriverBlockReason]: alloc=75348568 time=25.401
+systool:as: alloc=107048 time=0.171

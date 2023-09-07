@@ -1,0 +1,28 @@
+Parser [Storage.Queries.QuoteSpecialZone]: alloc=2256080 time=0.479
+Renamer/typechecker [Storage.Queries.QuoteSpecialZone]: alloc=109009528 time=33.164
+Desugar [Storage.Queries.QuoteSpecialZone]: alloc=5469992 time=1.984
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=117424032 time=34.016
+Specialise [Storage.Queries.QuoteSpecialZone]: alloc=17443144 time=4.058
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.QuoteSpecialZone]: alloc=11953616 time=3.821
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=185634728 time=60.124
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=52981328 time=17.626
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=106856296 time=35.959
+Float inwards [Storage.Queries.QuoteSpecialZone]: alloc=22888 time=0.005
+Called arity analysis [Storage.Queries.QuoteSpecialZone]: alloc=24464 time=0.006
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=59676368 time=28.620
+Demand analysis [Storage.Queries.QuoteSpecialZone]: alloc=15832896 time=4.319
+Worker Wrapper binds [Storage.Queries.QuoteSpecialZone]: alloc=924456 time=0.535
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=90433320 time=28.292
+Exitification transformation [Storage.Queries.QuoteSpecialZone]: alloc=25408 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.QuoteSpecialZone]: alloc=15332992 time=5.044
+Common sub-expression [Storage.Queries.QuoteSpecialZone]: alloc=23992 time=0.018
+Float inwards [Storage.Queries.QuoteSpecialZone]: alloc=22888 time=0.004
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=66891344 time=21.623
+Demand analysis [Storage.Queries.QuoteSpecialZone]: alloc=16450688 time=4.308
+CoreTidy [Storage.Queries.QuoteSpecialZone]: alloc=10981672 time=4.071
+CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.038
+CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=132686440 time=41.034
+systool:as: alloc=104320 time=0.244
+CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.016
+CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=140648904 time=44.132
+systool:as: alloc=107200 time=0.197

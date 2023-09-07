@@ -1,0 +1,34 @@
+Parser [Domain.Types.DriverOnboarding.Error]: alloc=3601648 time=0.666
+Simplify [expr]: alloc=179840 time=0.100
+CorePrep [expr]: alloc=31288 time=0.017
+ByteCodeGen [Ghci1]: alloc=169192 time=0.061
+Simplify [expr]: alloc=34464 time=0.014
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.034
+Renamer/typechecker [Domain.Types.DriverOnboarding.Error]: alloc=242011584 time=77.789
+Desugar [Domain.Types.DriverOnboarding.Error]: alloc=55164160 time=17.628
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=327183576 time=125.954
+Specialise [Domain.Types.DriverOnboarding.Error]: alloc=38797048 time=10.308
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.Error]: alloc=41886600 time=16.662
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=433954176 time=169.974
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=319874648 time=315.576
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=423957856 time=148.170
+Float inwards [Domain.Types.DriverOnboarding.Error]: alloc=23800 time=0.005
+Called arity analysis [Domain.Types.DriverOnboarding.Error]: alloc=25376 time=0.018
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=350534984 time=122.735
+Demand analysis [Domain.Types.DriverOnboarding.Error]: alloc=94246192 time=22.908
+Worker Wrapper binds [Domain.Types.DriverOnboarding.Error]: alloc=3505952 time=1.810
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=496182336 time=180.966
+Exitification transformation [Domain.Types.DriverOnboarding.Error]: alloc=26288 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.Error]: alloc=105808880 time=30.604
+Common sub-expression [Domain.Types.DriverOnboarding.Error]: alloc=24904 time=0.007
+Float inwards [Domain.Types.DriverOnboarding.Error]: alloc=23800 time=0.017
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=406276488 time=159.081
+Demand analysis [Domain.Types.DriverOnboarding.Error]: alloc=140992072 time=30.642
+CoreTidy [Domain.Types.DriverOnboarding.Error]: alloc=47154568 time=26.000
+CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.026
+CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=930583888 time=282.638
+systool:as: alloc=104592 time=0.321
+CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.029
+CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=970623824 time=266.552
+systool:as: alloc=107464 time=0.249

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.DriverFee]: alloc=2056568 time=0.488
+Simplify [expr]: alloc=183976 time=0.088
+CorePrep [expr]: alloc=73944 time=0.070
+ByteCodeGen [Ghci1]: alloc=379904 time=0.100
+Simplify [expr]: alloc=47024 time=0.046
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.049
+Renamer/typechecker [Storage.Beam.DriverFee]: alloc=321957408 time=84.134
+Desugar [Storage.Beam.DriverFee]: alloc=33822120 time=8.734
+Simplifier [Storage.Beam.DriverFee]: alloc=638412144 time=207.006
+Specialise [Storage.Beam.DriverFee]: alloc=34919544 time=10.965
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverFee]: alloc=101998256 time=31.009
+Simplifier [Storage.Beam.DriverFee]: alloc=1033994984 time=356.558
+Simplifier [Storage.Beam.DriverFee]: alloc=893321616 time=319.692
+Simplifier [Storage.Beam.DriverFee]: alloc=825551208 time=268.435
+Float inwards [Storage.Beam.DriverFee]: alloc=19912 time=0.005
+Called arity analysis [Storage.Beam.DriverFee]: alloc=21488 time=0.006
+Simplifier [Storage.Beam.DriverFee]: alloc=639206864 time=216.836
+Demand analysis [Storage.Beam.DriverFee]: alloc=84608208 time=26.000
+Worker Wrapper binds [Storage.Beam.DriverFee]: alloc=2983472 time=2.762
+Simplifier [Storage.Beam.DriverFee]: alloc=871923408 time=308.818
+Exitification transformation [Storage.Beam.DriverFee]: alloc=22432 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverFee]: alloc=75768768 time=23.372
+Common sub-expression [Storage.Beam.DriverFee]: alloc=21016 time=0.007
+Float inwards [Storage.Beam.DriverFee]: alloc=19912 time=0.004
+Simplifier [Storage.Beam.DriverFee]: alloc=665246592 time=228.775
+Demand analysis [Storage.Beam.DriverFee]: alloc=74589160 time=22.955
+CoreTidy [Storage.Beam.DriverFee]: alloc=130897264 time=53.146
+CorePrep [Storage.Beam.DriverFee]: alloc=20888 time=0.042
+CodeGen [Storage.Beam.DriverFee]: alloc=657055456 time=209.911
+systool:as: alloc=103688 time=0.273
+CorePrep [Storage.Beam.DriverFee]: alloc=20888 time=0.044
+CodeGen [Storage.Beam.DriverFee]: alloc=689167168 time=220.271
+systool:as: alloc=106560 time=0.237

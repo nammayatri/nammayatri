@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverOnboarding.Image]: alloc=2948472 time=0.624
+Renamer/typechecker [Storage.Queries.DriverOnboarding.Image]: alloc=644664352 time=153.476
+Desugar [Storage.Queries.DriverOnboarding.Image]: alloc=57210112 time=12.077
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=499511648 time=124.426
+Specialise [Storage.Queries.DriverOnboarding.Image]: alloc=88968880 time=18.527
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.Image]: alloc=24245176 time=8.229
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=600097000 time=173.591
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=423023232 time=136.741
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=408187808 time=146.652
+Float inwards [Storage.Queries.DriverOnboarding.Image]: alloc=24680 time=0.018
+Called arity analysis [Storage.Queries.DriverOnboarding.Image]: alloc=26256 time=0.006
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=307275816 time=103.107
+Demand analysis [Storage.Queries.DriverOnboarding.Image]: alloc=32126456 time=8.768
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.Image]: alloc=1651792 time=0.831
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=314406264 time=93.704
+Exitification transformation [Storage.Queries.DriverOnboarding.Image]: alloc=27200 time=0.033
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.Image]: alloc=29101016 time=10.096
+Common sub-expression [Storage.Queries.DriverOnboarding.Image]: alloc=25784 time=0.019
+Float inwards [Storage.Queries.DriverOnboarding.Image]: alloc=24680 time=0.004
+Simplifier [Storage.Queries.DriverOnboarding.Image]: alloc=279722080 time=93.352
+Demand analysis [Storage.Queries.DriverOnboarding.Image]: alloc=16716144 time=7.545
+CoreTidy [Storage.Queries.DriverOnboarding.Image]: alloc=17808136 time=6.562
+CorePrep [Storage.Queries.DriverOnboarding.Image]: alloc=25656 time=0.039
+CodeGen [Storage.Queries.DriverOnboarding.Image]: alloc=120372808 time=37.890
+systool:as: alloc=104776 time=0.226
+CorePrep [Storage.Queries.DriverOnboarding.Image]: alloc=25656 time=0.017
+CodeGen [Storage.Queries.DriverOnboarding.Image]: alloc=129970384 time=39.570
+systool:as: alloc=107648 time=0.202

@@ -1,0 +1,31 @@
+Parser [Domain.Types.FarePolicy]: alloc=2386712 time=0.563
+Simplify [expr]: alloc=34464 time=0.028
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.052
+Renamer/typechecker [Domain.Types.FarePolicy]: alloc=162718640 time=62.263
+Desugar [Domain.Types.FarePolicy]: alloc=52866440 time=17.261
+Simplifier [Domain.Types.FarePolicy]: alloc=297244904 time=115.892
+Specialise [Domain.Types.FarePolicy]: alloc=21736744 time=8.125
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FarePolicy]: alloc=48731208 time=20.850
+Simplifier [Domain.Types.FarePolicy]: alloc=397329560 time=164.986
+Simplifier [Domain.Types.FarePolicy]: alloc=373620176 time=471.782
+Simplifier [Domain.Types.FarePolicy]: alloc=314981976 time=123.511
+Float inwards [Domain.Types.FarePolicy]: alloc=20216 time=0.005
+Called arity analysis [Domain.Types.FarePolicy]: alloc=21792 time=0.006
+Simplifier [Domain.Types.FarePolicy]: alloc=240419584 time=92.241
+Demand analysis [Domain.Types.FarePolicy]: alloc=53990576 time=13.209
+Worker Wrapper binds [Domain.Types.FarePolicy]: alloc=3272424 time=1.404
+Simplifier [Domain.Types.FarePolicy]: alloc=380332304 time=139.995
+Exitification transformation [Domain.Types.FarePolicy]: alloc=22720 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FarePolicy]: alloc=54549416 time=17.530
+Common sub-expression [Domain.Types.FarePolicy]: alloc=21320 time=0.019
+Float inwards [Domain.Types.FarePolicy]: alloc=20216 time=0.004
+Simplifier [Domain.Types.FarePolicy]: alloc=193526384 time=75.282
+Demand analysis [Domain.Types.FarePolicy]: alloc=43715856 time=11.408
+CoreTidy [Domain.Types.FarePolicy]: alloc=29406648 time=11.724
+CorePrep [Domain.Types.FarePolicy]: alloc=21176 time=0.026
+CodeGen [Domain.Types.FarePolicy]: alloc=421458912 time=140.301
+systool:as: alloc=103752 time=0.282
+CorePrep [Domain.Types.FarePolicy]: alloc=21176 time=0.016
+CodeGen [Domain.Types.FarePolicy]: alloc=438182568 time=136.279
+systool:as: alloc=106632 time=0.305

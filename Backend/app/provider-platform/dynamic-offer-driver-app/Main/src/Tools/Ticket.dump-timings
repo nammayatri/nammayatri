@@ -1,0 +1,28 @@
+Parser [Tools.Ticket]: alloc=1123696 time=0.308
+Renamer/typechecker [Tools.Ticket]: alloc=366111320 time=64.117
+Desugar [Tools.Ticket]: alloc=797511424 time=118.915
+Simplifier [Tools.Ticket]: alloc=9456488 time=3.079
+Specialise [Tools.Ticket]: alloc=681624 time=0.198
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Ticket]: alloc=2290040 time=0.581
+Simplifier [Tools.Ticket]: alloc=4318936 time=1.168
+Simplifier [Tools.Ticket]: alloc=4698368 time=1.121
+Simplifier [Tools.Ticket]: alloc=2110760 time=0.528
+Float inwards [Tools.Ticket]: alloc=16936 time=0.004
+Called arity analysis [Tools.Ticket]: alloc=18512 time=0.004
+Simplifier [Tools.Ticket]: alloc=6488800 time=1.298
+Demand analysis [Tools.Ticket]: alloc=2824728 time=0.591
+Worker Wrapper binds [Tools.Ticket]: alloc=235008 time=0.094
+Simplifier [Tools.Ticket]: alloc=4310360 time=1.055
+Exitification transformation [Tools.Ticket]: alloc=19456 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Ticket]: alloc=1992904 time=0.483
+Common sub-expression [Tools.Ticket]: alloc=18040 time=0.004
+Float inwards [Tools.Ticket]: alloc=16936 time=0.003
+Simplifier [Tools.Ticket]: alloc=5541096 time=1.336
+Demand analysis [Tools.Ticket]: alloc=2320912 time=0.449
+CoreTidy [Tools.Ticket]: alloc=650864 time=0.273
+CorePrep [Tools.Ticket]: alloc=17912 time=0.008
+CodeGen [Tools.Ticket]: alloc=19667912 time=6.107
+systool:as: alloc=103048 time=0.188
+CorePrep [Tools.Ticket]: alloc=17912 time=0.010
+CodeGen [Tools.Ticket]: alloc=20843984 time=6.260
+systool:as: alloc=105920 time=0.136

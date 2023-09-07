@@ -1,0 +1,28 @@
+Parser [SharedLogic.SyncRide]: alloc=3961440 time=0.764
+Renamer/typechecker [SharedLogic.SyncRide]: alloc=193114448 time=49.345
+Desugar [SharedLogic.SyncRide]: alloc=2181624 time=1.505
+Simplifier [SharedLogic.SyncRide]: alloc=168124344 time=48.733
+Specialise [SharedLogic.SyncRide]: alloc=6202376 time=3.672
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.SyncRide]: alloc=18436000 time=7.622
+Simplifier [SharedLogic.SyncRide]: alloc=253802512 time=76.697
+Simplifier [SharedLogic.SyncRide]: alloc=98876688 time=28.921
+Simplifier [SharedLogic.SyncRide]: alloc=197550288 time=60.104
+Float inwards [SharedLogic.SyncRide]: alloc=19320 time=0.005
+Called arity analysis [SharedLogic.SyncRide]: alloc=20896 time=0.006
+Simplifier [SharedLogic.SyncRide]: alloc=197620448 time=75.002
+Demand analysis [SharedLogic.SyncRide]: alloc=74091056 time=14.622
+Worker Wrapper binds [SharedLogic.SyncRide]: alloc=928280 time=0.562
+Simplifier [SharedLogic.SyncRide]: alloc=373992624 time=124.687
+Exitification transformation [SharedLogic.SyncRide]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.SyncRide]: alloc=57377704 time=16.907
+Common sub-expression [SharedLogic.SyncRide]: alloc=20424 time=0.005
+Float inwards [SharedLogic.SyncRide]: alloc=19320 time=0.003
+Simplifier [SharedLogic.SyncRide]: alloc=311803608 time=96.937
+Demand analysis [SharedLogic.SyncRide]: alloc=108761416 time=21.337
+CoreTidy [SharedLogic.SyncRide]: alloc=26820832 time=8.516
+CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.040
+CodeGen [SharedLogic.SyncRide]: alloc=541514384 time=141.663
+systool:as: alloc=103568 time=0.181
+CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.015
+CodeGen [SharedLogic.SyncRide]: alloc=559857040 time=128.926
+systool:as: alloc=106440 time=0.255

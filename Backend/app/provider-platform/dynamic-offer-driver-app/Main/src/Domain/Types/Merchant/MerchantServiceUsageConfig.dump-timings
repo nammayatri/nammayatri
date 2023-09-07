@@ -1,0 +1,28 @@
+Parser [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=1217152 time=0.328
+Renamer/typechecker [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=110627856 time=30.292
+Desugar [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=8460080 time=2.747
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=180095192 time=64.419
+Specialise [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=14172584 time=3.443
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=46108176 time=18.304
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=293191920 time=107.416
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=255654896 time=96.678
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=208819592 time=74.690
+Float inwards [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=27656 time=0.005
+Called arity analysis [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=29232 time=0.007
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=155913248 time=54.974
+Demand analysis [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=39488768 time=11.595
+Worker Wrapper binds [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=1300896 time=0.388
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=227069776 time=80.776
+Exitification transformation [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=30176 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=41133040 time=13.918
+Common sub-expression [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=28760 time=0.007
+Float inwards [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=27656 time=0.005
+Simplifier [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=133438088 time=46.797
+Demand analysis [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=34534480 time=10.190
+CoreTidy [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=20888024 time=8.142
+CorePrep [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=28648 time=0.033
+CodeGen [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=217621272 time=65.844
+systool:as: alloc=105312 time=0.257
+CorePrep [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=28648 time=0.031
+CodeGen [Domain.Types.Merchant.MerchantServiceUsageConfig]: alloc=225776376 time=70.834
+systool:as: alloc=108192 time=0.231

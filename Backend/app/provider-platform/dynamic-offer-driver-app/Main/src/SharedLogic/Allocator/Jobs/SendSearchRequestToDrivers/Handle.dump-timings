@@ -1,0 +1,28 @@
+Parser [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=1894424 time=0.514
+Renamer/typechecker [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=51256632 time=16.186
+Desugar [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=6028992 time=2.539
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=19189560 time=5.564
+Specialise [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=938264 time=0.230
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=4922304 time=1.404
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=14673296 time=4.093
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=9603048 time=2.586
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=9187072 time=2.537
+Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=31240 time=0.005
+Called arity analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=32816 time=0.007
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=10924776 time=3.034
+Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=4279480 time=0.931
+Worker Wrapper binds [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=275816 time=0.111
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=14409544 time=3.632
+Exitification transformation [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=33760 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=4819528 time=1.291
+Common sub-expression [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=32344 time=0.005
+Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=31240 time=0.005
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=23761232 time=6.018
+Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=4062544 time=0.911
+CoreTidy [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=3310856 time=1.043
+CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=32216 time=0.036
+CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=62492792 time=18.735
+systool:as: alloc=106216 time=0.164
+CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=32216 time=0.014
+CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle]: alloc=64744712 time=19.203
+systool:as: alloc=109088 time=0.151

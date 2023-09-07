@@ -1,0 +1,31 @@
+Parser [Domain.Types.LeaderBoardConfig]: alloc=696672 time=0.283
+Simplify [expr]: alloc=34464 time=0.028
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.064
+Renamer/typechecker [Domain.Types.LeaderBoardConfig]: alloc=93344368 time=27.216
+Desugar [Domain.Types.LeaderBoardConfig]: alloc=44954232 time=10.668
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=123172728 time=46.099
+Specialise [Domain.Types.LeaderBoardConfig]: alloc=12686304 time=3.074
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.LeaderBoardConfig]: alloc=24565192 time=8.025
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=195086256 time=70.469
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=167169960 time=71.813
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=149305368 time=55.715
+Float inwards [Domain.Types.LeaderBoardConfig]: alloc=22296 time=0.005
+Called arity analysis [Domain.Types.LeaderBoardConfig]: alloc=23872 time=0.006
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=115830784 time=43.569
+Demand analysis [Domain.Types.LeaderBoardConfig]: alloc=25936648 time=6.305
+Worker Wrapper binds [Domain.Types.LeaderBoardConfig]: alloc=1883504 time=0.742
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=144525568 time=51.243
+Exitification transformation [Domain.Types.LeaderBoardConfig]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.LeaderBoardConfig]: alloc=25863696 time=17.499
+Common sub-expression [Domain.Types.LeaderBoardConfig]: alloc=23400 time=0.006
+Float inwards [Domain.Types.LeaderBoardConfig]: alloc=22296 time=0.004
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=95724640 time=29.251
+Demand analysis [Domain.Types.LeaderBoardConfig]: alloc=22352032 time=12.225
+CoreTidy [Domain.Types.LeaderBoardConfig]: alloc=14112440 time=4.219
+CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.024
+CodeGen [Domain.Types.LeaderBoardConfig]: alloc=166190328 time=58.120
+systool:as: alloc=104176 time=0.181
+CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.016
+CodeGen [Domain.Types.LeaderBoardConfig]: alloc=172476592 time=55.960
+systool:as: alloc=107048 time=0.204

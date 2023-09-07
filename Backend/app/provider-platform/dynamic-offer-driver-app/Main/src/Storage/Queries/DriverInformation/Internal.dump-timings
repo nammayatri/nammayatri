@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverInformation.Internal]: alloc=1302360 time=0.324
+Renamer/typechecker [Storage.Queries.DriverInformation.Internal]: alloc=140135312 time=41.367
+Desugar [Storage.Queries.DriverInformation.Internal]: alloc=1530680 time=1.213
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=116306320 time=35.304
+Specialise [Storage.Queries.DriverInformation.Internal]: alloc=15348848 time=4.268
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverInformation.Internal]: alloc=18087288 time=6.018
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=339031920 time=115.734
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=244661424 time=94.266
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=231652512 time=90.361
+Float inwards [Storage.Queries.DriverInformation.Internal]: alloc=25864 time=0.005
+Called arity analysis [Storage.Queries.DriverInformation.Internal]: alloc=27440 time=0.006
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=173097240 time=62.973
+Demand analysis [Storage.Queries.DriverInformation.Internal]: alloc=34183104 time=8.973
+Worker Wrapper binds [Storage.Queries.DriverInformation.Internal]: alloc=1145016 time=0.829
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=182922232 time=71.484
+Exitification transformation [Storage.Queries.DriverInformation.Internal]: alloc=28384 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverInformation.Internal]: alloc=30549528 time=9.949
+Common sub-expression [Storage.Queries.DriverInformation.Internal]: alloc=26968 time=0.034
+Float inwards [Storage.Queries.DriverInformation.Internal]: alloc=25864 time=0.005
+Simplifier [Storage.Queries.DriverInformation.Internal]: alloc=156297488 time=69.046
+Demand analysis [Storage.Queries.DriverInformation.Internal]: alloc=18332128 time=5.338
+CoreTidy [Storage.Queries.DriverInformation.Internal]: alloc=16374024 time=7.299
+CorePrep [Storage.Queries.DriverInformation.Internal]: alloc=26856 time=0.040
+CodeGen [Storage.Queries.DriverInformation.Internal]: alloc=162847696 time=62.757
+systool:as: alloc=105016 time=0.247
+CorePrep [Storage.Queries.DriverInformation.Internal]: alloc=26856 time=0.018
+CodeGen [Storage.Queries.DriverInformation.Internal]: alloc=172546608 time=55.444
+systool:as: alloc=107896 time=0.217

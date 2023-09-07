@@ -1,0 +1,28 @@
+Parser [SharedLogic.DriverOnboarding]: alloc=1300672 time=0.370
+Renamer/typechecker [SharedLogic.DriverOnboarding]: alloc=66188920 time=21.551
+Desugar [SharedLogic.DriverOnboarding]: alloc=543424 time=1.065
+Simplifier [SharedLogic.DriverOnboarding]: alloc=78782912 time=21.917
+Specialise [SharedLogic.DriverOnboarding]: alloc=2154664 time=1.127
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverOnboarding]: alloc=9071096 time=3.185
+Simplifier [SharedLogic.DriverOnboarding]: alloc=108414192 time=29.855
+Simplifier [SharedLogic.DriverOnboarding]: alloc=28484152 time=7.102
+Simplifier [SharedLogic.DriverOnboarding]: alloc=77948344 time=21.091
+Float inwards [SharedLogic.DriverOnboarding]: alloc=21704 time=0.005
+Called arity analysis [SharedLogic.DriverOnboarding]: alloc=23280 time=0.007
+Simplifier [SharedLogic.DriverOnboarding]: alloc=60115144 time=17.404
+Demand analysis [SharedLogic.DriverOnboarding]: alloc=32752312 time=5.586
+Worker Wrapper binds [SharedLogic.DriverOnboarding]: alloc=445064 time=0.257
+Simplifier [SharedLogic.DriverOnboarding]: alloc=176130056 time=48.777
+Exitification transformation [SharedLogic.DriverOnboarding]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverOnboarding]: alloc=20665136 time=5.780
+Common sub-expression [SharedLogic.DriverOnboarding]: alloc=22808 time=0.007
+Float inwards [SharedLogic.DriverOnboarding]: alloc=21704 time=0.005
+Simplifier [SharedLogic.DriverOnboarding]: alloc=78126808 time=19.731
+Demand analysis [SharedLogic.DriverOnboarding]: alloc=46286160 time=7.987
+CoreTidy [SharedLogic.DriverOnboarding]: alloc=12543552 time=3.527
+CorePrep [SharedLogic.DriverOnboarding]: alloc=22680 time=0.010
+CodeGen [SharedLogic.DriverOnboarding]: alloc=187665896 time=54.642
+systool:as: alloc=104056 time=0.234
+CorePrep [SharedLogic.DriverOnboarding]: alloc=22680 time=0.015
+CodeGen [SharedLogic.DriverOnboarding]: alloc=193468616 time=45.005
+systool:as: alloc=106928 time=0.161

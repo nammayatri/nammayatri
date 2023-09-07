@@ -1,0 +1,28 @@
+Parser [Domain.Types.MetaData]: alloc=506960 time=0.187
+Renamer/typechecker [Domain.Types.MetaData]: alloc=53517240 time=16.102
+Desugar [Domain.Types.MetaData]: alloc=2899304 time=1.599
+Simplifier [Domain.Types.MetaData]: alloc=76699120 time=25.513
+Specialise [Domain.Types.MetaData]: alloc=4664952 time=1.270
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.MetaData]: alloc=16754136 time=5.459
+Simplifier [Domain.Types.MetaData]: alloc=125842928 time=40.528
+Simplifier [Domain.Types.MetaData]: alloc=105014944 time=44.947
+Simplifier [Domain.Types.MetaData]: alloc=91096480 time=29.559
+Float inwards [Domain.Types.MetaData]: alloc=19624 time=0.005
+Called arity analysis [Domain.Types.MetaData]: alloc=21200 time=0.006
+Simplifier [Domain.Types.MetaData]: alloc=66930296 time=19.032
+Demand analysis [Domain.Types.MetaData]: alloc=15577744 time=3.701
+Worker Wrapper binds [Domain.Types.MetaData]: alloc=478752 time=0.341
+Simplifier [Domain.Types.MetaData]: alloc=72895104 time=21.227
+Exitification transformation [Domain.Types.MetaData]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.MetaData]: alloc=15879200 time=4.889
+Common sub-expression [Domain.Types.MetaData]: alloc=20728 time=0.006
+Float inwards [Domain.Types.MetaData]: alloc=19624 time=0.004
+Simplifier [Domain.Types.MetaData]: alloc=56014712 time=17.283
+Demand analysis [Domain.Types.MetaData]: alloc=14426880 time=3.588
+CoreTidy [Domain.Types.MetaData]: alloc=7068248 time=2.581
+CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.009
+CodeGen [Domain.Types.MetaData]: alloc=100013120 time=29.655
+systool:as: alloc=103632 time=0.271
+CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.014
+CodeGen [Domain.Types.MetaData]: alloc=103944944 time=31.333
+systool:as: alloc=106504 time=0.210

@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Issue.IssueTranslation]: alloc=844184 time=0.236
+Renamer/typechecker [Storage.Queries.Issue.IssueTranslation]: alloc=5319808 time=2.124
+Desugar [Storage.Queries.Issue.IssueTranslation]: alloc=1791144 time=1.189
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=958344 time=0.381
+Specialise [Storage.Queries.Issue.IssueTranslation]: alloc=60064 time=0.026
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Issue.IssueTranslation]: alloc=227280 time=0.089
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=298520 time=0.115
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=293960 time=0.084
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=293960 time=0.083
+Float inwards [Storage.Queries.Issue.IssueTranslation]: alloc=24680 time=0.005
+Called arity analysis [Storage.Queries.Issue.IssueTranslation]: alloc=26256 time=0.005
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=366528 time=0.134
+Demand analysis [Storage.Queries.Issue.IssueTranslation]: alloc=277248 time=0.100
+Worker Wrapper binds [Storage.Queries.Issue.IssueTranslation]: alloc=97192 time=0.030
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=1634288 time=0.444
+Exitification transformation [Storage.Queries.Issue.IssueTranslation]: alloc=27200 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Issue.IssueTranslation]: alloc=241824 time=0.085
+Common sub-expression [Storage.Queries.Issue.IssueTranslation]: alloc=25784 time=0.004
+Float inwards [Storage.Queries.Issue.IssueTranslation]: alloc=24680 time=0.004
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=758720 time=0.243
+Demand analysis [Storage.Queries.Issue.IssueTranslation]: alloc=331096 time=0.108
+CoreTidy [Storage.Queries.Issue.IssueTranslation]: alloc=273056 time=0.142
+CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.009
+CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3453000 time=1.454
+systool:as: alloc=104712 time=0.215
+CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.015
+CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3494000 time=1.428
+systool:as: alloc=107584 time=0.175

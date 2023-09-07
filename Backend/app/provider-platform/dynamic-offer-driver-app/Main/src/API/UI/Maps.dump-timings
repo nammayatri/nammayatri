@@ -1,0 +1,28 @@
+Parser [API.UI.Maps]: alloc=1136520 time=0.297
+Renamer/typechecker [API.UI.Maps]: alloc=56176672 time=16.748
+Desugar [API.UI.Maps]: alloc=757768 time=1.110
+Simplifier [API.UI.Maps]: alloc=75729056 time=20.986
+Specialise [API.UI.Maps]: alloc=2147392 time=1.325
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Maps]: alloc=8904624 time=3.231
+Simplifier [API.UI.Maps]: alloc=74381880 time=21.491
+Simplifier [API.UI.Maps]: alloc=12335416 time=3.174
+Simplifier [API.UI.Maps]: alloc=12335416 time=3.098
+Float inwards [API.UI.Maps]: alloc=16648 time=0.004
+Called arity analysis [API.UI.Maps]: alloc=18224 time=0.005
+Simplifier [API.UI.Maps]: alloc=28438416 time=9.026
+Demand analysis [API.UI.Maps]: alloc=25020000 time=4.125
+Worker Wrapper binds [API.UI.Maps]: alloc=175984 time=0.140
+Simplifier [API.UI.Maps]: alloc=143571800 time=43.441
+Exitification transformation [API.UI.Maps]: alloc=19136 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Maps]: alloc=10581064 time=13.602
+Common sub-expression [API.UI.Maps]: alloc=17752 time=0.006
+Float inwards [API.UI.Maps]: alloc=16648 time=0.003
+Simplifier [API.UI.Maps]: alloc=31741752 time=7.042
+Demand analysis [API.UI.Maps]: alloc=23149232 time=3.732
+CoreTidy [API.UI.Maps]: alloc=10735072 time=2.837
+CorePrep [API.UI.Maps]: alloc=17608 time=0.036
+CodeGen [API.UI.Maps]: alloc=95622832 time=21.913
+systool:as: alloc=103008 time=0.226
+CorePrep [API.UI.Maps]: alloc=17608 time=0.014
+CodeGen [API.UI.Maps]: alloc=97556568 time=22.314
+systool:as: alloc=105904 time=0.256

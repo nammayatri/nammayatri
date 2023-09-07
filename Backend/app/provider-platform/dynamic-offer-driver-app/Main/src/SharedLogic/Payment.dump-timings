@@ -1,0 +1,28 @@
+Parser [SharedLogic.Payment]: alloc=3237904 time=0.716
+Renamer/typechecker [SharedLogic.Payment]: alloc=483782064 time=95.018
+Desugar [SharedLogic.Payment]: alloc=872567088 time=130.420
+Simplifier [SharedLogic.Payment]: alloc=33752336 time=9.396
+Specialise [SharedLogic.Payment]: alloc=2448392 time=0.550
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Payment]: alloc=8022584 time=2.157
+Simplifier [SharedLogic.Payment]: alloc=31239816 time=8.093
+Simplifier [SharedLogic.Payment]: alloc=26110080 time=7.166
+Simplifier [SharedLogic.Payment]: alloc=24148368 time=6.383
+Float inwards [SharedLogic.Payment]: alloc=19032 time=0.004
+Called arity analysis [SharedLogic.Payment]: alloc=20608 time=0.005
+Simplifier [SharedLogic.Payment]: alloc=20832072 time=4.883
+Demand analysis [SharedLogic.Payment]: alloc=15326984 time=2.814
+Worker Wrapper binds [SharedLogic.Payment]: alloc=236360 time=0.125
+Simplifier [SharedLogic.Payment]: alloc=27396144 time=7.242
+Exitification transformation [SharedLogic.Payment]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Payment]: alloc=7549056 time=1.987
+Common sub-expression [SharedLogic.Payment]: alloc=20136 time=0.004
+Float inwards [SharedLogic.Payment]: alloc=19032 time=0.004
+Simplifier [SharedLogic.Payment]: alloc=22984120 time=5.923
+Demand analysis [SharedLogic.Payment]: alloc=12915112 time=2.450
+CoreTidy [SharedLogic.Payment]: alloc=3650608 time=1.259
+CorePrep [SharedLogic.Payment]: alloc=19992 time=0.008
+CodeGen [SharedLogic.Payment]: alloc=87421552 time=24.543
+systool:as: alloc=103512 time=0.212
+CorePrep [SharedLogic.Payment]: alloc=19992 time=0.013
+CodeGen [SharedLogic.Payment]: alloc=91706688 time=24.652
+systool:as: alloc=106384 time=0.190

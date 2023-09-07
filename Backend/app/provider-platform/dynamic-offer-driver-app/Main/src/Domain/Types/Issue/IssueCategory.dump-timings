@@ -1,0 +1,28 @@
+Parser [Domain.Types.Issue.IssueCategory]: alloc=366184 time=0.116
+Renamer/typechecker [Domain.Types.Issue.IssueCategory]: alloc=26562880 time=8.812
+Desugar [Domain.Types.Issue.IssueCategory]: alloc=1556376 time=1.247
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=41912096 time=15.554
+Specialise [Domain.Types.Issue.IssueCategory]: alloc=2177368 time=0.649
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueCategory]: alloc=10166936 time=3.458
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=76264984 time=28.055
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=71967784 time=26.952
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=63819040 time=22.748
+Float inwards [Domain.Types.Issue.IssueCategory]: alloc=22888 time=0.005
+Called arity analysis [Domain.Types.Issue.IssueCategory]: alloc=24464 time=0.005
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=46197728 time=16.615
+Demand analysis [Domain.Types.Issue.IssueCategory]: alloc=10743328 time=2.530
+Worker Wrapper binds [Domain.Types.Issue.IssueCategory]: alloc=377304 time=0.214
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=51603528 time=18.407
+Exitification transformation [Domain.Types.Issue.IssueCategory]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueCategory]: alloc=10712536 time=3.161
+Common sub-expression [Domain.Types.Issue.IssueCategory]: alloc=23992 time=0.018
+Float inwards [Domain.Types.Issue.IssueCategory]: alloc=22888 time=0.004
+Simplifier [Domain.Types.Issue.IssueCategory]: alloc=38090728 time=15.127
+Demand analysis [Domain.Types.Issue.IssueCategory]: alloc=9967384 time=2.420
+CoreTidy [Domain.Types.Issue.IssueCategory]: alloc=4750616 time=3.155
+CorePrep [Domain.Types.Issue.IssueCategory]: alloc=23880 time=0.023
+CodeGen [Domain.Types.Issue.IssueCategory]: alloc=71314944 time=24.833
+systool:as: alloc=104328 time=0.222
+CorePrep [Domain.Types.Issue.IssueCategory]: alloc=23880 time=0.017
+CodeGen [Domain.Types.Issue.IssueCategory]: alloc=74277560 time=25.600
+systool:as: alloc=107208 time=0.142

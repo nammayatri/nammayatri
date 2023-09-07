@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Geometry]: alloc=1009088 time=0.343
+Simplify [expr]: alloc=97336 time=0.040
+CorePrep [expr]: alloc=43528 time=0.026
+ByteCodeGen [Ghci1]: alloc=217456 time=0.075
+Simplify [expr]: alloc=47024 time=0.015
+CorePrep [expr]: alloc=26752 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.040
+Renamer/typechecker [Storage.Beam.Geometry]: alloc=76437192 time=25.956
+Desugar [Storage.Beam.Geometry]: alloc=17295032 time=4.757
+Simplifier [Storage.Beam.Geometry]: alloc=87665824 time=28.297
+Specialise [Storage.Beam.Geometry]: alloc=7848640 time=2.041
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Geometry]: alloc=33127416 time=10.242
+Simplifier [Storage.Beam.Geometry]: alloc=147647536 time=47.648
+Simplifier [Storage.Beam.Geometry]: alloc=115991832 time=37.974
+Simplifier [Storage.Beam.Geometry]: alloc=107027512 time=34.894
+Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.004
+Called arity analysis [Storage.Beam.Geometry]: alloc=21200 time=0.006
+Simplifier [Storage.Beam.Geometry]: alloc=81980424 time=26.289
+Demand analysis [Storage.Beam.Geometry]: alloc=18768904 time=5.553
+Worker Wrapper binds [Storage.Beam.Geometry]: alloc=1136224 time=0.610
+Simplifier [Storage.Beam.Geometry]: alloc=123861352 time=40.532
+Exitification transformation [Storage.Beam.Geometry]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Geometry]: alloc=16880720 time=5.813
+Common sub-expression [Storage.Beam.Geometry]: alloc=20728 time=0.018
+Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.004
+Simplifier [Storage.Beam.Geometry]: alloc=95970008 time=31.842
+Demand analysis [Storage.Beam.Geometry]: alloc=16195240 time=4.827
+CoreTidy [Storage.Beam.Geometry]: alloc=7660328 time=3.771
+CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.038
+CodeGen [Storage.Beam.Geometry]: alloc=132859056 time=42.955
+systool:as: alloc=103632 time=0.202
+CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.016
+CodeGen [Storage.Beam.Geometry]: alloc=139085960 time=43.600
+systool:as: alloc=106504 time=0.181

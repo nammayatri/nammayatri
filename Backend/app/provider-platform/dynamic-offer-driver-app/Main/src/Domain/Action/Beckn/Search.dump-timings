@@ -1,0 +1,28 @@
+Parser [Domain.Action.Beckn.Search]: alloc=13030488 time=2.363
+Renamer/typechecker [Domain.Action.Beckn.Search]: alloc=1401392680 time=307.821
+Desugar [Domain.Action.Beckn.Search]: alloc=808380000 time=140.340
+Simplifier [Domain.Action.Beckn.Search]: alloc=392574632 time=128.617
+Specialise [Domain.Action.Beckn.Search]: alloc=16768592 time=9.331
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Search]: alloc=48660256 time=21.112
+Simplifier [Domain.Action.Beckn.Search]: alloc=516735672 time=191.900
+Simplifier [Domain.Action.Beckn.Search]: alloc=205958768 time=77.636
+Simplifier [Domain.Action.Beckn.Search]: alloc=306731384 time=107.846
+Float inwards [Domain.Action.Beckn.Search]: alloc=21096 time=0.004
+Called arity analysis [Domain.Action.Beckn.Search]: alloc=22672 time=0.008
+Simplifier [Domain.Action.Beckn.Search]: alloc=321587848 time=108.067
+Demand analysis [Domain.Action.Beckn.Search]: alloc=98355744 time=21.540
+Worker Wrapper binds [Domain.Action.Beckn.Search]: alloc=1720680 time=1.177
+Simplifier [Domain.Action.Beckn.Search]: alloc=617719368 time=224.500
+Exitification transformation [Domain.Action.Beckn.Search]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Search]: alloc=66515136 time=20.911
+Common sub-expression [Domain.Action.Beckn.Search]: alloc=22200 time=0.007
+Float inwards [Domain.Action.Beckn.Search]: alloc=21096 time=0.004
+Simplifier [Domain.Action.Beckn.Search]: alloc=468606496 time=157.326
+Demand analysis [Domain.Action.Beckn.Search]: alloc=109625984 time=23.651
+CoreTidy [Domain.Action.Beckn.Search]: alloc=39717136 time=13.015
+CorePrep [Domain.Action.Beckn.Search]: alloc=22088 time=0.039
+CodeGen [Domain.Action.Beckn.Search]: alloc=654931160 time=188.684
+systool:as: alloc=103968 time=0.182
+CorePrep [Domain.Action.Beckn.Search]: alloc=22088 time=0.016
+CodeGen [Domain.Action.Beckn.Search]: alloc=675138080 time=180.620
+systool:as: alloc=106848 time=0.213

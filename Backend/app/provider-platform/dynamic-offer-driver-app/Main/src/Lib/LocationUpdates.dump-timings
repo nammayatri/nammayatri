@@ -1,0 +1,28 @@
+Parser [Lib.LocationUpdates]: alloc=3306856 time=0.859
+Renamer/typechecker [Lib.LocationUpdates]: alloc=644460184 time=130.830
+Desugar [Lib.LocationUpdates]: alloc=590591952 time=96.201
+Simplifier [Lib.LocationUpdates]: alloc=160191056 time=60.723
+Specialise [Lib.LocationUpdates]: alloc=5095688 time=2.863
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.LocationUpdates]: alloc=18076400 time=6.474
+Simplifier [Lib.LocationUpdates]: alloc=219591416 time=66.452
+Simplifier [Lib.LocationUpdates]: alloc=81632736 time=24.031
+Simplifier [Lib.LocationUpdates]: alloc=159777552 time=48.276
+Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.004
+Called arity analysis [Lib.LocationUpdates]: alloc=20608 time=0.006
+Simplifier [Lib.LocationUpdates]: alloc=126206544 time=41.896
+Demand analysis [Lib.LocationUpdates]: alloc=62009472 time=23.986
+Worker Wrapper binds [Lib.LocationUpdates]: alloc=1065960 time=0.629
+Simplifier [Lib.LocationUpdates]: alloc=317822136 time=104.613
+Exitification transformation [Lib.LocationUpdates]: alloc=21520 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.LocationUpdates]: alloc=40155168 time=13.548
+Common sub-expression [Lib.LocationUpdates]: alloc=20136 time=0.006
+Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.003
+Simplifier [Lib.LocationUpdates]: alloc=135053360 time=44.963
+Demand analysis [Lib.LocationUpdates]: alloc=79820296 time=17.754
+CoreTidy [Lib.LocationUpdates]: alloc=22031472 time=7.902
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.038
+CodeGen [Lib.LocationUpdates]: alloc=394499152 time=120.882
+systool:as: alloc=103472 time=0.189
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.013
+CodeGen [Lib.LocationUpdates]: alloc=407458776 time=97.367
+systool:as: alloc=106344 time=0.285

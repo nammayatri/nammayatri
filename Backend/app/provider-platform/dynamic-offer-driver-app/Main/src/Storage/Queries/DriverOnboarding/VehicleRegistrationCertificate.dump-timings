@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=3704824 time=0.656
+Renamer/typechecker [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=470816576 time=129.156
+Desugar [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=13173816 time=3.854
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=408862280 time=127.265
+Specialise [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=82777312 time=19.675
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=52005576 time=17.052
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=799049904 time=282.522
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=558068040 time=224.019
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=505362824 time=187.960
+Float inwards [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32136 time=0.006
+Called arity analysis [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33712 time=0.019
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=376396680 time=144.456
+Demand analysis [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=77209472 time=19.833
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=3534624 time=1.920
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=395214368 time=151.327
+Exitification transformation [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=34640 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=70726008 time=21.699
+Common sub-expression [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33240 time=0.007
+Float inwards [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32136 time=0.018
+Simplifier [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=330101264 time=111.803
+Demand analysis [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=34295936 time=9.996
+CoreTidy [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=27196520 time=11.205
+CorePrep [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33096 time=0.029
+CodeGen [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=265470232 time=81.192
+systool:as: alloc=106296 time=0.268
+CorePrep [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33096 time=0.018
+CodeGen [Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate]: alloc=287283312 time=86.184
+systool:as: alloc=109176 time=0.236

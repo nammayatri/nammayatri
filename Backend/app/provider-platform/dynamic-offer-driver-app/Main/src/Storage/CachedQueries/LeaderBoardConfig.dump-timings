@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.LeaderBoardConfig]: alloc=1029712 time=0.278
+Renamer/typechecker [Storage.CachedQueries.LeaderBoardConfig]: alloc=225782736 time=39.929
+Desugar [Storage.CachedQueries.LeaderBoardConfig]: alloc=204673664 time=31.827
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=8757840 time=2.079
+Specialise [Storage.CachedQueries.LeaderBoardConfig]: alloc=547056 time=0.190
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=2598600 time=0.633
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=7348592 time=1.727
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=5055144 time=1.186
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=22067448 time=6.052
+Float inwards [Storage.CachedQueries.LeaderBoardConfig]: alloc=24984 time=0.005
+Called arity analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=26560 time=0.006
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=22080232 time=5.490
+Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=7241760 time=1.567
+Worker Wrapper binds [Storage.CachedQueries.LeaderBoardConfig]: alloc=579952 time=0.162
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=21699992 time=6.348
+Exitification transformation [Storage.CachedQueries.LeaderBoardConfig]: alloc=27488 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=6987384 time=1.819
+Common sub-expression [Storage.CachedQueries.LeaderBoardConfig]: alloc=26088 time=0.005
+Float inwards [Storage.CachedQueries.LeaderBoardConfig]: alloc=24984 time=0.004
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=13094760 time=3.625
+Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=12479912 time=2.360
+CoreTidy [Storage.CachedQueries.LeaderBoardConfig]: alloc=1695216 time=0.651
+CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.009
+CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=60928816 time=15.286
+systool:as: alloc=104776 time=0.178
+CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.019
+CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=63283232 time=16.032
+systool:as: alloc=107656 time=0.177

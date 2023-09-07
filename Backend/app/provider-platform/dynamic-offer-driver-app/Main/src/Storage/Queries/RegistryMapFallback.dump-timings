@@ -1,0 +1,28 @@
+Parser [Storage.Queries.RegistryMapFallback]: alloc=1249288 time=0.306
+Renamer/typechecker [Storage.Queries.RegistryMapFallback]: alloc=105031000 time=28.416
+Desugar [Storage.Queries.RegistryMapFallback]: alloc=3000376 time=1.533
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31115800 time=10.392
+Specialise [Storage.Queries.RegistryMapFallback]: alloc=3928784 time=1.198
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.RegistryMapFallback]: alloc=4842424 time=1.423
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=92440440 time=26.881
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31166032 time=9.347
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=30213384 time=8.745
+Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.005
+Called arity analysis [Storage.Queries.RegistryMapFallback]: alloc=25376 time=0.006
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=17258432 time=4.758
+Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4854960 time=1.680
+Worker Wrapper binds [Storage.Queries.RegistryMapFallback]: alloc=296592 time=0.147
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31800256 time=8.967
+Exitification transformation [Storage.Queries.RegistryMapFallback]: alloc=26288 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.RegistryMapFallback]: alloc=4634328 time=1.629
+Common sub-expression [Storage.Queries.RegistryMapFallback]: alloc=24904 time=0.004
+Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.004
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31556320 time=9.174
+Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4018024 time=1.332
+CoreTidy [Storage.Queries.RegistryMapFallback]: alloc=3331160 time=1.418
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.011
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=41767320 time=13.904
+systool:as: alloc=104512 time=0.198
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.018
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=44763584 time=14.492
+systool:as: alloc=107384 time=0.188

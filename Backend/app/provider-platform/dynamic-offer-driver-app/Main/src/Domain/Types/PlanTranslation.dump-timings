@@ -1,0 +1,28 @@
+Parser [Domain.Types.PlanTranslation]: alloc=426152 time=0.161
+Renamer/typechecker [Domain.Types.PlanTranslation]: alloc=39263312 time=14.219
+Desugar [Domain.Types.PlanTranslation]: alloc=1999240 time=1.467
+Simplifier [Domain.Types.PlanTranslation]: alloc=58553416 time=21.114
+Specialise [Domain.Types.PlanTranslation]: alloc=4579728 time=1.339
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.PlanTranslation]: alloc=13068200 time=4.494
+Simplifier [Domain.Types.PlanTranslation]: alloc=106603360 time=35.818
+Simplifier [Domain.Types.PlanTranslation]: alloc=89739240 time=28.924
+Simplifier [Domain.Types.PlanTranslation]: alloc=80715464 time=36.282
+Float inwards [Domain.Types.PlanTranslation]: alloc=21704 time=0.005
+Called arity analysis [Domain.Types.PlanTranslation]: alloc=23280 time=0.006
+Simplifier [Domain.Types.PlanTranslation]: alloc=59670152 time=18.530
+Demand analysis [Domain.Types.PlanTranslation]: alloc=13467008 time=3.453
+Worker Wrapper binds [Domain.Types.PlanTranslation]: alloc=451384 time=0.315
+Simplifier [Domain.Types.PlanTranslation]: alloc=64474392 time=20.609
+Exitification transformation [Domain.Types.PlanTranslation]: alloc=24224 time=0.033
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.PlanTranslation]: alloc=13197728 time=4.232
+Common sub-expression [Domain.Types.PlanTranslation]: alloc=22808 time=0.005
+Float inwards [Domain.Types.PlanTranslation]: alloc=21704 time=0.004
+Simplifier [Domain.Types.PlanTranslation]: alloc=48132720 time=15.543
+Demand analysis [Domain.Types.PlanTranslation]: alloc=12180904 time=3.173
+CoreTidy [Domain.Types.PlanTranslation]: alloc=6468064 time=2.363
+CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.010
+CodeGen [Domain.Types.PlanTranslation]: alloc=86086984 time=27.873
+systool:as: alloc=104056 time=0.208
+CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.016
+CodeGen [Domain.Types.PlanTranslation]: alloc=89505688 time=28.418
+systool:as: alloc=106928 time=0.188

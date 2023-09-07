@@ -1,0 +1,28 @@
+Parser [Storage.Queries.GoHomeConfig]: alloc=1182432 time=0.301
+Renamer/typechecker [Storage.Queries.GoHomeConfig]: alloc=54493048 time=16.648
+Desugar [Storage.Queries.GoHomeConfig]: alloc=3339624 time=1.482
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=38827328 time=12.441
+Specialise [Storage.Queries.GoHomeConfig]: alloc=7203344 time=1.760
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.GoHomeConfig]: alloc=9293624 time=2.657
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=166860376 time=55.850
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=44716920 time=15.486
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=42303888 time=20.212
+Float inwards [Storage.Queries.GoHomeConfig]: alloc=21704 time=0.005
+Called arity analysis [Storage.Queries.GoHomeConfig]: alloc=23280 time=0.006
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=25898976 time=7.580
+Demand analysis [Storage.Queries.GoHomeConfig]: alloc=9275016 time=2.466
+Worker Wrapper binds [Storage.Queries.GoHomeConfig]: alloc=446728 time=0.297
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=22423456 time=6.749
+Exitification transformation [Storage.Queries.GoHomeConfig]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.GoHomeConfig]: alloc=8814208 time=2.702
+Common sub-expression [Storage.Queries.GoHomeConfig]: alloc=22808 time=0.018
+Float inwards [Storage.Queries.GoHomeConfig]: alloc=21704 time=0.004
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=55758920 time=17.377
+Demand analysis [Storage.Queries.GoHomeConfig]: alloc=8981392 time=2.668
+CoreTidy [Storage.Queries.GoHomeConfig]: alloc=9500928 time=3.657
+CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.038
+CodeGen [Storage.Queries.GoHomeConfig]: alloc=91509440 time=31.380
+systool:as: alloc=104080 time=0.188
+CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.019
+CodeGen [Storage.Queries.GoHomeConfig]: alloc=96708744 time=31.708
+systool:as: alloc=106952 time=0.226

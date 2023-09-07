@@ -1,0 +1,34 @@
+Parser [Storage.Beam.KioskLocation]: alloc=1729456 time=0.393
+Simplify [expr]: alloc=184136 time=0.087
+CorePrep [expr]: alloc=74104 time=0.067
+ByteCodeGen [Ghci1]: alloc=379864 time=0.099
+Simplify [expr]: alloc=47024 time=0.019
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.KioskLocation]: alloc=152486112 time=45.015
+Desugar [Storage.Beam.KioskLocation]: alloc=22481536 time=6.085
+Simplifier [Storage.Beam.KioskLocation]: alloc=226752928 time=68.711
+Specialise [Storage.Beam.KioskLocation]: alloc=13543080 time=4.528
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.KioskLocation]: alloc=51704064 time=16.918
+Simplifier [Storage.Beam.KioskLocation]: alloc=356820808 time=116.442
+Simplifier [Storage.Beam.KioskLocation]: alloc=287064328 time=105.594
+Simplifier [Storage.Beam.KioskLocation]: alloc=264474832 time=80.958
+Float inwards [Storage.Beam.KioskLocation]: alloc=21096 time=0.005
+Called arity analysis [Storage.Beam.KioskLocation]: alloc=22672 time=0.006
+Simplifier [Storage.Beam.KioskLocation]: alloc=204930992 time=80.746
+Demand analysis [Storage.Beam.KioskLocation]: alloc=38276536 time=11.052
+Worker Wrapper binds [Storage.Beam.KioskLocation]: alloc=1540888 time=0.878
+Simplifier [Storage.Beam.KioskLocation]: alloc=290403520 time=102.541
+Exitification transformation [Storage.Beam.KioskLocation]: alloc=23616 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.KioskLocation]: alloc=32691968 time=10.933
+Common sub-expression [Storage.Beam.KioskLocation]: alloc=22200 time=0.005
+Float inwards [Storage.Beam.KioskLocation]: alloc=21096 time=0.008
+Simplifier [Storage.Beam.KioskLocation]: alloc=221194088 time=71.725
+Demand analysis [Storage.Beam.KioskLocation]: alloc=35307008 time=10.257
+CoreTidy [Storage.Beam.KioskLocation]: alloc=24231072 time=9.103
+CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.017
+CodeGen [Storage.Beam.KioskLocation]: alloc=259651120 time=96.016
+systool:as: alloc=103928 time=0.235
+CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.041
+CodeGen [Storage.Beam.KioskLocation]: alloc=272144152 time=80.903
+systool:as: alloc=106808 time=0.180

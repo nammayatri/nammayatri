@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Ride.StartRide]: alloc=4745560 time=1.042
+Renamer/typechecker [Domain.Action.UI.Ride.StartRide]: alloc=1368528456 time=286.740
+Desugar [Domain.Action.UI.Ride.StartRide]: alloc=1516979176 time=241.304
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=280654384 time=89.597
+Specialise [Domain.Action.UI.Ride.StartRide]: alloc=9765776 time=7.218
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.StartRide]: alloc=31337672 time=14.860
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=259654032 time=103.591
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=72836288 time=24.684
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=219602208 time=76.200
+Float inwards [Domain.Action.UI.Ride.StartRide]: alloc=22600 time=0.005
+Called arity analysis [Domain.Action.UI.Ride.StartRide]: alloc=24176 time=0.006
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=133528088 time=48.919
+Demand analysis [Domain.Action.UI.Ride.StartRide]: alloc=82916440 time=17.776
+Worker Wrapper binds [Domain.Action.UI.Ride.StartRide]: alloc=1764384 time=1.055
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=550063656 time=216.428
+Exitification transformation [Domain.Action.UI.Ride.StartRide]: alloc=25104 time=0.010
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.StartRide]: alloc=65212152 time=19.938
+Common sub-expression [Domain.Action.UI.Ride.StartRide]: alloc=23704 time=0.007
+Float inwards [Domain.Action.UI.Ride.StartRide]: alloc=22600 time=0.004
+Simplifier [Domain.Action.UI.Ride.StartRide]: alloc=219464752 time=76.847
+Demand analysis [Domain.Action.UI.Ride.StartRide]: alloc=120388912 time=24.405
+CoreTidy [Domain.Action.UI.Ride.StartRide]: alloc=38276464 time=12.896
+CorePrep [Domain.Action.UI.Ride.StartRide]: alloc=23560 time=0.013
+CodeGen [Domain.Action.UI.Ride.StartRide]: alloc=562802376 time=160.530
+systool:as: alloc=104288 time=0.274
+CorePrep [Domain.Action.UI.Ride.StartRide]: alloc=23560 time=0.029
+CodeGen [Domain.Action.UI.Ride.StartRide]: alloc=581443912 time=147.449
+systool:as: alloc=107168 time=0.228

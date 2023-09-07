@@ -1,0 +1,34 @@
+Parser [Storage.Beam.KioskLocationTranslation]: alloc=1668560 time=0.452
+Simplify [expr]: alloc=184136 time=0.101
+CorePrep [expr]: alloc=74024 time=0.064
+ByteCodeGen [Ghci1]: alloc=379864 time=0.098
+Simplify [expr]: alloc=47024 time=0.019
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.044
+Renamer/typechecker [Storage.Beam.KioskLocationTranslation]: alloc=109709176 time=35.743
+Desugar [Storage.Beam.KioskLocationTranslation]: alloc=19432224 time=5.702
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=134346904 time=43.009
+Specialise [Storage.Beam.KioskLocationTranslation]: alloc=11210712 time=3.098
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.KioskLocationTranslation]: alloc=41813944 time=13.077
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=221644176 time=79.801
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=172301928 time=60.878
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=157297328 time=56.149
+Float inwards [Storage.Beam.KioskLocationTranslation]: alloc=24392 time=0.005
+Called arity analysis [Storage.Beam.KioskLocationTranslation]: alloc=25968 time=0.006
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=121325456 time=37.229
+Demand analysis [Storage.Beam.KioskLocationTranslation]: alloc=26396824 time=7.364
+Worker Wrapper binds [Storage.Beam.KioskLocationTranslation]: alloc=1306808 time=0.784
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=178458232 time=61.890
+Exitification transformation [Storage.Beam.KioskLocationTranslation]: alloc=26896 time=0.032
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.KioskLocationTranslation]: alloc=23378152 time=7.774
+Common sub-expression [Storage.Beam.KioskLocationTranslation]: alloc=25496 time=0.006
+Float inwards [Storage.Beam.KioskLocationTranslation]: alloc=24392 time=0.005
+Simplifier [Storage.Beam.KioskLocationTranslation]: alloc=130722296 time=49.093
+Demand analysis [Storage.Beam.KioskLocationTranslation]: alloc=22941088 time=6.330
+CoreTidy [Storage.Beam.KioskLocationTranslation]: alloc=12508552 time=5.243
+CorePrep [Storage.Beam.KioskLocationTranslation]: alloc=25352 time=0.038
+CodeGen [Storage.Beam.KioskLocationTranslation]: alloc=184632792 time=58.339
+systool:as: alloc=104632 time=0.206
+CorePrep [Storage.Beam.KioskLocationTranslation]: alloc=25352 time=0.015
+CodeGen [Storage.Beam.KioskLocationTranslation]: alloc=193115288 time=61.239
+systool:as: alloc=107480 time=0.213

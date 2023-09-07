@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=1429640 time=0.355
+Renamer/typechecker [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=298728032 time=51.497
+Desugar [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=229102808 time=35.441
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=8682232 time=2.187
+Specialise [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=414144 time=0.158
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=2329832 time=0.553
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=5908664 time=1.517
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=4062656 time=1.014
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=19862512 time=5.684
+Float inwards [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=27064 time=0.007
+Called arity analysis [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=28640 time=0.006
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=18782760 time=4.893
+Demand analysis [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=6517392 time=1.421
+Worker Wrapper binds [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=549752 time=0.215
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=20462376 time=6.097
+Exitification transformation [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=29584 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=7040688 time=1.865
+Common sub-expression [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=28168 time=0.018
+Float inwards [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=27064 time=0.005
+Simplifier [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=13058208 time=3.637
+Demand analysis [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=12020632 time=2.269
+CoreTidy [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=1485600 time=0.608
+CorePrep [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=28040 time=0.010
+CodeGen [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=62583152 time=16.589
+systool:as: alloc=105256 time=0.211
+CorePrep [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=28040 time=0.021
+CodeGen [Storage.CachedQueries.Merchant.MerchantMessage]: alloc=65386784 time=16.642
+systool:as: alloc=108128 time=0.197

@@ -1,0 +1,28 @@
+Parser [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1268328 time=0.368
+Renamer/typechecker [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=11703520 time=4.448
+Desugar [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1516440 time=1.339
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=6110624 time=1.859
+Specialise [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=334888 time=0.186
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1184064 time=0.408
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=5150152 time=1.649
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=5111056 time=1.484
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=2182184 time=0.645
+Float inwards [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=28856 time=0.005
+Called arity analysis [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=30432 time=0.006
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=2816664 time=0.783
+Demand analysis [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1771272 time=0.459
+Worker Wrapper binds [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=74624 time=0.053
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=2750376 time=0.784
+Exitification transformation [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=31376 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1775112 time=0.547
+Common sub-expression [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=29960 time=0.005
+Float inwards [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=28856 time=0.004
+Simplifier [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=3863216 time=1.208
+Demand analysis [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1613496 time=0.400
+CoreTidy [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=1527736 time=0.462
+CorePrep [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=29832 time=0.012
+CodeGen [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=21269992 time=7.131
+systool:as: alloc=105704 time=0.225
+CorePrep [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=29832 time=0.017
+CodeGen [Tools.Metrics.SendSearchRequestToDriverMetrics.Types]: alloc=21703664 time=7.190
+systool:as: alloc=108576 time=0.179

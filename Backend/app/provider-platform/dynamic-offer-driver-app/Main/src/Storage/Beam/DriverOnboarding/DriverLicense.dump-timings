@@ -1,0 +1,34 @@
+Parser [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=2094712 time=0.600
+Simplify [expr]: alloc=246376 time=0.102
+CorePrep [expr]: alloc=96424 time=0.047
+ByteCodeGen [Ghci1]: alloc=527152 time=0.121
+Simplify [expr]: alloc=47024 time=0.020
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.049
+Renamer/typechecker [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=310050592 time=77.770
+Desugar [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=32973000 time=8.636
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=574545592 time=170.240
+Specialise [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=34391408 time=14.181
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=97959616 time=30.203
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=960618792 time=325.130
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=895657424 time=292.082
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=804856608 time=271.363
+Float inwards [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=26184 time=0.006
+Called arity analysis [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=27760 time=0.019
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=612245816 time=198.032
+Demand analysis [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=95990904 time=32.659
+Worker Wrapper binds [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=3488792 time=3.065
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=844389448 time=273.165
+Exitification transformation [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=28672 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=82849832 time=26.838
+Common sub-expression [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=27288 time=0.007
+Float inwards [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=26184 time=0.004
+Simplifier [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=609571184 time=189.962
+Demand analysis [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=72448712 time=28.238
+CoreTidy [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=113479288 time=28.326
+CorePrep [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=27144 time=0.029
+CodeGen [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=651496360 time=194.641
+systool:as: alloc=105056 time=0.275
+CorePrep [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=27144 time=0.019
+CodeGen [Storage.Beam.DriverOnboarding.DriverLicense]: alloc=683506480 time=191.788
+systool:as: alloc=107928 time=0.269

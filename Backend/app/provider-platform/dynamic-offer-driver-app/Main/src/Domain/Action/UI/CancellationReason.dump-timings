@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.CancellationReason]: alloc=466696 time=0.149
+Renamer/typechecker [Domain.Action.UI.CancellationReason]: alloc=23285624 time=6.251
+Desugar [Domain.Action.UI.CancellationReason]: alloc=7685584 time=2.093
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=453384 time=0.210
+Specialise [Domain.Action.UI.CancellationReason]: alloc=67056 time=0.038
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.CancellationReason]: alloc=259688 time=0.092
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=552792 time=0.257
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=199552 time=0.061
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=199552 time=0.073
+Float inwards [Domain.Action.UI.CancellationReason]: alloc=23800 time=0.004
+Called arity analysis [Domain.Action.UI.CancellationReason]: alloc=25376 time=0.005
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=317888 time=0.111
+Demand analysis [Domain.Action.UI.CancellationReason]: alloc=281168 time=0.085
+Worker Wrapper binds [Domain.Action.UI.CancellationReason]: alloc=122016 time=0.036
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=1949744 time=0.572
+Exitification transformation [Domain.Action.UI.CancellationReason]: alloc=26288 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.CancellationReason]: alloc=296872 time=0.105
+Common sub-expression [Domain.Action.UI.CancellationReason]: alloc=24904 time=0.004
+Float inwards [Domain.Action.UI.CancellationReason]: alloc=23800 time=0.003
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=710528 time=0.221
+Demand analysis [Domain.Action.UI.CancellationReason]: alloc=485680 time=0.123
+CoreTidy [Domain.Action.UI.CancellationReason]: alloc=299576 time=0.129
+CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.007
+CodeGen [Domain.Action.UI.CancellationReason]: alloc=4087872 time=1.385
+systool:as: alloc=104512 time=0.154
+CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.011
+CodeGen [Domain.Action.UI.CancellationReason]: alloc=4277784 time=1.433
+systool:as: alloc=107408 time=0.148

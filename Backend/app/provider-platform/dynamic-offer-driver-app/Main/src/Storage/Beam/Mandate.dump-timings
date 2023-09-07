@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Mandate]: alloc=1610544 time=0.407
+Simplify [expr]: alloc=97336 time=0.064
+CorePrep [expr]: alloc=43528 time=0.045
+ByteCodeGen [Ghci1]: alloc=217456 time=0.108
+Simplify [expr]: alloc=47024 time=0.034
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.068
+Renamer/typechecker [Storage.Beam.Mandate]: alloc=204178744 time=58.861
+Desugar [Storage.Beam.Mandate]: alloc=25869264 time=7.080
+Simplifier [Storage.Beam.Mandate]: alloc=350128176 time=113.311
+Specialise [Storage.Beam.Mandate]: alloc=21596480 time=15.593
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Mandate]: alloc=70382872 time=21.116
+Simplifier [Storage.Beam.Mandate]: alloc=648213368 time=213.498
+Simplifier [Storage.Beam.Mandate]: alloc=513627552 time=181.572
+Simplifier [Storage.Beam.Mandate]: alloc=476392952 time=168.397
+Float inwards [Storage.Beam.Mandate]: alloc=19320 time=0.005
+Called arity analysis [Storage.Beam.Mandate]: alloc=20896 time=0.006
+Simplifier [Storage.Beam.Mandate]: alloc=367724504 time=134.078
+Demand analysis [Storage.Beam.Mandate]: alloc=58525992 time=15.434
+Worker Wrapper binds [Storage.Beam.Mandate]: alloc=2188312 time=1.205
+Simplifier [Storage.Beam.Mandate]: alloc=518005088 time=175.427
+Exitification transformation [Storage.Beam.Mandate]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Mandate]: alloc=47516256 time=25.480
+Common sub-expression [Storage.Beam.Mandate]: alloc=20424 time=0.006
+Float inwards [Storage.Beam.Mandate]: alloc=19320 time=0.004
+Simplifier [Storage.Beam.Mandate]: alloc=389720032 time=129.372
+Demand analysis [Storage.Beam.Mandate]: alloc=53574696 time=23.456
+CoreTidy [Storage.Beam.Mandate]: alloc=52740240 time=13.956
+CorePrep [Storage.Beam.Mandate]: alloc=20296 time=0.028
+CodeGen [Storage.Beam.Mandate]: alloc=387424280 time=126.858
+systool:as: alloc=103568 time=0.245
+CorePrep [Storage.Beam.Mandate]: alloc=20296 time=0.015
+CodeGen [Storage.Beam.Mandate]: alloc=406233424 time=129.819
+systool:as: alloc=106440 time=0.235

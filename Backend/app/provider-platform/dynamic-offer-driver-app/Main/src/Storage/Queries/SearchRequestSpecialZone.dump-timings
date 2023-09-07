@@ -1,0 +1,28 @@
+Parser [Storage.Queries.SearchRequestSpecialZone]: alloc=2827200 time=0.557
+Renamer/typechecker [Storage.Queries.SearchRequestSpecialZone]: alloc=293390576 time=76.961
+Desugar [Storage.Queries.SearchRequestSpecialZone]: alloc=10190104 time=2.706
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=237491368 time=70.298
+Specialise [Storage.Queries.SearchRequestSpecialZone]: alloc=15906520 time=5.347
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.SearchRequestSpecialZone]: alloc=18422632 time=5.918
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=372515776 time=125.501
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=90031768 time=38.804
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=190425552 time=63.651
+Float inwards [Storage.Queries.SearchRequestSpecialZone]: alloc=25272 time=0.005
+Called arity analysis [Storage.Queries.SearchRequestSpecialZone]: alloc=26848 time=0.006
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=107715248 time=34.771
+Demand analysis [Storage.Queries.SearchRequestSpecialZone]: alloc=26340904 time=7.210
+Worker Wrapper binds [Storage.Queries.SearchRequestSpecialZone]: alloc=1437080 time=0.839
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=158685224 time=64.108
+Exitification transformation [Storage.Queries.SearchRequestSpecialZone]: alloc=27792 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.SearchRequestSpecialZone]: alloc=26840056 time=8.836
+Common sub-expression [Storage.Queries.SearchRequestSpecialZone]: alloc=26376 time=0.006
+Float inwards [Storage.Queries.SearchRequestSpecialZone]: alloc=25272 time=0.004
+Simplifier [Storage.Queries.SearchRequestSpecialZone]: alloc=173764520 time=58.898
+Demand analysis [Storage.Queries.SearchRequestSpecialZone]: alloc=25355784 time=7.036
+CoreTidy [Storage.Queries.SearchRequestSpecialZone]: alloc=15737552 time=6.347
+CorePrep [Storage.Queries.SearchRequestSpecialZone]: alloc=26264 time=0.045
+CodeGen [Storage.Queries.SearchRequestSpecialZone]: alloc=173960968 time=51.029
+systool:as: alloc=104832 time=0.289
+CorePrep [Storage.Queries.SearchRequestSpecialZone]: alloc=26264 time=0.019
+CodeGen [Storage.Queries.SearchRequestSpecialZone]: alloc=188293992 time=54.352
+systool:as: alloc=107688 time=0.246

@@ -1,0 +1,28 @@
+Parser [Domain.Types.RegistryMapFallback]: alloc=336208 time=0.141
+Renamer/typechecker [Domain.Types.RegistryMapFallback]: alloc=26492728 time=10.581
+Desugar [Domain.Types.RegistryMapFallback]: alloc=1523160 time=1.233
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=41554288 time=14.753
+Specialise [Domain.Types.RegistryMapFallback]: alloc=2190880 time=0.717
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistryMapFallback]: alloc=10132584 time=3.593
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=75714624 time=24.717
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=70739048 time=22.347
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=63431048 time=20.379
+Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.005
+Called arity analysis [Domain.Types.RegistryMapFallback]: alloc=24464 time=0.006
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=45869568 time=13.697
+Demand analysis [Domain.Types.RegistryMapFallback]: alloc=10641808 time=2.736
+Worker Wrapper binds [Domain.Types.RegistryMapFallback]: alloc=376072 time=0.238
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=51161624 time=15.607
+Exitification transformation [Domain.Types.RegistryMapFallback]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistryMapFallback]: alloc=10576328 time=3.240
+Common sub-expression [Domain.Types.RegistryMapFallback]: alloc=23992 time=0.017
+Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.004
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=37732592 time=12.208
+Demand analysis [Domain.Types.RegistryMapFallback]: alloc=9850056 time=2.740
+CoreTidy [Domain.Types.RegistryMapFallback]: alloc=4796456 time=1.927
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.008
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=67526336 time=23.837
+systool:as: alloc=104296 time=0.193
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.043
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=70074848 time=22.983
+systool:as: alloc=107176 time=0.206

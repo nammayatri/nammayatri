@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.Exophone]: alloc=3239224 time=0.619
+Renamer/typechecker [Storage.CachedQueries.Exophone]: alloc=1803145008 time=296.880
+Desugar [Storage.CachedQueries.Exophone]: alloc=1040394984 time=156.768
+Simplifier [Storage.CachedQueries.Exophone]: alloc=62393496 time=15.387
+Specialise [Storage.CachedQueries.Exophone]: alloc=2860464 time=0.854
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Exophone]: alloc=15663784 time=4.153
+Simplifier [Storage.CachedQueries.Exophone]: alloc=74291528 time=21.944
+Simplifier [Storage.CachedQueries.Exophone]: alloc=113441872 time=35.330
+Simplifier [Storage.CachedQueries.Exophone]: alloc=166642424 time=52.642
+Float inwards [Storage.CachedQueries.Exophone]: alloc=22296 time=0.005
+Called arity analysis [Storage.CachedQueries.Exophone]: alloc=23872 time=0.006
+Simplifier [Storage.CachedQueries.Exophone]: alloc=158244984 time=46.512
+Demand analysis [Storage.CachedQueries.Exophone]: alloc=58627768 time=13.262
+Worker Wrapper binds [Storage.CachedQueries.Exophone]: alloc=3159688 time=1.247
+Simplifier [Storage.CachedQueries.Exophone]: alloc=177907664 time=57.037
+Exitification transformation [Storage.CachedQueries.Exophone]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Exophone]: alloc=48143720 time=13.986
+Common sub-expression [Storage.CachedQueries.Exophone]: alloc=23400 time=0.033
+Float inwards [Storage.CachedQueries.Exophone]: alloc=22296 time=0.004
+Simplifier [Storage.CachedQueries.Exophone]: alloc=92882232 time=28.566
+Demand analysis [Storage.CachedQueries.Exophone]: alloc=78131064 time=15.445
+CoreTidy [Storage.CachedQueries.Exophone]: alloc=10266456 time=4.164
+CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.011
+CodeGen [Storage.CachedQueries.Exophone]: alloc=319368456 time=81.350
+systool:as: alloc=104224 time=0.258
+CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.016
+CodeGen [Storage.CachedQueries.Exophone]: alloc=331476184 time=83.302
+systool:as: alloc=107096 time=0.254

@@ -1,0 +1,28 @@
+Parser [Storage.Queries.CancellationReason]: alloc=1012104 time=0.306
+Renamer/typechecker [Storage.Queries.CancellationReason]: alloc=43386216 time=13.729
+Desugar [Storage.Queries.CancellationReason]: alloc=2196040 time=1.340
+Simplifier [Storage.Queries.CancellationReason]: alloc=11941136 time=4.097
+Specialise [Storage.Queries.CancellationReason]: alloc=2524192 time=0.832
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.CancellationReason]: alloc=5323984 time=1.555
+Simplifier [Storage.Queries.CancellationReason]: alloc=153739800 time=46.519
+Simplifier [Storage.Queries.CancellationReason]: alloc=82092672 time=25.510
+Simplifier [Storage.Queries.CancellationReason]: alloc=53997064 time=16.924
+Float inwards [Storage.Queries.CancellationReason]: alloc=23480 time=0.005
+Called arity analysis [Storage.Queries.CancellationReason]: alloc=25056 time=0.006
+Simplifier [Storage.Queries.CancellationReason]: alloc=30637144 time=9.509
+Demand analysis [Storage.Queries.CancellationReason]: alloc=8751424 time=2.837
+Worker Wrapper binds [Storage.Queries.CancellationReason]: alloc=405224 time=0.279
+Simplifier [Storage.Queries.CancellationReason]: alloc=56579016 time=17.534
+Exitification transformation [Storage.Queries.CancellationReason]: alloc=26000 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.CancellationReason]: alloc=9590440 time=3.576
+Common sub-expression [Storage.Queries.CancellationReason]: alloc=24584 time=0.005
+Float inwards [Storage.Queries.CancellationReason]: alloc=23480 time=0.004
+Simplifier [Storage.Queries.CancellationReason]: alloc=87485424 time=27.741
+Demand analysis [Storage.Queries.CancellationReason]: alloc=6594320 time=2.524
+CoreTidy [Storage.Queries.CancellationReason]: alloc=6096264 time=2.498
+CorePrep [Storage.Queries.CancellationReason]: alloc=24472 time=0.011
+CodeGen [Storage.Queries.CancellationReason]: alloc=58684720 time=19.386
+systool:as: alloc=104432 time=0.223
+CorePrep [Storage.Queries.CancellationReason]: alloc=24472 time=0.014
+CodeGen [Storage.Queries.CancellationReason]: alloc=62405552 time=20.191
+systool:as: alloc=107312 time=0.187

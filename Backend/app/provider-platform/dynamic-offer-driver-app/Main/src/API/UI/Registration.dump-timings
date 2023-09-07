@@ -1,0 +1,28 @@
+Parser [API.UI.Registration]: alloc=1540424 time=0.373
+Renamer/typechecker [API.UI.Registration]: alloc=125369176 time=30.708
+Desugar [API.UI.Registration]: alloc=514640 time=0.911
+Simplifier [API.UI.Registration]: alloc=170887824 time=50.047
+Specialise [API.UI.Registration]: alloc=4301184 time=4.102
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Registration]: alloc=13982712 time=7.380
+Simplifier [API.UI.Registration]: alloc=148450520 time=47.998
+Simplifier [API.UI.Registration]: alloc=16252200 time=5.559
+Simplifier [API.UI.Registration]: alloc=16252200 time=5.619
+Float inwards [API.UI.Registration]: alloc=19032 time=0.004
+Called arity analysis [API.UI.Registration]: alloc=20608 time=0.005
+Simplifier [API.UI.Registration]: alloc=40111680 time=18.211
+Demand analysis [API.UI.Registration]: alloc=26380616 time=5.392
+Worker Wrapper binds [API.UI.Registration]: alloc=358576 time=0.202
+Simplifier [API.UI.Registration]: alloc=289162208 time=91.082
+Exitification transformation [API.UI.Registration]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Registration]: alloc=12916200 time=4.923
+Common sub-expression [API.UI.Registration]: alloc=20136 time=0.006
+Float inwards [API.UI.Registration]: alloc=19032 time=0.004
+Simplifier [API.UI.Registration]: alloc=87955376 time=25.316
+Demand analysis [API.UI.Registration]: alloc=29322712 time=6.349
+CoreTidy [API.UI.Registration]: alloc=18645536 time=5.260
+CorePrep [API.UI.Registration]: alloc=19992 time=0.012
+CodeGen [API.UI.Registration]: alloc=127579328 time=29.502
+systool:as: alloc=103496 time=0.197
+CorePrep [API.UI.Registration]: alloc=19992 time=0.013
+CodeGen [API.UI.Registration]: alloc=131288424 time=29.747
+systool:as: alloc=106368 time=0.217

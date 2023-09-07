@@ -1,0 +1,31 @@
+Parser [Domain.Types.Message.MessageReport]: alloc=1682048 time=0.416
+Simplify [expr]: alloc=34464 time=0.018
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Message.MessageReport]: alloc=82473728 time=27.127
+Desugar [Domain.Types.Message.MessageReport]: alloc=86157112 time=19.309
+Simplifier [Domain.Types.Message.MessageReport]: alloc=89715848 time=28.817
+Specialise [Domain.Types.Message.MessageReport]: alloc=6182200 time=1.599
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Message.MessageReport]: alloc=21755976 time=6.966
+Simplifier [Domain.Types.Message.MessageReport]: alloc=136856424 time=52.935
+Simplifier [Domain.Types.Message.MessageReport]: alloc=128806720 time=41.242
+Simplifier [Domain.Types.Message.MessageReport]: alloc=124553800 time=39.991
+Float inwards [Domain.Types.Message.MessageReport]: alloc=23480 time=0.005
+Called arity analysis [Domain.Types.Message.MessageReport]: alloc=25056 time=0.006
+Simplifier [Domain.Types.Message.MessageReport]: alloc=100698672 time=31.945
+Demand analysis [Domain.Types.Message.MessageReport]: alloc=25326568 time=6.515
+Worker Wrapper binds [Domain.Types.Message.MessageReport]: alloc=3059552 time=0.967
+Simplifier [Domain.Types.Message.MessageReport]: alloc=144992344 time=73.294
+Exitification transformation [Domain.Types.Message.MessageReport]: alloc=26000 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Message.MessageReport]: alloc=25708736 time=8.183
+Common sub-expression [Domain.Types.Message.MessageReport]: alloc=24584 time=0.007
+Float inwards [Domain.Types.Message.MessageReport]: alloc=23480 time=0.017
+Simplifier [Domain.Types.Message.MessageReport]: alloc=86014336 time=28.026
+Demand analysis [Domain.Types.Message.MessageReport]: alloc=24171048 time=6.029
+CoreTidy [Domain.Types.Message.MessageReport]: alloc=13779448 time=5.021
+CorePrep [Domain.Types.Message.MessageReport]: alloc=24472 time=0.013
+CodeGen [Domain.Types.Message.MessageReport]: alloc=211499488 time=63.938
+systool:as: alloc=104456 time=0.208
+CorePrep [Domain.Types.Message.MessageReport]: alloc=24472 time=0.030
+CodeGen [Domain.Types.Message.MessageReport]: alloc=219543792 time=65.002
+systool:as: alloc=107336 time=0.235

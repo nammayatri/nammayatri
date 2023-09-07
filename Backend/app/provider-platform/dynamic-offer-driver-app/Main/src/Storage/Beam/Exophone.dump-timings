@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Exophone]: alloc=1481152 time=0.361
+Simplify [expr]: alloc=308832 time=0.105
+CorePrep [expr]: alloc=119168 time=0.089
+ByteCodeGen [Ghci1]: alloc=674264 time=0.154
+Simplify [expr]: alloc=47024 time=0.046
+CorePrep [expr]: alloc=26752 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.047
+Renamer/typechecker [Storage.Beam.Exophone]: alloc=172632944 time=47.362
+Desugar [Storage.Beam.Exophone]: alloc=23700792 time=6.418
+Simplifier [Storage.Beam.Exophone]: alloc=268836200 time=78.410
+Specialise [Storage.Beam.Exophone]: alloc=16064744 time=5.391
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Exophone]: alloc=57414168 time=18.518
+Simplifier [Storage.Beam.Exophone]: alloc=431826232 time=151.097
+Simplifier [Storage.Beam.Exophone]: alloc=342257624 time=104.880
+Simplifier [Storage.Beam.Exophone]: alloc=312744592 time=120.312
+Float inwards [Storage.Beam.Exophone]: alloc=19624 time=0.036
+Called arity analysis [Storage.Beam.Exophone]: alloc=21200 time=0.005
+Simplifier [Storage.Beam.Exophone]: alloc=242330584 time=71.835
+Demand analysis [Storage.Beam.Exophone]: alloc=43879360 time=13.308
+Worker Wrapper binds [Storage.Beam.Exophone]: alloc=1649152 time=0.970
+Simplifier [Storage.Beam.Exophone]: alloc=340596744 time=129.448
+Exitification transformation [Storage.Beam.Exophone]: alloc=22128 time=0.032
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Exophone]: alloc=36828264 time=12.586
+Common sub-expression [Storage.Beam.Exophone]: alloc=20728 time=0.007
+Float inwards [Storage.Beam.Exophone]: alloc=19624 time=0.004
+Simplifier [Storage.Beam.Exophone]: alloc=263014040 time=103.264
+Demand analysis [Storage.Beam.Exophone]: alloc=41045208 time=12.233
+CoreTidy [Storage.Beam.Exophone]: alloc=30738816 time=25.059
+CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.041
+CodeGen [Storage.Beam.Exophone]: alloc=297665432 time=89.645
+systool:as: alloc=103632 time=0.253
+CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.029
+CodeGen [Storage.Beam.Exophone]: alloc=312435544 time=91.197
+systool:as: alloc=106528 time=0.301

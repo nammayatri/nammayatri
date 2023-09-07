@@ -1,0 +1,28 @@
+Parser [Domain.Types.DriverOnboarding.DriverLicense]: alloc=1397984 time=0.413
+Renamer/typechecker [Domain.Types.DriverOnboarding.DriverLicense]: alloc=47313176 time=14.009
+Desugar [Domain.Types.DriverOnboarding.DriverLicense]: alloc=6495912 time=2.459
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=16590872 time=4.572
+Specialise [Domain.Types.DriverOnboarding.DriverLicense]: alloc=1228456 time=0.350
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.DriverLicense]: alloc=5279256 time=1.622
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=30485952 time=11.924
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=14442800 time=4.115
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=14454976 time=4.033
+Float inwards [Domain.Types.DriverOnboarding.DriverLicense]: alloc=26184 time=0.006
+Called arity analysis [Domain.Types.DriverOnboarding.DriverLicense]: alloc=27760 time=0.007
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=8596464 time=2.349
+Demand analysis [Domain.Types.DriverOnboarding.DriverLicense]: alloc=7431016 time=1.788
+Worker Wrapper binds [Domain.Types.DriverOnboarding.DriverLicense]: alloc=368424 time=0.191
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=11568784 time=3.008
+Exitification transformation [Domain.Types.DriverOnboarding.DriverLicense]: alloc=28672 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.DriverLicense]: alloc=5864848 time=4.688
+Common sub-expression [Domain.Types.DriverOnboarding.DriverLicense]: alloc=27288 time=0.006
+Float inwards [Domain.Types.DriverOnboarding.DriverLicense]: alloc=26184 time=0.005
+Simplifier [Domain.Types.DriverOnboarding.DriverLicense]: alloc=26848320 time=6.731
+Demand analysis [Domain.Types.DriverOnboarding.DriverLicense]: alloc=7464040 time=1.705
+CoreTidy [Domain.Types.DriverOnboarding.DriverLicense]: alloc=5869968 time=1.701
+CorePrep [Domain.Types.DriverOnboarding.DriverLicense]: alloc=27144 time=0.023
+CodeGen [Domain.Types.DriverOnboarding.DriverLicense]: alloc=64092720 time=22.267
+systool:as: alloc=105056 time=0.211
+CorePrep [Domain.Types.DriverOnboarding.DriverLicense]: alloc=27144 time=0.016
+CodeGen [Domain.Types.DriverOnboarding.DriverLicense]: alloc=65587504 time=21.437
+systool:as: alloc=107952 time=0.227

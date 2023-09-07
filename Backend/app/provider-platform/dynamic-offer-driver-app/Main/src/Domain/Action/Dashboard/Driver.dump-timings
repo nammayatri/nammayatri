@@ -1,0 +1,28 @@
+Parser [Domain.Action.Dashboard.Driver]: alloc=27973456 time=4.261
+Renamer/typechecker [Domain.Action.Dashboard.Driver]: alloc=1615292872 time=350.102
+Desugar [Domain.Action.Dashboard.Driver]: alloc=209213848 time=36.617
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=649960168 time=214.867
+Specialise [Domain.Action.Dashboard.Driver]: alloc=49033472 time=17.550
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Driver]: alloc=82360592 time=24.091
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=1313208152 time=415.318
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=566094536 time=196.718
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=785483320 time=277.090
+Float inwards [Domain.Action.Dashboard.Driver]: alloc=22296 time=0.005
+Called arity analysis [Domain.Action.Dashboard.Driver]: alloc=23872 time=0.006
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=826963248 time=274.249
+Demand analysis [Domain.Action.Dashboard.Driver]: alloc=285628624 time=57.750
+Worker Wrapper binds [Domain.Action.Dashboard.Driver]: alloc=7060440 time=3.783
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=923632736 time=349.572
+Exitification transformation [Domain.Action.Dashboard.Driver]: alloc=24816 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Driver]: alloc=158632264 time=65.749
+Common sub-expression [Domain.Action.Dashboard.Driver]: alloc=23400 time=0.008
+Float inwards [Domain.Action.Dashboard.Driver]: alloc=22296 time=0.005
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=662467280 time=227.224
+Demand analysis [Domain.Action.Dashboard.Driver]: alloc=261514376 time=53.510
+CoreTidy [Domain.Action.Dashboard.Driver]: alloc=85665504 time=42.933
+CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.040
+CodeGen [Domain.Action.Dashboard.Driver]: alloc=1934849568 time=439.741
+systool:as: alloc=104264 time=0.253
+CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.029
+CodeGen [Domain.Action.Dashboard.Driver]: alloc=1995759392 time=429.371
+systool:as: alloc=107112 time=0.271

@@ -1,0 +1,28 @@
+Parser [Domain.Types.Merchant.TransporterConfig]: alloc=1619328 time=0.355
+Renamer/typechecker [Domain.Types.Merchant.TransporterConfig]: alloc=243621520 time=316.170
+Desugar [Domain.Types.Merchant.TransporterConfig]: alloc=24884184 time=6.154
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=551632424 time=191.297
+Specialise [Domain.Types.Merchant.TransporterConfig]: alloc=44724720 time=10.334
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.TransporterConfig]: alloc=143312944 time=52.841
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=784830008 time=291.336
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=691328720 time=218.413
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=454138944 time=161.806
+Float inwards [Domain.Types.Merchant.TransporterConfig]: alloc=24984 time=0.006
+Called arity analysis [Domain.Types.Merchant.TransporterConfig]: alloc=26560 time=0.006
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=364450912 time=117.455
+Demand analysis [Domain.Types.Merchant.TransporterConfig]: alloc=110443320 time=21.830
+Worker Wrapper binds [Domain.Types.Merchant.TransporterConfig]: alloc=2408392 time=1.359
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=564847840 time=194.079
+Exitification transformation [Domain.Types.Merchant.TransporterConfig]: alloc=27488 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.TransporterConfig]: alloc=112030312 time=31.108
+Common sub-expression [Domain.Types.Merchant.TransporterConfig]: alloc=26088 time=0.008
+Float inwards [Domain.Types.Merchant.TransporterConfig]: alloc=24984 time=0.004
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=359425176 time=134.568
+Demand analysis [Domain.Types.Merchant.TransporterConfig]: alloc=109423200 time=22.222
+CoreTidy [Domain.Types.Merchant.TransporterConfig]: alloc=62029496 time=14.401
+CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.026
+CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=796154848 time=218.341
+systool:as: alloc=104768 time=0.275
+CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.017
+CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=821807608 time=206.700
+systool:as: alloc=107648 time=0.228

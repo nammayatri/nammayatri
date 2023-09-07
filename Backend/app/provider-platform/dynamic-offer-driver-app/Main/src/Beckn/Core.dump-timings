@@ -1,0 +1,28 @@
+Parser [Beckn.Core]: alloc=2007808 time=0.501
+Renamer/typechecker [Beckn.Core]: alloc=212276512 time=52.962
+Desugar [Beckn.Core]: alloc=217618544 time=34.259
+Simplifier [Beckn.Core]: alloc=94221688 time=29.892
+Specialise [Beckn.Core]: alloc=591272 time=0.273
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.Core]: alloc=2874872 time=0.933
+Simplifier [Beckn.Core]: alloc=11041384 time=3.409
+Simplifier [Beckn.Core]: alloc=10769704 time=3.342
+Simplifier [Beckn.Core]: alloc=5402976 time=1.607
+Float inwards [Beckn.Core]: alloc=16328 time=0.004
+Called arity analysis [Beckn.Core]: alloc=17904 time=0.005
+Simplifier [Beckn.Core]: alloc=6546880 time=1.934
+Demand analysis [Beckn.Core]: alloc=4127312 time=1.194
+Worker Wrapper binds [Beckn.Core]: alloc=358416 time=0.163
+Simplifier [Beckn.Core]: alloc=6017256 time=1.904
+Exitification transformation [Beckn.Core]: alloc=18848 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.Core]: alloc=3013784 time=0.962
+Common sub-expression [Beckn.Core]: alloc=17432 time=0.004
+Float inwards [Beckn.Core]: alloc=16328 time=0.003
+Simplifier [Beckn.Core]: alloc=7643456 time=2.326
+Demand analysis [Beckn.Core]: alloc=3696360 time=0.924
+CoreTidy [Beckn.Core]: alloc=2169368 time=0.775
+CorePrep [Beckn.Core]: alloc=17320 time=0.009
+CodeGen [Beckn.Core]: alloc=27696800 time=7.896
+systool:as: alloc=102920 time=0.166
+CorePrep [Beckn.Core]: alloc=17320 time=0.012
+CodeGen [Beckn.Core]: alloc=29259416 time=8.647
+systool:as: alloc=105800 time=0.164

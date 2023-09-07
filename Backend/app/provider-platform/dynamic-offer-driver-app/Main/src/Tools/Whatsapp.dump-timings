@@ -1,0 +1,28 @@
+Parser [Tools.Whatsapp]: alloc=1295360 time=0.390
+Renamer/typechecker [Tools.Whatsapp]: alloc=229190864 time=42.408
+Desugar [Tools.Whatsapp]: alloc=782168744 time=115.390
+Simplifier [Tools.Whatsapp]: alloc=8944224 time=2.435
+Specialise [Tools.Whatsapp]: alloc=905216 time=0.210
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Whatsapp]: alloc=2897400 time=0.678
+Simplifier [Tools.Whatsapp]: alloc=7946896 time=1.843
+Simplifier [Tools.Whatsapp]: alloc=5896272 time=1.323
+Simplifier [Tools.Whatsapp]: alloc=18431720 time=4.792
+Float inwards [Tools.Whatsapp]: alloc=17528 time=0.004
+Called arity analysis [Tools.Whatsapp]: alloc=19104 time=0.004
+Simplifier [Tools.Whatsapp]: alloc=12357680 time=2.824
+Demand analysis [Tools.Whatsapp]: alloc=7092768 time=1.394
+Worker Wrapper binds [Tools.Whatsapp]: alloc=333112 time=0.110
+Simplifier [Tools.Whatsapp]: alloc=20872440 time=5.432
+Exitification transformation [Tools.Whatsapp]: alloc=20048 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Whatsapp]: alloc=5897976 time=1.436
+Common sub-expression [Tools.Whatsapp]: alloc=18632 time=0.004
+Float inwards [Tools.Whatsapp]: alloc=17528 time=0.003
+Simplifier [Tools.Whatsapp]: alloc=13695296 time=3.445
+Demand analysis [Tools.Whatsapp]: alloc=9650168 time=1.768
+CoreTidy [Tools.Whatsapp]: alloc=1444264 time=0.592
+CorePrep [Tools.Whatsapp]: alloc=18504 time=0.007
+CodeGen [Tools.Whatsapp]: alloc=53529032 time=13.963
+systool:as: alloc=103168 time=0.182
+CorePrep [Tools.Whatsapp]: alloc=18504 time=0.025
+CodeGen [Tools.Whatsapp]: alloc=56393896 time=15.097
+systool:as: alloc=106040 time=0.147

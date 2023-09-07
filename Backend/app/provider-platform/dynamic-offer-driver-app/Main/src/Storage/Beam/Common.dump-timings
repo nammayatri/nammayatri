@@ -1,0 +1,28 @@
+Parser [Storage.Beam.Common]: alloc=2451792 time=0.476
+Renamer/typechecker [Storage.Beam.Common]: alloc=325497864 time=83.471
+Desugar [Storage.Beam.Common]: alloc=13502616 time=4.085
+Simplifier [Storage.Beam.Common]: alloc=811253472 time=237.008
+Specialise [Storage.Beam.Common]: alloc=234977952 time=41.039
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Common]: alloc=113901208 time=34.927
+Simplifier [Storage.Beam.Common]: alloc=2204034256 time=643.158
+Simplifier [Storage.Beam.Common]: alloc=828232192 time=221.867
+Simplifier [Storage.Beam.Common]: alloc=780137600 time=225.008
+Float inwards [Storage.Beam.Common]: alloc=19032 time=0.006
+Called arity analysis [Storage.Beam.Common]: alloc=20608 time=0.006
+Simplifier [Storage.Beam.Common]: alloc=605281944 time=147.999
+Demand analysis [Storage.Beam.Common]: alloc=58534536 time=27.935
+Worker Wrapper binds [Storage.Beam.Common]: alloc=2729976 time=3.308
+Simplifier [Storage.Beam.Common]: alloc=815164384 time=208.051
+Exitification transformation [Storage.Beam.Common]: alloc=21520 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Common]: alloc=77853104 time=38.826
+Common sub-expression [Storage.Beam.Common]: alloc=20136 time=0.006
+Float inwards [Storage.Beam.Common]: alloc=19032 time=0.004
+Simplifier [Storage.Beam.Common]: alloc=1778835056 time=488.514
+Demand analysis [Storage.Beam.Common]: alloc=66156872 time=79.562
+CoreTidy [Storage.Beam.Common]: alloc=543396528 time=175.515
+CorePrep [Storage.Beam.Common]: alloc=19992 time=0.029
+CodeGen [Storage.Beam.Common]: alloc=929759456 time=517.216
+systool:as: alloc=103520 time=0.323
+CorePrep [Storage.Beam.Common]: alloc=19992 time=0.018
+CodeGen [Storage.Beam.Common]: alloc=976457728 time=320.774
+systool:as: alloc=106392 time=0.319

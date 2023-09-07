@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverQuote]: alloc=4323680 time=0.814
+Renamer/typechecker [Storage.Queries.DriverQuote]: alloc=691018080 time=183.516
+Desugar [Storage.Queries.DriverQuote]: alloc=17831352 time=4.234
+Simplifier [Storage.Queries.DriverQuote]: alloc=841187112 time=241.298
+Specialise [Storage.Queries.DriverQuote]: alloc=139889016 time=31.157
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverQuote]: alloc=50196568 time=17.997
+Simplifier [Storage.Queries.DriverQuote]: alloc=616717480 time=212.740
+Simplifier [Storage.Queries.DriverQuote]: alloc=161993248 time=56.742
+Simplifier [Storage.Queries.DriverQuote]: alloc=320361400 time=113.620
+Float inwards [Storage.Queries.DriverQuote]: alloc=21416 time=0.005
+Called arity analysis [Storage.Queries.DriverQuote]: alloc=22992 time=0.018
+Simplifier [Storage.Queries.DriverQuote]: alloc=192647320 time=66.994
+Demand analysis [Storage.Queries.DriverQuote]: alloc=37865312 time=10.933
+Worker Wrapper binds [Storage.Queries.DriverQuote]: alloc=1797568 time=1.214
+Simplifier [Storage.Queries.DriverQuote]: alloc=253856496 time=88.131
+Exitification transformation [Storage.Queries.DriverQuote]: alloc=23904 time=0.032
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverQuote]: alloc=36791728 time=10.909
+Common sub-expression [Storage.Queries.DriverQuote]: alloc=22520 time=0.005
+Float inwards [Storage.Queries.DriverQuote]: alloc=21416 time=0.004
+Simplifier [Storage.Queries.DriverQuote]: alloc=124719640 time=52.139
+Demand analysis [Storage.Queries.DriverQuote]: alloc=21359520 time=5.749
+CoreTidy [Storage.Queries.DriverQuote]: alloc=17664680 time=6.624
+CorePrep [Storage.Queries.DriverQuote]: alloc=22376 time=0.040
+CodeGen [Storage.Queries.DriverQuote]: alloc=184073720 time=57.591
+systool:as: alloc=104024 time=0.249
+CorePrep [Storage.Queries.DriverQuote]: alloc=22376 time=0.016
+CodeGen [Storage.Queries.DriverQuote]: alloc=196772824 time=60.238
+systool:as: alloc=106896 time=0.237

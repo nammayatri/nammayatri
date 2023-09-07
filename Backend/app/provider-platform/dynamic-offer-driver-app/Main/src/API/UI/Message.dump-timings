@@ -1,0 +1,28 @@
+Parser [API.UI.Message]: alloc=2199224 time=0.535
+Renamer/typechecker [API.UI.Message]: alloc=17889792 time=7.133
+Desugar [API.UI.Message]: alloc=1027160 time=1.127
+Simplifier [API.UI.Message]: alloc=8351760 time=2.223
+Specialise [API.UI.Message]: alloc=332008 time=0.125
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Message]: alloc=1084024 time=0.357
+Simplifier [API.UI.Message]: alloc=3647312 time=0.893
+Simplifier [API.UI.Message]: alloc=1745512 time=0.447
+Simplifier [API.UI.Message]: alloc=1745512 time=0.443
+Float inwards [API.UI.Message]: alloc=17528 time=0.008
+Called arity analysis [API.UI.Message]: alloc=19104 time=0.005
+Simplifier [API.UI.Message]: alloc=2082960 time=0.472
+Demand analysis [API.UI.Message]: alloc=3070368 time=0.534
+Worker Wrapper binds [API.UI.Message]: alloc=33672 time=0.023
+Simplifier [API.UI.Message]: alloc=3365944 time=0.714
+Exitification transformation [API.UI.Message]: alloc=20048 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Message]: alloc=1034024 time=0.305
+Common sub-expression [API.UI.Message]: alloc=18632 time=0.004
+Float inwards [API.UI.Message]: alloc=17528 time=0.016
+Simplifier [API.UI.Message]: alloc=4105544 time=1.040
+Demand analysis [API.UI.Message]: alloc=3062136 time=0.637
+CoreTidy [API.UI.Message]: alloc=1091776 time=0.399
+CorePrep [API.UI.Message]: alloc=18504 time=0.010
+CodeGen [API.UI.Message]: alloc=15425272 time=5.425
+systool:as: alloc=103184 time=0.195
+CorePrep [API.UI.Message]: alloc=18504 time=0.012
+CodeGen [API.UI.Message]: alloc=16006032 time=5.260
+systool:as: alloc=106056 time=0.148

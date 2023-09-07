@@ -1,0 +1,28 @@
+Parser [Domain.Action.Dashboard.Booking]: alloc=5280528 time=1.159
+Renamer/typechecker [Domain.Action.Dashboard.Booking]: alloc=120680128 time=33.617
+Desugar [Domain.Action.Dashboard.Booking]: alloc=1966616 time=1.525
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=93385112 time=26.397
+Specialise [Domain.Action.Dashboard.Booking]: alloc=4652984 time=1.337
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Booking]: alloc=15282816 time=4.247
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=168679776 time=45.222
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=63608080 time=16.769
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=131866672 time=36.393
+Float inwards [Domain.Action.Dashboard.Booking]: alloc=22600 time=0.005
+Called arity analysis [Domain.Action.Dashboard.Booking]: alloc=24176 time=0.006
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=139360920 time=38.310
+Demand analysis [Domain.Action.Dashboard.Booking]: alloc=47480760 time=9.739
+Worker Wrapper binds [Domain.Action.Dashboard.Booking]: alloc=621480 time=0.410
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=113226616 time=30.185
+Exitification transformation [Domain.Action.Dashboard.Booking]: alloc=25104 time=0.032
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Booking]: alloc=23660344 time=7.478
+Common sub-expression [Domain.Action.Dashboard.Booking]: alloc=23704 time=0.007
+Float inwards [Domain.Action.Dashboard.Booking]: alloc=22600 time=0.005
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=84235704 time=37.605
+Demand analysis [Domain.Action.Dashboard.Booking]: alloc=43763352 time=8.558
+CoreTidy [Domain.Action.Dashboard.Booking]: alloc=11942904 time=3.864
+CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.040
+CodeGen [Domain.Action.Dashboard.Booking]: alloc=231822672 time=58.327
+systool:as: alloc=104304 time=0.196
+CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.019
+CodeGen [Domain.Action.Dashboard.Booking]: alloc=240040904 time=59.543
+systool:as: alloc=107208 time=0.197

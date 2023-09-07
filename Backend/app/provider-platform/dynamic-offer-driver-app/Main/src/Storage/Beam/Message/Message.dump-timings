@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Message.Message]: alloc=1650584 time=0.410
+Simplify [expr]: alloc=97256 time=0.066
+CorePrep [expr]: alloc=43488 time=0.043
+ByteCodeGen [Ghci1]: alloc=217456 time=0.101
+Simplify [expr]: alloc=47024 time=0.032
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.048
+Renamer/typechecker [Storage.Beam.Message.Message]: alloc=221080880 time=59.765
+Desugar [Storage.Beam.Message.Message]: alloc=27000712 time=7.196
+Simplifier [Storage.Beam.Message.Message]: alloc=387325024 time=112.132
+Specialise [Storage.Beam.Message.Message]: alloc=23029888 time=8.824
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Message.Message]: alloc=73177864 time=23.457
+Simplifier [Storage.Beam.Message.Message]: alloc=747290136 time=230.413
+Simplifier [Storage.Beam.Message.Message]: alloc=613016888 time=220.224
+Simplifier [Storage.Beam.Message.Message]: alloc=564954384 time=186.424
+Float inwards [Storage.Beam.Message.Message]: alloc=21704 time=0.005
+Called arity analysis [Storage.Beam.Message.Message]: alloc=23280 time=0.006
+Simplifier [Storage.Beam.Message.Message]: alloc=434314064 time=127.186
+Demand analysis [Storage.Beam.Message.Message]: alloc=65251832 time=22.654
+Worker Wrapper binds [Storage.Beam.Message.Message]: alloc=2298976 time=1.351
+Simplifier [Storage.Beam.Message.Message]: alloc=592032552 time=211.829
+Exitification transformation [Storage.Beam.Message.Message]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Message.Message]: alloc=51527848 time=17.678
+Common sub-expression [Storage.Beam.Message.Message]: alloc=22808 time=0.006
+Float inwards [Storage.Beam.Message.Message]: alloc=21704 time=0.004
+Simplifier [Storage.Beam.Message.Message]: alloc=445733784 time=132.319
+Demand analysis [Storage.Beam.Message.Message]: alloc=56404360 time=20.765
+CoreTidy [Storage.Beam.Message.Message]: alloc=64481272 time=23.376
+CorePrep [Storage.Beam.Message.Message]: alloc=22680 time=0.029
+CodeGen [Storage.Beam.Message.Message]: alloc=404732880 time=196.805
+systool:as: alloc=104096 time=0.255
+CorePrep [Storage.Beam.Message.Message]: alloc=22680 time=0.031
+CodeGen [Storage.Beam.Message.Message]: alloc=424714512 time=125.010
+systool:as: alloc=106968 time=0.240

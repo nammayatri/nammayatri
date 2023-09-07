@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Feedback.FeedbackBadge]: alloc=1694392 time=0.652
+Renamer/typechecker [Storage.Queries.Feedback.FeedbackBadge]: alloc=138245736 time=38.989
+Desugar [Storage.Queries.Feedback.FeedbackBadge]: alloc=5478632 time=1.992
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=72118384 time=23.950
+Specialise [Storage.Queries.Feedback.FeedbackBadge]: alloc=10640752 time=2.987
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Feedback.FeedbackBadge]: alloc=10674936 time=3.320
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=273878936 time=91.021
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=97845896 time=28.713
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=96776008 time=27.713
+Float inwards [Storage.Queries.Feedback.FeedbackBadge]: alloc=24680 time=0.005
+Called arity analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=26256 time=0.006
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=53452728 time=15.798
+Demand analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=9816808 time=4.750
+Worker Wrapper binds [Storage.Queries.Feedback.FeedbackBadge]: alloc=640176 time=0.488
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=101517616 time=34.383
+Exitification transformation [Storage.Queries.Feedback.FeedbackBadge]: alloc=27200 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Feedback.FeedbackBadge]: alloc=10396080 time=4.192
+Common sub-expression [Storage.Queries.Feedback.FeedbackBadge]: alloc=25784 time=0.019
+Float inwards [Storage.Queries.Feedback.FeedbackBadge]: alloc=24680 time=0.005
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=109535624 time=32.189
+Demand analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=8560312 time=4.028
+CoreTidy [Storage.Queries.Feedback.FeedbackBadge]: alloc=10876560 time=4.504
+CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.027
+CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=75920168 time=24.805
+systool:as: alloc=104736 time=0.223
+CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.016
+CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=81665552 time=26.338
+systool:as: alloc=107608 time=0.224

@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Frontend]: alloc=1360344 time=0.455
+Renamer/typechecker [Domain.Action.UI.Frontend]: alloc=258945544 time=55.884
+Desugar [Domain.Action.UI.Frontend]: alloc=369836032 time=55.943
+Simplifier [Domain.Action.UI.Frontend]: alloc=58646192 time=19.678
+Specialise [Domain.Action.UI.Frontend]: alloc=6065464 time=1.577
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Frontend]: alloc=10164472 time=3.330
+Simplifier [Domain.Action.UI.Frontend]: alloc=81952768 time=27.031
+Simplifier [Domain.Action.UI.Frontend]: alloc=71552288 time=22.623
+Simplifier [Domain.Action.UI.Frontend]: alloc=67416752 time=22.287
+Float inwards [Domain.Action.UI.Frontend]: alloc=20808 time=0.005
+Called arity analysis [Domain.Action.UI.Frontend]: alloc=22384 time=0.006
+Simplifier [Domain.Action.UI.Frontend]: alloc=50040792 time=15.700
+Demand analysis [Domain.Action.UI.Frontend]: alloc=11343648 time=2.963
+Worker Wrapper binds [Domain.Action.UI.Frontend]: alloc=657544 time=0.387
+Simplifier [Domain.Action.UI.Frontend]: alloc=51797920 time=16.495
+Exitification transformation [Domain.Action.UI.Frontend]: alloc=23312 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Frontend]: alloc=10615840 time=3.403
+Common sub-expression [Domain.Action.UI.Frontend]: alloc=21912 time=0.006
+Float inwards [Domain.Action.UI.Frontend]: alloc=20808 time=0.005
+Simplifier [Domain.Action.UI.Frontend]: alloc=37226848 time=12.165
+Demand analysis [Domain.Action.UI.Frontend]: alloc=9890920 time=2.648
+CoreTidy [Domain.Action.UI.Frontend]: alloc=4535672 time=1.821
+CorePrep [Domain.Action.UI.Frontend]: alloc=21784 time=0.008
+CodeGen [Domain.Action.UI.Frontend]: alloc=70940008 time=22.380
+systool:as: alloc=103928 time=0.239
+CorePrep [Domain.Action.UI.Frontend]: alloc=21784 time=0.014
+CodeGen [Domain.Action.UI.Frontend]: alloc=74137888 time=24.256
+systool:as: alloc=106784 time=0.171

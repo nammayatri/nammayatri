@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverQuote.Internal]: alloc=606952 time=0.226
+Renamer/typechecker [Storage.Queries.DriverQuote.Internal]: alloc=77491280 time=22.999
+Desugar [Storage.Queries.DriverQuote.Internal]: alloc=822720 time=1.026
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=89147624 time=25.008
+Specialise [Storage.Queries.DriverQuote.Internal]: alloc=678248 time=0.393
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverQuote.Internal]: alloc=2182176 time=0.610
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=10107752 time=2.927
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9667216 time=2.860
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9518592 time=2.676
+Float inwards [Storage.Queries.DriverQuote.Internal]: alloc=24088 time=0.005
+Called arity analysis [Storage.Queries.DriverQuote.Internal]: alloc=25664 time=0.006
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=6001992 time=1.580
+Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=2125776 time=0.636
+Worker Wrapper binds [Storage.Queries.DriverQuote.Internal]: alloc=122976 time=0.100
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9993560 time=2.837
+Exitification transformation [Storage.Queries.DriverQuote.Internal]: alloc=26608 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverQuote.Internal]: alloc=2056880 time=0.531
+Common sub-expression [Storage.Queries.DriverQuote.Internal]: alloc=25192 time=0.005
+Float inwards [Storage.Queries.DriverQuote.Internal]: alloc=24088 time=0.004
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=11016216 time=3.159
+Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=2187008 time=0.618
+CoreTidy [Storage.Queries.DriverQuote.Internal]: alloc=4120344 time=1.140
+CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.012
+CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=35996176 time=12.160
+systool:as: alloc=104624 time=0.189
+CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.015
+CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=37843664 time=12.785
+systool:as: alloc=107496 time=0.182

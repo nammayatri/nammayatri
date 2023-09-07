@@ -1,0 +1,28 @@
+Parser [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=2918920 time=0.594
+Renamer/typechecker [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=425336064 time=119.069
+Desugar [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=9891936 time=2.890
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=398097128 time=125.742
+Specialise [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=76486272 time=18.491
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=43237184 time=14.765
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=646813240 time=235.102
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=151153848 time=50.508
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=147503592 time=53.360
+Float inwards [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=27960 time=0.006
+Called arity analysis [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=29536 time=0.006
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=100747744 time=32.396
+Demand analysis [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=32631664 time=9.376
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=1748904 time=1.116
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=162387688 time=59.516
+Exitification transformation [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=30464 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=34260808 time=11.080
+Common sub-expression [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=29064 time=0.019
+Float inwards [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=27960 time=0.005
+Simplifier [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=239266648 time=79.140
+Demand analysis [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=23922096 time=5.976
+CoreTidy [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=21664608 time=7.119
+CorePrep [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=28936 time=0.042
+CodeGen [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=202986096 time=64.084
+systool:as: alloc=105440 time=0.265
+CorePrep [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=28936 time=0.017
+CodeGen [Storage.Queries.DriverOnboarding.IdfyVerification]: alloc=219782456 time=68.204
+systool:as: alloc=108320 time=0.221

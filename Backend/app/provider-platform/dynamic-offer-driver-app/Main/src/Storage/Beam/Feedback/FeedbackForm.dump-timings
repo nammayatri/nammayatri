@@ -1,0 +1,34 @@
+Parser [Storage.Beam.Feedback.FeedbackForm]: alloc=1415136 time=0.372
+Simplify [expr]: alloc=183976 time=0.086
+CorePrep [expr]: alloc=73944 time=0.066
+ByteCodeGen [Ghci1]: alloc=379864 time=0.095
+Simplify [expr]: alloc=47024 time=0.017
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.070
+Renamer/typechecker [Storage.Beam.Feedback.FeedbackForm]: alloc=147408280 time=44.001
+Desugar [Storage.Beam.Feedback.FeedbackForm]: alloc=21610864 time=5.947
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=208160784 time=62.788
+Specialise [Storage.Beam.Feedback.FeedbackForm]: alloc=18275392 time=4.937
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Feedback.FeedbackForm]: alloc=54260672 time=17.023
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=398461520 time=133.723
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=364465544 time=134.449
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=323812392 time=103.895
+Float inwards [Storage.Beam.Feedback.FeedbackForm]: alloc=23480 time=0.005
+Called arity analysis [Storage.Beam.Feedback.FeedbackForm]: alloc=25056 time=0.006
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=239171184 time=92.665
+Demand analysis [Storage.Beam.Feedback.FeedbackForm]: alloc=53307848 time=14.072
+Worker Wrapper binds [Storage.Beam.Feedback.FeedbackForm]: alloc=2131896 time=1.140
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=346007320 time=122.265
+Exitification transformation [Storage.Beam.Feedback.FeedbackForm]: alloc=26000 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Feedback.FeedbackForm]: alloc=44329824 time=13.980
+Common sub-expression [Storage.Beam.Feedback.FeedbackForm]: alloc=24584 time=0.006
+Float inwards [Storage.Beam.Feedback.FeedbackForm]: alloc=23480 time=0.004
+Simplifier [Storage.Beam.Feedback.FeedbackForm]: alloc=227359000 time=68.482
+Demand analysis [Storage.Beam.Feedback.FeedbackForm]: alloc=35000408 time=10.102
+CoreTidy [Storage.Beam.Feedback.FeedbackForm]: alloc=22082680 time=32.589
+CorePrep [Storage.Beam.Feedback.FeedbackForm]: alloc=24472 time=0.042
+CodeGen [Storage.Beam.Feedback.FeedbackForm]: alloc=280844624 time=85.472
+systool:as: alloc=104456 time=0.261
+CorePrep [Storage.Beam.Feedback.FeedbackForm]: alloc=24472 time=0.017
+CodeGen [Storage.Beam.Feedback.FeedbackForm]: alloc=294484032 time=88.683
+systool:as: alloc=107336 time=0.231

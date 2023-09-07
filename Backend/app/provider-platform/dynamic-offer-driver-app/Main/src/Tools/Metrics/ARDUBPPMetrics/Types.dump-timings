@@ -1,0 +1,28 @@
+Parser [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=1864000 time=0.468
+Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=21944888 time=10.520
+Desugar [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2236912 time=1.477
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=10804720 time=3.552
+Specialise [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=808696 time=0.247
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=1888296 time=0.632
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=12098728 time=3.832
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=7501864 time=2.229
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=3097472 time=0.897
+Float inwards [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=23480 time=0.005
+Called arity analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=25056 time=0.006
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=4055664 time=1.089
+Demand analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2586920 time=0.667
+Worker Wrapper binds [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=105512 time=0.053
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=7801368 time=2.185
+Exitification transformation [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=26000 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2549632 time=0.762
+Common sub-expression [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24584 time=0.005
+Float inwards [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=23480 time=0.004
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=5358688 time=1.691
+Demand analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2308768 time=0.554
+CoreTidy [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=1949064 time=0.620
+CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.012
+CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=33123504 time=11.161
+systool:as: alloc=104504 time=0.199
+CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.017
+CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=34007872 time=11.244
+systool:as: alloc=107384 time=0.242

@@ -1,0 +1,34 @@
+Parser [Storage.Beam.CallStatus]: alloc=1475856 time=0.383
+Simplify [expr]: alloc=184216 time=0.076
+CorePrep [expr]: alloc=74144 time=0.053
+ByteCodeGen [Ghci1]: alloc=379904 time=0.145
+Simplify [expr]: alloc=47024 time=0.045
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.051
+Renamer/typechecker [Storage.Beam.CallStatus]: alloc=175096208 time=51.062
+Desugar [Storage.Beam.CallStatus]: alloc=23741848 time=6.575
+Simplifier [Storage.Beam.CallStatus]: alloc=270223512 time=81.721
+Specialise [Storage.Beam.CallStatus]: alloc=17986008 time=5.822
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.CallStatus]: alloc=58802216 time=18.823
+Simplifier [Storage.Beam.CallStatus]: alloc=462205832 time=164.262
+Simplifier [Storage.Beam.CallStatus]: alloc=354732248 time=106.156
+Simplifier [Storage.Beam.CallStatus]: alloc=327454968 time=138.348
+Float inwards [Storage.Beam.CallStatus]: alloc=20216 time=0.005
+Called arity analysis [Storage.Beam.CallStatus]: alloc=21792 time=0.019
+Simplifier [Storage.Beam.CallStatus]: alloc=254534992 time=71.817
+Demand analysis [Storage.Beam.CallStatus]: alloc=46303352 time=13.418
+Worker Wrapper binds [Storage.Beam.CallStatus]: alloc=1688768 time=1.001
+Simplifier [Storage.Beam.CallStatus]: alloc=358031592 time=105.113
+Exitification transformation [Storage.Beam.CallStatus]: alloc=22720 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.CallStatus]: alloc=38516896 time=51.915
+Common sub-expression [Storage.Beam.CallStatus]: alloc=21320 time=0.019
+Float inwards [Storage.Beam.CallStatus]: alloc=20216 time=0.004
+Simplifier [Storage.Beam.CallStatus]: alloc=273598784 time=94.965
+Demand analysis [Storage.Beam.CallStatus]: alloc=42364368 time=12.620
+CoreTidy [Storage.Beam.CallStatus]: alloc=31655384 time=11.726
+CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.029
+CodeGen [Storage.Beam.CallStatus]: alloc=317492920 time=97.169
+systool:as: alloc=103776 time=0.237
+CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.030
+CodeGen [Storage.Beam.CallStatus]: alloc=332738264 time=98.097
+systool:as: alloc=106632 time=0.206

@@ -1,0 +1,28 @@
+Parser [SharedLogic.CallBAPInternal]: alloc=1284624 time=0.358
+Renamer/typechecker [SharedLogic.CallBAPInternal]: alloc=82638376 time=28.250
+Desugar [SharedLogic.CallBAPInternal]: alloc=3351096 time=1.754
+Simplifier [SharedLogic.CallBAPInternal]: alloc=67331432 time=24.369
+Specialise [SharedLogic.CallBAPInternal]: alloc=11105936 time=3.066
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.CallBAPInternal]: alloc=15260040 time=5.236
+Simplifier [SharedLogic.CallBAPInternal]: alloc=186698872 time=65.615
+Simplifier [SharedLogic.CallBAPInternal]: alloc=162257568 time=56.999
+Simplifier [SharedLogic.CallBAPInternal]: alloc=155607952 time=72.153
+Float inwards [SharedLogic.CallBAPInternal]: alloc=21416 time=0.004
+Called arity analysis [SharedLogic.CallBAPInternal]: alloc=22992 time=0.006
+Simplifier [SharedLogic.CallBAPInternal]: alloc=121367552 time=50.738
+Demand analysis [SharedLogic.CallBAPInternal]: alloc=30053040 time=7.563
+Worker Wrapper binds [SharedLogic.CallBAPInternal]: alloc=723920 time=0.643
+Simplifier [SharedLogic.CallBAPInternal]: alloc=128140728 time=41.683
+Exitification transformation [SharedLogic.CallBAPInternal]: alloc=23904 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.CallBAPInternal]: alloc=24424472 time=8.439
+Common sub-expression [SharedLogic.CallBAPInternal]: alloc=22520 time=0.007
+Float inwards [SharedLogic.CallBAPInternal]: alloc=21416 time=0.004
+Simplifier [SharedLogic.CallBAPInternal]: alloc=87052400 time=47.302
+Demand analysis [SharedLogic.CallBAPInternal]: alloc=25035024 time=5.905
+CoreTidy [SharedLogic.CallBAPInternal]: alloc=9910632 time=3.901
+CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.010
+CodeGen [SharedLogic.CallBAPInternal]: alloc=107318416 time=35.077
+systool:as: alloc=104000 time=0.219
+CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.016
+CodeGen [SharedLogic.CallBAPInternal]: alloc=111652560 time=36.305
+systool:as: alloc=106872 time=0.229

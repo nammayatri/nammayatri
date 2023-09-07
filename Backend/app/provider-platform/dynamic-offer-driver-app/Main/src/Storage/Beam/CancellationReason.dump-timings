@@ -1,0 +1,34 @@
+Parser [Storage.Beam.CancellationReason]: alloc=1177352 time=0.332
+Simplify [expr]: alloc=97336 time=0.079
+CorePrep [expr]: alloc=43528 time=0.032
+ByteCodeGen [Ghci1]: alloc=217456 time=0.127
+Simplify [expr]: alloc=47024 time=0.018
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.CancellationReason]: alloc=107294992 time=35.483
+Desugar [Storage.Beam.CancellationReason]: alloc=19402640 time=5.390
+Simplifier [Storage.Beam.CancellationReason]: alloc=135662520 time=42.483
+Specialise [Storage.Beam.CancellationReason]: alloc=10167768 time=2.871
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.CancellationReason]: alloc=40864512 time=12.700
+Simplifier [Storage.Beam.CancellationReason]: alloc=215312088 time=67.781
+Simplifier [Storage.Beam.CancellationReason]: alloc=173660656 time=62.112
+Simplifier [Storage.Beam.CancellationReason]: alloc=157825512 time=59.617
+Float inwards [Storage.Beam.CancellationReason]: alloc=22600 time=0.005
+Called arity analysis [Storage.Beam.CancellationReason]: alloc=24176 time=0.006
+Simplifier [Storage.Beam.CancellationReason]: alloc=121678928 time=36.493
+Demand analysis [Storage.Beam.CancellationReason]: alloc=26577784 time=6.930
+Worker Wrapper binds [Storage.Beam.CancellationReason]: alloc=1300992 time=0.747
+Simplifier [Storage.Beam.CancellationReason]: alloc=177046456 time=67.103
+Exitification transformation [Storage.Beam.CancellationReason]: alloc=25104 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.CancellationReason]: alloc=23679256 time=8.013
+Common sub-expression [Storage.Beam.CancellationReason]: alloc=23704 time=0.006
+Float inwards [Storage.Beam.CancellationReason]: alloc=22600 time=0.004
+Simplifier [Storage.Beam.CancellationReason]: alloc=131297000 time=56.325
+Demand analysis [Storage.Beam.CancellationReason]: alloc=22958576 time=6.182
+CoreTidy [Storage.Beam.CancellationReason]: alloc=12383216 time=5.106
+CorePrep [Storage.Beam.CancellationReason]: alloc=23560 time=0.026
+CodeGen [Storage.Beam.CancellationReason]: alloc=186842424 time=58.810
+systool:as: alloc=104240 time=0.235
+CorePrep [Storage.Beam.CancellationReason]: alloc=23560 time=0.017
+CodeGen [Storage.Beam.CancellationReason]: alloc=195442024 time=59.345
+systool:as: alloc=107120 time=0.227

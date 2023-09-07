@@ -1,0 +1,28 @@
+Parser [Domain.Action.UI.Location.UpdateLocation]: alloc=7424960 time=1.578
+Renamer/typechecker [Domain.Action.UI.Location.UpdateLocation]: alloc=1444229600 time=301.033
+Desugar [Domain.Action.UI.Location.UpdateLocation]: alloc=3289001416 time=520.115
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=369185288 time=122.672
+Specialise [Domain.Action.UI.Location.UpdateLocation]: alloc=37540576 time=9.638
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Location.UpdateLocation]: alloc=54849656 time=18.113
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=381219280 time=141.018
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=379046936 time=145.610
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=374490456 time=126.358
+Float inwards [Domain.Action.UI.Location.UpdateLocation]: alloc=25272 time=0.006
+Called arity analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=26848 time=0.006
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=374163264 time=114.724
+Demand analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=99914464 time=24.765
+Worker Wrapper binds [Domain.Action.UI.Location.UpdateLocation]: alloc=2720136 time=1.813
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=437480800 time=162.863
+Exitification transformation [Domain.Action.UI.Location.UpdateLocation]: alloc=27792 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Location.UpdateLocation]: alloc=85991872 time=57.710
+Common sub-expression [Domain.Action.UI.Location.UpdateLocation]: alloc=26376 time=0.007
+Float inwards [Domain.Action.UI.Location.UpdateLocation]: alloc=25272 time=0.005
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=333518776 time=125.643
+Demand analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=98267272 time=22.293
+CoreTidy [Domain.Action.UI.Location.UpdateLocation]: alloc=32571600 time=12.536
+CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.039
+CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=624129176 time=194.745
+systool:as: alloc=104856 time=0.236
+CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.016
+CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=649262464 time=182.213
+systool:as: alloc=107760 time=0.231

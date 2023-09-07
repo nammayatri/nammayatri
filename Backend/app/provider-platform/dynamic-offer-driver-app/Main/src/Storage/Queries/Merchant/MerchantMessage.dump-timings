@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Merchant.MerchantMessage]: alloc=1243432 time=0.298
+Renamer/typechecker [Storage.Queries.Merchant.MerchantMessage]: alloc=42320848 time=13.165
+Desugar [Storage.Queries.Merchant.MerchantMessage]: alloc=3231440 time=1.425
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=17146888 time=5.718
+Specialise [Storage.Queries.Merchant.MerchantMessage]: alloc=4048368 time=1.104
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.MerchantMessage]: alloc=5999320 time=1.708
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=180429112 time=48.773
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=62262744 time=17.695
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=61286960 time=17.259
+Float inwards [Storage.Queries.Merchant.MerchantMessage]: alloc=25272 time=0.005
+Called arity analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=26848 time=0.006
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=33121944 time=9.317
+Demand analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=5763112 time=2.584
+Worker Wrapper binds [Storage.Queries.Merchant.MerchantMessage]: alloc=302896 time=0.217
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=64158880 time=17.853
+Exitification transformation [Storage.Queries.Merchant.MerchantMessage]: alloc=27792 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.MerchantMessage]: alloc=5315280 time=2.444
+Common sub-expression [Storage.Queries.Merchant.MerchantMessage]: alloc=26376 time=0.019
+Float inwards [Storage.Queries.Merchant.MerchantMessage]: alloc=25272 time=0.004
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=68063960 time=19.701
+Demand analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=5455232 time=2.546
+CoreTidy [Storage.Queries.Merchant.MerchantMessage]: alloc=6487712 time=2.718
+CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.039
+CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=54349888 time=18.385
+systool:as: alloc=104856 time=0.204
+CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.016
+CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=57897904 time=19.064
+systool:as: alloc=107736 time=0.246

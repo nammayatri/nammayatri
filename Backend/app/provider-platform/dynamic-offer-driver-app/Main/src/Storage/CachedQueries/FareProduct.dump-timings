@@ -1,0 +1,28 @@
+Parser [Storage.CachedQueries.FareProduct]: alloc=2113488 time=0.454
+Renamer/typechecker [Storage.CachedQueries.FareProduct]: alloc=483806344 time=89.057
+Desugar [Storage.CachedQueries.FareProduct]: alloc=406514008 time=67.045
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=18901472 time=4.402
+Specialise [Storage.CachedQueries.FareProduct]: alloc=1889832 time=0.527
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.FareProduct]: alloc=9543576 time=2.591
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=52768144 time=15.153
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=91823488 time=29.982
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=109907568 time=37.020
+Float inwards [Storage.CachedQueries.FareProduct]: alloc=23192 time=0.006
+Called arity analysis [Storage.CachedQueries.FareProduct]: alloc=24768 time=0.007
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=95511152 time=39.779
+Demand analysis [Storage.CachedQueries.FareProduct]: alloc=28989344 time=6.306
+Worker Wrapper binds [Storage.CachedQueries.FareProduct]: alloc=1341872 time=0.702
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=105035656 time=33.998
+Exitification transformation [Storage.CachedQueries.FareProduct]: alloc=25696 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.FareProduct]: alloc=28127904 time=8.138
+Common sub-expression [Storage.CachedQueries.FareProduct]: alloc=24296 time=0.007
+Float inwards [Storage.CachedQueries.FareProduct]: alloc=23192 time=0.005
+Simplifier [Storage.CachedQueries.FareProduct]: alloc=50843200 time=16.024
+Demand analysis [Storage.CachedQueries.FareProduct]: alloc=33161376 time=6.933
+CoreTidy [Storage.CachedQueries.FareProduct]: alloc=4841704 time=2.195
+CorePrep [Storage.CachedQueries.FareProduct]: alloc=24168 time=0.010
+CodeGen [Storage.CachedQueries.FareProduct]: alloc=159686920 time=52.492
+systool:as: alloc=104400 time=0.224
+CorePrep [Storage.CachedQueries.FareProduct]: alloc=24168 time=0.021
+CodeGen [Storage.CachedQueries.FareProduct]: alloc=167044304 time=43.546
+systool:as: alloc=107288 time=0.213

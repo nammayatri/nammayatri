@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Geometry]: alloc=1402816 time=0.424
+Renamer/typechecker [Storage.Queries.Geometry]: alloc=19273576 time=8.138
+Desugar [Storage.Queries.Geometry]: alloc=3630952 time=1.565
+Simplifier [Storage.Queries.Geometry]: alloc=12335600 time=4.206
+Specialise [Storage.Queries.Geometry]: alloc=2368632 time=0.750
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Geometry]: alloc=3679112 time=1.279
+Simplifier [Storage.Queries.Geometry]: alloc=62279424 time=19.259
+Simplifier [Storage.Queries.Geometry]: alloc=19184264 time=6.017
+Simplifier [Storage.Queries.Geometry]: alloc=18426760 time=5.775
+Float inwards [Storage.Queries.Geometry]: alloc=20504 time=0.004
+Called arity analysis [Storage.Queries.Geometry]: alloc=22080 time=0.006
+Simplifier [Storage.Queries.Geometry]: alloc=20276776 time=6.312
+Demand analysis [Storage.Queries.Geometry]: alloc=4206720 time=1.393
+Worker Wrapper binds [Storage.Queries.Geometry]: alloc=346872 time=0.193
+Simplifier [Storage.Queries.Geometry]: alloc=32135592 time=9.805
+Exitification transformation [Storage.Queries.Geometry]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Geometry]: alloc=4699456 time=1.546
+Common sub-expression [Storage.Queries.Geometry]: alloc=21608 time=0.004
+Float inwards [Storage.Queries.Geometry]: alloc=20504 time=0.004
+Simplifier [Storage.Queries.Geometry]: alloc=24381952 time=7.622
+Demand analysis [Storage.Queries.Geometry]: alloc=4761904 time=1.424
+CoreTidy [Storage.Queries.Geometry]: alloc=2876416 time=1.153
+CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.036
+CodeGen [Storage.Queries.Geometry]: alloc=46144656 time=14.392
+systool:as: alloc=103832 time=0.193
+CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.016
+CodeGen [Storage.Queries.Geometry]: alloc=49024336 time=15.325
+systool:as: alloc=106712 time=0.202

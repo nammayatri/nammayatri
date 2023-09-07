@@ -1,0 +1,28 @@
+Parser [Domain.Types.DriverOnboarding.OperatingCity]: alloc=438992 time=0.153
+Renamer/typechecker [Domain.Types.DriverOnboarding.OperatingCity]: alloc=46191536 time=13.033
+Desugar [Domain.Types.DriverOnboarding.OperatingCity]: alloc=2550896 time=1.581
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=66937528 time=22.640
+Specialise [Domain.Types.DriverOnboarding.OperatingCity]: alloc=6290128 time=1.627
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.OperatingCity]: alloc=16047032 time=5.377
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=128506976 time=43.695
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=105072632 time=34.063
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=94515560 time=42.821
+Float inwards [Domain.Types.DriverOnboarding.OperatingCity]: alloc=26184 time=0.005
+Called arity analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27760 time=0.008
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=71792984 time=30.072
+Demand analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=15518032 time=3.624
+Worker Wrapper binds [Domain.Types.DriverOnboarding.OperatingCity]: alloc=460392 time=0.349
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=76356608 time=22.549
+Exitification transformation [Domain.Types.DriverOnboarding.OperatingCity]: alloc=28672 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.OperatingCity]: alloc=15590000 time=4.674
+Common sub-expression [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27288 time=0.005
+Float inwards [Domain.Types.DriverOnboarding.OperatingCity]: alloc=26184 time=0.004
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=57593184 time=25.316
+Demand analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=13891520 time=3.343
+CoreTidy [Domain.Types.DriverOnboarding.OperatingCity]: alloc=7344672 time=2.593
+CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.010
+CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=84891064 time=26.853
+systool:as: alloc=105056 time=0.212
+CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.028
+CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=88411272 time=27.797
+systool:as: alloc=107928 time=0.227

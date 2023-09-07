@@ -1,0 +1,28 @@
+Parser [Lib.Schema]: alloc=595304 time=0.171
+Renamer/typechecker [Lib.Schema]: alloc=20723584 time=6.208
+Desugar [Lib.Schema]: alloc=324848 time=0.836
+Simplifier [Lib.Schema]: alloc=3786216 time=0.998
+Specialise [Lib.Schema]: alloc=153184 time=0.045
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.Schema]: alloc=346008 time=0.110
+Simplifier [Lib.Schema]: alloc=1065208 time=0.265
+Simplifier [Lib.Schema]: alloc=1051504 time=0.245
+Simplifier [Lib.Schema]: alloc=530240 time=0.147
+Float inwards [Lib.Schema]: alloc=16328 time=0.004
+Called arity analysis [Lib.Schema]: alloc=17904 time=0.004
+Simplifier [Lib.Schema]: alloc=570272 time=0.155
+Demand analysis [Lib.Schema]: alloc=522320 time=0.129
+Worker Wrapper binds [Lib.Schema]: alloc=26616 time=0.011
+Simplifier [Lib.Schema]: alloc=575984 time=0.133
+Exitification transformation [Lib.Schema]: alloc=18848 time=0.003
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.Schema]: alloc=337104 time=0.089
+Common sub-expression [Lib.Schema]: alloc=17432 time=0.003
+Float inwards [Lib.Schema]: alloc=16328 time=0.003
+Simplifier [Lib.Schema]: alloc=808408 time=0.207
+Demand analysis [Lib.Schema]: alloc=542744 time=0.114
+CoreTidy [Lib.Schema]: alloc=493688 time=0.156
+CorePrep [Lib.Schema]: alloc=17320 time=0.009
+CodeGen [Lib.Schema]: alloc=4524440 time=1.859
+systool:as: alloc=102912 time=0.159
+CorePrep [Lib.Schema]: alloc=17320 time=0.011
+CodeGen [Lib.Schema]: alloc=4659592 time=1.667
+systool:as: alloc=105792 time=0.130

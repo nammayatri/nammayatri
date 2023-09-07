@@ -1,0 +1,28 @@
+Parser [Beckn.ACL.Search]: alloc=2783728 time=0.632
+Renamer/typechecker [Beckn.ACL.Search]: alloc=334704568 time=75.814
+Desugar [Beckn.ACL.Search]: alloc=7279968 time=2.819
+Simplifier [Beckn.ACL.Search]: alloc=27260568 time=8.281
+Specialise [Beckn.ACL.Search]: alloc=974112 time=0.319
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Search]: alloc=3497808 time=1.101
+Simplifier [Beckn.ACL.Search]: alloc=19040416 time=5.839
+Simplifier [Beckn.ACL.Search]: alloc=17409504 time=4.737
+Simplifier [Beckn.ACL.Search]: alloc=20137352 time=5.673
+Float inwards [Beckn.ACL.Search]: alloc=18120 time=0.017
+Called arity analysis [Beckn.ACL.Search]: alloc=19696 time=0.005
+Simplifier [Beckn.ACL.Search]: alloc=15702312 time=4.150
+Demand analysis [Beckn.ACL.Search]: alloc=6519384 time=1.393
+Worker Wrapper binds [Beckn.ACL.Search]: alloc=273136 time=0.174
+Simplifier [Beckn.ACL.Search]: alloc=13251336 time=3.895
+Exitification transformation [Beckn.ACL.Search]: alloc=20640 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Search]: alloc=5368672 time=1.462
+Common sub-expression [Beckn.ACL.Search]: alloc=19224 time=0.004
+Float inwards [Beckn.ACL.Search]: alloc=18120 time=0.008
+Simplifier [Beckn.ACL.Search]: alloc=15825184 time=4.821
+Demand analysis [Beckn.ACL.Search]: alloc=5954296 time=1.401
+CoreTidy [Beckn.ACL.Search]: alloc=2726264 time=1.024
+CorePrep [Beckn.ACL.Search]: alloc=19112 time=0.010
+CodeGen [Beckn.ACL.Search]: alloc=74668120 time=21.793
+systool:as: alloc=103312 time=0.179
+CorePrep [Beckn.ACL.Search]: alloc=19112 time=0.014
+CodeGen [Beckn.ACL.Search]: alloc=78733160 time=23.339
+systool:as: alloc=106192 time=0.198

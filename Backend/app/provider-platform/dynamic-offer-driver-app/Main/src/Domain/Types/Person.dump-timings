@@ -1,0 +1,37 @@
+Parser [Domain.Types.Person]: alloc=4320520 time=0.879
+Simplify [expr]: alloc=34464 time=0.016
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.047
+Simplify [expr]: alloc=34464 time=0.014
+CorePrep [expr]: alloc=22952 time=0.014
+ByteCodeGen [Ghci1]: alloc=94056 time=0.038
+Simplify [expr]: alloc=34464 time=0.015
+CorePrep [expr]: alloc=22952 time=0.014
+ByteCodeGen [Ghci1]: alloc=94056 time=0.040
+Renamer/typechecker [Domain.Types.Person]: alloc=449567888 time=141.943
+Desugar [Domain.Types.Person]: alloc=148402968 time=37.769
+Simplifier [Domain.Types.Person]: alloc=380149984 time=141.627
+Specialise [Domain.Types.Person]: alloc=37024808 time=8.904
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Person]: alloc=61753504 time=24.651
+Simplifier [Domain.Types.Person]: alloc=448965872 time=178.355
+Simplifier [Domain.Types.Person]: alloc=393710536 time=159.674
+Simplifier [Domain.Types.Person]: alloc=433247736 time=179.743
+Float inwards [Domain.Types.Person]: alloc=19032 time=0.004
+Called arity analysis [Domain.Types.Person]: alloc=20608 time=0.005
+Simplifier [Domain.Types.Person]: alloc=345334704 time=455.096
+Demand analysis [Domain.Types.Person]: alloc=106966104 time=24.026
+Worker Wrapper binds [Domain.Types.Person]: alloc=6540040 time=2.236
+Simplifier [Domain.Types.Person]: alloc=597365344 time=213.691
+Exitification transformation [Domain.Types.Person]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Person]: alloc=89472256 time=26.811
+Common sub-expression [Domain.Types.Person]: alloc=20136 time=0.006
+Float inwards [Domain.Types.Person]: alloc=19032 time=0.004
+Simplifier [Domain.Types.Person]: alloc=431109864 time=153.331
+Demand analysis [Domain.Types.Person]: alloc=103542480 time=23.007
+CoreTidy [Domain.Types.Person]: alloc=53427112 time=19.311
+CorePrep [Domain.Types.Person]: alloc=19992 time=0.027
+CodeGen [Domain.Types.Person]: alloc=790592144 time=272.956
+systool:as: alloc=103512 time=0.268
+CorePrep [Domain.Types.Person]: alloc=19992 time=0.030
+CodeGen [Domain.Types.Person]: alloc=817930904 time=234.861
+systool:as: alloc=106384 time=0.316

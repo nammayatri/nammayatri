@@ -1,0 +1,28 @@
+Parser [Storage.Queries.Vehicle.Internal]: alloc=649240 time=0.281
+Renamer/typechecker [Storage.Queries.Vehicle.Internal]: alloc=67388704 time=19.781
+Desugar [Storage.Queries.Vehicle.Internal]: alloc=785752 time=1.016
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=53512056 time=15.727
+Specialise [Storage.Queries.Vehicle.Internal]: alloc=590104 time=0.331
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Vehicle.Internal]: alloc=1858904 time=0.575
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=8212560 time=2.526
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=7853896 time=2.393
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=7565904 time=2.332
+Float inwards [Storage.Queries.Vehicle.Internal]: alloc=22888 time=0.004
+Called arity analysis [Storage.Queries.Vehicle.Internal]: alloc=24464 time=0.006
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=4790040 time=1.323
+Demand analysis [Storage.Queries.Vehicle.Internal]: alloc=1847600 time=0.570
+Worker Wrapper binds [Storage.Queries.Vehicle.Internal]: alloc=105928 time=0.092
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=8591376 time=2.486
+Exitification transformation [Storage.Queries.Vehicle.Internal]: alloc=25408 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Vehicle.Internal]: alloc=1740984 time=0.519
+Common sub-expression [Storage.Queries.Vehicle.Internal]: alloc=23992 time=0.005
+Float inwards [Storage.Queries.Vehicle.Internal]: alloc=22888 time=0.004
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=9663480 time=2.948
+Demand analysis [Storage.Queries.Vehicle.Internal]: alloc=1906616 time=0.575
+CoreTidy [Storage.Queries.Vehicle.Internal]: alloc=3190720 time=0.974
+CorePrep [Storage.Queries.Vehicle.Internal]: alloc=23880 time=0.012
+CodeGen [Storage.Queries.Vehicle.Internal]: alloc=30664712 time=11.170
+systool:as: alloc=104360 time=0.208
+CorePrep [Storage.Queries.Vehicle.Internal]: alloc=23880 time=0.015
+CodeGen [Storage.Queries.Vehicle.Internal]: alloc=32310408 time=11.415
+systool:as: alloc=107240 time=0.189
