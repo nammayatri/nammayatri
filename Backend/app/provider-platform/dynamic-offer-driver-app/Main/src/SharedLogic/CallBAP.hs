@@ -27,6 +27,7 @@ module SharedLogic.CallBAP
   )
 where
 
+import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
@@ -37,6 +38,7 @@ import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Control.Lens ((%~))
 import qualified Data.Text as T
+import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.DriverQuote as DDQ
@@ -57,6 +59,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -143,7 +146,12 @@ sendRideAssignedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    MonadReader r m,
+    MonadFlow m,
+    MonadTime m,
+    CacheFlow m r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -154,6 +162,8 @@ sendRideAssignedUpdateToBAP booking ride = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  image <- fetchAndCacheAadhaarImage driver driverInfo
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 

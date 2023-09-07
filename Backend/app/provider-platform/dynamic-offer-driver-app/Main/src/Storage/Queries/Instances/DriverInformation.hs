@@ -51,7 +51,8 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             mode = mode,
             autoPayStatus = autoPayStatus,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            compAadhaarImagePath = compAadhaarImagePath
           }
 
 instance ToTType' BeamDI.DriverInformation DriverInformation where
@@ -79,5 +80,6 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.createdAt = createdAt,
-        BeamDI.updatedAt = updatedAt
+        BeamDI.updatedAt = updatedAt,
+        BeamDI.compAadhaarImagePath = compAadhaarImagePath
       }

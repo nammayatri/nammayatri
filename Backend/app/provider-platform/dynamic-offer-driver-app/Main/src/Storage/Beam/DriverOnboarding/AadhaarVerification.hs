@@ -37,7 +37,8 @@ data AadhaarVerificationT f = AadhaarVerificationT
     driverImage :: B.C f (Maybe Text),
     isVerified :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    driverImagePath :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

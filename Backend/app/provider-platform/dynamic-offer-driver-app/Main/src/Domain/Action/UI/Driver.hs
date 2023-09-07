@@ -76,6 +76,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
+import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
@@ -165,7 +166,6 @@ import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDriverLocation
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -566,7 +566,8 @@ createDriverDetails personId adminId merchantId = do
             blockExpiryTime = Nothing,
             createdAt = now,
             updatedAt = now,
-            autoPayStatus = Nothing
+            autoPayStatus = Nothing,
+            compAadhaarImagePath = Nothing
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -578,7 +579,9 @@ getInformation ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    CacheFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   m DriverInformationRes
@@ -723,14 +726,14 @@ deleteHomeLocation (driverId, merchantId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
+listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m)) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
@@ -738,8 +741,7 @@ buildDriverEntityRes (person, driverInfo) = do
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
-  aadhaarVerification <- QAV.findByDriverId person.id
-  let aadhaarCardPhoto = (.driverImage) =<< aadhaarVerification
+  aadhaarCardPhoto <- fetchAndCacheAadhaarImage person driverInfo
   return $
     DriverEntityRes
       { id = person.id,
@@ -819,7 +821,9 @@ updateDriver ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    CacheFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   UpdateDriverReq ->
@@ -1257,7 +1261,7 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
           QPerson.updateMediaId driverId Nothing
           MFQuery.deleteById mediaFileId
         Nothing -> return ()
-      createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType}
+  createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do
       case fileType of

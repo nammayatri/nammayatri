@@ -100,7 +100,8 @@ data DriverInformationE e = DriverInformation
     blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    compAadhaarImagePath :: Maybe Text
   }
   deriving (Generic)
 

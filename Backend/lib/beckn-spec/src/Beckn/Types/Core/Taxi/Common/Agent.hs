@@ -24,6 +24,7 @@ data Agent = Agent
   { name :: Text,
     rateable :: Bool,
     phone :: Maybe Text,
+    image :: Maybe Text,
     tags :: Maybe TagGroups
   }
   deriving (Generic, Show)

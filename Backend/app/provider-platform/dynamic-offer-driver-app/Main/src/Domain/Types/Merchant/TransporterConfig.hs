@@ -22,6 +22,12 @@ import Kernel.External.Notification.FCM.Types (FCMConfig)
 import Kernel.Types.Common
 import Kernel.Types.Id
 
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig
+  { height :: Int,
+    width :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
   { merchantId :: Id Merchant,
@@ -68,7 +74,8 @@ data TransporterConfigD u = TransporterConfig
     updatedAt :: UTCTime,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
-    isAvoidToll :: Bool
+    isAvoidToll :: Bool,
+    aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig
   }
   deriving (Generic, Show)
 

@@ -95,7 +95,8 @@ mkOnInitMessage res = do
                           { name = driverName,
                             rateable = True,
                             tags = Nothing,
-                            phone = Nothing
+                            phone = Nothing,
+                            image = Nothing
                           }
                 },
             state = OnInit.NEW,
