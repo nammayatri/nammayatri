@@ -15,16 +15,9 @@
 
 module Storage.Beam.RiderDetails where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
@@ -35,12 +28,12 @@ data RiderDetailsT f = RiderDetailsT
     merchantId :: B.C f Text,
     referralCode :: B.C f (Maybe Text),
     referredByDriver :: B.C f (Maybe Text),
-    referredAt :: B.C f (Maybe Time.UTCTime),
+    referredAt :: B.C f (Maybe UTCTime),
     hasTakenValidRide :: B.C f Bool,
-    hasTakenValidRideAt :: B.C f (Maybe Time.UTCTime),
+    hasTakenValidRideAt :: B.C f (Maybe UTCTime),
     otpCode :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

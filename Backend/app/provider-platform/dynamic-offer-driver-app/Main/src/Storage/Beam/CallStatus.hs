@@ -15,16 +15,10 @@
 
 module Storage.Beam.CallStatus where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import qualified Kernel.External.Call.Interface.Types as Call
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import qualified Kernel.External.Call.Interface.Types as Call
+import Kernel.Prelude
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
@@ -34,7 +28,7 @@ data CallStatusT f = CallStatusT
     status :: B.C f Call.CallStatus,
     recordingUrl :: B.C f (Maybe Text),
     conversationDuration :: B.C f Int,
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

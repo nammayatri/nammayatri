@@ -12,25 +12,17 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Estimate where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Maps hiding (status)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Maps hiding (status)
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
@@ -61,8 +53,8 @@ data EstimateT f = EstimateT
     status :: B.C f Domain.EstimateStatus,
     waitingChargePerMin :: B.C f (Maybe Money),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

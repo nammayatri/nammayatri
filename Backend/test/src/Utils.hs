@@ -24,7 +24,6 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
 import HSpec
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id (Id (Id))

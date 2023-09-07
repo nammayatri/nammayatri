@@ -25,8 +25,6 @@ import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
--- import Beckn.Types.Core.Taxi.Common.Tags (TagGroup)
-
 data Agent = Agent
   { name :: Maybe Text,
     rateable :: Maybe Bool,

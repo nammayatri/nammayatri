@@ -12,24 +12,17 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Booking where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -49,7 +42,7 @@ data BookingT f = BookingT
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
     primaryExophone :: B.C f Text,
-    startTime :: B.C f Time.UTCTime,
+    startTime :: B.C f UTCTime,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f (Maybe Text),
     estimatedFare :: B.C f HighPrecMoney,
@@ -62,8 +55,8 @@ data BookingT f = BookingT
     rentalSlabId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

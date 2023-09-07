@@ -15,22 +15,16 @@
 
 module Storage.Beam.MediaFile where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.MediaFile as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,
     fileType :: B.C f Domain.MediaType,
     url :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

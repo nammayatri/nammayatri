@@ -16,21 +16,15 @@
 module Storage.Beam.Driver.DriverFlowStatus where
 
 import Data.Aeson
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,
     flowStatus :: B.C f Domain.FlowStatus,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

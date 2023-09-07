@@ -15,20 +15,14 @@
 
 module Storage.Beam.DriverReferral where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverReferralT f = DriverReferralT
   { referralCode :: B.C f Text,
     driverId :: B.C f Text,
-    linkedAt :: B.C f Time.UTCTime
+    linkedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

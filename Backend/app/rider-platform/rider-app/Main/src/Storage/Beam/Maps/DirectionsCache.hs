@@ -12,22 +12,15 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Maps.DirectionsCache where
 
 import Data.Aeson
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Maps (RouteInfo (..))
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Maps (RouteInfo (..))
+import Kernel.Prelude
 
 data DirectionsCacheT f = DirectionsCacheT
   { id :: B.C f Text,
@@ -35,7 +28,7 @@ data DirectionsCacheT f = DirectionsCacheT
     destHash :: B.C f Text,
     slot :: B.C f Int,
     response :: B.C f RouteInfo,
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

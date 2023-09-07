@@ -16,20 +16,14 @@
 
 module Storage.Beam.Person where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Person as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
@@ -60,8 +54,8 @@ data PersonT f = PersonT
     alternateMobileNumberEncrypted :: B.C f (Maybe Text),
     unencryptedAlternateMobileNumber :: B.C f (Maybe Text),
     alternateMobileNumberHash :: B.C f (Maybe DbHash),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
     faceImageId :: B.C f (Maybe Text)

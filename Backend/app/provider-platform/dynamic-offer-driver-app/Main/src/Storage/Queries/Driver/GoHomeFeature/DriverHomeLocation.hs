@@ -25,7 +25,6 @@ import Kernel.Prelude
 import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Common (getCurrentTime)
 import Kernel.Types.Id as ID
-import Lib.Utils ()
 import qualified Sequelize as Se
 import Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as BeamDHL
 

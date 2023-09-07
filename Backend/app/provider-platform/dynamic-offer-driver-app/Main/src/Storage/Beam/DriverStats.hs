@@ -15,20 +15,14 @@
 
 module Storage.Beam.DriverStats where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
-    idleSince :: B.C f Time.UTCTime,
+    idleSince :: B.C f UTCTime,
     totalRides :: B.C f Int,
     totalEarnings :: B.C f Money,
     bonusEarned :: B.C f Money,
@@ -37,7 +31,7 @@ data DriverStatsT f = DriverStatsT
     totalDistance :: B.C f Double,
     ridesCancelled :: B.C f (Maybe Int),
     totalRidesAssigned :: B.C f (Maybe Int),
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

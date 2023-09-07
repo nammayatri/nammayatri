@@ -22,23 +22,17 @@ module Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
-import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
-import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
-import Lib.Utils ()
-import Sequelize
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 instance FromField Domain.DriverGoHomeRequestStatus where

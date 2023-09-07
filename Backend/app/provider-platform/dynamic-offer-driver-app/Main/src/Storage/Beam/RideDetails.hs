@@ -15,16 +15,11 @@
 
 module Storage.Beam.RideDetails where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle as SV
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Kernel.Prelude
 
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,

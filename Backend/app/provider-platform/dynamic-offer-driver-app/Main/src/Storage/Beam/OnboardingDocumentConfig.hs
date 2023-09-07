@@ -15,18 +15,12 @@
 
 module Storage.Beam.OnboardingDocumentConfig where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -35,8 +29,8 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     checkExpiry :: B.C f Bool,
     validVehicleClasses :: B.C f [Text],
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

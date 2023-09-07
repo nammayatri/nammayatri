@@ -15,12 +15,7 @@
 
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
@@ -28,9 +23,7 @@ import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types
 import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
@@ -53,8 +46,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     issueTicketService :: B.C f IssueTicketService,
     getExophone :: B.C f CallService,
-    updatedAt :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

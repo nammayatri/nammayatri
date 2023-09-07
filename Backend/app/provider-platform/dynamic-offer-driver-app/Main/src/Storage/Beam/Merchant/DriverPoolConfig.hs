@@ -15,15 +15,9 @@
 
 module Storage.Beam.Merchant.DriverPoolConfig where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
 import Tools.Beam.UtilsTH
 
@@ -47,8 +41,8 @@ data DriverPoolConfigT f = DriverPoolConfigT
     radiusShrinkValueForDriversOnRide :: B.C f Meters,
     driverToDestinationDistanceThreshold :: B.C f Meters,
     driverToDestinationDuration :: B.C f Seconds,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

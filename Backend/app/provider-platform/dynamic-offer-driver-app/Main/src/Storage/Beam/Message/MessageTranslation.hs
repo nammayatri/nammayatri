@@ -15,16 +15,10 @@
 
 module Storage.Beam.Message.MessageTranslation where
 
-import qualified Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Types (Language)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Types (Language)
+import Kernel.Prelude
 
 data MessageTranslationT f = MessageTranslationT
   { messageId :: B.C f Text,
@@ -33,7 +27,7 @@ data MessageTranslationT f = MessageTranslationT
     description :: B.C f Text,
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

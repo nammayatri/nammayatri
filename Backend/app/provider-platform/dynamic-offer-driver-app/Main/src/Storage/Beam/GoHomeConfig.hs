@@ -20,16 +20,10 @@ module Storage.Beam.GoHomeConfig where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 import Kernel.Types.Common (Meters)
-import Lib.Utils ()
-import Sequelize
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstancesWithTModifier, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,

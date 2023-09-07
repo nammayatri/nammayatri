@@ -15,18 +15,13 @@
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
-import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
-import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Tools.Beam.UtilsTH
+import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
-import Sequelize as Se
-import Tools.Beam.UtilsTH
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),

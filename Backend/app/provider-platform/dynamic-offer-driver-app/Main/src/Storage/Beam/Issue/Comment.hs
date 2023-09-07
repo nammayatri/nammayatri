@@ -15,14 +15,8 @@
 
 module Storage.Beam.Issue.Comment where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CommentT f = CommentT
@@ -30,7 +24,7 @@ data CommentT f = CommentT
     issueReportId :: B.C f Text,
     authorId :: B.C f Text,
     comment :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

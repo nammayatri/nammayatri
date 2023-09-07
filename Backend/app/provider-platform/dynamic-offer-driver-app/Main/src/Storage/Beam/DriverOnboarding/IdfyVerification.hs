@@ -15,18 +15,12 @@
 
 module Storage.Beam.DriverOnboarding.IdfyVerification where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Vehicle as Vehicle
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Storage.Beam.DriverOnboarding.Image ()
 import Tools.Beam.UtilsTH
 
@@ -38,16 +32,16 @@ data IdfyVerificationT f = IdfyVerificationT
     requestId :: B.C f Text,
     docType :: B.C f Image.ImageType,
     status :: B.C f Text,
-    issueDateOnDoc :: B.C f (Maybe Time.UTCTime),
-    driverDateOfBirth :: B.C f (Maybe Time.UTCTime),
+    issueDateOnDoc :: B.C f (Maybe UTCTime),
+    driverDateOfBirth :: B.C f (Maybe UTCTime),
     documentNumberEncrypted :: B.C f Text,
     documentNumberHash :: B.C f DbHash,
     imageExtractionValidation :: B.C f Domain.ImageExtractionValidation,
     idfyResponse :: B.C f (Maybe Text),
     multipleRC :: B.C f (Maybe Bool),
     dashboardPassedVehicleVariant :: B.C f (Maybe Vehicle.Variant),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

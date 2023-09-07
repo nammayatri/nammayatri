@@ -4,16 +4,11 @@
 
 module Storage.Beam.Mandate where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Mandate as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import EulerHS.Prelude (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (HighPrecMoney)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 
 data MandateT f = MandateT
   { id :: B.C f Text,

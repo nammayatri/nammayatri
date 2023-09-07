@@ -15,14 +15,8 @@
 
 module Storage.Beam.Rating where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT
@@ -31,8 +25,8 @@ data RatingT f = RatingT
     driverId :: B.C f Text,
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -12,22 +12,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.KioskLocationTranslation where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
+import Tools.Beam.UtilsTH
 import Kernel.External.Types (Language)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
+import Kernel.Prelude
 
 data KioskLocationTranslationT f = KioskLocationTranslationT
   { kioskLocationId :: B.C f Text,

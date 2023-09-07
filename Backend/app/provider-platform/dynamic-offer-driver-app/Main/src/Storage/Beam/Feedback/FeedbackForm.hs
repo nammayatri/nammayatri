@@ -12,19 +12,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Storage.Beam.Feedback.FeedbackForm where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Feedback.FeedbackForm as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data FeedbackFormT f = FeedbackFormT
   { id :: B.C f Text,

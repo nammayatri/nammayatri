@@ -14,8 +14,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Lib.Scheduler.Types where
 
@@ -29,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common as Comon
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
+import Kernel.Beam.Lib.UtilsTH
 
 data JobEntry (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   JobEntry
@@ -146,6 +145,8 @@ data JobStatus = Pending | Completed | Failed | Revived
   deriving (PrettyShow) via Showable JobStatus
 
 derivePersistField "JobStatus"
+
+$(mkBeamInstancesForEnum ''JobStatus)
 
 data ExecutionResult = Complete | Terminate Text | Retry | ReSchedule UTCTime | DuplicateExecution
   deriving (Show, Generic, Exception)

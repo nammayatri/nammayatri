@@ -487,7 +487,7 @@ updateAverageRating (Id personId) newAverageRating = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
+updateAlternateMobileNumberAndCode :: MonadFlow m => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV

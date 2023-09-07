@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
+import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.Common
 

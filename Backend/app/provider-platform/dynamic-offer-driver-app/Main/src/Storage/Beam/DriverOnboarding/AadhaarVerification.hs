@@ -12,20 +12,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Storage.Beam.DriverOnboarding.AadhaarVerification where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AadhaarVerificationT f = AadhaarVerificationT
@@ -36,9 +28,9 @@ data AadhaarVerificationT f = AadhaarVerificationT
     driverDob :: B.C f Text,
     driverImage :: B.C f (Maybe Text),
     isVerified :: B.C f Bool,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
-    driverImagePath :: B.C f (Maybe Text)
+    driverImagePath :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

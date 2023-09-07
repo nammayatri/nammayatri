@@ -15,16 +15,11 @@
 
 module Storage.Beam.FareParameters.FareParametersProgressiveDetails where
 
-import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (Money)
-import Sequelize as Se
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common (Money)
 
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,

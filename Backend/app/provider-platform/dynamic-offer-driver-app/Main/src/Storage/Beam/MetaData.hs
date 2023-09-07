@@ -12,28 +12,21 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Storage.Beam.MetaData where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MetaDataT f = MetaDataT
   { driverId :: B.C f Text,
     device :: B.C f (Maybe Text),
     deviceOS :: B.C f (Maybe Text),
-    deviceDateTime :: B.C f (Maybe Time.UTCTime),
+    deviceDateTime :: B.C f (Maybe UTCTime),
     appPermissions :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

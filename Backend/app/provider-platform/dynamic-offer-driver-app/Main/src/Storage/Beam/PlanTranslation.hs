@@ -15,15 +15,10 @@
 
 module Storage.Beam.PlanTranslation where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Types (Language)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Types (Language)
+import Kernel.Prelude
 
 data PlanTranslationT f = PlanTranslationT
   { planId :: B.C f Text,

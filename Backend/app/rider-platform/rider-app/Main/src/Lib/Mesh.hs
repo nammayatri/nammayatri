@@ -1,7 +1,7 @@
 module Lib.Mesh where
 
 import EulerHS.KVConnector.Types (MeshConfig (..))
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 
 meshConfig :: MeshConfig
 meshConfig =

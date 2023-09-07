@@ -15,19 +15,13 @@
 
 module Storage.Beam.DriverQuote where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Tools.Beam.UtilsTH
+import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
-import Sequelize
-import Tools.Beam.UtilsTH
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,
@@ -43,14 +37,14 @@ data DriverQuoteT f = DriverQuoteT
     distance :: B.C f Meters,
     distanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
-    validTill :: B.C f Time.LocalTime,
+    validTill :: B.C f LocalTime,
     goHomeRequestId :: B.C f (Maybe Text),
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime,
+    updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

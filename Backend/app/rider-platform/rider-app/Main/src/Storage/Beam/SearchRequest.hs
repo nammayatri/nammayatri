@@ -12,27 +12,20 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.SearchRequest where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Maps (Language)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Maps (Language)
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
-    startTime :: B.C f Time.UTCTime,
-    validTill :: B.C f Time.UTCTime,
+    startTime :: B.C f UTCTime,
+    validTill :: B.C f UTCTime,
     riderId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f (Maybe Text),
@@ -50,7 +43,7 @@ data SearchRequestT f = SearchRequestT
     autoAssignEnabledV2 :: B.C f (Maybe Bool),
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

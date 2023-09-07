@@ -15,14 +15,8 @@
 
 module Storage.Beam.SearchRequest.SearchReqLocation where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SearchReqLocationT f = SearchReqLocationT
@@ -38,8 +32,8 @@ data SearchReqLocationT f = SearchReqLocationT
     full_address :: B.C f (Maybe Text),
     areaCode :: B.C f (Maybe Text),
     area :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

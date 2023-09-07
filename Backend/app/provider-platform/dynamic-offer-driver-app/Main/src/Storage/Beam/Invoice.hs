@@ -3,16 +3,11 @@
 
 module Storage.Beam.Invoice where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Invoice as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import EulerHS.Prelude (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data InvoiceT f = InvoiceT
   { id :: B.C f Text,

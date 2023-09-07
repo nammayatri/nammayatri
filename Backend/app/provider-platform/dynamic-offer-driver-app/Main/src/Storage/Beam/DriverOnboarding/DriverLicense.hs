@@ -15,36 +15,30 @@
 
 module Storage.Beam.DriverOnboarding.DriverLicense where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Sequelize
-import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
     driverId :: B.C f Text,
     documentImageId1 :: B.C f Text,
     documentImageId2 :: B.C f (Maybe Text),
-    driverDob :: B.C f (Maybe Time.UTCTime),
+    driverDob :: B.C f (Maybe UTCTime),
     driverName :: B.C f (Maybe Text),
     licenseNumberEncrypted :: B.C f Text,
     licenseNumberHash :: B.C f DbHash,
-    licenseExpiry :: B.C f Time.UTCTime,
+    licenseExpiry :: B.C f UTCTime,
     classOfVehicles :: B.C f [Text],
     failedRules :: B.C f [Text],
     verificationStatus :: B.C f Domain.VerificationStatus,
     consent :: B.C f Bool,
-    consentTimestamp :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    consentTimestamp :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

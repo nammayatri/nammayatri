@@ -12,7 +12,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Rating where
@@ -20,15 +19,9 @@ module Storage.Beam.Rating where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Map as M
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
-import Tools.Beam.UtilsTH
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
+import Kernel.Prelude
 
 data RatingT f = RatingT
   { id :: B.C f Text,
@@ -36,8 +29,8 @@ data RatingT f = RatingT
     riderId :: B.C f Text,
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

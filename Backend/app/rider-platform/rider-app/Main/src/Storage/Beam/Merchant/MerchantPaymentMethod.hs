@@ -12,21 +12,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.MerchantPaymentMethod where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
@@ -36,8 +28,8 @@ data MerchantPaymentMethodT f = MerchantPaymentMethodT
     paymentInstrument :: B.C f Domain.PaymentInstrument,
     collectedBy :: B.C f Domain.PaymentCollector,
     priority :: B.C f Int,
-    updatedAt :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
