@@ -17,9 +17,9 @@ module Domain.Types.Merchant.MerchantMessage where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data MessageKey
   = SEND_OTP

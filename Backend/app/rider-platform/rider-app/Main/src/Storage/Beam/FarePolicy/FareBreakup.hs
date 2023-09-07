@@ -22,11 +22,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FareBreakupT f = FareBreakupT
   { id :: B.C f Text,
@@ -44,15 +44,6 @@ instance B.Table FareBreakupT where
 
 type FareBreakup = FareBreakupT Identity
 
-fareBreakupTMod :: FareBreakupT (B.FieldModification (B.TableField FareBreakupT))
-fareBreakupTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      bookingId = B.fieldNamed "booking_id",
-      description = B.fieldNamed "description",
-      amount = B.fieldNamed "amount"
-    }
-
 $(enableKVPG ''FareBreakupT ['id] [['bookingId]])
 
-$(mkTableInstances ''FareBreakupT "fare_breakup" "atlas_app")
+$(mkTableInstances ''FareBreakupT "fare_breakup")

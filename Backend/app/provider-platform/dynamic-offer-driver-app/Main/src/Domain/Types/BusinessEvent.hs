@@ -19,10 +19,10 @@ import Domain.Types.Booking (Booking)
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride (Ride)
 import Domain.Types.Vehicle.Variant (Variant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BusinessEvent = BusinessEvent
   { id :: Id BusinessEvent,

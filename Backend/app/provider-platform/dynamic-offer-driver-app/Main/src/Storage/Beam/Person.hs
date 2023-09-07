@@ -23,7 +23,6 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Types (Language)
@@ -32,6 +31,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -77,43 +77,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-personTMod :: PersonT (B.FieldModification (B.TableField PersonT))
-personTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      firstName = B.fieldNamed "first_name",
-      middleName = B.fieldNamed "middle_name",
-      lastName = B.fieldNamed "last_name",
-      role = B.fieldNamed "role",
-      gender = B.fieldNamed "gender",
-      hometown = B.fieldNamed "hometown",
-      languagesSpoken = B.fieldNamed "languages_spoken",
-      identifierType = B.fieldNamed "identifier_type",
-      email = B.fieldNamed "email",
-      unencryptedMobileNumber = B.fieldNamed "unencrypted_mobile_number",
-      mobileNumberEncrypted = B.fieldNamed "mobile_number_encrypted",
-      mobileNumberHash = B.fieldNamed "mobile_number_hash",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      passwordHash = B.fieldNamed "password_hash",
-      identifier = B.fieldNamed "identifier",
-      rating = B.fieldNamed "rating",
-      isNew = B.fieldNamed "is_new",
-      onboardedFromDashboard = B.fieldNamed "onboarded_from_dashboard",
-      merchantId = B.fieldNamed "merchant_id",
-      deviceToken = B.fieldNamed "device_token",
-      language = B.fieldNamed "language",
-      whatsappNotificationEnrollStatus = B.fieldNamed "whatsapp_notification_enroll_status",
-      description = B.fieldNamed "description",
-      alternateMobileNumberEncrypted = B.fieldNamed "alternate_mobile_number_encrypted",
-      unencryptedAlternateMobileNumber = B.fieldNamed "unencrypted_alternate_mobile_number",
-      alternateMobileNumberHash = B.fieldNamed "alternate_mobile_number_hash",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      bundleVersion = B.fieldNamed "bundle_version",
-      clientVersion = B.fieldNamed "client_version",
-      faceImageId = B.fieldNamed "face_image_id"
-    }
-
 $(enableKVPG ''PersonT ['id] [['mobileNumberHash]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''PersonT "person" "atlas_driver_offer_bpp")
+$(mkTableInstances ''PersonT "person")

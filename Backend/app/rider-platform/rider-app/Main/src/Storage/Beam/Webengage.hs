@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data WebengageT f = WebengageT
   { id :: B.C f Text,
@@ -46,19 +46,6 @@ instance B.Table WebengageT where
 
 type Webengage = WebengageT Identity
 
-webengageTMod :: WebengageT (B.FieldModification (B.TableField WebengageT))
-webengageTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      version = B.fieldNamed "version",
-      contentTemplateId = B.fieldNamed "content_template_id",
-      principalEntityId = B.fieldNamed "principal_entity_id",
-      infoMessageId = B.fieldNamed "info_message_id",
-      webMessageId = B.fieldNamed "web_message_id",
-      toNumber = B.fieldNamed "to_number",
-      status = B.fieldNamed "status"
-    }
-
 $(enableKVPG ''WebengageT ['id] [['infoMessageId]])
 
-$(mkTableInstances ''WebengageT "webengage" "atlas_app")
+$(mkTableInstances ''WebengageT "webengage")

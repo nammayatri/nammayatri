@@ -20,9 +20,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data IssueOptionT f = IssueOptionT
   { id :: B.C f Text,
@@ -39,14 +39,6 @@ instance B.Table IssueOptionT where
 
 type IssueOption = IssueOptionT Identity
 
-issueOptionTMod :: IssueOptionT (B.FieldModification (B.TableField IssueOptionT))
-issueOptionTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      issueCategoryId = B.fieldNamed "issue_category_id",
-      option = B.fieldNamed "option"
-    }
-
 $(enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])
 
-$(mkTableInstances ''IssueOptionT "issue_option" "atlas_driver_offer_bpp")
+$(mkTableInstances ''IssueOptionT "issue_option")

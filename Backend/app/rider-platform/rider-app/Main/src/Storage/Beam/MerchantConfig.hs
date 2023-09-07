@@ -22,11 +22,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantConfigT f = MerchantConfigT
   { id :: B.C f Text,
@@ -52,23 +52,6 @@ instance B.Table MerchantConfigT where
 
 type MerchantConfig = MerchantConfigT Identity
 
-merchantConfigTMod :: MerchantConfigT (B.FieldModification (B.TableField MerchantConfigT))
-merchantConfigTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      fraudBookingCancellationCountThreshold = B.fieldNamed "fraud_booking_cancellation_count_threshold",
-      fraudBookingCancellationCountWindow = B.fieldNamed "fraud_booking_cancellation_count_window",
-      fraudBookingTotalCountThreshold = B.fieldNamed "fraud_booking_total_count_threshold",
-      fraudBookingCancelledByDriverCountThreshold = B.fieldNamed "fraud_booking_cancelled_by_driver_count_threshold",
-      fraudBookingCancelledByDriverCountWindow = B.fieldNamed "fraud_booking_cancelled_by_driver_count_window",
-      fraudSearchCountThreshold = B.fieldNamed "fraud_search_count_threshold",
-      fraudSearchCountWindow = B.fieldNamed "fraud_search_count_window",
-      fraudRideCountThreshold = B.fieldNamed "fraud_ride_count_threshold",
-      fraudRideCountWindow = B.fieldNamed "fraud_ride_count_window",
-      enabled = B.fieldNamed "enabled"
-    }
-
 $(enableKVPG ''MerchantConfigT ['id] [['merchantId]])
 
-$(mkTableInstances ''MerchantConfigT "merchant_config" "atlas_app")
+$(mkTableInstances ''MerchantConfigT "merchant_config")

@@ -20,10 +20,10 @@ import qualified Data.List as List
 import Data.OpenApi
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Text.Show
+import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   { id :: Id MerchantPaymentMethod,

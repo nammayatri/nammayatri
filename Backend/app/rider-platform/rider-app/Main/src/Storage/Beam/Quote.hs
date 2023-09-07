@@ -25,11 +25,11 @@ import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data QuoteT f = QuoteT
   { id :: B.C f Text,
@@ -64,32 +64,6 @@ instance B.Table QuoteT where
 
 type Quote = QuoteT Identity
 
-quoteTMod :: QuoteT (B.FieldModification (B.TableField QuoteT))
-quoteTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      fareProductType = B.fieldNamed "fare_product_type",
-      requestId = B.fieldNamed "request_id",
-      estimatedFare = B.fieldNamed "estimated_fare",
-      discount = B.fieldNamed "discount",
-      estimatedTotalFare = B.fieldNamed "estimated_total_fare",
-      providerId = B.fieldNamed "provider_id",
-      providerUrl = B.fieldNamed "provider_url",
-      providerName = B.fieldNamed "provider_name",
-      itemId = B.fieldNamed "item_id",
-      providerMobileNumber = B.fieldNamed "provider_mobile_number",
-      providerCompletedRidesCount = B.fieldNamed "provider_completed_rides_count",
-      distanceToNearestDriver = B.fieldNamed "distance_to_nearest_driver",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      tripTermsId = B.fieldNamed "trip_terms_id",
-      rentalSlabId = B.fieldNamed "rental_slab_id",
-      driverOfferId = B.fieldNamed "driver_offer_id",
-      merchantId = B.fieldNamed "merchant_id",
-      specialZoneQuoteId = B.fieldNamed "special_zone_quote_id",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''QuoteT ['id] [['requestId], ['driverOfferId]])
 
-$(mkTableInstances ''QuoteT "quote" "atlas_app")
+$(mkTableInstances ''QuoteT "quote")

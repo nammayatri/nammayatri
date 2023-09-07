@@ -23,10 +23,10 @@ import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data ImageT f = ImageT
   { id :: B.C f Text,
@@ -48,19 +48,6 @@ instance B.Table ImageT where
 
 type Image = ImageT Identity
 
-imageTMod :: ImageT (B.FieldModification (B.TableField ImageT))
-imageTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      personId = B.fieldNamed "person_id",
-      merchantId = B.fieldNamed "merchant_id",
-      s3Path = B.fieldNamed "s3_path",
-      imageType = B.fieldNamed "image_type",
-      isValid = B.fieldNamed "is_valid",
-      failureReason = B.fieldNamed "failure_reason",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''ImageT ['id] [['personId], ['merchantId]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''ImageT "image" "atlas_driver_offer_bpp")
+$(mkTableInstances ''ImageT "image")

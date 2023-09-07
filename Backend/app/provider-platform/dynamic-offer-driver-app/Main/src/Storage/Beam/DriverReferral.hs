@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverReferralT f = DriverReferralT
   { referralCode :: B.C f Text,
@@ -40,14 +40,6 @@ instance B.Table DriverReferralT where
 
 type DriverReferral = DriverReferralT Identity
 
-driverReferralTMod :: DriverReferralT (B.FieldModification (B.TableField DriverReferralT))
-driverReferralTMod =
-  B.tableModification
-    { referralCode = B.fieldNamed "referral_code",
-      driverId = B.fieldNamed "driver_id",
-      linkedAt = B.fieldNamed "linked_at"
-    }
-
 $(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
 
-$(mkTableInstances ''DriverReferralT "driver_referral" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverReferralT "driver_referral")

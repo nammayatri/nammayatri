@@ -23,9 +23,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonStatsT f = PersonStatsT
   { personId :: B.C f Text,
@@ -50,21 +50,5 @@ instance B.Table PersonStatsT where
 
 type PersonStats = PersonStatsT Identity
 
-personStatsTMod :: PersonStatsT (B.FieldModification (B.TableField PersonStatsT))
-personStatsTMod =
-  B.tableModification
-    { personId = B.fieldNamed "person_id",
-      userCancelledRides = B.fieldNamed "user_cancelled_rides",
-      driverCancelledRides = B.fieldNamed "driver_cancelled_rides",
-      completedRides = B.fieldNamed "completed_rides",
-      weekendRides = B.fieldNamed "weekend_rides",
-      weekdayRides = B.fieldNamed "weekday_rides",
-      offPeakRides = B.fieldNamed "off_peak_rides",
-      eveningPeakRides = B.fieldNamed "evening_peak_rides",
-      morningPeakRides = B.fieldNamed "morning_peak_rides",
-      weekendPeakRides = B.fieldNamed "weekend_peak_rides",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''PersonStatsT ['personId] [])
-$(mkTableInstances ''PersonStatsT "person_stats" "atlas_app")
+$(mkTableInstances ''PersonStatsT "person_stats")

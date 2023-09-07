@@ -30,17 +30,16 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 instance FromField Domain.DriverGoHomeRequestStatus where
   fromField = fromFieldEnum
@@ -54,12 +53,6 @@ instance FromBackendRow Postgres Domain.DriverGoHomeRequestStatus
 
 instance IsString Domain.DriverGoHomeRequestStatus where
   fromString = show
-
-driverGoHomeRequestTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverGoHomeRequestT)
-driverGoHomeRequestTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "driver_go_home_request"
-    <> B.modifyTableFields driverGoHomeRequestTMod
 
 toRowExpression reqId driverId lat lon status numCancellation createdAt updatedAt =
   DriverGoHomeRequestT
@@ -92,38 +85,7 @@ instance B.Table DriverGoHomeRequestT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverGoHomeRequestT where
-  modelFieldModification = driverGoHomeRequestTMod
-  modelTableName = "driver_go_home_request"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverGoHomeRequest = DriverGoHomeRequestT Identity
-
-instance FromJSON DriverGoHomeRequest where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverGoHomeRequest where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverGoHomeRequest
-
-driverGoHomeRequestTMod :: DriverGoHomeRequestT (B.FieldModification (B.TableField DriverGoHomeRequestT))
-driverGoHomeRequestTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      point = B.fieldNamed "point",
-      status = B.fieldNamed "status",
-      numCancellation = B.fieldNamed "num_cancellation",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
-instance Serialize DriverGoHomeRequest where
-  put = error "undefined"
-  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
@@ -137,3 +99,5 @@ driverGoHomeRequestToPSModifiers =
   M.empty
 
 $(enableKVPG ''DriverGoHomeRequestT ['id] [])
+
+$(mkTableInstances ''DriverGoHomeRequestT "driver_go_home_request")

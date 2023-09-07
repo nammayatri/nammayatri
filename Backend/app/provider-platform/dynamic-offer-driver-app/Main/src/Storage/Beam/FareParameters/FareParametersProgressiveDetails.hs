@@ -21,11 +21,11 @@ import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Money)
 import Lib.Utils ()
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,
@@ -42,14 +42,6 @@ instance B.Table FareParametersProgressiveDetailsT where
 
 type FareParametersProgressiveDetails = FareParametersProgressiveDetailsT Identity
 
-fareParametersProgressiveDetailsTMod :: FareParametersProgressiveDetailsT (B.FieldModification (B.TableField FareParametersProgressiveDetailsT))
-fareParametersProgressiveDetailsTMod =
-  B.tableModification
-    { fareParametersId = B.fieldNamed "fare_parameters_id",
-      deadKmFare = B.fieldNamed "dead_km_fare",
-      extraKmFare = B.fieldNamed "extra_km_fare"
-    }
-
 $(enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])
 
-$(mkTableInstances ''FareParametersProgressiveDetailsT "fare_parameters_progressive_details" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FareParametersProgressiveDetailsT "fare_parameters_progressive_details")

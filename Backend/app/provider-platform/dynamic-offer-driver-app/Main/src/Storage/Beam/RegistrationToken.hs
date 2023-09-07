@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.RegistrationToken as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
@@ -56,27 +56,6 @@ instance B.Table RegistrationTokenT where
 
 type RegistrationToken = RegistrationTokenT Identity
 
-registrationTokenTMod :: RegistrationTokenT (B.FieldModification (B.TableField RegistrationTokenT))
-registrationTokenTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      token = B.fieldNamed "token",
-      attempts = B.fieldNamed "attempts",
-      authMedium = B.fieldNamed "auth_medium",
-      authType = B.fieldNamed "auth_type",
-      authValueHash = B.fieldNamed "auth_value_hash",
-      verified = B.fieldNamed "verified",
-      authExpiry = B.fieldNamed "auth_expiry",
-      tokenExpiry = B.fieldNamed "token_expiry",
-      entityId = B.fieldNamed "entity_id",
-      merchantId = B.fieldNamed "merchant_id",
-      entityType = B.fieldNamed "entity_type",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      info = B.fieldNamed "info",
-      alternateNumberAttempts = B.fieldNamed "alternate_number_attempts"
-    }
-
 $(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])
 
-$(mkTableInstances ''RegistrationTokenT "registration_token" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RegistrationTokenT "registration_token")

@@ -25,7 +25,6 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -38,6 +37,7 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
@@ -55,16 +55,6 @@ instance B.Table MerchantServiceConfigT where
   primaryKey = Id . merchantId
 
 type MerchantServiceConfig = MerchantServiceConfigT Identity
-
-merchantServiceConfigTMod :: MerchantServiceConfigT (B.FieldModification (B.TableField MerchantServiceConfigT))
-merchantServiceConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      serviceName = B.fieldNamed "service_name",
-      configJSON = B.fieldNamed "config_json",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
 
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJSON = \case
@@ -90,4 +80,4 @@ getServiceNameConfigJSON = \case
 
 $(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
 
-$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config" "atlas_app")
+$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")

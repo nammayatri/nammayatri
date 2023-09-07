@@ -24,11 +24,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
   { id :: B.C f Text,
@@ -50,19 +50,6 @@ instance B.Table MerchantPaymentMethodT where
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
-merchantPaymentMethodTMod :: MerchantPaymentMethodT (B.FieldModification (B.TableField MerchantPaymentMethodT))
-merchantPaymentMethodTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      paymentType = B.fieldNamed "payment_type",
-      paymentInstrument = B.fieldNamed "payment_instrument",
-      collectedBy = B.fieldNamed "collected_by",
-      priority = B.fieldNamed "priority",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])
 
-$(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method" "atlas_app")
+$(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")

@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MetaDataT f = MetaDataT
   { driverId :: B.C f Text,
@@ -45,17 +45,6 @@ instance B.Table MetaDataT where
 
 type MetaData = MetaDataT Identity
 
-metaDataTMod :: MetaDataT (B.FieldModification (B.TableField MetaDataT))
-metaDataTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      device = B.fieldNamed "device",
-      deviceOS = B.fieldNamed "device_o_s",
-      deviceDateTime = B.fieldNamed "device_date_time",
-      appPermissions = B.fieldNamed "app_permissions",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''MetaDataT ['driverId] [])
-$(mkTableInstances ''MetaDataT "meta_data" "atlas_driver_offer_bpp")
+
+$(mkTableInstancesWithTModifier ''MetaDataT "meta_data" [("deviceOS", "device_o_s")])

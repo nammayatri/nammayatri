@@ -21,11 +21,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
@@ -33,7 +33,7 @@ data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
     baseFare :: B.C f Money,
     deadKmFare :: B.C f Money,
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
-    freeWatingTime :: B.C f (Maybe Minutes),
+    freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
@@ -46,18 +46,6 @@ instance B.Table FarePolicyProgressiveDetailsT where
 
 type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
 
-farePolicyProgressiveDetailsTMod :: FarePolicyProgressiveDetailsT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsT))
-farePolicyProgressiveDetailsTMod =
-  B.tableModification
-    { farePolicyId = B.fieldNamed "fare_policy_id",
-      baseDistance = B.fieldNamed "base_distance",
-      baseFare = B.fieldNamed "base_fare",
-      deadKmFare = B.fieldNamed "dead_km_fare",
-      waitingCharge = B.fieldNamed "waiting_charge",
-      freeWatingTime = B.fieldNamed "free_wating_time",
-      nightShiftCharge = B.fieldNamed "night_shift_charge"
-    }
-
 $(enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
 
-$(mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details")

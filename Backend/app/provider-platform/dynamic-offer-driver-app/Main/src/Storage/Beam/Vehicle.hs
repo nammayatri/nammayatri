@@ -23,10 +23,10 @@ import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data VehicleT f = VehicleT
   { driverId :: B.C f Text,
@@ -56,27 +56,6 @@ instance B.Table VehicleT where
 
 type Vehicle = VehicleT Identity
 
-vehicleTMod :: VehicleT (B.FieldModification (B.TableField VehicleT))
-vehicleTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      merchantId = B.fieldNamed "merchant_id",
-      variant = B.fieldNamed "variant",
-      model = B.fieldNamed "model",
-      color = B.fieldNamed "color",
-      vehicleName = B.fieldNamed "vehicle_name",
-      registrationNo = B.fieldNamed "registration_no",
-      capacity = B.fieldNamed "capacity",
-      category = B.fieldNamed "category",
-      make = B.fieldNamed "make",
-      size = B.fieldNamed "size",
-      energyType = B.fieldNamed "energy_type",
-      registrationCategory = B.fieldNamed "registration_category",
-      vehicleClass = B.fieldNamed "vehicle_class",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
 
-$(mkTableInstances ''VehicleT "vehicle" "atlas_driver_offer_bpp")
+$(mkTableInstances ''VehicleT "vehicle")

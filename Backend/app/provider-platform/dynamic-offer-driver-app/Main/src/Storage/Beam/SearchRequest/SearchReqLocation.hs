@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data SearchReqLocationT f = SearchReqLocationT
   { id :: B.C f Text,
@@ -51,25 +51,6 @@ instance B.Table SearchReqLocationT where
 
 type SearchReqLocation = SearchReqLocationT Identity
 
-searchReqLocationTMod :: SearchReqLocationT (B.FieldModification (B.TableField SearchReqLocationT))
-searchReqLocationTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      street = B.fieldNamed "street",
-      door = B.fieldNamed "door",
-      city = B.fieldNamed "city",
-      state = B.fieldNamed "state",
-      country = B.fieldNamed "country",
-      building = B.fieldNamed "building",
-      full_address = B.fieldNamed "full_address",
-      areaCode = B.fieldNamed "area_code",
-      area = B.fieldNamed "area",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''SearchReqLocationT ['id] [])
 
-$(mkTableInstances ''SearchReqLocationT "search_request_location" "atlas_driver_offer_bpp")
+$(mkTableInstances ''SearchReqLocationT "search_request_location")

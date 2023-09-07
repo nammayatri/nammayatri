@@ -24,10 +24,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Message.MessageReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,
@@ -50,19 +50,5 @@ instance B.Table MessageReportT where
 
 type MessageReport = MessageReportT Identity
 
-messageReportTMod :: MessageReportT (B.FieldModification (B.TableField MessageReportT))
-messageReportTMod =
-  B.tableModification
-    { messageId = B.fieldNamed "message_id",
-      driverId = B.fieldNamed "driver_id",
-      deliveryStatus = B.fieldNamed "delivery_status",
-      readStatus = B.fieldNamed "read_status",
-      likeStatus = B.fieldNamed "like_status",
-      reply = B.fieldNamed "reply",
-      messageDynamicFields = B.fieldNamed "message_dynamic_fields",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MessageReportT ['driverId, 'messageId] [])
-$(mkTableInstances ''MessageReportT "message_report" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MessageReportT "message_report")

@@ -16,9 +16,9 @@ module Domain.Types.Merchant.OnboardingDocumentConfig where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle (Variant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)
 

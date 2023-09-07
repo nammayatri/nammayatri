@@ -22,7 +22,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -31,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
 import Servant.API
+import Tools.Beam.UtilsTH
 
 data Role
   = USER

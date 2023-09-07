@@ -25,11 +25,11 @@ import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax = autoSqlValueSyntax
@@ -63,26 +63,6 @@ instance B.Table SearchTryT where
 
 type SearchTry = SearchTryT Identity
 
-searchTryTMod :: SearchTryT (B.FieldModification (B.TableField SearchTryT))
-searchTryTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      messageId = B.fieldNamed "message_id",
-      requestId = B.fieldNamed "request_id",
-      estimateId = B.fieldNamed "estimate_id",
-      merchantId = B.fieldNamed "merchant_id",
-      startTime = B.fieldNamed "start_time",
-      validTill = B.fieldNamed "valid_till",
-      baseFare = B.fieldNamed "base_fare",
-      customerExtraFee = B.fieldNamed "customer_extra_fee",
-      status = B.fieldNamed "status",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      searchRepeatCounter = B.fieldNamed "search_repeat_counter",
-      searchRepeatType = B.fieldNamed "search_repeat_type",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''SearchTryT ['id] [['requestId]])
 
-$(mkTableInstances ''SearchTryT "search_try" "atlas_driver_offer_bpp")
+$(mkTableInstances ''SearchTryT "search_try")

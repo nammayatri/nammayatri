@@ -21,11 +21,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FareParameters as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,
@@ -49,21 +49,6 @@ instance B.Table FareParametersT where
 
 type FareParameters = FareParametersT Identity
 
-fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
-fareParametersTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      baseFare = B.fieldNamed "base_fare",
-      driverSelectedFare = B.fieldNamed "driver_selected_fare",
-      customerExtraFee = B.fieldNamed "customer_extra_fee",
-      nightShiftRateIfApplies = B.fieldNamed "night_shift_rate_if_applies",
-      serviceCharge = B.fieldNamed "service_charge",
-      fareParametersType = B.fieldNamed "fare_parameters_type",
-      govtCharges = B.fieldNamed "govt_charges",
-      waitingCharge = B.fieldNamed "waiting_charge",
-      nightShiftCharge = B.fieldNamed "night_shift_charge"
-    }
-
 $(enableKVPG ''FareParametersT ['id] [])
 
-$(mkTableInstances ''FareParametersT "fare_parameters" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FareParametersT "fare_parameters")

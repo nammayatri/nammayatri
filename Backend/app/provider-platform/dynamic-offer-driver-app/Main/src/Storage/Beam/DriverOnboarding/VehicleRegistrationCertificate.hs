@@ -25,11 +25,11 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
@@ -62,30 +62,6 @@ instance B.Table VehicleRegistrationCertificateT where
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
-vehicleRegistrationCertificateTMod :: VehicleRegistrationCertificateT (B.FieldModification (B.TableField VehicleRegistrationCertificateT))
-vehicleRegistrationCertificateTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      documentImageId = B.fieldNamed "document_image_id",
-      certificateNumberEncrypted = B.fieldNamed "certificate_number_encrypted",
-      certificateNumberHash = B.fieldNamed "certificate_number_hash",
-      fitnessExpiry = B.fieldNamed "fitness_expiry",
-      permitExpiry = B.fieldNamed "permit_expiry",
-      pucExpiry = B.fieldNamed "puc_expiry",
-      insuranceValidity = B.fieldNamed "insurance_validity",
-      vehicleClass = B.fieldNamed "vehicle_class",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      vehicleManufacturer = B.fieldNamed "vehicle_manufacturer",
-      vehicleCapacity = B.fieldNamed "vehicle_capacity",
-      vehicleModel = B.fieldNamed "vehicle_model",
-      vehicleColor = B.fieldNamed "vehicle_color",
-      vehicleEnergyType = B.fieldNamed "vehicle_energy_type",
-      verificationStatus = B.fieldNamed "verification_status",
-      failedRules = B.fieldNamed "failed_rules",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
 
-$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate" "atlas_driver_offer_bpp")
+$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")

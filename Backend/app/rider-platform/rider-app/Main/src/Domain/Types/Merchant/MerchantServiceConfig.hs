@@ -19,7 +19,6 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
@@ -34,6 +33,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show as Show
+import Tools.Beam.UtilsTH
 
 data ServiceName
   = MapsService Maps.MapsService

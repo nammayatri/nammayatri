@@ -22,11 +22,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data AadhaarVerificationT f = AadhaarVerificationT
   { driverId :: B.C f Text,
@@ -49,20 +49,6 @@ instance B.Table AadhaarVerificationT where
 
 type AadhaarVerification = AadhaarVerificationT Identity
 
-aadhaarVerificationTMod :: AadhaarVerificationT (B.FieldModification (B.TableField AadhaarVerificationT))
-aadhaarVerificationTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      driverName = B.fieldNamed "driver_name",
-      driverGender = B.fieldNamed "driver_gender",
-      aadhaarNumberHash = B.fieldNamed "aadhaar_number_hash",
-      driverDob = B.fieldNamed "driver_dob",
-      driverImage = B.fieldNamed "driver_image",
-      isVerified = B.fieldNamed "is_verified",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])
 
-$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification" "atlas_driver_offer_bpp")
+$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification")

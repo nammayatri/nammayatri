@@ -23,10 +23,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data OnSearchEventT f = OnSearchEventT
   { id :: B.C f Text,
@@ -47,18 +47,6 @@ instance B.Table OnSearchEventT where
 
 type OnSearchEvent = OnSearchEventT Identity
 
-onSearchEventTMod :: OnSearchEventT (B.FieldModification (B.TableField OnSearchEventT))
-onSearchEventTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      bppId = B.fieldNamed "bpp_id",
-      messageId = B.fieldNamed "message_id",
-      errorCode = B.fieldNamed "error_code",
-      errorType = B.fieldNamed "error_type",
-      errorMessage = B.fieldNamed "error_message",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''OnSearchEventT ['id] [])
 
-$(mkTableInstances ''OnSearchEventT "on_search_event" "atlas_app")
+$(mkTableInstances ''OnSearchEventT "on_search_event")

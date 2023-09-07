@@ -18,11 +18,11 @@ module Domain.Types.DriverOffer where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BPPQuote
 

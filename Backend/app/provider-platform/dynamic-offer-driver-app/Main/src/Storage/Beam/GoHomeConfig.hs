@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.GoHomeConfig where
 
@@ -26,11 +25,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstancesWithTModifier)
 
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,
@@ -56,43 +55,7 @@ instance B.Table GoHomeConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-instance ModelMeta GoHomeConfigT where
-  modelFieldModification = goHomeConfigTMod
-  modelTableName = "go_home_config"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type GoHomeConfig = GoHomeConfigT Identity
-
-instance FromJSON GoHomeConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON GoHomeConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show GoHomeConfig
-
-goHomeConfigTMod :: GoHomeConfigT (B.FieldModification (B.TableField GoHomeConfigT))
-goHomeConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      enableGoHome = B.fieldNamed "enable_go_home",
-      startCnt = B.fieldNamed "start_cnt",
-      destRadiusMeters = B.fieldNamed "dest_radius",
-      activeTime = B.fieldNamed "active_time",
-      updateHomeLocationAfterSec = B.fieldNamed "update_home_location_after_sec",
-      cancellationCnt = B.fieldNamed "cancecllation_cnt",
-      numHomeLocations = B.fieldNamed "num_home_locations",
-      goHomeFromLocationRadius = B.fieldNamed "go_home_from_location_radius",
-      goHomeWayPointRadius = B.fieldNamed "go_home_way_point_radius",
-      numDriversForDirCheck = B.fieldNamed "num_drivers_for_dir_check",
-      goHomeBatchDelay = B.fieldNamed "go_home_batch_delay",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
-instance Serialize GoHomeConfig where
-  put = error "undefined"
-  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
@@ -106,3 +69,5 @@ goHomeConfigToPSModifiers =
   M.empty
 
 $(enableKVPG ''GoHomeConfigT ['merchantId] [])
+
+$(mkTableInstancesWithTModifier ''GoHomeConfigT "go_home_config" [("destRadiusMeters", "dest_radius"), ("cancellationCnt", "cancecllation_cnt")])

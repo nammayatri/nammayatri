@@ -151,9 +151,6 @@ fromFieldMeters f mbValue = case mbValue of
 -- instance FromField Seconds where
 --   fromField = fromFieldSeconds
 
--- instance IsString Seconds where
---   fromString = show
-
 -- instance FromField DbHash where
 --   fromField = fromFieldEnumDbHash
 
@@ -163,9 +160,6 @@ fromFieldMeters f mbValue = case mbValue of
 -- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
 -- instance FromBackendRow Postgres DbHash
-
--- instance IsString DbHash where
---   fromString = show
 
 instance FromField DomainFP.WaitingCharge where
   fromField = fromFieldJSON

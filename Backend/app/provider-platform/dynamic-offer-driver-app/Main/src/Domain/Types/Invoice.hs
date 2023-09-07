@@ -6,11 +6,11 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.DriverFee as DF
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Invoice = Invoice
   { id :: Id Invoice,

@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.JobStorageType.DB.Table where
@@ -58,22 +57,6 @@ instance B.Table SchedulerJobT where
   primaryKey = Id . id
 
 type SchedulerJob = SchedulerJobT Identity
-
-schedulerJobTMod :: SchedulerJobT (B.FieldModification (B.TableField SchedulerJobT))
-schedulerJobTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      jobType = B.fieldNamed "job_type",
-      jobData = B.fieldNamed "job_data",
-      shardId = B.fieldNamed "shard_id",
-      scheduledAt = B.fieldNamed "scheduled_at",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      maxErrors = B.fieldNamed "max_errors",
-      currErrors = B.fieldNamed "curr_errors",
-      status = B.fieldNamed "status",
-      parentJobId = B.fieldNamed "parent_job_id"
-    }
 
 $(enableKVPG ''SchedulerJobT ['id] [])
 

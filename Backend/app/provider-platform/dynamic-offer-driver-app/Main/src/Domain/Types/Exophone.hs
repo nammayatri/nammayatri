@@ -15,9 +15,9 @@
 module Domain.Types.Exophone where
 
 import qualified Domain.Types.Merchant as DM
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Exophone = Exophone
   { id :: Id Exophone,

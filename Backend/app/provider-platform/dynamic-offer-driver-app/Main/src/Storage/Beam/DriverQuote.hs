@@ -23,12 +23,12 @@ import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,
@@ -63,32 +63,6 @@ instance B.Table DriverQuoteT where
 
 type DriverQuote = DriverQuoteT Identity
 
-driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))
-driverQuoteTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "search_request_id",
-      searchTryId = B.fieldNamed "search_try_id",
-      searchRequestForDriverId = B.fieldNamed "search_request_for_driver_id",
-      driverId = B.fieldNamed "driver_id",
-      estimateId = B.fieldNamed "estimate_id",
-      driverName = B.fieldNamed "driver_name",
-      driverRating = B.fieldNamed "driver_rating",
-      status = B.fieldNamed "status",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      distance = B.fieldNamed "distance",
-      distanceToPickup = B.fieldNamed "distance_to_pickup",
-      durationToPickup = B.fieldNamed "duration_to_pickup",
-      validTill = B.fieldNamed "valid_till",
-      goHomeRequestId = B.fieldNamed "go_home_request_id",
-      estimatedFare = B.fieldNamed "estimated_fare",
-      fareParametersId = B.fieldNamed "fare_parameters_id",
-      providerId = B.fieldNamed "provider_id",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])
 
-$(mkTableInstances ''DriverQuoteT "driver_quote" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''DriverQuoteT "driver_quote" [("requestId", "search_request_id")])

@@ -22,10 +22,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverInformation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverInformationT f = DriverInformationT
   { driverId :: B.C f Text,
@@ -62,34 +62,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-driverInformationTMod :: DriverInformationT (B.FieldModification (B.TableField DriverInformationT))
-driverInformationTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      adminId = B.fieldNamed "admin_id",
-      merchantId = B.fieldNamed "merchant_id",
-      active = B.fieldNamed "active",
-      onRide = B.fieldNamed "on_ride",
-      enabled = B.fieldNamed "enabled",
-      blocked = B.fieldNamed "blocked",
-      verified = B.fieldNamed "verified",
-      subscribed = B.fieldNamed "subscribed",
-      paymentPending = B.fieldNamed "payment_pending",
-      aadhaarVerified = B.fieldNamed "aadhaar_verified",
-      numOfLocks = B.fieldNamed "num_of_locks",
-      lastEnabledOn = B.fieldNamed "last_enabled_on",
-      blockedReason = B.fieldNamed "blocked_reason",
-      blockExpiryTime = B.fieldNamed "block_expiry_time",
-      referralCode = B.fieldNamed "referral_code",
-      canDowngradeToSedan = B.fieldNamed "can_downgrade_to_sedan",
-      canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
-      canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi",
-      mode = B.fieldNamed "mode",
-      autoPayStatus = B.fieldNamed "auto_pay_status",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverInformationT ['driverId] [])
 
-$(mkTableInstances ''DriverInformationT "driver_information" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverInformationT "driver_information")

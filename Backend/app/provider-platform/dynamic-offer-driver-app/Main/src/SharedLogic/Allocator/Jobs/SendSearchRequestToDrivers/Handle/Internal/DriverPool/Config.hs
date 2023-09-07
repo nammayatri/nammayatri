@@ -27,9 +27,9 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   { batchSplitSize :: Int,

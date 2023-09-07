@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Ride as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -67,38 +67,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-rideTMod :: RideT (B.FieldModification (B.TableField RideT))
-rideTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      bookingId = B.fieldNamed "booking_id",
-      shortId = B.fieldNamed "short_id",
-      merchantId = B.fieldNamed "merchant_id",
-      status = B.fieldNamed "status",
-      driverId = B.fieldNamed "driver_id",
-      otp = B.fieldNamed "otp",
-      trackingUrl = B.fieldNamed "tracking_url",
-      fare = B.fieldNamed "fare",
-      traveledDistance = B.fieldNamed "traveled_distance",
-      chargeableDistance = B.fieldNamed "chargeable_distance",
-      driverArrivalTime = B.fieldNamed "driver_arrival_time",
-      tripStartTime = B.fieldNamed "trip_start_time",
-      tripEndTime = B.fieldNamed "trip_end_time",
-      tripStartLat = B.fieldNamed "trip_start_lat",
-      tripStartLon = B.fieldNamed "trip_start_lon",
-      tripEndLat = B.fieldNamed "trip_end_lat",
-      tripEndLon = B.fieldNamed "trip_end_lon",
-      pickupDropOutsideOfThreshold = B.fieldNamed "pickup_drop_outside_of_threshold",
-      fareParametersId = B.fieldNamed "fare_parameters_id",
-      distanceCalculationFailed = B.fieldNamed "distance_calculation_failed",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      driverDeviatedFromRoute = B.fieldNamed "driver_deviated_from_route",
-      numberOfSnapToRoadCalls = B.fieldNamed "number_of_snap_to_road_calls",
-      numberOfDeviation = B.fieldNamed "number_of_deviation",
-      driverGoHomeRequestId = B.fieldNamed "driver_go_home_req_id"
-    }
-
 $(enableKVPG ''RideT ['id] [['bookingId], ['driverId], ['driverGoHomeRequestId]])
 
-$(mkTableInstances ''RideT "ride" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''RideT "ride" [("driverGoHomeRequestId", "driver_go_home_req_id")])

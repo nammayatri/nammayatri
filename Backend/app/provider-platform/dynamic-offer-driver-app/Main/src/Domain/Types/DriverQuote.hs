@@ -24,11 +24,11 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)

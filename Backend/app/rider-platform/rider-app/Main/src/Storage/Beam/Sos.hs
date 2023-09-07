@@ -24,11 +24,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Sos as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data SosT f = SosT
   { id :: B.C f Text,
@@ -49,18 +49,6 @@ instance B.Table SosT where
 
 type Sos = SosT Identity
 
-sosTMod :: SosT (B.FieldModification (B.TableField SosT))
-sosTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      personId = B.fieldNamed "person_id",
-      rideId = B.fieldNamed "ride_id",
-      flow = B.fieldNamed "flow",
-      status = B.fieldNamed "status",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''SosT ['id] [])
 
-$(mkTableInstances ''SosT "sos" "atlas_app")
+$(mkTableInstances ''SosT "sos")

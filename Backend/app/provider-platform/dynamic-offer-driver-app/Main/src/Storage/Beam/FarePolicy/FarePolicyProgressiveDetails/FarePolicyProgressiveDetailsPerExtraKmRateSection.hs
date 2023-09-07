@@ -21,12 +21,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data FarePolicyProgressiveDetailsPerExtraKmRateSectionT f = FarePolicyProgressiveDetailsPerExtraKmRateSectionT
   { -- id :: B.C f Text,
@@ -46,15 +46,6 @@ type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDe
 
 type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.FarePolicy, Domain.FPProgressiveDetailsPerExtraKmRateSection)
 
-farePolicyProgressiveDetailsPerExtraKmRateSectionTMod :: FarePolicyProgressiveDetailsPerExtraKmRateSectionT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsPerExtraKmRateSectionT))
-farePolicyProgressiveDetailsPerExtraKmRateSectionTMod =
-  B.tableModification
-    { -- id = B.fieldNamed "id",
-      farePolicyId = B.fieldNamed "fare_policy_id",
-      startDistance = B.fieldNamed "start_distance",
-      perExtraKmRate = B.fieldNamed "per_extra_km_rate"
-    }
-
 $(enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
 
-$(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section")

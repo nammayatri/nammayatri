@@ -24,11 +24,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PlaceNameCacheT f = PlaceNameCacheT
   { id :: B.C f Text,
@@ -51,20 +51,6 @@ instance B.Table PlaceNameCacheT where
 
 type PlaceNameCache = PlaceNameCacheT Identity
 
-placeNameCacheTMod :: PlaceNameCacheT (B.FieldModification (B.TableField PlaceNameCacheT))
-placeNameCacheTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      formattedAddress = B.fieldNamed "formatted_address",
-      plusCode = B.fieldNamed "plus_code",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      placeId = B.fieldNamed "place_id",
-      geoHash = B.fieldNamed "geo_hash",
-      addressComponents = B.fieldNamed "address_components",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])
 
-$(mkTableInstances ''PlaceNameCacheT "place_name_cache" "atlas_driver_offer_bpp")
+$(mkTableInstances ''PlaceNameCacheT "place_name_cache")

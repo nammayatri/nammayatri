@@ -79,9 +79,6 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Estimat
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [EstimateBreakupD 'Unsafe]
 
-instance IsString EstimateBreakup where
-  fromString = show
-
 -- We shouldn't define JSON instances for 'Safe version
 deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 

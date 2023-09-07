@@ -500,6 +500,7 @@ library
       Storage.Queries.Vehicle.Internal
       Tools.AadhaarVerification
       Tools.Auth
+      Tools.Beam.UtilsTH
       Tools.Call
       Tools.Error
       Tools.Event

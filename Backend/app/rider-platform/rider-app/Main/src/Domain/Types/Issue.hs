@@ -17,9 +17,9 @@ module Domain.Types.Issue where
 
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data IssueStatus
   = OPEN

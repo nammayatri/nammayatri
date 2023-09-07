@@ -22,13 +22,13 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common ()
 import Kernel.Types.Geofencing
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
@@ -68,37 +68,6 @@ instance B.Table MerchantT where
 
 type Merchant = MerchantT Identity
 
-merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
-merchantTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      name = B.fieldNamed "name",
-      description = B.fieldNamed "description",
-      subscriberId = B.fieldNamed "subscriber_id",
-      uniqueKeyId = B.fieldNamed "unique_key_id",
-      shortId = B.fieldNamed "short_id",
-      mobileNumber = B.fieldNamed "mobile_number",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      gstin = B.fieldNamed "gstin",
-      fromTime = B.fieldNamed "from_time",
-      toTime = B.fieldNamed "to_time",
-      headCount = B.fieldNamed "head_count",
-      geoHashPrecisionValue = B.fieldNamed "geo_hash_precision_value",
-      status = B.fieldNamed "status",
-      city = B.fieldNamed "city",
-      country = B.fieldNamed "country",
-      verified = B.fieldNamed "verified",
-      enabled = B.fieldNamed "enabled",
-      internalApiKey = B.fieldNamed "internal_api_key",
-      minimumDriverRatesCount = B.fieldNamed "minimum_driver_rates_count",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      originRestriction = B.fieldNamed "origin_restriction",
-      destinationRestriction = B.fieldNamed "destination_restriction",
-      info = B.fieldNamed "info",
-      registryUrl = B.fieldNamed "registry_url"
-    }
-
 $(enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])
 
-$(mkTableInstances ''MerchantT "merchant" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MerchantT "merchant")

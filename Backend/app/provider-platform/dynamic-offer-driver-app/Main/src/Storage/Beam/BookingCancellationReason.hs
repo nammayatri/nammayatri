@@ -21,11 +21,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.BookingCancellationReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { driverId :: B.C f (Maybe Text),
@@ -49,21 +49,6 @@ instance B.Table BookingCancellationReasonT where
 
 type BookingCancellationReason = BookingCancellationReasonT Identity
 
-bookingCancellationReasonTMod :: BookingCancellationReasonT (B.FieldModification (B.TableField BookingCancellationReasonT))
-bookingCancellationReasonTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      bookingId = B.fieldNamed "booking_id",
-      rideId = B.fieldNamed "ride_id",
-      merchantId = B.fieldNamed "merchant_id",
-      source = B.fieldNamed "source",
-      reasonCode = B.fieldNamed "reason_code",
-      additionalInfo = B.fieldNamed "additional_info",
-      driverCancellationLocationLat = B.fieldNamed "driver_cancellation_location_lat",
-      driverCancellationLocationLon = B.fieldNamed "driver_cancellation_location_lon",
-      driverDistToPickup = B.fieldNamed "driver_dist_to_pickup"
-    }
-
 $(enableKVPG ''BookingCancellationReasonT ['bookingId] [['rideId]])
 
-$(mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason" "atlas_driver_offer_bpp")
+$(mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason")

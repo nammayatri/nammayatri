@@ -10,11 +10,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Mandate as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Prelude (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMoney)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MandateT f = MandateT
   { id :: B.C f Text,
@@ -38,20 +38,5 @@ instance B.Table MandateT where
 
 type Mandate = MandateT Identity
 
-mandateTMod :: MandateT (B.FieldModification (B.TableField MandateT))
-mandateTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      status = B.fieldNamed "status",
-      startDate = B.fieldNamed "start_date",
-      payerVpa = B.fieldNamed "payer_vpa",
-      payerApp = B.fieldNamed "payer_app",
-      payerAppName = B.fieldNamed "payer_app_name",
-      endDate = B.fieldNamed "end_date",
-      maxAmount = B.fieldNamed "max_amount",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''MandateT ['id] [])
-$(mkTableInstances ''MandateT "mandate" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MandateT "mandate")

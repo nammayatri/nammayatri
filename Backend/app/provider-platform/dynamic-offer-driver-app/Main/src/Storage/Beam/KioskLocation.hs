@@ -24,10 +24,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data KioskLocationT f = KioskLocationT
   { id :: B.C f Text,
@@ -48,18 +48,6 @@ instance B.Table KioskLocationT where
 
 type KioskLocation = KioskLocationT Identity
 
-kioskLocationTMod :: KioskLocationT (B.FieldModification (B.TableField KioskLocationT))
-kioskLocationTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      address = B.fieldNamed "address",
-      landmark = B.fieldNamed "landmark",
-      contact = B.fieldNamed "contact",
-      longitude = B.fieldNamed "longitude",
-      latitude = B.fieldNamed "latitude"
-    }
-
 $(enableKVPG ''KioskLocationT ['id] [['merchantId]])
 
-$(mkTableInstances ''KioskLocationT "kiosk_location" "atlas_driver_offer_bpp")
+$(mkTableInstances ''KioskLocationT "kiosk_location")

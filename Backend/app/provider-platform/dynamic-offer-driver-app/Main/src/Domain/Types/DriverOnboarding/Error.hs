@@ -15,9 +15,9 @@
 
 module Domain.Types.DriverOnboarding.Error where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Error.BaseError.HTTPError
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverOnboardingError
   = ImageValidationExceedLimit Text

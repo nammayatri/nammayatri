@@ -23,10 +23,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data AppInstallsT f = AppInstallsT
   { id :: B.C f Text,
@@ -49,20 +49,6 @@ instance B.Table AppInstallsT where
 
 type AppInstalls = AppInstallsT Identity
 
-appInstallsTMod :: AppInstallsT (B.FieldModification (B.TableField AppInstallsT))
-appInstallsTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      deviceToken = B.fieldNamed "device_token",
-      source = B.fieldNamed "source",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      appVersion = B.fieldNamed "app_version",
-      bundleVersion = B.fieldNamed "bundle_version",
-      platform = B.fieldNamed "platform"
-    }
-
 $(enableKVPG ''AppInstallsT ['id] [])
 
-$(mkTableInstances ''AppInstallsT "app_installs" "atlas_app")
+$(mkTableInstances ''AppInstallsT "app_installs")

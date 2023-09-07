@@ -25,9 +25,9 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Servant
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)

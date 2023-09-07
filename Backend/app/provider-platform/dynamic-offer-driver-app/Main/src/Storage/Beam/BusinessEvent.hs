@@ -23,11 +23,11 @@ import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
   { id :: B.C f Text,
@@ -51,21 +51,6 @@ instance B.Table BusinessEventT where
 
 type BusinessEvent = BusinessEventT Identity
 
-businessEventTMod :: BusinessEventT (B.FieldModification (B.TableField BusinessEventT))
-businessEventTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      eventType = B.fieldNamed "event_type",
-      timeStamp = B.fieldNamed "time_stamp",
-      bookingId = B.fieldNamed "booking_id",
-      whenPoolWasComputed = B.fieldNamed "when_pool_was_computed",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      distance = B.fieldNamed "distance",
-      duration = B.fieldNamed "duration",
-      rideId = B.fieldNamed "ride_id"
-    }
-
 $(enableKVPG ''BusinessEventT ['id] [])
 
-$(mkTableInstances ''BusinessEventT "business_event" "atlas_driver_offer_bpp")
+$(mkTableInstances ''BusinessEventT "business_event")

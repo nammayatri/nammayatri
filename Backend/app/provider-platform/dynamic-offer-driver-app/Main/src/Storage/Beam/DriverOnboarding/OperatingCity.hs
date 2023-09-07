@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data OperatingCityT f = OperatingCityT
   { id :: B.C f Text,
@@ -43,17 +43,6 @@ instance B.Table OperatingCityT where
 
 type OperatingCity = OperatingCityT Identity
 
-operatingCityTMod :: OperatingCityT (B.FieldModification (B.TableField OperatingCityT))
-operatingCityTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      cityName = B.fieldNamed "city_name",
-      enabled = B.fieldNamed "enabled",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''OperatingCityT ['id] [['merchantId], ['cityName]])
 
-$(mkTableInstances ''OperatingCityT "operating_city" "atlas_driver_offer_bpp")
+$(mkTableInstances ''OperatingCityT "operating_city")

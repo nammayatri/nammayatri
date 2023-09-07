@@ -20,11 +20,11 @@ import Domain.Types.Booking.Type (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Ride (Ride)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BookingCancellationReason = BookingCancellationReason
   { bookingId :: Id Booking,

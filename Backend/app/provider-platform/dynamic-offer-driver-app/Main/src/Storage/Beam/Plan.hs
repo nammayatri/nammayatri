@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Plan as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PlanT f = PlanT
   { id :: B.C f Text,
@@ -53,24 +53,6 @@ instance B.Table PlanT where
 
 type Plan = PlanT Identity
 
-planTMod :: PlanT (B.FieldModification (B.TableField PlanT))
-planTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      paymentMode = B.fieldNamed "payment_mode",
-      merchantId = B.fieldNamed "merchant_id",
-      name = B.fieldNamed "name",
-      description = B.fieldNamed "description",
-      maxAmount = B.fieldNamed "max_amount",
-      registrationAmount = B.fieldNamed "registration_amount",
-      isOfferApplicable = B.fieldNamed "is_offer_applicable",
-      maxCreditLimit = B.fieldNamed "max_credit_limit",
-      planBaseAmount = B.fieldNamed "plan_base_amount",
-      freeRideCount = B.fieldNamed "free_ride_count",
-      frequency = B.fieldNamed "frequency",
-      planType = B.fieldNamed "plan_type"
-    }
-
 $(enableKVPG ''PlanT ['id] [['paymentMode], ['merchantId]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''PlanT "plan" "atlas_driver_offer_bpp")
+$(mkTableInstances ''PlanT "plan")

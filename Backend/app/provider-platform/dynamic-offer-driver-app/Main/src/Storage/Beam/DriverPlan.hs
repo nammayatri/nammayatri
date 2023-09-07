@@ -23,10 +23,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverPlanT f = DriverPlanT
   { driverId :: B.C f Text,
@@ -47,17 +47,5 @@ instance B.Table DriverPlanT where
 
 type DriverPlan = DriverPlanT Identity
 
-driverPlanTMod :: DriverPlanT (B.FieldModification (B.TableField DriverPlanT))
-driverPlanTMod =
-  B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      planId = B.fieldNamed "plan_id",
-      planType = B.fieldNamed "plan_type",
-      mandateId = B.fieldNamed "mandate_id",
-      mandateSetupDate = B.fieldNamed "mandate_setup_date",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverPlanT ['driverId] [])
-$(mkTableInstances ''DriverPlanT "driver_plan" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverPlanT "driver_plan")

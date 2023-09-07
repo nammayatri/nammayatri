@@ -23,12 +23,12 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude (BaseUrl)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving stock (Show, Eq, Read, Ord, Generic)

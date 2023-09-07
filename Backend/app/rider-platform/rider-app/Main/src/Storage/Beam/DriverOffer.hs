@@ -24,11 +24,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOffer as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverOfferT f = DriverOfferT
   { id :: B.C f Text,
@@ -54,23 +54,6 @@ instance B.Table DriverOfferT where
 
 type DriverOffer = DriverOfferT Identity
 
-driverOfferTMod :: DriverOfferT (B.FieldModification (B.TableField DriverOfferT))
-driverOfferTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      estimateId = B.fieldNamed "estimate_id",
-      merchantId = B.fieldNamed "merchant_id",
-      driverId = B.fieldNamed "driver_id",
-      driverName = B.fieldNamed "driver_name",
-      durationToPickup = B.fieldNamed "duration_to_pickup",
-      distanceToPickup = B.fieldNamed "distance_to_pickup",
-      validTill = B.fieldNamed "valid_till",
-      bppQuoteId = B.fieldNamed "bpp_quote_id",
-      rating = B.fieldNamed "rating",
-      status = B.fieldNamed "status",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
 
-$(mkTableInstances ''DriverOfferT "driver_offer" "atlas_app")
+$(mkTableInstances ''DriverOfferT "driver_offer")

@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.LeaderBoardConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data LeaderBoardConfigsT f = LeaderBoardConfigsT
   { id :: B.C f Text,
@@ -48,19 +48,6 @@ instance B.Table LeaderBoardConfigsT where
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 
-leaderBoardConfigsTMod :: LeaderBoardConfigsT (B.FieldModification (B.TableField LeaderBoardConfigsT))
-leaderBoardConfigsTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      leaderBoardType = B.fieldNamed "leader_board_type",
-      numberOfSets = B.fieldNamed "number_of_sets",
-      leaderBoardExpiry = B.fieldNamed "leader_board_expiry",
-      zScoreBase = B.fieldNamed "z_score_base",
-      leaderBoardLengthLimit = B.fieldNamed "leader_board_length_limit",
-      isEnabled = B.fieldNamed "is_enabled",
-      merchantId = B.fieldNamed "merchant_id"
-    }
-
 $(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])
 
-$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs" "atlas_driver_offer_bpp")
+$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")

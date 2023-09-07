@@ -18,10 +18,10 @@ module Domain.Types.Message.Message where
 import Data.Map as HM
 import qualified Domain.Types.MediaFile as MF
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data MessageType = Action Text | Read
   deriving stock (Show, Eq, Read, Ord, Generic)

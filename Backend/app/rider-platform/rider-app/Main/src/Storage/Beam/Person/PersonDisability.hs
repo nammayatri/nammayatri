@@ -14,8 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Person.PersonDisability where
 
@@ -25,9 +23,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonDisabilityT f = PersonDisabilityT
   { personId :: B.C f Text,
@@ -46,15 +44,5 @@ instance B.Table PersonDisabilityT where
 
 type PersonDisability = PersonDisabilityT Identity
 
-personDisabilityTMod :: PersonDisabilityT (B.FieldModification (B.TableField PersonDisabilityT))
-personDisabilityTMod =
-  B.tableModification
-    { personId = B.fieldNamed "person_id",
-      disabilityId = B.fieldNamed "disability_id",
-      tag = B.fieldNamed "tag",
-      description = B.fieldNamed "description",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''PersonDisabilityT ['personId] [])
-$(mkTableInstances ''PersonDisabilityT "person_disability" "atlas_app")
+$(mkTableInstances ''PersonDisabilityT "person_disability")

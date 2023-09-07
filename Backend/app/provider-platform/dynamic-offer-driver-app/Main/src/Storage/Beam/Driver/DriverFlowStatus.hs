@@ -23,9 +23,9 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,
@@ -42,14 +42,6 @@ instance B.Table DriverFlowStatusT where
 
 type DriverFlowStatus = DriverFlowStatusT Identity
 
-driverFlowStatusTMod :: DriverFlowStatusT (B.FieldModification (B.TableField DriverFlowStatusT))
-driverFlowStatusTMod =
-  B.tableModification
-    { personId = B.fieldNamed "person_id",
-      flowStatus = B.fieldNamed "flow_status",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''DriverFlowStatusT ['personId] [])
 
-$(mkTableInstances ''DriverFlowStatusT "driver_flow_status" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverFlowStatusT "driver_flow_status")

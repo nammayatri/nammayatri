@@ -102,9 +102,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowStatus
 
 instance FromBackendRow Postgres FlowStatus
 
-instance IsString FlowStatus where
-  fromString = show
-
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =
   defaultOptions

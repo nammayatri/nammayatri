@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT
   { id :: B.C f Text,
@@ -44,18 +44,6 @@ instance B.Table RatingT where
 
 type Rating = RatingT Identity
 
-ratingTMod :: RatingT (B.FieldModification (B.TableField RatingT))
-ratingTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      rideId = B.fieldNamed "ride_id",
-      driverId = B.fieldNamed "driver_id",
-      ratingValue = B.fieldNamed "rating_value",
-      feedbackDetails = B.fieldNamed "feedback_details",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''RatingT ['id] [['rideId]])
 
-$(mkTableInstances ''RatingT "rating" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RatingT "rating")

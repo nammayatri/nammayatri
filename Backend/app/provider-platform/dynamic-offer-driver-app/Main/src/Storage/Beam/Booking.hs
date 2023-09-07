@@ -24,12 +24,12 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -73,41 +73,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
-bookingTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      quoteId = B.fieldNamed "quote_id",
-      status = B.fieldNamed "status",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      disabilityTag = B.fieldNamed "disability_tag",
-      bookingType = B.fieldNamed "booking_type",
-      specialZoneOtpCode = B.fieldNamed "special_zone_otp_code",
-      area = B.fieldNamed "area",
-      providerId = B.fieldNamed "provider_id",
-      primaryExophone = B.fieldNamed "primary_exophone",
-      bapId = B.fieldNamed "bap_id",
-      bapUri = B.fieldNamed "bap_uri",
-      bapCity = B.fieldNamed "bap_city",
-      bapCountry = B.fieldNamed "bap_country",
-      startTime = B.fieldNamed "start_time",
-      riderId = B.fieldNamed "rider_id",
-      fromLocationId = B.fieldNamed "from_location_id",
-      toLocationId = B.fieldNamed "to_location_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      estimatedDistance = B.fieldNamed "estimated_distance",
-      maxEstimatedDistance = B.fieldNamed "max_estimated_distance",
-      estimatedFare = B.fieldNamed "estimated_fare",
-      estimatedDuration = B.fieldNamed "estimated_duration",
-      fareParametersId = B.fieldNamed "fare_parameters_id",
-      riderName = B.fieldNamed "rider_name",
-      paymentUrl = B.fieldNamed "payment_url",
-      createdAt = B.fieldNamed "created_at",
-      paymentMethodId = B.fieldNamed "payment_method_id",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])
 
-$(mkTableInstances ''BookingT "booking" "atlas_driver_offer_bpp")
+$(mkTableInstances ''BookingT "booking")

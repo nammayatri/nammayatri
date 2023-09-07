@@ -22,10 +22,10 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Issue.IssueReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
@@ -52,23 +52,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-issueReportTMod :: IssueReportT (B.FieldModification (B.TableField IssueReportT))
-issueReportTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      rideId = B.fieldNamed "ride_id",
-      description = B.fieldNamed "description",
-      assignee = B.fieldNamed "assignee",
-      status = B.fieldNamed "status",
-      categoryId = B.fieldNamed "category_id",
-      optionId = B.fieldNamed "option_id",
-      deleted = B.fieldNamed "deleted",
-      mediaFiles = B.fieldNamed "media_files",
-      ticketId = B.fieldNamed "ticket_id",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId], ['ticketId]])
-$(mkTableInstances ''IssueReportT "issue_report" "atlas_driver_offer_bpp")
+
+$(mkTableInstances ''IssueReportT "issue_report")

@@ -23,12 +23,12 @@ import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant hiding (throwError)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data SearchTry = SearchTry
   { id :: Id SearchTry,

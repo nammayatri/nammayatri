@@ -24,13 +24,13 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -81,48 +81,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-personTMod :: PersonT (B.FieldModification (B.TableField PersonT))
-personTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      firstName = B.fieldNamed "first_name",
-      middleName = B.fieldNamed "middle_name",
-      lastName = B.fieldNamed "last_name",
-      role = B.fieldNamed "role",
-      gender = B.fieldNamed "gender",
-      identifierType = B.fieldNamed "identifier_type",
-      emailEncrypted = B.fieldNamed "email_encrypted",
-      emailHash = B.fieldNamed "email_hash",
-      unencryptedMobileNumber = B.fieldNamed "unencrypted_mobile_number",
-      mobileNumberEncrypted = B.fieldNamed "mobile_number_encrypted",
-      mobileNumberHash = B.fieldNamed "mobile_number_hash",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      passwordHash = B.fieldNamed "password_hash",
-      identifier = B.fieldNamed "identifier",
-      totalRatings = B.fieldNamed "total_ratings",
-      totalRatingScore = B.fieldNamed "total_rating_score",
-      isValidRating = B.fieldNamed "is_valid_rating",
-      language = B.fieldNamed "language",
-      isNew = B.fieldNamed "is_new",
-      enabled = B.fieldNamed "enabled",
-      blocked = B.fieldNamed "blocked",
-      deviceToken = B.fieldNamed "device_token",
-      notificationToken = B.fieldNamed "notification_token",
-      description = B.fieldNamed "description",
-      merchantId = B.fieldNamed "merchant_id",
-      whatsappNotificationEnrollStatus = B.fieldNamed "whatsapp_notification_enroll_status",
-      createdAt = B.fieldNamed "created_at",
-      blockedAt = B.fieldNamed "blocked_at",
-      blockedByRuleId = B.fieldNamed "blocked_by_rule_id",
-      updatedAt = B.fieldNamed "updated_at",
-      bundleVersion = B.fieldNamed "bundle_version",
-      clientVersion = B.fieldNamed "client_version",
-      hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
-      hasDisability = B.fieldNamed "has_disability",
-      referralCode = B.fieldNamed "referral_code",
-      referredAt = B.fieldNamed "referred_at"
-    }
-
 $(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])
 
-$(mkTableInstances ''PersonT "person" "atlas_app")
+$(mkTableInstances ''PersonT "person")

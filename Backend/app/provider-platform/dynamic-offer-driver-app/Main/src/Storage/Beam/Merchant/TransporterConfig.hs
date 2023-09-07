@@ -21,11 +21,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
@@ -85,57 +85,6 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-transporterConfigTMod :: TransporterConfigT (B.FieldModification (B.TableField TransporterConfigT))
-transporterConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      pickupLocThreshold = B.fieldNamed "pickup_loc_threshold",
-      dropLocThreshold = B.fieldNamed "drop_loc_threshold",
-      rideTimeEstimatedThreshold = B.fieldNamed "ride_time_estimated_threshold",
-      includeDriverCurrentlyOnRide = B.fieldNamed "include_driver_currently_on_ride",
-      defaultPopupDelay = B.fieldNamed "default_popup_delay",
-      popupDelayToAddAsPenalty = B.fieldNamed "popup_delay_to_add_as_penalty",
-      thresholdCancellationScore = B.fieldNamed "threshold_cancellation_score",
-      minRidesForCancellationScore = B.fieldNamed "min_rides_for_cancellation_score",
-      thresholdCancellationPercentageToUnlist = B.fieldNamed "threshold_cancellation_percentage_to_unlist",
-      minRidesToUnlist = B.fieldNamed "min_rides_to_unlist",
-      mediaFileUrlPattern = B.fieldNamed "media_file_url_pattern",
-      mediaFileSizeUpperLimit = B.fieldNamed "media_file_size_upper_limit",
-      referralLinkPassword = B.fieldNamed "referral_link_password",
-      fcmUrl = B.fieldNamed "fcm_url",
-      fcmServiceAccount = B.fieldNamed "fcm_service_account",
-      fcmTokenKeyPrefix = B.fieldNamed "fcm_token_key_prefix",
-      onboardingTryLimit = B.fieldNamed "onboarding_try_limit",
-      onboardingRetryTimeInHours = B.fieldNamed "onboarding_retry_time_in_hours",
-      checkImageExtractionForDashboard = B.fieldNamed "check_image_extraction_for_dashboard",
-      searchRepeatLimit = B.fieldNamed "search_repeat_limit",
-      actualRideDistanceDiffThreshold = B.fieldNamed "actual_ride_distance_diff_threshold",
-      upwardsRecomputeBuffer = B.fieldNamed "upwards_recompute_buffer",
-      approxRideDistanceDiffThreshold = B.fieldNamed "approx_ride_distance_diff_threshold",
-      driverPaymentCycleBuffer = B.fieldNamed "driver_payment_cycle_buffer",
-      driverPaymentCycleDuration = B.fieldNamed "driver_payment_cycle_duration",
-      driverPaymentCycleStartTime = B.fieldNamed "driver_payment_cycle_start_time",
-      driverPaymentReminderInterval = B.fieldNamed "driver_payment_reminder_interval",
-      timeDiffFromUtc = B.fieldNamed "time_diff_from_utc",
-      subscription = B.fieldNamed "subscription",
-      minLocationAccuracy = B.fieldNamed "min_location_accuracy",
-      aadhaarVerificationRequired = B.fieldNamed "aadhaar_verification_required",
-      enableDashboardSms = B.fieldNamed "enable_dashboard_sms",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      rcLimit = B.fieldNamed "rc_limit",
-      mandateValidity = B.fieldNamed "mandate_validity",
-      automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off",
-      driverAutoPayNotificationTime = B.fieldNamed "driver_auto_pay_notification_time",
-      driverAutoPayExecutionTime = B.fieldNamed "driver_auto_pay_execution_time",
-      subscriptionStartTime = B.fieldNamed "subscription_start_time",
-      driverLocationAccuracyBuffer = B.fieldNamed "driver_location_accuracy_buffer",
-      routeDeviationThreshold = B.fieldNamed "route_deviation_threshold",
-      canDowngradeToSedan = B.fieldNamed "can_downgrade_to_sedan",
-      canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
-      canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi"
-    }
-
 $(enableKVPG ''TransporterConfigT ['merchantId] [])
 
-$(mkTableInstances ''TransporterConfigT "transporter_config" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])

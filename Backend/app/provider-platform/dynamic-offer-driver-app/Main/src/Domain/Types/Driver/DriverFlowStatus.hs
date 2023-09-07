@@ -101,9 +101,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowStatus
 
 instance FromBackendRow Postgres FlowStatus
 
-instance IsString FlowStatus where
-  fromString = show
-
 data DriverFlowStatus = DriverFlowStatus
   { personId :: Id DP.Person,
     flowStatus :: FlowStatus,

@@ -26,9 +26,9 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Person (Driver)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 type MessageDynamicFieldsType = M.Map Text Text
 
@@ -51,9 +51,6 @@ instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be MessageDynamicFiel
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageDynamicFieldsType
 
 instance FromBackendRow Postgres MessageDynamicFieldsType
-
-instance IsString MessageDynamicFieldsType where
-  fromString = show
 
 data DeliveryStatus = Success | Failed | Queued | Sending
   deriving stock (Show, Eq, Read, Ord, Generic)

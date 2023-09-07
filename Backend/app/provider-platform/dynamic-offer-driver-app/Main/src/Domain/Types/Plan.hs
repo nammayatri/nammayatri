@@ -22,13 +22,13 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
 import qualified Text.Show
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig [RideCountBasedFeePolicy] deriving (Generic, ToJSON, FromJSON, Show)
 
