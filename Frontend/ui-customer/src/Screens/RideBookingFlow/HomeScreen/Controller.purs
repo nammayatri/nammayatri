@@ -91,7 +91,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), Trip)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | RepeatTrip HomeScreenState Trip
 
 data Action = NoAction
             | BackPressed
@@ -621,6 +622,7 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | RepeatRide Int Trip
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1808,6 +1810,9 @@ eval (UpdateETA currentETA currentDistance) state = do
   let
     newState = state { data { driverInfoCardState { eta = currentETA, distance = currentDistance, initDistance = Just distance } } }
   continue newState
+
+eval (RepeatRide index item) state = do 
+  exit $ RepeatTrip state item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do

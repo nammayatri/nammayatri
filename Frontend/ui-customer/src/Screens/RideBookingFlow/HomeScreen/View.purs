@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, scrollBarY,cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -766,6 +766,7 @@ buttonLayout state push =
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
             , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false && (getValueToLocalStore DISABILITY_UPDATED == "true" && (not state.data.config.showDisabilityBanner ) ) ) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , repeatTripView state push
             ]
         ]
 
@@ -790,6 +791,73 @@ updateDisabilityBanner state push =
     , orientation VERTICAL
     , margin $ MarginVertical 10 10
     ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
+    
+repeatTripView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+repeatTripView state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 16 0 16 (16+safeMarginBottom)
+  , cornerRadii $ Corners (4.0) true true false false
+  , visibility if length state.data.tripSuggestions > 0 then VISIBLE else GONE
+  ][ scrollView
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , scrollBarY false
+        ] ( mapWithIndex 
+                  (\index item -> 
+                      linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , orientation VERTICAL
+                        , stroke $ "1," <> Color.grey900
+                        , onClick push $ const $ RepeatRide index item
+                        ][
+                      linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation VERTICAL
+                      ][ textView
+                          [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , color Color.black900
+                          , textSize FontSize.a_12
+                          , text item.source
+                          ]
+                        , textView
+                          [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , color Color.black600
+                          , textSize FontSize.a_12
+                          , text item.source
+                          ]
+                      ]
+                    , linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation VERTICAL
+                      ][ textView
+                          [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , color Color.black900
+                          , textSize FontSize.a_12
+                          , text item.destination
+                          ]
+                        , textView
+                          [ width WRAP_CONTENT
+                          , height WRAP_CONTENT
+                          , color Color.black600
+                          , textSize FontSize.a_12
+                          , text item.destination
+                          ]
+                        ]
+                        ]
+                  )
+                  state.data.tripSuggestions
+                )
+          
+  ]
+
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =

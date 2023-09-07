@@ -1510,24 +1510,23 @@ homeScreenFlow = do
 
     REPEAT_RIDE_FLOW_HOME state -> do
       _ <- pure $ spy "logging state in REPEAT_RIDE_FLOW_HOME " state
-      homeScreenFlow
-      -- updateRideDetailsX state
-      -- let sourceLat = state.data.selectedItem.sourceLocation^._lat
-      -- let sourceLong = state.data.selectedItem.sourceLocation^._lon
-      -- (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq sourceLat sourceLong)
-      -- let srcServiceable = sourceServiceabilityResp.serviceable
-      -- let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
-      -- let pickUpPoints = map (\(GatesInfo item) -> {
-      --                                         place: item.name,
-      --                                         lat  : (item.point)^._lat,
-      --                                         lng : (item.point)^._lon,
-      --                                         address : item.address
-      --                                       }) srcSpecialLocation.gates
-      -- if(state.data.selectedItem.isSpecialZone) then do
-      --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
-      --   pure unit
-      --   else pure unit
-      -- rideSearchFlow "REPEAT_RIDE_FLOW"
+      updateRideDetailsX state
+      let sourceLat = state.sourceLat
+      let sourceLong = state.sourceLong
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq sourceLat sourceLong)
+      let srcServiceable = sourceServiceabilityResp.serviceable
+      let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
+      let pickUpPoints = map (\(GatesInfo item) -> {
+                                              place: item.name,
+                                              lat  : (item.point)^._lat,
+                                              lng : (item.point)^._lon,
+                                              address : item.address
+                                            }) srcSpecialLocation.gates
+      if(state.isSpecialZone) then do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
+        pure unit
+      else pure unit
+      rideSearchFlow "REPEAT_RIDE_FLOW"
       
     _ -> homeScreenFlow
 
@@ -2348,12 +2347,14 @@ fetchOrModifyLocationLists savedLocationResp = do
     _ <- pure $ spy "geohashNeighbours" (geohashNeighbours currentGeoHash)
     _ <- pure $ spy "recentSearchesWithoutSuggested abcde " recentSearchesWithoutSuggested
     _ <- pure $ spy "updatedList abcde " updatedList
+    _ <- pure $ spy "tripSuggesstions abcde abcde " destArr.tripSuggestions
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data
                                                                         { savedLocations = savedLocationResp
                                                                         , recentSearchs {predictionArray = recents}
                                                                         , locationList = updatedList
                                                                         , destinationSuggestions = updatedList
                                                                         , suggestedDestinations{suggestedDestinationsMap = mmap}
+                                                                        , tripSuggestions = destArr.tripSuggestions
                                                                         }
                                                                       })
     pure unit
