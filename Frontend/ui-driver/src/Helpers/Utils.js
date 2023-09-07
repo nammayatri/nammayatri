@@ -751,6 +751,76 @@ export const startPP = function (payload) {
 	}
 }
 
+// TODO NEED TO REFACTOR 
+export const renewFile = function(filePath,location,cb) {
+  JBridge.renewFile(location,filePath,callbackMapper.map(function(result) {
+    cb(result)();
+  }));
+}
+
+export const preFetch = function() {
+  let configPackage = {};
+  try {
+    if (top.configPackage) configPackage = Object.assign({},top.configPackage)
+    else configPackage = JSON.parse(JBridge.loadFileInDUI("config.json"));
+  }catch (err){
+    window.JBridge.firebaseLogEventWithParams("pre_fetch_failed", "config_read_failed",err);
+    }
+
+  let JOSFlags = JOS.getJOSflags();
+  let assets = {};
+  let bundles = {};
+  if (JOSFlags && JOSFlags.isCUGUser) {
+    assets = Object.assign(assets,configPackage.new.assets)
+    bundles = Object.assign(bundles,configPackage.new.package)
+  } else {
+    assets = Object.assign(assets,configPackage.live.assets)
+    bundles = Object.assign(bundles,configPackage.live.package)
+  }
+  return getDownloadObject(assets,bundles,configPackage.app_list,configPackage.dependencies);
+}
+
+function getDownloadObject(assets,bundles,apps,dependencies) {
+  let files = [];
+  apps.forEach((app) => {
+
+    if (!bundles[app]) return;
+    let assetsBlock = assets[app];
+    let root = getRoot(dependencies[app]);
+    let assetsKey = Object.keys(assetsBlock);
+    let assetsList = [];
+
+
+
+    assetsKey.forEach((key) => {if (typeof assetsBlock[key] == "string") assetsList.push(assetsBlock[key])})
+
+    files.push(constructDownloadObject(root,bundles[app]));
+
+    assetsList.forEach((url) => {
+      files.push(constructDownloadObject(root,url));
+    });
+  });
+  return files;
+}
+
+function constructDownloadObject (root,url) {
+  let download = {};
+  Object.assign(download,({
+    "filePath" : root.concat(getFileName(url)),
+    "location" : url
+  }));
+  return download;
+}
+
+function getRoot(rootObject) {
+  return rootObject ? rootObject.default.root : "";
+}
+
+function getFileName(url) {
+  const reg = /(v1-[^/]*\.((zip)|(jsa)))|[^/]*\.(html|js)/;
+  const out = reg.exec(url);
+  return out ? out[0] : fileurl;
+}
 
 export const initiatePP = function () {
   var cb = function (code) {
@@ -763,8 +833,8 @@ export const initiatePP = function () {
   }
   if (JOS) {
     try {
-      var innerPayload = window.__payload.payload;
-      var initiatePayload = window.__payload;
+      var innerPayload = Object.assign({},window.__payload.payload);
+      var initiatePayload = Object.assign({},window.__payload);
       innerPayload["action"] = "initiate";
       initiatePayload["payload"] = innerPayload;
       JOS.startApp("in.juspay.hyperpay")(initiatePayload)(cb)();
