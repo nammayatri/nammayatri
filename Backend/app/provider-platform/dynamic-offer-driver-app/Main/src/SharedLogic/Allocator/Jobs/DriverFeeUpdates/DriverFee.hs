@@ -70,7 +70,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       startTime = jobData.startTime
       endTime = jobData.endTime
       merchantId = jobData.merchantId
-  now <- getLocalCurrentTime jobData.timeDiff
+  now <- getCurrentTime
   feeZipDriver <- calcDriverFeeAttr merchantId ONGOING startTime endTime
   when (null feeZipDriver) $ logInfo "No ongoing payment found."
   for_ feeZipDriver $ \(driverFee, mbDriver) -> do
@@ -308,7 +308,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
       merchantId = jobData.merchantId
-  now <- getLocalCurrentTime jobData.timeDiff
+  now <- getCurrentTime
   feeZipDriver <- calcDriverFeeAttr merchantId PAYMENT_PENDING startTime now
   when (null feeZipDriver) $ logInfo "No pending payment found."
   for_ feeZipDriver $ \(driverFee, mbDriver) -> do
@@ -378,7 +378,7 @@ mkInvoiceAgainstDriverFee driverFee = do
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> m ()
 scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  now <- getCurrentTime
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
   createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $

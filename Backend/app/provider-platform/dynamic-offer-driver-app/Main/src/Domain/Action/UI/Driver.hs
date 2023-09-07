@@ -84,7 +84,7 @@ import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
+import Data.Time (Day, UTCTime (UTCTime), fromGregorian, utctDay)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -1584,18 +1584,17 @@ remove (personId, _) = do
 -- history should be on basis of invoice instead of driverFee id
 getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
 getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
+  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
-  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  now <- getCurrentTime
   let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
-
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
     _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
@@ -1794,13 +1793,13 @@ getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceShortId = do
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
         | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
         | otherwise = DDF.RECURRING_INVOICE
-  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
-mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> TransporterConfig -> m [DriverFeeInfoEntity]
-mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
+mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> m [DriverFeeInfoEntity]
+mkDriverFeeInfoEntity driverFees invoiceStatus = do
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
@@ -1813,7 +1812,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
+              rideTakenOn = driverFee.createdAt,
               offerAndPlanDetails = driverFee.planOfferTitle
             }
     )

@@ -54,7 +54,6 @@ import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -103,13 +102,13 @@ getStatus (personId, merchantId) orderId = do
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
-            processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
+            processPayment (cast order.personId) merchantId order.id (shouldSendSuccessNotification mandateStatus)
           processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
         DPayment.PaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
-            processPayment merchantId (cast order.personId) order.id True
+            processPayment (cast order.personId) merchantId order.id True
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
         DPayment.PDNNotificationStatusResp {..} ->
           processNotification notificationId notificationStatus
@@ -139,14 +138,14 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
                 unless (transactionStatus /= Payment.CHARGED) $ do
-                  processPayment merchantId (cast order.personId) order.id True
+                  processPayment (cast order.personId) merchantId order.id True
                 notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             Payment.MandateOrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
                 unless (transactionStatus /= Payment.CHARGED) $ do
-                  processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
+                  processPayment (cast order.personId) merchantId order.id (shouldSendSuccessNotification mandateStatus)
                 processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
                 notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
@@ -160,12 +159,11 @@ juspayWebhookHandler merchantShortId authData value = do
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> Flow ()
-processPayment merchantId driverId orderId sendNotification = do
+processPayment :: Id DP.Person -> Id DM.Merchant -> Id DOrder.PaymentOrder -> Bool -> Flow ()
+processPayment driverId merchantId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  now <- getCurrentTime
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let invoice = listToMaybe invoices
   when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
