@@ -69,9 +69,9 @@ handler merchant sReq estimate = do
   searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantId merchantId
-  let inTime = fromIntegral goHomeCfg.goHomeBatchDelay
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
+  (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
+  let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
