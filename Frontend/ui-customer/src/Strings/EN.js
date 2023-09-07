@@ -592,5 +592,9 @@ const englishStrings = {
   "JUST_ONE_LAST_THING" : "Just one last thing",
   "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
-  "AUTO_RICKSHAW" : "Auto Rickshaw"
+  "AUTO_RICKSHAW" : "Auto Rickshaw",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "Did you have a safe journey",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "We would like to ensure that your trip was safe and worry free.",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "The driver behaved inappropriately",
+  "I_DID_NOT_FEEL_SAFE" : "I did not feel safe"
 }

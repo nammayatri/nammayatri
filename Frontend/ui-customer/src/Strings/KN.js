@@ -588,5 +588,9 @@ const kannadaStrings = {
   "GOT_AN_OTP" : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   "JUST_ONE_LAST_THING" : "ಕೇವಲ ಒಂದು ಕೊನೆಯ ವಿಷಯ",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ",
-  "AUTO_RICKSHAW" : "ಆಟೋ ರಿಕ್ಷಾ"
+  "AUTO_RICKSHAW" : "ಆಟೋ ರಿಕ್ಷಾ",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "ನೀವು ಸುರಕ್ಷಿತ ಪ್ರಯಾಣವನ್ನು ಹೊಂದಿದ್ದೀರಾ",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "ನಿಮ್ಮ ಪ್ರವಾಸವು ಸುರಕ್ಷಿತವಾಗಿದೆ ಮತ್ತು ಚಿಂತೆಯಿಲ್ಲ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ನಾವು ಬಯಸುತ್ತೇವೆ.",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "ಚಾಲಕ ಅನುಚಿತವಾಗಿ ವರ್ತಿಸಿದ್ದಾನೆ",
+  "I_DID_NOT_FEEL_SAFE" : "ನನಗೆ ಸುರಕ್ಷಿತ ಅನಿಸಲಿಲ್ಲ"
 }

@@ -56,7 +56,8 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, flowRunner)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
@@ -183,6 +184,11 @@ screen initialState =
                 pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
+                pure unit
+              RideCompleted -> do 
+                void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+                 $ do 
+                 lift $ lift $ doAff do liftEffect $ push $ AfterRender
                 pure unit
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
@@ -1091,8 +1097,8 @@ didYouFaceIssue state push =
   , stroke $ "1,"<>Color.grey800
   , orientation VERTICAL
   , padding $ Padding 10 10 10 10
-  ][  commonTextView state push (getString DID_YOU_FACE_ANY_ISSUE) Color.black800 (FontStyle.h3 TypoGraphy) 0
-    , commonTextView state push (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
+  ][  commonTextView state push (if state.props.isNightTime then (getString DID_YOU_HAVE_A_SAFE_JOURNEY) else (getString DID_YOU_FACE_ANY_ISSUE)) Color.black800 (FontStyle.h3 TypoGraphy) 0
+    , commonTextView state push (if state.props.isNightTime then (getString TRIP_WAS_SAFE_AND_WORRY_FREE) else (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY)) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
     , yesNoRadioButton state push
     , linearLayout
       [ height WRAP_CONTENT
@@ -1100,8 +1106,8 @@ didYouFaceIssue state push =
       , gravity CENTER
       , margin $ MarginTop 15
       , orientation VERTICAL
-      , visibility if state.data.ratingViewState.selectedYesNoButton == 0 then VISIBLE else GONE
-      ](mapWithIndex (\ index item ->
+      , visibility if state.props.nightRideSafetyPopUpVisibility then VISIBLE else GONE
+      ](mapWithIndex (\ index item -> 
           linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -1307,7 +1313,7 @@ issueFacedAndRateView state push =
       , height WRAP_CONTENT
       , weight 1.0
       , gravity BOTTOM
-      , visibility if not state.data.ratingViewState.issueFacedView || state.data.ratingViewState.doneButtonVisibility then VISIBLE else GONE
+      , visibility if (not state.data.ratingViewState.issueFacedView || state.data.ratingViewState.doneButtonVisibility || (state.props.isNightTime && state.data.ratingViewState.selectedYesNoButton == 0)) && not (state.data.ratingViewState.selectedYesNoButton == 1 && state.props.isNightTime) then VISIBLE else GONE
       , padding $ PaddingBottom safeMarginBottom
       ][ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)]
   ]

@@ -592,5 +592,10 @@ const hindiStrings = {
   "GOT_AN_OTP" : "एक OTP मिला?",
   "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा",
-  "AUTO_RICKSHAW" : "ऑटो रिक्शा"
+  "AUTO_RICKSHAW" : "ऑटो रिक्शा",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "क्या आपकी यात्रा सुरक्षित रही ?",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "हम यह सुनिश्चित करना चाहेंगे कि आपकी यात्रा सुरक्षित और चिंता मुक्त हो।",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "ड्राइवर ने अनुचित व्यवहार किया",
+  "I_DID_NOT_FEEL_SAFE" : "मैं सुरक्षित महसूस नहीं कर रहा था"
+
 }
