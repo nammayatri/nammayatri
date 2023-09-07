@@ -49,7 +49,8 @@ initData = {
           waitingTime : "__",
           waitTimeInfo : false,
           rideCreatedAt : "",
-          requestedVehicleVariant : Nothing
+          requestedVehicleVariant : Nothing,
+          disabilityTag : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -141,6 +142,7 @@ initData = {
         showOffer : false,
         rcActive : false, 
         rcDeactivePopup : false,
-        autoPayBanner : false
+        autoPayBanner : false,
+        showAccessbilityPopup : false
     }
 }

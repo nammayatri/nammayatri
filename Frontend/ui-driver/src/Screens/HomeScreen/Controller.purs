@@ -32,7 +32,7 @@ import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
@@ -90,7 +90,7 @@ instance loggableAction :: Loggable Action where
       -- RideActionModal.ButtonTimer seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "button_timer"
       -- RideActionModal.MessageCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "message_customer"
       -- _ -> pure unit
-
+    PopUpModalAccessibilityAction act -> pure unit
     InAppKeyboardModalAction act -> pure unit--case act of
       -- InAppKeyboardModal.OnSelection key index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_selection"
       -- InAppKeyboardModal.OnClickBack text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_back"
@@ -264,6 +264,7 @@ data Action = NoAction
             | OfferPopupAC PopUpModal.Action
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
+            | PopUpModalAccessibilityAction PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -313,7 +314,7 @@ eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
   if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
     _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
-    continue state{data{activeRide{isDriverArrived = true}}}
+    continue state{data{activeRide{isDriverArrived = true}}, props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag}}
     else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
       exit $ FcmNotification notificationType state
       else continue state
@@ -396,6 +397,8 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
   pure NoAction
   ]
+
+eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true}}
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = exit $ OpenPaymentPage state
 
@@ -595,7 +598,10 @@ eval (TimeUpdate time lat lng) state = do
     pure AfterRender
     ]
 
-eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRide = activeRideDetail state activeRide}} $ UpdateStage ST.RideAccepted state { data {activeRide = activeRideDetail state activeRide}}
+eval (RideActiveAction activeRide) state = do
+  let currActiveRideDetails = activeRideDetail state activeRide
+      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag && currActiveRideDetails.isDriverArrived)}}
+  updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
 
 eval RecenterButtonAction state = continue state
 
@@ -667,6 +673,7 @@ eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment 
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
+eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue state{props{showAccessbilityPopup = false}}
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
@@ -752,7 +759,14 @@ activeRideDetail state (RidesInfo ride) = {
   waitingTime : if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" && state.props.timerRefresh then (getValueToLocalStore SET_WAITING_TIME) else state.data.activeRide.waitingTime,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
-  requestedVehicleVariant : ride.requestedVehicleVariant
+  requestedVehicleVariant : ride.requestedVehicleVariant,
+  disabilityTag :  case ride.disabilityTag of
+              Just "BLIND_LOW_VISION" -> Just ST.BLIND_AND_LOW_VISION
+              Just "HEAR_IMPAIRMENT" -> Just ST.HEAR_IMPAIRMENT
+              Just "LOCOMOTOR_DISABILITY" -> Just ST.LOCOMOTOR_DISABILITY
+              Just "OTHER" -> Just ST.OTHER_DISABILITY
+              Just _ -> Just ST.OTHER_DISABILITY
+              Nothing -> Nothing
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList

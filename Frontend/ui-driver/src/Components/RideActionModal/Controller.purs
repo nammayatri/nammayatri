@@ -16,7 +16,7 @@
 module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
 
-import Screens.Types (HomeScreenStage(..))
+import Screens.Types (HomeScreenStage(..), DisabilityType(..))
 
 data Action = StartRide 
             | EndRide 
@@ -30,6 +30,7 @@ data Action = StartRide
             | TimerCallback String String Int
             | WaitingInfo
             | LoadMessages
+            | SecondaryTextClick
 
 type Config = { 
   startRideActive :: Boolean,
@@ -47,7 +48,8 @@ type Config = {
   specialLocationTag :: Mb.Maybe String,
   waitTime :: String,
   isChatOpened :: Boolean,
-  requestedVehicleVariant :: Mb.Maybe String
+  requestedVehicleVariant :: Mb.Maybe String,
+  accessbilityTag :: Mb.Maybe DisabilityType
   }
 
 type AddressConfig = {
@@ -78,5 +80,6 @@ config = {
   unReadMessages : false,
   specialLocationTag : Mb.Nothing,
   isChatOpened : false,
-  requestedVehicleVariant : Mb.Nothing
+  requestedVehicleVariant : Mb.Nothing,
+  accessbilityTag : Mb.Nothing
 }

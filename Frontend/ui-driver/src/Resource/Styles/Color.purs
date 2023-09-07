@@ -445,3 +445,9 @@ lightGradientBlue = "#F5F8FF"
 
 darkGradientBlue :: Color
 darkGradientBlue = "#E2EAFF"
+
+lightPurple :: Color
+lightPurple = "#F4ECFF"
+
+purple :: Color
+purple = "#9747FF"

@@ -492,7 +492,8 @@ newtype RidesInfo = RidesInfo
       estimatedDistance :: Int,
       exoPhone :: String,
       specialLocationTag :: Maybe String,
-      requestedVehicleVariant :: Maybe String
+      requestedVehicleVariant :: Maybe String,
+      disabilityTag :: Maybe String
   }
 
 newtype LocationInfo = LocationInfo

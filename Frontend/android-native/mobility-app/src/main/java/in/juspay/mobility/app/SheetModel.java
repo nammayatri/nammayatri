@@ -21,6 +21,8 @@ public class SheetModel {
     private final int driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
+
+    private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
 
@@ -43,7 +45,8 @@ public class SheetModel {
                       String specialLocationTag,
                       String sourcePinCode,
                       String destinationPinCode,
-                      String requestedVehicleVariant){
+                      String requestedVehicleVariant,
+                      Boolean disabilityTag){
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -70,6 +73,7 @@ public class SheetModel {
         this.sourcePinCode = sourcePinCode;
         this.destinationPinCode = destinationPinCode;
         this.requestedVehicleVariant = requestedVehicleVariant;
+        this.disabilityTag = disabilityTag;
     }
 
     public String getRequestedVehicleVariant() {
@@ -83,6 +87,8 @@ public class SheetModel {
     public int getCustomerTip() {
         return customerExtraFee;
     }
+
+    public Boolean getDisabilityTag() {return disabilityTag; }
 
     public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;

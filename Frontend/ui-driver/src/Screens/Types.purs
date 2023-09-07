@@ -848,7 +848,8 @@ type ActiveRide = {
   waitTimeInfo :: Boolean,
   rideCreatedAt :: String,
   specialLocationTag :: Maybe String,
-  requestedVehicleVariant :: Maybe String
+  requestedVehicleVariant :: Maybe String,
+  disabilityTag :: Maybe DisabilityType
 }
 
 type HomeScreenProps =  {
@@ -890,8 +891,17 @@ type HomeScreenProps =  {
   showOffer :: Boolean,
   autoPayBanner :: Boolean,
   rcActive :: Boolean, 
-  rcDeactivePopup :: Boolean
+  rcDeactivePopup :: Boolean,
+  showAccessbilityPopup :: Boolean
  }
+
+data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY
+
+derive instance genericPwdType :: Generic DisabilityType _
+instance eqPwdType :: Eq DisabilityType where eq = genericEq
+instance showPwdType :: Show DisabilityType where show = genericShow
+instance encodePwdType :: Encode DisabilityType where encode = defaultEnumEncode
+instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 

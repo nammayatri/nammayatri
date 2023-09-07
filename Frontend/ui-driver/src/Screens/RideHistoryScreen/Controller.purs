@@ -17,6 +17,7 @@ module Screens.RideHistoryScreen.Controller where
 
 import Effect.Unsafe
 import Prelude
+import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
 import Log
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.DatePickerModel as DatePickerModel
@@ -35,12 +36,11 @@ import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
 import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Screens.Types (IndividualRideCardState, ItemState, RideHistoryScreenState, AnimationState(..))
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount)
@@ -206,38 +206,48 @@ eval (PaymentHistoryModelAC (PaymentHistoryModel.PaymentHistoryListItemAC (Payme
 eval _ state = continue state
 
 rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
-rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
-    date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
-    time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
-    total_amount : toPropValue $ fromMaybe ride.estimatedBaseFare ride.computedFare,
-    card_visibility : toPropValue "visible",
-    shimmer_visibility : toPropValue "gone",
-    rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 
-                            Just name -> " with " <> name
-                            Nothing -> "",
-    status :  toPropValue ride.status,
-    vehicleModel : toPropValue ride.vehicleModel ,
-    shortRideId : toPropValue ride.shortRideId  ,
-    vehicleNumber :  toPropValue ride.vehicleNumber  ,
-    driverName : toPropValue ride.driverName  ,
-    driverSelectedFare : toPropValue ride.driverSelectedFare  ,
-    vehicleColor : toPropValue ride.vehicleColor  ,
-    id : toPropValue ride.shortRideId,
-    updatedAt : toPropValue ride.updatedAt,
-    source : toPropValue (decodeAddress (ride.fromLocation) false),
-    destination : toPropValue (decodeAddress (ride.toLocation) false),
-    amountColor: toPropValue (case (ride.status) of
-                  "COMPLETED" -> Color.black800
-                  "CANCELLED" -> Color.red
-                  _ -> Color.black800),
-    riderName : toPropValue $ fromMaybe "" ride.riderName,
-    metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing || (getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone",
-    specialZoneText : toPropValue $ getSpecialZoneConfig "text" ride.specialLocationTag,
-    specialZoneImage : toPropValue $ getSpecialZoneConfig "imageUrl" ride.specialLocationTag,
-    specialZoneLayoutBackground : toPropValue $ getSpecialZoneConfig "backgroundColor" ride.specialLocationTag
+rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
+  let accessibilityTag = (getDisabilityType ride.disabilityTag)
+    in 
+      {
+      date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
+      time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
+      total_amount : toPropValue $ fromMaybe ride.estimatedBaseFare ride.computedFare,
+      card_visibility : toPropValue "visible",
+      shimmer_visibility : toPropValue "gone",
+      rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 
+                              Just name -> " with " <> name
+                              Nothing -> "",
+      status :  toPropValue ride.status,
+      vehicleModel : toPropValue ride.vehicleModel ,
+      shortRideId : toPropValue ride.shortRideId  ,
+      vehicleNumber :  toPropValue ride.vehicleNumber  ,
+      driverName : toPropValue ride.driverName  ,
+      driverSelectedFare : toPropValue ride.driverSelectedFare  ,
+      vehicleColor : toPropValue ride.vehicleColor  ,
+      id : toPropValue ride.shortRideId,
+      updatedAt : toPropValue ride.updatedAt,
+      source : toPropValue (decodeAddress (ride.fromLocation) false),
+      destination : toPropValue (decodeAddress (ride.toLocation) false),
+      amountColor: toPropValue (case (ride.status) of
+                    "COMPLETED" -> Color.black800
+                    "CANCELLED" -> Color.red
+                    _ -> Color.black800),
+      riderName : toPropValue $ fromMaybe "" ride.riderName,
+      metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing || ride.disabilityTag /= Nothing  || (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing) then "visible" else "gone",
+      specialZoneText : toPropValue $ getRideLabelData "text" ride.specialLocationTag accessibilityTag,
+      specialZoneImage : toPropValue $ getRideLabelData "imageUrl" ride.specialLocationTag accessibilityTag,
+      specialZoneLayoutBackground : toPropValue $ getRideLabelData "backgroundColor" ride.specialLocationTag accessibilityTag
 
-}) list )
+    }) list )
 
+getDisabilityType :: Maybe String -> Maybe DisabilityType
+getDisabilityType disabilityString = case disabilityString of 
+                                      Just "BLIND_LOW_VISION" -> Just BLIND_AND_LOW_VISION
+                                      Just "HEAR_IMPAIRMENT" -> Just HEAR_IMPAIRMENT
+                                      Just "LOCOMOTOR_DISABILITY" -> Just LOCOMOTOR_DISABILITY
+                                      Just "OTHER" -> Just OTHER_DISABILITY
+                                      _ -> Nothing
 
 rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
 rideListResponseTransformer list = (map (\(RidesInfo ride) -> {

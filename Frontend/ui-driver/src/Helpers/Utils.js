@@ -1,6 +1,13 @@
 import { callbackMapper } from 'presto-ui';
 
 const { JOS, JBridge } = window;
+const hindiStrings = require("./../../src/Strings/HI.js");
+const kannadaStrings = require("./../../src/Strings/KN.js");
+const englishStrings = require("./../../src/Strings/EN.js");
+const bengaliStrings = require("./../../src/Strings/BN.js");
+const malayalamStrings = require("./../../src/Strings/ML.js");
+const tamilStrings = require("./../../src/Strings/TA.js");
+const frenchStrings = require("./../../src/Strings/FR.js");
 
 var timerIdDebounce;
 var inputForDebounce;
@@ -613,9 +620,9 @@ export const getImageUrl = function (url) {
   }
 };
 
-export const getZoneTagConfig = function (just, nothing, key, zoneType){
-  if (zoneType in zoneConfig){
-    var zoneOb = zoneConfig[zoneType];
+export const getRideLabelConfig = function (just, nothing, key, zoneType){
+  if (zoneType in rideLabelConfig){
+    var zoneOb = rideLabelConfig[zoneType];
     if(key in zoneOb){
       var prop = zoneOb[key]
       return just(prop);
@@ -626,10 +633,11 @@ export const getZoneTagConfig = function (just, nothing, key, zoneType){
   return nothing;
 }
 
-const zoneConfig = {
+const rideLabelConfig = {
   SureMetro_Pickup : {
     "backgroundColor" : "#2194FF",
     "text" : "Metro Pickup",
+    "secondaryText" : "",
     "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
     "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
     "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
@@ -637,10 +645,20 @@ const zoneConfig = {
   SureMetro_Drop : {
     "backgroundColor" : "#2194FF",
     "text" : "Metro Drop",
+    "secondaryText" : "",
     "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
     "cancelText" : "ZONE_CANCEL_TEXT_DROP",
     "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
-  } //More zoneConfigs can be added
+  },
+  Accessibility : {
+    "backgroundColor" : "#9747FF",
+    "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
+    "secondaryText" : getStringFromCommon("LEARN_MORE"), //"Learn More",
+    "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+    "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+    "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+  }
+   //More rideLabelConfigs can be added
 }
 
 export const getPastDays = function (count) {
@@ -815,5 +833,25 @@ export const killPP = function () {
       }
     });
     window.ppInitiateCallback = undefined;
+  }
+}
+
+function getStringFromCommon(key) {
+  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  switch (selectedLanguage) {
+    case "HI_IN":
+      return hindiStrings.getStringValue(key);
+    case "KN_IN":
+      return kannadaStrings.getStringValue(key);
+    case "BN_IN":
+      return bengaliStrings.getStringValue(key);
+    case "ML_IN":
+      return malayalamStrings.getStringValue(key);
+    case "TA_IN":
+      return tamilStrings.getStringValue(key);
+    case "FR_FR":
+      return frenchStrings.getStringValue(key);
+    default:
+      return englishStrings.getStringValue(key);
   }
 }
