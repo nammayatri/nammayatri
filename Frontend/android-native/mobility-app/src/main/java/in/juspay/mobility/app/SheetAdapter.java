@@ -72,6 +72,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         ImageView assetZonePickup, assetZoneDrop;
         MaterialCardView specialLocationTag, zoneDot;
         LinearLayout customerTipBlock;
+        LinearLayout accessibilityTag;
+        LinearLayout customerTipTag;
 
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -92,7 +94,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             textDecPrice = itemView.findViewById(R.id.textDecPrice);
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
             customerTipBlock = itemView.findViewById(R.id.customer_tip_block);
-            customerTipText = itemView.findViewById(R.id.customer_tip_text);
+            customerTipText = itemView.findViewById(R.id.tip_text);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
             specialLocationTag = itemView.findViewById(R.id.specialLocationTag);
             zoneText = itemView.findViewById(R.id.zoneText);
@@ -102,6 +104,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             assetZonePickup = itemView.findViewById(R.id.assetZonePickup);
             sourcePinCode = itemView.findViewById(R.id.sourcePinCode);
             destinationPinCode = itemView.findViewById(R.id.destinationPinCode);
+            accessibilityTag = itemView.findViewById(R.id.accessibilityTag);
+            customerTipTag = itemView.findViewById(R.id.customerTipTag);
         }
     }
 

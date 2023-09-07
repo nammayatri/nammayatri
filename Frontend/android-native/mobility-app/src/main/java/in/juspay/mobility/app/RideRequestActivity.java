@@ -115,7 +115,9 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("specialLocationTag"),
                     rideRequestBundle.getString("sourcePinCode"),
                     rideRequestBundle.getString("destinationPinCode"),
-                    rideRequestBundle.getString("requestedVehicleVariant"));
+                    rideRequestBundle.getString("requestedVehicleVariant"),
+                    rideRequestBundle.getBoolean("disabilityTag")
+            );
 
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);

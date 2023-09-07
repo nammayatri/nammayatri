@@ -41,7 +41,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (ceil, toNumber)
 import Data.Int (toNumber, ceil)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -73,7 +73,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..))
 import Services.API (Status(..))
@@ -218,6 +218,7 @@ view push state =
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
+      , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
@@ -227,6 +228,13 @@ view push state =
   ]
 
 
+accessibilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+accessibilityPopUpView push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][PopUpModal.view (push <<< PopUpModalAccessibilityAction) (accessibilityPopUpConfig state)]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverMapsHeaderView push state =
@@ -605,6 +613,7 @@ driverDetail push state =
            ]
          ]
       ]
+    , accessibilityHeaderView push state (getAccessibilityHeaderText state)
     , linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -617,12 +626,50 @@ driverDetail push state =
       , cornerRadius 50.0
       , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
+      , visibility if isJust state.data.activeRide.disabilityTag then GONE else VISIBLE 
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
-      )
+      ) 
   ]
 
+
+accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> {primaryText :: String, secondaryText :: String, imageUrl :: String} -> PrestoDOM (Effect Unit) w
+accessibilityHeaderView push state accessibilityHeaderconfig = 
+  linearLayout
+  [ weight 1.0
+  , height MATCH_PARENT
+  , gravity CENTER
+  , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
+  , margin (Margin 10 10 10 10)
+  , background Color.lightPurple
+  , cornerRadius 50.0
+  ][
+    imageView
+    [ width $ V 25
+    , imageWithFallback accessibilityHeaderconfig.imageUrl
+    , height $ V 22
+    , margin $ MarginRight 13
+    ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    ][ textView $
+        [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding $ PaddingRight 4
+            , text accessibilityHeaderconfig.primaryText
+            , color Color.purple
+        ] <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text accessibilityHeaderconfig.secondaryText
+        , color Color.purple
+        ] <> FontStyle.body4 TypoGraphy
+    ]
+  ]
 
 driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =

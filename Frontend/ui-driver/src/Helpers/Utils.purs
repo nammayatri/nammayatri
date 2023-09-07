@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek)
+import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex) as DA
@@ -37,7 +37,7 @@ import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe (Maybe(..))
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
@@ -57,7 +57,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show)
 import Prelude (class Eq, class Show, (<<<))
-import Prelude (map, (*), (-), (/))
+import Prelude (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
 import Effect.Uncurried (EffectFn1(..))
@@ -121,7 +121,7 @@ foreign import isYesterday :: String -> Boolean
 foreign import currentPosition  :: String -> Effect Unit
 foreign import getPastDays :: Int -> Array LeaderBoardDay
 foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
-foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
+foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
@@ -237,26 +237,29 @@ getVehicleType vehicleType =
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
 
-getSpecialZoneConfig :: String -> Maybe String -> String
-getSpecialZoneConfig prop tag = do
-  case getRequiredTag prop tag of
+getRideLabelData :: String -> Maybe String -> Maybe DisabilityType -> String
+getRideLabelData prop tag accessibilityTag = do
+  case getRequiredTag prop tag accessibilityTag of
     Nothing -> ""
     Just tag' -> tag'
 
-getRequiredTag :: String -> Maybe String -> Maybe String
-getRequiredTag prop tag = do
-  case tag of
-    Nothing -> Nothing
-    Just tag' -> do
+getRequiredTag :: String -> Maybe String -> Maybe DisabilityType -> Maybe String
+getRequiredTag prop tag accessibilityTag = do
+  let rideType = if (isJust accessibilityTag) then "Accessibility" else fromMaybe "" tag 
+  case rideType of
+    "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
+                                Nothing -> Nothing
+                                Just val -> Just val
+    tag' -> do
         let arr = DS.split (DS.Pattern "_") tag'
         let pickup = fromMaybe "" (arr DA.!! 0)
         let drop = fromMaybe "" (arr DA.!! 1)
         let priority = fromMaybe "" (arr DA.!! 2)
         case priority of
-          "PriorityPickup" -> case (runFn4 getZoneTagConfig Just Nothing prop (pickup <> "_Pickup")) of
+          "PriorityPickup" -> case (runFn4 getRideLabelConfig Just Nothing prop (pickup <> "_Pickup")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
-          "PriorityDrop" -> case (runFn4 getZoneTagConfig Just Nothing prop (drop <> "_Drop")) of
+          "PriorityDrop" -> case (runFn4 getRideLabelConfig Just Nothing prop (drop <> "_Drop")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
           _ -> Nothing

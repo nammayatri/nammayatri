@@ -141,6 +141,8 @@ headerActionView config push =
     , width $ V 60
     , visibility (getConfig config.userConfig.appType).driverVisibility
     , gravity CENTER
+    , alpha if config.enableCall then 1.0 else 0.5
+    , clickable (config.enableCall)
     , background config.grey700
     , stroke $ "1,"<> config.grey900
     , cornerRadius 32.0

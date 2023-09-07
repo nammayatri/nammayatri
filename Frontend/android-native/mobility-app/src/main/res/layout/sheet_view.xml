@@ -36,22 +36,77 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="#FEEBB9"
+                        android:background="@color/grey900"
                         android:visibility="gone"
                         android:id="@+id/customer_tip_block"
-                        android:paddingVertical="3dp"
-                        android:gravity="center">
-
-                        <TextView
+                        android:padding="10dp">
+                    <HorizontalScrollView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@color/grey900"
+                        android:padding="10dp">
+                        <LinearLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="₹ 10 tip included !"
-                            android:id="@+id/customer_tip_text"
-                            android:textSize="16dp"
-                            android:lineHeight="20dp"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:textColor="@color/Black900" />
-                    </LinearLayout>
+                            android:layout_height="wrap_content">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_tip_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingHorizontal="3dp"
+                                android:visibility="gone"
+                                android:id="@+id/customerTipTag"
+                                android:layout_marginEnd="10dp"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_tip_icon"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/tip_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="₹10 Tip"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/Black900"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_accessibility_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:id="@+id/accessibilityTag"
+                                android:visibility="gone"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_wheelchair"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/accessibilityTagText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="Assistance Required"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                        </LinearLayout>
+
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -105,62 +160,62 @@
                                     android:layout_height="wrap_content"
                                     android:gravity="right">
 
-                                    <com.google.android.material.card.MaterialCardView
-                                        android:id="@+id/specialLocationTag"
-                                        android:layout_width="wrap_content"
+                                <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/specialLocationTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:visibility="gone"
+                                    app:cardBackgroundColor="#1A0066FF"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardCornerRadius="10dp"
+                                    app:cardElevation="0dp"
+                                    app:contentPadding="10dp"
+                                    android:layout_marginVertical="10dp">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
-                                        android:layout_gravity="center"
-                                        android:visibility="gone"
-                                        app:cardBackgroundColor="#1A0066FF"
-                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="10dp"
-                                        app:cardElevation="0dp"
-                                        app:contentPadding="10dp"
-                                        android:layout_marginVertical="10dp">
+                                        android:orientation="horizontal">
 
-                                        <LinearLayout
-                                            android:layout_width="match_parent"
+                                        <TextView
+                                            android:id="@+id/zoneText"
+                                            android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:orientation="horizontal">
+                                            android:textSize="11dp"
+                                            android:layout_marginLeft="5dp"
+                                            android:gravity="center"
+                                            android:textColor="#0066FF"
+                                            android:textFontWeight="600"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:text="Metro Ride "/>
 
-                                            <TextView
-                                                android:id="@+id/zoneText"
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:textSize="11dp"
-                                                android:layout_marginLeft="5dp"
-                                                android:gravity="center"
-                                                android:textColor="#0066FF"
-                                                android:textFontWeight="600"
-                                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:text="Metro Ride "/>
+                                        <com.google.android.material.card.MaterialCardView
+                                            android:id="@+id/zoneDot"
+                                            android:layout_width="4dp"
+                                            android:layout_height="4dp"
+                                            android:layout_gravity="center"
+                                            app:cardBackgroundColor="#0066FF"
+                                            android:theme="@style/Theme.MaterialComponents.Light"
+                                            app:cardCornerRadius="10dp"
+                                            app:cardElevation="0dp"
+                                            android:layout_marginLeft="5dp"/>
 
-                                            <com.google.android.material.card.MaterialCardView
-                                                android:id="@+id/zoneDot"
-                                                android:layout_width="4dp"
-                                                android:layout_height="4dp"
-                                                android:layout_gravity="center"
-                                                app:cardBackgroundColor="#0066FF"
-                                                android:theme="@style/Theme.MaterialComponents.Light"
-                                                app:cardCornerRadius="10dp"
-                                                app:cardElevation="0dp"
-                                                android:layout_marginLeft="5dp"/>
+                                        <TextView
+                                            android:id="@+id/fixedFareText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textSize="11dp"
+                                            android:layout_marginLeft="5dp"
+                                            android:textColor="#0066FF"
+                                            android:gravity="center"
+                                            android:singleLine="false"
+                                            android:textFontWeight="600"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:text="No Cancellation"/>
+                                    </LinearLayout>
 
-                                            <TextView
-                                                android:id="@+id/fixedFareText"
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:textSize="11dp"
-                                                android:layout_marginLeft="5dp"
-                                                android:textColor="#0066FF"
-                                                android:gravity="center"
-                                                android:singleLine="false"
-                                                android:textFontWeight="600"
-                                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:text="No Cancellation"/>
-                                        </LinearLayout>
-
-                                    </com.google.android.material.card.MaterialCardView>
+                                </com.google.android.material.card.MaterialCardView>
 
                                 </LinearLayout>
 
@@ -352,12 +407,12 @@
                                         android:visibility="gone"
                                         />
                                 </LinearLayout>
-                                <ImageView
-                                    android:layout_width="40dp"
-                                    android:layout_height="match_parent"
-                                    android:id="@+id/assetZoneDrop"
-                                    android:visibility="gone"
-                                    android:src="@drawable/ic_metro_shape"/>
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="match_parent"
+                                android:id="@+id/assetZoneDrop"
+                                android:visibility="gone"
+                                android:src="@drawable/ic_metro_shape"/>
 
                             </LinearLayout>
 
