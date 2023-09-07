@@ -134,7 +134,8 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
   plans <- QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
-  plansList <- mapM (convertPlanToPlanEntity driverId now) plans
+  dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
+  plansList <- mapM (convertPlanToPlanEntity driverId now dueInvoices) plans
   return $
     PlanListAPIRes
       { list = plansList,
@@ -149,14 +150,14 @@ currentPlan (driverId, _merchantId) = do
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
-
+  dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
   latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId
 
   now <- getCurrentTime
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
-  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate >=> (pure . Just)) mPlan
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate dueInvoices >=> (pure . Just)) mPlan
 
   orderId <-
     if driverInfo.autoPayStatus == Just DI.PENDING
@@ -371,23 +372,19 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             startTime = now,
             endTime = now,
             collectedBy = Nothing,
-            driverId = cast driverId
+            driverId = cast driverId,
+            offerId = Nothing
           }
 
-convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Plan -> Flow PlanEntity
-convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
-  dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
+convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> [DF.DriverFee] -> Plan -> Flow PlanEntity
+convertPlanToPlanEntity driverId applicationDate dueInvoices plan@Plan {..} = do
   offers <- Payment.offerList merchantId =<< makeOfferReq applicationDate
   let planFareBreakup = mkPlanFareBreakup offers.offerResp
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
   let translatedName = maybe plan.name (.name) mbtranslation
-  let translatedDescription = maybe plan.description (.description) mbtranslation
-  planBaseFrequcency <- case planBaseAmount of
-    PERRIDE_BASE _ -> return "PER_RIDE"
-    DAILY_BASE _ -> return "DAILY"
-    WEEKLY_BASE _ -> return "WEEKLY"
-    MONTHLY_BASE _ -> return "MONTHLY"
+      translatedDescription = maybe plan.description (.description) mbtranslation
+      planBaseFrequcency = getPlanBaseFrequency planBaseAmount
   return
     PlanEntity
       { id = plan.id.getId,
@@ -436,6 +433,13 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
         PlanFareBreakup {component = "DISCOUNTED_FEE", amount = discountAmount},
         PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount}
         ]
+
+getPlanBaseFrequency :: PlanBaseAmount -> Text
+getPlanBaseFrequency planBaseAmount = case planBaseAmount of
+  PERRIDE_BASE _ -> "PER_RIDE"
+  DAILY_BASE _ -> "DAILY"
+  WEEKLY_BASE _ -> "WEEKLY"
+  MONTHLY_BASE _ -> "MONTHLY"
 
 mkMandateDetailEntity :: Maybe (Id DM.Mandate) -> Flow (Maybe MandateDetailsEntity)
 mkMandateDetailEntity mandateId = do

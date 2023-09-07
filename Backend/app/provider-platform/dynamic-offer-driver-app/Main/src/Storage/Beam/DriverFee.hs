@@ -45,6 +45,7 @@ data DriverFeeT f = DriverFeeT
     status :: B.C f Domain.DriverFeeStatus,
     collectedBy :: B.C f (Maybe Text),
     feeType :: B.C f Domain.FeeType,
+    offerId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

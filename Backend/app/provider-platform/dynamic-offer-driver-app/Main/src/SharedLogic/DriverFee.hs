@@ -44,10 +44,11 @@ mergeDriverFee oldFee newFee now = do
       createdAt = now
       updatedAt = now
       feeType = DDF.RECURRING_INVOICE
+      offerId = Nothing
   let newDriverFee = DDF.DriverFee {..}
   -- runTransaction $ do
-  _ <- QDF.updateStatus DDF.INACTIVE oldFee.id now
-  _ <- QDF.updateStatus DDF.INACTIVE newFee.id now
+  _ <- QDF.updateStatus DDF.INACTIVE now oldFee.id
+  _ <- QDF.updateStatus DDF.INACTIVE now newFee.id
   void $ QDF.create newDriverFee
 
 data DriverFeeByInvoice = DriverFeeByInvoice

@@ -29,6 +29,9 @@ import qualified Storage.Beam.DriverFee as BeamDF
 create :: MonadFlow m => DriverFee -> m ()
 create = createWithKV
 
+createMany :: MonadFlow m => [DriverFee] -> m ()
+createMany = traverse_ create
+
 findById :: MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
@@ -87,9 +90,9 @@ findOldestFeeByStatus (Id driverId) status =
     Nothing
     <&> listToMaybe
 
-findFeesInRangeWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
-findFeesInRangeWithStatus startTime endTime status =
-  findAllWithKV
+findFeesInRangeWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> Maybe Int -> m [DriverFee]
+findFeesInRangeWithStatus startTime endTime status mbLimit =
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
@@ -98,6 +101,9 @@ findFeesInRangeWithStatus startTime endTime status =
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
     ]
+    (Se.Desc BeamDF.endTime)
+    mbLimit
+    Nothing
 
 findWindowsWithStatus :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
 findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
@@ -136,8 +142,8 @@ findUnpaidAfterPayBy (Id driverId) now =
         ]
     ]
 
-updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
+updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> m ()
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -146,7 +152,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       let cgst' = df.platformFee.cgst
       let sgst' = df.platformFee.sgst
       let totalEarnings = df.totalEarnings
-      let numRides = df.numRides
+      let numRides = df.numRides + if isRideEnd then 1 else 0
       let fare = fromMaybe 0 mbFare
       updateOneWithKV
         [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
@@ -155,11 +161,17 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
           Se.Set BeamDF.sgst $ sgst' + sgst,
           Se.Set BeamDF.status ONGOING,
           Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
-          Se.Set BeamDF.numRides $ numRides + 1, -- in the api, num_rides needed without cost contribution?
+          Se.Set BeamDF.numRides numRides,
           Se.Set BeamDF.updatedAt now
         ]
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
+
+updateOfferId :: MonadFlow m => Maybe Text -> Id DriverFee -> UTCTime -> m ()
+updateOfferId offerId driverFeeId now = do
+  updateOneWithKV
+    [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 updateStatusByIds :: MonadFlow m => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now =
@@ -184,10 +196,16 @@ findLatestByFeeTypeAndStatus feeType status driverId = do
     Nothing
     <&> listToMaybe
 
-updateStatus :: MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
-updateStatus status (Id driverFeeId) now = do
+updateStatus :: MonadFlow m => DriverFeeStatus -> UTCTime -> Id DriverFee -> m ()
+updateStatus status now (Id driverFeeId) = do
   updateOneWithKV
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+
+updateFeeType :: MonadFlow m => FeeType -> UTCTime -> Id DriverFee -> m ()
+updateFeeType feeType now (Id driverFeeId) = do
+  updateOneWithKV
+    [Se.Set BeamDF.feeType feeType, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 updateRegisterationFeeStatusByDriverId :: MonadFlow m => DriverFeeStatus -> Id Person -> m ()
@@ -221,6 +239,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             status = status,
             feeType = feeType,
             collectedBy = collectedBy,
+            offerId = offerId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -243,6 +262,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.status = status,
         BeamDF.feeType = feeType,
         BeamDF.collectedBy = collectedBy,
+        BeamDF.offerId = offerId,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

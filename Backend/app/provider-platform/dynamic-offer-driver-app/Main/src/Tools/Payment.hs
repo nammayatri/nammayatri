@@ -33,6 +33,9 @@ orderStatus = runWithServiceConfig Payment.orderStatus
 offerList :: ServiceFlow m r => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList = runWithServiceConfig Payment.offerList
 
+offerApply :: ServiceFlow m r => Id DM.Merchant -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
+offerApply = runWithServiceConfig Payment.offerApply
+
 mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
 mandateRevoke = runWithServiceConfig Payment.mandateRevoke
 

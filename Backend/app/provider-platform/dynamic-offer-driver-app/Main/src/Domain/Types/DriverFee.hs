@@ -43,7 +43,8 @@ data DriverFee = DriverFee
     collectedBy :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    feeType :: FeeType
+    feeType :: FeeType,
+    offerId :: Maybe Text
   }
   deriving (Generic, Show)
 

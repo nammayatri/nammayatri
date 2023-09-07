@@ -148,7 +148,7 @@ handleDriverPayments driverId diffUtc = do
     case (ongoingAfterEndTime, overdueFee) of
       (Nothing, _) -> pure ()
       (Just df, Nothing) -> do
-        _ <- updateStatus PAYMENT_PENDING df.id now
+        _ <- updateStatus PAYMENT_PENDING now df.id
         updatePendingPayment True (cast driverId)
       (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
 
@@ -156,7 +156,7 @@ handleDriverPayments driverId diffUtc = do
     case unpaidAfterdeadline of
       Nothing -> pure ()
       Just df -> do
-        _ <- updateStatus PAYMENT_OVERDUE df.id now
+        _ <- updateStatus PAYMENT_OVERDUE now df.id
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
         updateSubscription False (cast driverId)
 
@@ -176,7 +176,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    when (thresholdConfig.subscription) $ do
+    when (thresholdConfig.subscription && isJust thresholdConfig.driverFeeCalculationTime) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
       handleDriverPayments driverId thresholdConfig.timeDiffFromUtc

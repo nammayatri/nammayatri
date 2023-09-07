@@ -46,6 +46,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
+import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
@@ -53,6 +54,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
+import Storage.Queries.DriverPlan (findByDriverId)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
@@ -157,8 +159,12 @@ processPayment merchantId driverId orderId sendNotification = do
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
-    CDI.updatePendingPayment False (cast driverId)
-    CDI.updateSubscription True (cast driverId)
+    dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
+    let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
+    when (totalDue <= 0) $ CDI.updatePendingPayment False (cast driverId)
+    mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
+    plan <- getPlan mbDriverPlan merchantId
+    when (totalDue < plan.maxAmount) $ CDI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
