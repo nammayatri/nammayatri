@@ -21,10 +21,10 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,

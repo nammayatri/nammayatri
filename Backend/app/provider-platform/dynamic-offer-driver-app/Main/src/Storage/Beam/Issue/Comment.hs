@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data CommentT f = CommentT
   { id :: B.C f Text,
@@ -42,16 +42,6 @@ instance B.Table CommentT where
 
 type Comment = CommentT Identity
 
-commentTMod :: CommentT (B.FieldModification (B.TableField CommentT))
-commentTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      issueReportId = B.fieldNamed "issue_report_id",
-      authorId = B.fieldNamed "author_id",
-      comment = B.fieldNamed "comment",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''CommentT ['id] [['issueReportId]])
 
-$(mkTableInstances ''CommentT "comment" "atlas_driver_offer_bpp")
+$(mkTableInstances ''CommentT "comment")

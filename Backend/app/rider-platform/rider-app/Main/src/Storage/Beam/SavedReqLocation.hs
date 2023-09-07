@@ -23,10 +23,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data SavedReqLocationT f = SavedReqLocationT
   { id :: B.C f Text,
@@ -58,29 +58,6 @@ instance B.Table SavedReqLocationT where
 
 type SavedReqLocation = SavedReqLocationT Identity
 
-savedReqLocationTMod :: SavedReqLocationT (B.FieldModification (B.TableField SavedReqLocationT))
-savedReqLocationTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      street = B.fieldNamed "street",
-      door = B.fieldNamed "door",
-      city = B.fieldNamed "city",
-      state = B.fieldNamed "state",
-      country = B.fieldNamed "country",
-      building = B.fieldNamed "building",
-      areaCode = B.fieldNamed "area_code",
-      area = B.fieldNamed "area",
-      placeId = B.fieldNamed "place_id",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      tag = B.fieldNamed "tag",
-      riderId = B.fieldNamed "rider_id",
-      ward = B.fieldNamed "ward",
-      isMoved = B.fieldNamed "is_moved"
-    }
-
 $(enableKVPG ''SavedReqLocationT ['id] [['riderId]])
 
-$(mkTableInstances ''SavedReqLocationT "saved_location" "atlas_app")
+$(mkTableInstances ''SavedReqLocationT "saved_location")

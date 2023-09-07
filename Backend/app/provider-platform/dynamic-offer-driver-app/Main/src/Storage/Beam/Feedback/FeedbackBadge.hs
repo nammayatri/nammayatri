@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FeedbackBadgeT f = FeedbackBadgeT
   { id :: B.C f Text,
@@ -44,17 +44,6 @@ instance B.Table FeedbackBadgeT where
 
 type FeedbackBadge = FeedbackBadgeT Identity
 
-feedbackBadgeTMod :: FeedbackBadgeT (B.FieldModification (B.TableField FeedbackBadgeT))
-feedbackBadgeTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      badge = B.fieldNamed "badge",
-      badgeCount = B.fieldNamed "badge_count",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''FeedbackBadgeT ['id] [['driverId]])
 
-$(mkTableInstances ''FeedbackBadgeT "feedback_badge" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FeedbackBadgeT "feedback_badge")

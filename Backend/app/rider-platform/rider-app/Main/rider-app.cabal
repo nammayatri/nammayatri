@@ -322,6 +322,7 @@ library
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Tools.Auth
+      Tools.Beam.UtilsTH
       Tools.Call
       Tools.Error
       Tools.Event

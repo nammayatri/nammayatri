@@ -24,10 +24,10 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 -- import Kernel.Types.Common hiding (id)
 
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -49,18 +49,5 @@ instance B.Table OnboardingDocumentConfigT where
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 
-onboardingDocumentConfigTMod :: OnboardingDocumentConfigT (B.FieldModification (B.TableField OnboardingDocumentConfigT))
-onboardingDocumentConfigTMod =
-  B.tableModification
-    { merchantId = B.fieldNamed "merchant_id",
-      documentType = B.fieldNamed "document_type",
-      checkExtraction = B.fieldNamed "check_extraction",
-      checkExpiry = B.fieldNamed "check_expiry",
-      validVehicleClasses = B.fieldNamed "valid_vehicle_classes",
-      vehicleClassCheckType = B.fieldNamed "vehicle_class_check_type",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''OnboardingDocumentConfigT ['documentType, 'merchantId] [])
-$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs" "atlas_driver_offer_bpp")
+$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")

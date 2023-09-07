@@ -25,11 +25,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as FareProductD
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
@@ -64,26 +64,6 @@ instance B.Table SearchRequestSpecialZoneT where
 
 type SearchRequestSpecialZone = SearchRequestSpecialZoneT Identity
 
-searchRequestSpecialZoneTMod :: SearchRequestSpecialZoneT (B.FieldModification (B.TableField SearchRequestSpecialZoneT))
-searchRequestSpecialZoneTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      messageId = B.fieldNamed "message_id",
-      startTime = B.fieldNamed "start_time",
-      validTill = B.fieldNamed "valid_till",
-      providerId = B.fieldNamed "provider_id",
-      fromLocationId = B.fieldNamed "from_location_id",
-      toLocationId = B.fieldNamed "to_location_id",
-      area = B.fieldNamed "area",
-      bapId = B.fieldNamed "bap_id",
-      bapUri = B.fieldNamed "bap_uri",
-      estimatedDistance = B.fieldNamed "estimated_distance",
-      estimatedDuration = B.fieldNamed "estimated_duration",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])
 
-$(mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone" "atlas_driver_offer_bpp")
+$(mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone")

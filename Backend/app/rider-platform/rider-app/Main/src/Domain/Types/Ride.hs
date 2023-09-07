@@ -22,11 +22,11 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RideStatus
   = NEW

@@ -25,12 +25,12 @@ import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RideStatus
   = NEW

@@ -20,11 +20,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PlanTranslationT f = PlanTranslationT
   { planId :: B.C f Text,
@@ -42,14 +42,5 @@ instance B.Table PlanTranslationT where
 
 type PlanTranslation = PlanTranslationT Identity
 
-planTranslationTMod :: PlanTranslationT (B.FieldModification (B.TableField PlanTranslationT))
-planTranslationTMod =
-  B.tableModification
-    { planId = B.fieldNamed "plan_id",
-      language = B.fieldNamed "language",
-      name = B.fieldNamed "name",
-      description = B.fieldNamed "description"
-    }
-
 $(enableKVPG ''PlanTranslationT ['planId] [['language]])
-$(mkTableInstances ''PlanTranslationT "plan_translation" "atlas_driver_offer_bpp")
+$(mkTableInstances ''PlanTranslationT "plan_translation")

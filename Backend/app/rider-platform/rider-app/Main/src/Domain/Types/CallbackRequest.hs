@@ -17,10 +17,10 @@
 module Domain.Types.CallbackRequest where
 
 import qualified Domain.Types.Merchant as DM
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data CallbackRequestE e = CallbackRequest
   { id :: Id CallbackRequest,

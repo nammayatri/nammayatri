@@ -18,7 +18,6 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
@@ -35,6 +34,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data ServiceName
   = MapsService Maps.MapsService

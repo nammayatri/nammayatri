@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data SpecialZoneQuoteT f = SpecialZoneQuoteT
   { id :: B.C f Text,
@@ -40,13 +40,6 @@ instance B.Table SpecialZoneQuoteT where
 
 type SpecialZoneQuote = SpecialZoneQuoteT Identity
 
-specialZoneQuoteTMod :: SpecialZoneQuoteT (B.FieldModification (B.TableField SpecialZoneQuoteT))
-specialZoneQuoteTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      quoteId = B.fieldNamed "quote_id"
-    }
-
 $(enableKVPG ''SpecialZoneQuoteT ['id] [])
 
-$(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote" "atlas_app")
+$(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote")

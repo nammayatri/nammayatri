@@ -20,9 +20,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data GeometryT f = GeometryT
   { id :: B.C f Text,
@@ -38,13 +38,6 @@ instance B.Table GeometryT where
 
 type Geometry = GeometryT Identity
 
-geometryTMod :: GeometryT (B.FieldModification (B.TableField GeometryT))
-geometryTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      region = B.fieldNamed "region"
-    }
-
 $(enableKVPG ''GeometryT ['id] [])
 
-$(mkTableInstances ''GeometryT "geometry" "atlas_driver_offer_bpp")
+$(mkTableInstances ''GeometryT "geometry")

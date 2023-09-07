@@ -27,11 +27,11 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH
 
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]

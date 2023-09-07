@@ -22,10 +22,10 @@ import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FareProductT f = FareProductT
   { id :: B.C f Text,
@@ -45,17 +45,6 @@ instance B.Table FareProductT where
 
 type FareProduct = FareProductT Identity
 
-fareProductTMod :: FareProductT (B.FieldModification (B.TableField FareProductT))
-fareProductTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      farePolicyId = B.fieldNamed "fare_policy_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      area = B.fieldNamed "area",
-      flow = B.fieldNamed "flow"
-    }
-
 $(enableKVPG ''FareProductT ['id] [['merchantId, 'area]])
 
-$(mkTableInstances ''FareProductT "fare_product" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FareProductT "fare_product")

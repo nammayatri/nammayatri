@@ -22,12 +22,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
@@ -53,23 +53,6 @@ instance B.Table QuoteSpecialZoneT where
 
 type QuoteSpecialZone = QuoteSpecialZoneT Identity
 
-quoteSpecialZoneTMod :: QuoteSpecialZoneT (B.FieldModification (B.TableField QuoteSpecialZoneT))
-quoteSpecialZoneTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      searchRequestId = B.fieldNamed "search_request_id",
-      providerId = B.fieldNamed "provider_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      distance = B.fieldNamed "distance",
-      validTill = B.fieldNamed "valid_till",
-      estimatedFare = B.fieldNamed "estimated_fare",
-      fareParametersId = B.fieldNamed "fare_parameters_id",
-      estimatedFinishTime = B.fieldNamed "estimated_finish_time",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
 
-$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone" "atlas_driver_offer_bpp")
+$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone")

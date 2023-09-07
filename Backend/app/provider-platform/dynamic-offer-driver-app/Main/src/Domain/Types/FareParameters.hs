@@ -15,11 +15,11 @@
 
 module Domain.Types.FareParameters where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow (..))
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,

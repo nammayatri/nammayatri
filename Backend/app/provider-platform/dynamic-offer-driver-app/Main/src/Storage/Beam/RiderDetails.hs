@@ -21,11 +21,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
   { id :: B.C f Text,
@@ -51,23 +51,6 @@ instance B.Table RiderDetailsT where
 
 type RiderDetails = RiderDetailsT Identity
 
-riderDetailsTMod :: RiderDetailsT (B.FieldModification (B.TableField RiderDetailsT))
-riderDetailsTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      mobileNumberEncrypted = B.fieldNamed "mobile_number_encrypted",
-      mobileNumberHash = B.fieldNamed "mobile_number_hash",
-      merchantId = B.fieldNamed "merchant_id",
-      referralCode = B.fieldNamed "referral_code",
-      referredByDriver = B.fieldNamed "referred_by_driver",
-      referredAt = B.fieldNamed "referred_at",
-      hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
-      hasTakenValidRideAt = B.fieldNamed "has_taken_valid_ride_at",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
 
-$(mkTableInstances ''RiderDetailsT "rider_details" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RiderDetailsT "rider_details")

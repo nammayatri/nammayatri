@@ -24,13 +24,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Estimate = Estimate
   { id :: Id Estimate,

@@ -23,12 +23,12 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Maps (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
@@ -63,32 +63,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
-searchRequestTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      startTime = B.fieldNamed "start_time",
-      validTill = B.fieldNamed "valid_till",
-      riderId = B.fieldNamed "rider_id",
-      fromLocationId = B.fieldNamed "from_location_id",
-      toLocationId = B.fieldNamed "to_location_id",
-      distance = B.fieldNamed "distance",
-      maxDistance = B.fieldNamed "max_distance",
-      estimatedRideDuration = B.fieldNamed "estimated_ride_duration",
-      device = B.fieldNamed "device",
-      merchantId = B.fieldNamed "merchant_id",
-      language = B.fieldNamed "language",
-      disabilityTag = B.fieldNamed "disability_tag",
-      customerExtraFee = B.fieldNamed "customer_extra_fee",
-      availablePaymentMethods = B.fieldNamed "available_payment_methods",
-      selectedPaymentMethodId = B.fieldNamed "selected_payment_method_id",
-      autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
-      autoAssignEnabledV2 = B.fieldNamed "auto_assign_enabled_v2",
-      bundleVersion = B.fieldNamed "bundle_version",
-      clientVersion = B.fieldNamed "client_version",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''SearchRequestT ['id] [['riderId]])
 
-$(mkTableInstances ''SearchRequestT "search_request" "atlas_app")
+$(mkTableInstances ''SearchRequestT "search_request")

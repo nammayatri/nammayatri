@@ -11,32 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Domain.Types.VehicleVariant where
+module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH) where
 
+import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier)
+import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Kernel.Utils.GenericPretty
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Language.Haskell.TH
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
-  deriving
-    ( Show,
-      Eq,
-      Read,
-      Ord,
-      Generic,
-      ToJSON,
-      FromJSON,
-      ToSchema,
-      ToParamSchema,
-      Enum,
-      Bounded
-    )
-  deriving (PrettyShow) via Showable VehicleVariant
+schemaName :: String
+schemaName = "atlas_app"
 
-derivePersistField "VehicleVariant"
+mkTableInstances :: Name -> String -> Q [Dec]
+mkTableInstances name table = TH.mkTableInstances name table schemaName
 
-$(mkBeamInstancesForEnum ''VehicleVariant)
+mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
+mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table schemaName

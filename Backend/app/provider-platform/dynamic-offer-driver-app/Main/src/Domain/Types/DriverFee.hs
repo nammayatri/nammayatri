@@ -22,11 +22,11 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Driver)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverFee = DriverFee
   { id :: Id DriverFee,

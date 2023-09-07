@@ -22,11 +22,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Message.Message as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data MessageT f = MessageT
   { id :: B.C f Text,
@@ -51,22 +51,6 @@ instance B.Table MessageT where
 
 type Message = MessageT Identity
 
-messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
-messageTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      messageType = B.fieldNamed "type",
-      title = B.fieldNamed "title",
-      description = B.fieldNamed "description",
-      shortDescription = B.fieldNamed "short_description",
-      label = B.fieldNamed "label",
-      likeCount = B.fieldNamed "like_count",
-      viewCount = B.fieldNamed "view_count",
-      mediaFiles = B.fieldNamed "media_files",
-      merchantId = B.fieldNamed "merchant_id",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''MessageT ['id] []) -- DON'T Enable for KV
 
-$(mkTableInstances ''MessageT "message" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''MessageT "message" [("messageType", "type")])

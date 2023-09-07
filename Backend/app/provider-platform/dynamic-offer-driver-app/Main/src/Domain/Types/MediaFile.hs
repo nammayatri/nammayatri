@@ -15,9 +15,9 @@
 
 module Domain.Types.MediaFile where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
   deriving stock (Show, Eq, Read, Ord, Generic)

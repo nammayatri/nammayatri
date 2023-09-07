@@ -15,9 +15,9 @@
 
 module Domain.Types.FarePolicy.FareProductType where
 
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Tools.Beam.UtilsTH
 
 data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 

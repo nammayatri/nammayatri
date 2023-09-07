@@ -13,8 +13,6 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RegistryMapFallback where
 
@@ -23,10 +21,10 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RegistryMapFallbackT f = RegistryMapFallbackT
   { subscriberId :: B.C f Text,
@@ -43,14 +41,6 @@ instance B.Table RegistryMapFallbackT where
 
 type RegistryMapFallback = RegistryMapFallbackT Identity
 
-registryMapFallbackTMod :: RegistryMapFallbackT (B.FieldModification (B.TableField RegistryMapFallbackT))
-registryMapFallbackTMod =
-  B.tableModification
-    { subscriberId = B.fieldNamed "subscriber_id",
-      uniqueId = B.fieldNamed "unique_id",
-      registryUrl = B.fieldNamed "registry_url"
-    }
-
 $(enableKVPG ''RegistryMapFallbackT ['subscriberId, 'uniqueId] [])
 
-$(mkTableInstances ''RegistryMapFallbackT "registry_map_fallback" "atlas_driver_offer_bpp")
+$(mkTableInstances ''RegistryMapFallbackT "registry_map_fallback")

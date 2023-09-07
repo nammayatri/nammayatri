@@ -23,9 +23,9 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Feedback.Feedback as Domain ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FeedbackT f = FeedbackT
   { id :: B.C f Text,
@@ -44,16 +44,6 @@ instance B.Table FeedbackT where
 
 type Feedback = FeedbackT Identity
 
-feedbackTMod :: FeedbackT (B.FieldModification (B.TableField FeedbackT))
-feedbackTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      rideId = B.fieldNamed "ride_id",
-      badge = B.fieldNamed "badge",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''FeedbackT ['id] [])
 
-$(mkTableInstances ''FeedbackT "feedback" "atlas_driver_offer_bpp")
+$(mkTableInstances ''FeedbackT "feedback")

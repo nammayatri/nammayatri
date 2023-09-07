@@ -14,8 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Rating where
 
@@ -26,13 +24,12 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH (enableKVPG)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT
   { id :: B.C f Text,
@@ -51,38 +48,7 @@ instance B.Table RatingT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RatingT where
-  modelFieldModification = ratingTMod
-  modelTableName = "rating"
-  modelSchemaName = Just "atlas_app"
-
 type Rating = RatingT Identity
-
-ratingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RatingT)
-ratingTable =
-  BST.setEntitySchema (Just "atlas_app")
-    <> B.setEntityName "rating"
-    <> B.modifyTableFields ratingTMod
-
-instance FromJSON Rating where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Rating where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Rating
-
-ratingTMod :: RatingT (B.FieldModification (B.TableField RatingT))
-ratingTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      rideId = B.fieldNamed "ride_id",
-      riderId = B.fieldNamed "rider_id",
-      ratingValue = B.fieldNamed "rating_value",
-      feedbackDetails = B.fieldNamed "feedback_details",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
@@ -95,8 +61,6 @@ ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 ratingToPSModifiers =
   M.empty
 
-instance Serialize Rating where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''RatingT ['id] [['rideId]])
+
+$(mkTableInstances ''RatingT "rating")

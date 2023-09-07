@@ -26,11 +26,11 @@ import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
@@ -63,25 +63,6 @@ instance B.Table EstimateT where
 
 type Estimate = EstimateT Identity
 
-estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
-estimateTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "request_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      minFare = B.fieldNamed "min_fare",
-      maxFare = B.fieldNamed "max_fare",
-      estimateBreakupList = B.fieldNamed "estimate_breakup_list",
-      nightShiftCharge = B.fieldNamed "night_shift_charge",
-      oldNightShiftCharge = B.fieldNamed "night_shift_multiplier",
-      nightShiftStart = B.fieldNamed "night_shift_start",
-      nightShiftEnd = B.fieldNamed "night_shift_end",
-      waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
-      waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''EstimateT ['id] [])
 
-$(mkTableInstances ''EstimateT "estimate" "atlas_driver_offer_bpp")
+$(mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])

@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverRCAssociationT f = DriverRCAssociationT
   { id :: B.C f Text,
@@ -45,19 +45,6 @@ instance B.Table DriverRCAssociationT where
 
 type DriverRCAssociation = DriverRCAssociationT Identity
 
-driverRcAssociationTMod :: DriverRCAssociationT (B.FieldModification (B.TableField DriverRCAssociationT))
-driverRcAssociationTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      rcId = B.fieldNamed "rc_id",
-      associatedOn = B.fieldNamed "associated_on",
-      associatedTill = B.fieldNamed "associated_till",
-      consent = B.fieldNamed "consent",
-      consentTimestamp = B.fieldNamed "consent_timestamp",
-      isRcActive = B.fieldNamed "is_rc_active"
-    }
-
 $(enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])
 
-$(mkTableInstances ''DriverRCAssociationT "driver_rc_association" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverRCAssociationT "driver_rc_association")

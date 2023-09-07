@@ -18,10 +18,10 @@ import Data.Aeson.Types
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Text.Show
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   { id :: Id MerchantPaymentMethod,

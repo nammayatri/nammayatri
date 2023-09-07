@@ -19,10 +19,10 @@ module Domain.Types.DriverOnboarding.IdfyVerification where
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
 import Domain.Types.Vehicle as Vehicle
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)

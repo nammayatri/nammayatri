@@ -20,11 +20,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize as Se
+import Tools.Beam.UtilsTH
 
 data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
   { id :: B.C f (Maybe Int),
@@ -43,16 +43,6 @@ instance B.Table DriverExtraFeeBoundsT where
 
 type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
 
-driverExtraFeeBoundsTMod :: DriverExtraFeeBoundsT (B.FieldModification (B.TableField DriverExtraFeeBoundsT))
-driverExtraFeeBoundsTMod =
-  B.tableModification
-    { -- id = B.fieldNamed "id",
-      farePolicyId = B.fieldNamed "fare_policy_id",
-      startDistance = B.fieldNamed "start_distance",
-      minFee = B.fieldNamed "min_fee",
-      maxFee = B.fieldNamed "max_fee"
-    }
-
 $(enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])
 
-$(mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds" "atlas_driver_offer_bpp")
+$(mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds")

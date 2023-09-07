@@ -22,10 +22,10 @@ import qualified Domain.Types.MediaFile as D
 import qualified Domain.Types.Person as D
 import qualified Domain.Types.Ride as D
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data IssueStatus
   = OPEN

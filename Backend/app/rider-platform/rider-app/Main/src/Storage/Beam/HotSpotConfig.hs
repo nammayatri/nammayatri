@@ -22,9 +22,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data HotSpotConfigT f = HotSpotConfigT
   { id :: B.C f Text,
@@ -52,25 +52,6 @@ instance B.Table HotSpotConfigT where
 
 type HotSpotConfig = HotSpotConfigT Identity
 
-hotSpotConfigTMod :: HotSpotConfigT (B.FieldModification (B.TableField HotSpotConfigT))
-hotSpotConfigTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      hotSpotGeoHashPrecision = B.fieldNamed "hot_spot_geo_hash_precision",
-      blockRadius = B.fieldNamed "block_radius",
-      minFrequencyOfHotSpot = B.fieldNamed "min_frequency_of_hot_spot",
-      nearbyGeohashPrecision = B.fieldNamed "nearby_geohash_precision",
-      weightOfManualPickup = B.fieldNamed "weight_of_manual_pickup",
-      weightOfManualSaved = B.fieldNamed "weight_of_manual_saved",
-      weightOfAutoPickup = B.fieldNamed "weight_of_auto_pickup",
-      weightOfAutoSaved = B.fieldNamed "weight_of_auto_saved",
-      weightOfTripStart = B.fieldNamed "weight_of_trip_start",
-      weightOfTripEnd = B.fieldNamed "weight_of_trip_end",
-      weightOfSpecialLocation = B.fieldNamed "weight_of_special_location",
-      shouldTakeHotSpot = B.fieldNamed "should_take_hot_spot",
-      maxNumHotSpotsToShow = B.fieldNamed "max_num_hot_spots_to_show"
-    }
-
 defaultHotSpotConfig :: HotSpotConfig
 defaultHotSpotConfig =
   HotSpotConfigT
@@ -92,4 +73,4 @@ defaultHotSpotConfig =
 
 $(enableKVPG ''HotSpotConfigT ['id] [])
 
-$(mkTableInstances ''HotSpotConfigT "hot_spot_config" "atlas_app")
+$(mkTableInstances ''HotSpotConfigT "hot_spot_config")

@@ -24,12 +24,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as FareProductD
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 import qualified Tools.Maps as Maps
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
@@ -67,29 +67,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
-searchRequestTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      providerId = B.fieldNamed "provider_id",
-      fromLocationId = B.fieldNamed "from_location_id",
-      toLocationId = B.fieldNamed "to_location_id",
-      area = B.fieldNamed "area",
-      bapId = B.fieldNamed "bap_id",
-      bapCity = B.fieldNamed "bap_city",
-      bapUri = B.fieldNamed "bap_uri",
-      bapCountry = B.fieldNamed "bap_country",
-      estimatedDistance = B.fieldNamed "estimated_distance",
-      estimatedDuration = B.fieldNamed "estimated_duration",
-      customerLanguage = B.fieldNamed "customer_language",
-      disabilityTag = B.fieldNamed "disability_tag",
-      device = B.fieldNamed "device",
-      autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
-      specialLocationTag = B.fieldNamed "special_location_tag",
-      createdAt = B.fieldNamed "created_at"
-    }
-
 $(enableKVPG ''SearchRequestT ['id] [['transactionId]])
 
-$(mkTableInstances ''SearchRequestT "search_request" "atlas_driver_offer_bpp")
+$(mkTableInstances ''SearchRequestT "search_request")

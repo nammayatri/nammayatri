@@ -23,12 +23,12 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,
@@ -59,28 +59,6 @@ instance B.Table PaymentTransactionT where
 
 type PaymentTransaction = PaymentTransactionT Identity
 
-paymentTransactionTMod :: PaymentTransactionT (B.FieldModification (B.TableField PaymentTransactionT))
-paymentTransactionTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      txnUUID = B.fieldNamed "txn_uuid",
-      paymentMethodType = B.fieldNamed "payment_method_type",
-      paymentMethod = B.fieldNamed "payment_method",
-      respMessage = B.fieldNamed "resp_message",
-      respCode = B.fieldNamed "resp_code",
-      gatewayReferenceId = B.fieldNamed "gateway_reference_id",
-      orderId = B.fieldNamed "order_id",
-      merchantId = B.fieldNamed "merchant_id",
-      amount = B.fieldNamed "amount",
-      currency = B.fieldNamed "currency",
-      dateCreated = B.fieldNamed "date_created",
-      statusId = B.fieldNamed "status_id",
-      status = B.fieldNamed "status",
-      juspayResponse = B.fieldNamed "juspay_response",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''PaymentTransactionT ['id] [])
 
-$(mkTableInstances ''PaymentTransactionT "payment_transaction" "atlas_app")
+$(mkTableInstances ''PaymentTransactionT "payment_transaction")

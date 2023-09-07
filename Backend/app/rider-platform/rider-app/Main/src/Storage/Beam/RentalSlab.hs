@@ -23,11 +23,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,
@@ -44,14 +44,6 @@ instance B.Table RentalSlabT where
 
 type RentalSlab = RentalSlabT Identity
 
-rentalSlabTMod :: RentalSlabT (B.FieldModification (B.TableField RentalSlabT))
-rentalSlabTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      baseDistance = B.fieldNamed "base_distance",
-      baseDuration = B.fieldNamed "base_duration"
-    }
-
 $(enableKVPG ''RentalSlabT ['id] [])
 
-$(mkTableInstances ''RentalSlabT "rental_slab" "atlas_app")
+$(mkTableInstances ''RentalSlabT "rental_slab")

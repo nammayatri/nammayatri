@@ -24,11 +24,11 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.CallbackRequest as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data CallbackRequestT f = CallbackRequestT
   { id :: B.C f Text,
@@ -51,20 +51,6 @@ instance B.Table CallbackRequestT where
 
 type CallbackRequest = CallbackRequestT Identity
 
-callbackRequestTMod :: CallbackRequestT (B.FieldModification (B.TableField CallbackRequestT))
-callbackRequestTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      customerName = B.fieldNamed "customer_name",
-      customerPhoneEncrypted = B.fieldNamed "customer_phone_encrypted",
-      customerPhoneHash = B.fieldNamed "customer_phone_hash",
-      customerMobileCountryCode = B.fieldNamed "customer_mobile_country_code",
-      status = B.fieldNamed "status",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
-    }
-
 $(enableKVPG ''CallbackRequestT ['id] [])
 
-$(mkTableInstances ''CallbackRequestT "callback_request" "atlas_app")
+$(mkTableInstances ''CallbackRequestT "callback_request")

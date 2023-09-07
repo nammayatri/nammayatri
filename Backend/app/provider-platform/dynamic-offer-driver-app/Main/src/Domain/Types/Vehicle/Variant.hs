@@ -20,10 +20,10 @@ import Data.Bifunctor
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude hiding (first)
 import Kernel.Utils.GenericPretty
 import Servant.API
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving

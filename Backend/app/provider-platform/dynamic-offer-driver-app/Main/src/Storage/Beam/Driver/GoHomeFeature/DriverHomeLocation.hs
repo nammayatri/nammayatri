@@ -27,9 +27,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data DriverHomeLocationT f = DriverHomeLocationT
   { id :: B.C f Text,
@@ -49,37 +49,7 @@ instance B.Table DriverHomeLocationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverHomeLocationT where
-  modelFieldModification = driverHomeLocationTMod
-  modelTableName = "driver_home_location"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverHomeLocation = DriverHomeLocationT Identity
-
-instance FromJSON DriverHomeLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverHomeLocation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverHomeLocation
-
-driverHomeLocationTMod :: DriverHomeLocationT (B.FieldModification (B.TableField DriverHomeLocationT))
-driverHomeLocationTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      lat = B.fieldNamed "lat",
-      lon = B.fieldNamed "lon",
-      address = B.fieldNamed "home_address",
-      tag = B.fieldNamed "tag",
-      updatedAt = B.fieldNamed "updated_at",
-      createdAt = B.fieldNamed "created_at"
-    }
-
-instance Serialize DriverHomeLocation where
-  put = error "undefined"
-  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
@@ -93,3 +63,5 @@ driverHomeLocationToPSModifiers =
   M.empty
 
 $(enableKVPG ''DriverHomeLocationT ['id] [])
+
+$(mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])

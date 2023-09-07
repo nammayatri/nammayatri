@@ -23,9 +23,9 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.FeedbackForm as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
+import Tools.Beam.UtilsTH
 
 data FeedbackFormT f = FeedbackFormT
   { id :: B.C f Text,
@@ -45,17 +45,6 @@ instance B.Table FeedbackFormT where
 
 type FeedbackForm = FeedbackFormT Identity
 
-feedbackFormTMod :: FeedbackFormT (B.FieldModification (B.TableField FeedbackFormT))
-feedbackFormTMod =
-  B.tableModification
-    { id = B.fieldNamed "id",
-      categoryName = B.fieldNamed "category_name",
-      rating = B.fieldNamed "rating",
-      question = B.fieldNamed "question",
-      answer = B.fieldNamed "answer",
-      answerType = B.fieldNamed "answer_type"
-    }
-
 $(enableKVPG ''FeedbackFormT ['id] [])
 
-$(mkTableInstances ''FeedbackFormT "feedback_form" "atlas_app")
+$(mkTableInstances ''FeedbackFormT "feedback_form")
