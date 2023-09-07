@@ -228,8 +228,9 @@ window.getMerchantConfig = function () {
   , "defaultLanguage" : "EN_US"
   , "specialLocationView" : true
   , "navigationAppConfig" : {
-    "query" : "google.navigation:q=%f,%f"
-  , "packageName" : "com.google.android.apps.maps"
+      "query" : "google.navigation:q=%f,%f"
+    , "packageName" : "com.google.android.apps.maps"
+    , "walkQuery" : "google.navigation:q=%f,%f&mode=w"
   }
   , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"

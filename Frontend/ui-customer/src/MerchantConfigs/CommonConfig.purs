@@ -52,4 +52,9 @@ commonConfig =
         , callOptions : ["ANONYMOUS"]
         , autoVariantEnabled : true
         , showNearByDrivers : false
+        , navigationAppConfig :
+            { query : "google.navigation:q=%f,%f"
+            , packageName : "com.google.android.apps.maps"
+            , walkQuery : "google.navigation:q=%f,%f&mode=w"
+            }
         }
