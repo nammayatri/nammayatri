@@ -36,7 +36,7 @@ data MetricsHandle m = MetricsHandle
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
-    getNextDriverPoolBatch :: m [DriverPoolWithActualDistResult],
+    getNextDriverPoolBatch :: m ([DriverPoolWithActualDistResult], Bool),
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
@@ -46,29 +46,29 @@ data Handle m = Handle
     cancelSearchTry :: m ()
   }
 
-handler :: HandleMonad m => Handle m -> m ExecutionResult
+handler :: HandleMonad m => Handle m -> m (ExecutionResult, Bool)
 handler h@Handle {..} = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
-  measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
+  measuringDuration (\ms (_, _) -> metrics.putTaskDuration ms) $ do
     isSearchTryValid' <- isSearchTryValid
     if not isSearchTryValid'
       then do
         logInfo "Search request is either assigned, cancelled or expired."
-        return Complete
+        return (Complete, False)
       else do
         isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
         if isReceivedMaxDriverQuotes'
           then do
             logInfo "Received enough quotes from drivers."
-            return Complete
+            return (Complete, False)
           else processRequestSending h
 
-processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
+processRequestSending :: HandleMonad m => Handle m -> m (ExecutionResult, Bool)
 processRequestSending Handle {..} = do
   mLastProcTime <- setBatchDurationLock
   case mLastProcTime of
-    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime
+    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
     Nothing -> do
       isBatchNumExceedLimit' <- isBatchNumExceedLimit
       if isBatchNumExceedLimit'
@@ -76,15 +76,15 @@ processRequestSending Handle {..} = do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
           cancelSearchTry
-          return Complete
+          return (Complete, False)
         else do
-          driverPool <- getNextDriverPoolBatch
+          (driverPool, isGoToBatch) <- getNextDriverPoolBatch
           if null driverPool
             then do
               metrics.incrementFailedTaskCounter
               logInfo "No driver available"
               cancelSearchTry
-              return Complete
+              return (Complete, isGoToBatch)
             else do
               sendSearchRequestToDrivers driverPool
-              ReSchedule <$> getRescheduleTime
+              ReSchedule <$> getRescheduleTime <&> (,isGoToBatch)
