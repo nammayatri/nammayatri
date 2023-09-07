@@ -54,6 +54,12 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
 deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq personId)]
 
+updateDriverImagePath :: MonadFlow m => Id Person -> Text -> m ()
+updateDriverImagePath (Id personId) imagePath =
+  updateOneWithKV
+    [Se.Set BeamAV.driverImagePath (Just imagePath)]
+    [Se.Is BeamAV.driverId (Se.Eq personId)]
+
 instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
   fromTType' BeamAV.AadhaarVerificationT {..} = do
     pure $
@@ -67,7 +73,8 @@ instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
             driverImage = driverImage,
             isVerified = isVerified,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            driverImagePath = driverImagePath
           }
 
 instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
@@ -81,5 +88,6 @@ instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
         BeamAV.driverImage = driverImage,
         BeamAV.isVerified = isVerified,
         BeamAV.createdAt = createdAt,
-        BeamAV.updatedAt = updatedAt
+        BeamAV.updatedAt = updatedAt,
+        BeamAV.driverImagePath = driverImagePath
       }

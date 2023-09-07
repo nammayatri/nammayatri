@@ -301,6 +301,7 @@ instance FromTType' BeamR.Ride Ride where
             driverRating = driverRating,
             driverMobileNumber = driverMobileNumber,
             driverRegisteredAt = driverRegisteredAt,
+            driverImage = driverImage,
             vehicleNumber = vehicleNumber,
             vehicleModel = vehicleModel,
             vehicleColor = vehicleColor,
@@ -349,7 +350,8 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.rideRating = rideRating,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.driverMobileCountryCode = driverMobileCountryCode
+        BeamR.driverMobileCountryCode = driverMobileCountryCode,
+        BeamR.driverImage = driverImage
       }
 
 countRidesByRiderId :: MonadFlow m => Id Person -> m Int

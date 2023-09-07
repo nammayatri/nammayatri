@@ -50,7 +50,8 @@ data DriverInformationT f = DriverInformationT
     mode :: B.C f (Maybe Domain.DriverMode),
     autoPayStatus :: B.C f (Maybe Domain.DriverAutoPayStatus),
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    compAadhaarImagePath :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

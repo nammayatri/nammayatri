@@ -383,6 +383,7 @@ library
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
       Storage.CachedQueries.BapMetadata
+      Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.Exophone
@@ -566,8 +567,11 @@ library
       TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
-      aeson
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres
@@ -670,8 +674,11 @@ executable dynamic-offer-driver-app-exe
       TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
-      aeson
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres

@@ -193,7 +193,8 @@ createDriverDetails personId merchantId = do
             blockExpiryTime = Nothing,
             mode = Just DriverInfo.OFFLINE,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            compAadhaarImagePath = Nothing
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

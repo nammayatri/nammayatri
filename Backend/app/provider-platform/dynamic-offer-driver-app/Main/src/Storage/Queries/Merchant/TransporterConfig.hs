@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.TransporterConfig
     #-}
 where
 
+import qualified Data.Aeson as A
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
@@ -97,8 +98,14 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
             ..
           }
+    where
+      valueToMaybe :: FromJSON a => A.Value -> Maybe a
+      valueToMaybe value = case A.fromJSON value of
+        A.Success a -> Just a
+        A.Error _ -> Nothing
 
 instance ToTType' BeamTC.TransporterConfig TransporterConfig where
   toTType' TransporterConfig {..} = do
@@ -149,5 +156,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
-        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi
+        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
+        BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig
       }

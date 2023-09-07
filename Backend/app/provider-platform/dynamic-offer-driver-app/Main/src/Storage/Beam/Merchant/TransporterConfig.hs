@@ -15,6 +15,7 @@
 
 module Storage.Beam.Merchant.TransporterConfig where
 
+import qualified Data.Aeson as A
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -74,7 +75,8 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    aadhaarImageResizeConfig :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 

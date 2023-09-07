@@ -105,6 +105,9 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - JuicyPixels
+  - JuicyPixels-extra
+  - base64-bytestring
 
 ghc-options:
   - -fwrite-ide-info

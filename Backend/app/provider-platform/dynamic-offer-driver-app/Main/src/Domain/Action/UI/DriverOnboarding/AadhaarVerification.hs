@@ -15,14 +15,28 @@
 
 module Domain.Action.UI.DriverOnboarding.AadhaarVerification where
 
-import Data.Text (pack)
+import qualified AWS.S3 as S3
+import Codec.Picture
+import Codec.Picture.Extra
+import Codec.Picture.Types
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Base64.Lazy as B64L
+import qualified Data.ByteString.Lazy as LBS
+import Data.Text (pack, unpack)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
+import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
+import Domain.Types.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -30,10 +44,13 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
+import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
@@ -50,6 +67,8 @@ data UnVerifiedDataReq = UnVerifiedDataReq
     driverDob :: Text
   }
   deriving (Show, Generic, ToSchema, ToJSON, FromJSON)
+
+data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 
 generateAadhaarOtp ::
   Bool ->
@@ -116,13 +135,125 @@ verifyAadhaarOtp mbMerchant personId req = do
       if res.code == pack "1002"
         then do
           Redis.del key
-          aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
-          Q.create aadhaarEntity
-          DriverInfo.updateAadhaarVerifiedState (cast personId) True
-          Status.statusHandler (person.id, person.merchantId) Nothing
+          let imageType = getImageExtension res.image
+          (orgImageFilePath, resultOrg) <- uploadOriginalAadhaarImage person res.image imageType
+          case resultOrg of
+            Left err -> throwError $ InternalError ("Aadhaar Verification failed due to S3 upload failure, Please try again : " <> show err)
+            Right _ -> do
+              aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
+              Q.create aadhaarEntity
+              DriverInfo.updateAadhaarVerifiedState (cast personId) True
+              Status.statusHandler (person.id, person.merchantId) Nothing
+              uploadCompressedAadhaarImage person res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound
+
+fetchAndCacheAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> DriverInformation -> m (Maybe Text)
+fetchAndCacheAadhaarImage driver driverInfo =
+  if driverInfo.aadhaarVerified
+    then case driverInfo.compAadhaarImagePath of
+      Just path -> Just <$> CQDI.getDriverImageByDriverId driverInfo.driverId path
+      Nothing -> do
+        aadhaarVerification <- runInReplica (QAV.findByDriverId driverInfo.driverId) >>= fromMaybeM (InternalError $ "Count not find aadhaar verification data for the provided user : " <> getId driverInfo.driverId)
+        case aadhaarVerification.driverImagePath of
+          Nothing -> backfillAadhaarImage driver aadhaarVerification
+          Just imgPath -> do
+            uploadedImage <- CQDI.getDriverImageByDriverId driverInfo.driverId imgPath
+            let imageType = getImageExtension uploadedImage
+            (compImage, resultComp) <- uploadCompressedAadhaarImage driver uploadedImage imageType
+            case resultComp of
+              Left _ -> return (Just uploadedImage)
+              Right _ -> CQDI.cacheDriverImageByDriverId driverInfo.driverId compImage >> return (Just compImage)
+    else pure Nothing
+
+backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> AadhaarVerification -> m (Maybe Text)
+backfillAadhaarImage person aadhaarVerification =
+  case aadhaarVerification.driverImage of
+    Nothing -> return Nothing
+    Just image -> do
+      let imageType = getImageExtension image
+      (orgImageFilePath, resultOrg) <- uploadOriginalAadhaarImage person image imageType
+      case resultOrg of
+        Left _ -> return $ Just image
+        Right _ -> do
+          QAV.updateDriverImagePath person.id orgImageFilePath
+          (compImage, resultComp) <- uploadCompressedAadhaarImage person image imageType
+          case resultComp of
+            Left _ -> return $ Just image
+            Right _ -> return $ Just compImage
+
+uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadOriginalAadhaarImage person image imageType = do
+  orgImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo/" (parseImageExtension imageType)
+  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  pure (orgImageFilePath, resultOrg)
+
+uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadCompressedAadhaarImage person image imageType = do
+  transporterConfig <- CTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+  let mbconfig = transporterConfig.aadhaarImageResizeConfig
+  compImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo-resized/" (parseImageExtension imageType)
+  compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig
+  resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
+  case resultComp of
+    Left err -> logDebug ("Failed to Upload Compressed Aadhaar Image to S3 : " <> show err)
+    Right _ -> QDI.updateCompAadhaarImagePath (cast person.id) compImageFilePath
+  pure (compImage, resultComp)
+
+resizeImage :: MonadFlow m => Int -> Int -> Text -> ImageType -> m (Maybe Text)
+resizeImage newHeight newWidth base64Image imageType = do
+  let byteStringImg = B64.decodeLenient (TE.encodeUtf8 base64Image)
+  case imageType of
+    PNG -> do
+      let dynamicImage = decodePng byteStringImg
+      resizeImageHelper dynamicImage encodePng newHeight newWidth
+    JPG -> do
+      let dynamicImage = decodeJpeg byteStringImg
+      resizeImageHelper dynamicImage (encodeJpeg . convertImage) newHeight newWidth
+    _ -> return Nothing
+
+resizeImageHelper :: (MonadFlow m) => Either String DynamicImage -> (Image PixelRGB8 -> LBS.ByteString) -> Int -> Int -> m (Maybe Text)
+resizeImageHelper dynamicImage encodingFunc newHeight newWidth = do
+  case dynamicImage of
+    Left err -> logDebug ("Failed to create a dynamic image : " <> show err) >> return Nothing
+    Right dImage -> do
+      let imageCONV = convertRGB8 dImage
+          resizedImage = scaleBilinear newWidth newHeight imageCONV
+          encodedImage = encodingFunc resizedImage
+          base64Encoded = B64L.encode encodedImage
+      return $ Just (TE.decodeUtf8 (LBS.toStrict base64Encoded))
+
+getImageExtension :: Text -> ImageType
+getImageExtension base64Image = case T.take 1 base64Image of
+  "/" -> JPG
+  "i" -> PNG
+  _ -> UNKNOWN
+
+parseImageExtension :: ImageType -> Text
+parseImageExtension ext = case ext of
+  JPG -> ".jpg"
+  PNG -> ".png"
+  _ -> ""
+
+createFilePath ::
+  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+  Text ->
+  Common.FileType ->
+  Text ->
+  Text ->
+  m Text
+createFilePath driverId fileType identifier imageExtension = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  now <- getCurrentTime
+  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+  return
+    ( pathPrefix <> identifier <> "driver-" <> driverId <> "/"
+        <> show fileType
+        <> "/"
+        <> fileName
+        <> imageExtension
+    )
 
 unVerifiedAadhaarData ::
   Id Person.Person ->
@@ -131,7 +262,7 @@ unVerifiedAadhaarData ::
 unVerifiedAadhaarData personId req = do
   mAadhaarCard <- Q.findByDriverId personId
   when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
-  aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
+  aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False Nothing
   Q.create aadhaarEntity
   return Success
 
@@ -189,8 +320,9 @@ mkAadhaar ::
   Maybe DbHash ->
   Maybe Text ->
   Bool ->
+  Maybe Text ->
   m VDomain.AadhaarVerification
-mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
+mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified imgPath = do
   now <- getCurrentTime
   return $
     VDomain.AadhaarVerification
@@ -202,7 +334,8 @@ mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
         aadhaarNumberHash = aadhaarHash,
         isVerified = aadhaarVerified,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        driverImagePath = imgPath
       }
 
 checkForDuplicacy :: DbHash -> Flow ()

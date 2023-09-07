@@ -313,3 +313,10 @@ updatePendingPayment isPending (Id driverId) = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateCompAadhaarImagePath :: (L.MonadFlow m, Log m) => Id Person.Driver -> Text -> m ()
+updateCompAadhaarImagePath (Id driverId) compAadhaarImagePath =
+  updateOneWithKV
+    [ Se.Set BeamDI.compAadhaarImagePath (Just compAadhaarImagePath)
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
