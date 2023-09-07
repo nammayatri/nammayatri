@@ -562,6 +562,7 @@ type HomeScreenStateData =
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
   , destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard

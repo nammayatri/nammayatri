@@ -49,6 +49,7 @@ initData = {
     , savedLocations : []
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
+    , tripSuggestions: []
     , suggestedDestinations : { suggestedDestinationsMap: Map.empty, suggestedTripsMap : Map.empty }
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
