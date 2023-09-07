@@ -12,24 +12,15 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Storage.Beam.Merchant.OnboardingDocumentConfig where
 
 import qualified Data.Aeson as A
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
--- import Kernel.Types.Common hiding (id)
-
-import Kernel.Prelude hiding (Generic)
-import Kernel.Utils.Common (encodeToText)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Utils.Common (encodeToText)
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -39,8 +30,8 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     supportedVehicleClassesJSON :: B.C f A.Value,
     rcNumberPrefix :: B.C f Text,
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

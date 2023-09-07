@@ -17,19 +17,13 @@
 module Storage.Beam.Estimate where
 
 import qualified Data.Aeson as A
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
@@ -50,7 +44,7 @@ data EstimateT f = EstimateT
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

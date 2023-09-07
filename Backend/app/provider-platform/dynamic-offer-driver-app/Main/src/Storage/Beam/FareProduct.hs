@@ -15,16 +15,11 @@
 
 module Storage.Beam.FareProduct where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data FareProductT f = FareProductT
   { id :: B.C f Text,

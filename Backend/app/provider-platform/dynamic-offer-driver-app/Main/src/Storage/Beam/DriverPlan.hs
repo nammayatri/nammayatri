@@ -14,18 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Storage.Beam.DriverPlan where
 
-import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Plan as DPlan
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import Kernel.Prelude
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data DriverPlanT f = DriverPlanT
   { driverId :: B.C f Text,

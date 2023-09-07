@@ -15,11 +15,10 @@
 
 module Storage.Queries.DriverOffer where
 
-import Database.Beam.MySQL ()
 import Domain.Types.DriverOffer
 import Domain.Types.Estimate
 import Kernel.Beam.Functions
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se

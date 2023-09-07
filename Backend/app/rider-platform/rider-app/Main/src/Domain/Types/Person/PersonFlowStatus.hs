@@ -12,9 +12,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Person.PersonFlowStatus
   ( FlowStatus (..),
@@ -29,7 +27,7 @@ import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
+import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id

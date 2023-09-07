@@ -12,22 +12,15 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Payment.PaymentTransaction where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,
@@ -41,12 +34,12 @@ data PaymentTransactionT f = PaymentTransactionT
     merchantId :: B.C f Text,
     amount :: B.C f HighPrecMoney,
     currency :: B.C f Payment.Currency,
-    dateCreated :: B.C f (Maybe Time.UTCTime),
+    dateCreated :: B.C f (Maybe UTCTime),
     statusId :: B.C f Int,
     status :: B.C f Payment.TransactionStatus,
     juspayResponse :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -20,7 +20,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as K
-import Sequelize as Se
 import qualified Servant.Client as Servant
 import "dynamic-offer-driver-app" Storage.Beam.Booking as BeamB
 

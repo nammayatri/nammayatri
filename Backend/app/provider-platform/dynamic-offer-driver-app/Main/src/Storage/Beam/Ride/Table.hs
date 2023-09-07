@@ -15,17 +15,11 @@
 
 module Storage.Beam.Ride.Table where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Ride as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -39,9 +33,9 @@ data RideT f = RideT
     fare :: B.C f (Maybe Money),
     traveledDistance :: B.C f HighPrecMeters,
     chargeableDistance :: B.C f (Maybe Meters),
-    driverArrivalTime :: B.C f (Maybe Time.UTCTime),
-    tripStartTime :: B.C f (Maybe Time.UTCTime),
-    tripEndTime :: B.C f (Maybe Time.UTCTime),
+    driverArrivalTime :: B.C f (Maybe UTCTime),
+    tripStartTime :: B.C f (Maybe UTCTime),
+    tripEndTime :: B.C f (Maybe UTCTime),
     tripStartLat :: B.C f (Maybe Double),
     tripStartLon :: B.C f (Maybe Double),
     tripEndLat :: B.C f (Maybe Double),
@@ -49,8 +43,8 @@ data RideT f = RideT
     pickupDropOutsideOfThreshold :: B.C f (Maybe Bool),
     fareParametersId :: B.C f (Maybe Text),
     distanceCalculationFailed :: B.C f (Maybe Bool),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
     driverDeviatedFromRoute :: B.C f (Maybe Bool),
     numberOfSnapToRoadCalls :: B.C f (Maybe Int),
     numberOfDeviation :: B.C f (Maybe Bool),

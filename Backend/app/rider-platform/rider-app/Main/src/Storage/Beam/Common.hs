@@ -15,7 +15,7 @@
 module Storage.Beam.Common where
 
 import qualified Database.Beam as B
-import GHC.Generics (Generic)
+import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.Exophone

@@ -26,7 +26,6 @@ import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common ()
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)

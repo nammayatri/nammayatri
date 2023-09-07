@@ -15,16 +15,9 @@
 
 module Storage.Beam.Message.Message where
 
-import Data.Serialize hiding (label)
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Message.Message as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MessageT f = MessageT
@@ -38,7 +31,7 @@ data MessageT f = MessageT
     viewCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

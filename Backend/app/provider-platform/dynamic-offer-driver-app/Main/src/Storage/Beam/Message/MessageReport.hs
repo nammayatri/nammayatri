@@ -17,16 +17,10 @@ module Storage.Beam.Message.MessageReport where
 
 import Data.Aeson
 import qualified Data.Aeson as A
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Message.MessageReport as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,
@@ -36,8 +30,8 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f A.Value,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f LocalTime,
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

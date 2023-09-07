@@ -12,24 +12,17 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Person where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Person as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
+import Tools.Beam.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
-import Kernel.Prelude hiding (Generic)
-import Sequelize
-import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -59,17 +52,17 @@ data PersonT f = PersonT
     description :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),
-    createdAt :: B.C f Time.UTCTime,
-    blockedAt :: B.C f (Maybe Time.LocalTime),
+    createdAt :: B.C f UTCTime,
+    blockedAt :: B.C f (Maybe LocalTime),
     blockedByRuleId :: B.C f (Maybe Text),
     aadhaarVerified :: B.C f Bool,
-    updatedAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
     hasTakenValidRide :: B.C f Bool,
     hasDisability :: B.C f (Maybe Bool),
     referralCode :: B.C f (Maybe Text),
-    referredAt :: B.C f (Maybe Time.UTCTime)
+    referredAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)
 

@@ -16,16 +16,10 @@
 module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
@@ -82,8 +76,6 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
     specialZoneBookingOtpExpiry :: B.C f Int,
     driverFeeRetryThresholdConfig :: B.C f Int,
@@ -93,7 +85,9 @@ data TransporterConfigT f = TransporterConfigT
     cacheOfferListByDriverId :: B.C f Bool,
     useOfferListCache :: B.C f Bool,
     updateNotificationStatusBatchSize :: B.C f Int,
-    updateOrderStatusBatchSize :: B.C f Int
+    updateOrderStatusBatchSize :: B.C f Int,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

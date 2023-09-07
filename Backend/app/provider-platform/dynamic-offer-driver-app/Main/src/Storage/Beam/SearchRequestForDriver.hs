@@ -16,20 +16,14 @@
 module Storage.Beam.SearchRequestForDriver where
 
 import Data.ByteString
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Types
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 extractValue :: KVDBAnswer [ByteString] -> [ByteString]
 extractValue (Right value) = value
@@ -43,7 +37,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     requestId :: B.C f Text,
     searchTryId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
-    startTime :: B.C f Time.UTCTime,
+    startTime :: B.C f UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
@@ -51,7 +45,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     batchNumber :: B.C f Int,
     lat :: B.C f (Maybe Double),
     lon :: B.C f (Maybe Double),
-    searchRequestValidTill :: B.C f Time.LocalTime,
+    searchRequestValidTill :: B.C f LocalTime,
     driverId :: B.C f Text,
     status :: B.C f Domain.DriverSearchRequestStatus,
     response :: B.C f (Maybe Domain.SearchRequestForDriverResponse),
@@ -67,7 +61,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     keepHiddenForSeconds :: B.C f Seconds,
     mode :: B.C f (Maybe D.DriverMode),
     goHomeRequestId :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

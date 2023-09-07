@@ -22,11 +22,10 @@ module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import qualified Data.ByteString as BS
 import Data.Time as T hiding (getCurrentTime)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
+import Kernel.Types.Common (Log, MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
@@ -137,10 +136,7 @@ getReadyTasks mbMaxShards = do
   return $ zip res (map (const "rndm") [1 .. length res])
 
 updateStatus ::
-  ( MonadTime m,
-    L.MonadFlow m,
-    Log m
-  ) =>
+  MonadFlow m =>
   JobStatus ->
   Id AnyJob ->
   m ()

@@ -15,24 +15,17 @@
 
 module Storage.Beam.BusinessEvent where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle.Variant (Variant)
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common ()
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BusinessEventT f = BusinessEventT
   { id :: B.C f Text,
     driverId :: B.C f (Maybe Text),
     eventType :: B.C f Domain.EventType,
-    timeStamp :: B.C f Time.UTCTime,
+    timeStamp :: B.C f UTCTime,
     bookingId :: B.C f (Maybe Text),
     whenPoolWasComputed :: B.C f (Maybe Domain.WhenPoolWasComputed),
     vehicleVariant :: B.C f (Maybe Variant),

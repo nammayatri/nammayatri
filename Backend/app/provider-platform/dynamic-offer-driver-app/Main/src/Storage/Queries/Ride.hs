@@ -44,7 +44,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude hiding (foldl', map)
-import Kernel.Types.Common ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se

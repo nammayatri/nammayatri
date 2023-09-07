@@ -1,48 +1,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.JobStorageType.DB.Table where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Prelude
 import qualified Lib.Scheduler.Types as ST
-import Sequelize
-
-instance FromField ST.JobStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ST.JobStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be ST.JobStatus
-
-instance FromBackendRow Postgres ST.JobStatus
-
-instance IsString ST.JobStatus where
-  fromString = show
 
 data SchedulerJobT f = SchedulerJobT
   { id :: B.C f Text,
     jobType :: B.C f Text,
     jobData :: B.C f Text,
     shardId :: B.C f Int,
-    scheduledAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
+    scheduledAt :: B.C f LocalTime,
+    createdAt :: B.C f LocalTime,
+    updatedAt :: B.C f LocalTime,
     maxErrors :: B.C f Int,
     currErrors :: B.C f Int,
     status :: B.C f ST.JobStatus,

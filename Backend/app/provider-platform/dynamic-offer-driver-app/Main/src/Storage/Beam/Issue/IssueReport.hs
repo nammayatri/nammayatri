@@ -15,16 +15,10 @@
 
 module Storage.Beam.Issue.IssueReport where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Issue.IssueReport as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
@@ -38,8 +32,8 @@ data IssueReportT f = IssueReportT
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f LocalTime,
+    updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

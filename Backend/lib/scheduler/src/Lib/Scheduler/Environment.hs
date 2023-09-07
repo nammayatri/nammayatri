@@ -17,7 +17,6 @@ module Lib.Scheduler.Environment where
 
 import qualified Data.Map as M
 import EulerHS.Interpreters (runFlow)
-import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
@@ -106,9 +105,9 @@ type SchedulerM = FlowR SchedulerEnv
 
 type JobCreator r m = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "schedulerSetName" r Text, JobMonad r m)
 
-type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m, MonadIO m)
+type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
 
-type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadTime m, MonadTime m, MonadThrow m, Log m, MonadGuid m, MonadReader r m, HedisFlow m r, L.MonadFlow m)
+type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m)
 
 runSchedulerM :: SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do

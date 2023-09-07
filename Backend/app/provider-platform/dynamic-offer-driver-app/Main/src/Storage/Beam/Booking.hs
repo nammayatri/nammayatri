@@ -15,20 +15,14 @@
 
 module Storage.Beam.Booking where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Tools.Beam.UtilsTH
+import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
-import Sequelize
-import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -46,7 +40,7 @@ data BookingT f = BookingT
     bapUri :: B.C f Text,
     bapCity :: B.C f (Maybe Context.City),
     bapCountry :: B.C f (Maybe Context.Country),
-    startTime :: B.C f Time.UTCTime,
+    startTime :: B.C f UTCTime,
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -59,8 +53,8 @@ data BookingT f = BookingT
     riderName :: B.C f (Maybe Text),
     paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -15,30 +15,22 @@
 
 module Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
--- import Kernel.Types.Common hiding (id)
-
-import Kernel.External.Encryption
-import Kernel.Prelude hiding (Generic)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.External.Encryption
+import Kernel.Prelude
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
     documentImageId :: B.C f Text,
     certificateNumberEncrypted :: B.C f Text,
     certificateNumberHash :: B.C f DbHash,
-    fitnessExpiry :: B.C f Time.UTCTime,
-    permitExpiry :: B.C f (Maybe Time.UTCTime),
-    pucExpiry :: B.C f (Maybe Time.UTCTime),
-    insuranceValidity :: B.C f (Maybe Time.UTCTime),
+    fitnessExpiry :: B.C f UTCTime,
+    permitExpiry :: B.C f (Maybe UTCTime),
+    pucExpiry :: B.C f (Maybe UTCTime),
+    insuranceValidity :: B.C f (Maybe UTCTime),
     vehicleClass :: B.C f (Maybe Text),
     vehicleVariant :: B.C f (Maybe Variant),
     vehicleManufacturer :: B.C f (Maybe Text),
@@ -48,8 +40,8 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleEnergyType :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
     failedRules :: B.C f [Text],
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

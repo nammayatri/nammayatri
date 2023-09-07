@@ -12,23 +12,16 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Ride where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -41,7 +34,7 @@ data RideT f = RideT
     driverRating :: B.C f (Maybe Centesimal),
     driverMobileNumber :: B.C f Text,
     driverMobileCountryCode :: B.C f (Maybe Text),
-    driverRegisteredAt :: B.C f Time.UTCTime,
+    driverRegisteredAt :: B.C f UTCTime,
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
     vehicleColor :: B.C f Text,
@@ -52,12 +45,12 @@ data RideT f = RideT
     totalFare :: B.C f (Maybe HighPrecMoney),
     chargeableDistance :: B.C f (Maybe HighPrecMeters),
     traveledDistance :: B.C f (Maybe HighPrecMeters),
-    driverArrivalTime :: B.C f (Maybe Time.UTCTime),
-    rideStartTime :: B.C f (Maybe Time.UTCTime),
-    rideEndTime :: B.C f (Maybe Time.UTCTime),
+    driverArrivalTime :: B.C f (Maybe UTCTime),
+    rideStartTime :: B.C f (Maybe UTCTime),
+    rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)

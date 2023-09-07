@@ -12,22 +12,15 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.DriverOffer where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.DriverOffer as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data DriverOfferT f = DriverOfferT
   { id :: B.C f Text,
@@ -37,11 +30,11 @@ data DriverOfferT f = DriverOfferT
     driverName :: B.C f Text,
     durationToPickup :: B.C f Int,
     distanceToPickup :: B.C f HighPrecMeters,
-    validTill :: B.C f Time.UTCTime,
+    validTill :: B.C f UTCTime,
     bppQuoteId :: B.C f Text,
     rating :: B.C f (Maybe Centesimal),
     status :: B.C f Domain.DriverOfferStatus,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

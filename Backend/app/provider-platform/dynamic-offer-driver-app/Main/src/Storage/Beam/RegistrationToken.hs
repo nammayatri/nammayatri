@@ -15,17 +15,11 @@
 
 module Storage.Beam.RegistrationToken where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.RegistrationToken as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
@@ -40,8 +34,8 @@ data RegistrationTokenT f = RegistrationTokenT
     entityId :: B.C f Text,
     merchantId :: B.C f Text,
     entityType :: B.C f Domain.RTEntityType,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
     info :: B.C f (Maybe Text),
     alternateNumberAttempts :: B.C f Int
   }

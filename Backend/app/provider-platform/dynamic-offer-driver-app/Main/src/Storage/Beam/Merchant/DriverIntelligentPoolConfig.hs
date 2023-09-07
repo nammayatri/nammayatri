@@ -15,17 +15,11 @@
 
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Tools.Beam.UtilsTH
+import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Sequelize
-import Tools.Beam.UtilsTH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
@@ -44,8 +38,8 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
     locationUpdateSampleTime :: B.C f Minutes,
     minLocationUpdates :: B.C f Int,
     defaultDriverSpeed :: B.C f Double,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

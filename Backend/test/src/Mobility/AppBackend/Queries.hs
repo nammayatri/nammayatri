@@ -21,7 +21,6 @@ import Kernel.Types.Common
 import Kernel.Types.Geofencing (GeoRestriction (Regions))
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as K
-import Sequelize as Se
 import "rider-app" Storage.Beam.Merchant as BeamM
 
 -- updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()

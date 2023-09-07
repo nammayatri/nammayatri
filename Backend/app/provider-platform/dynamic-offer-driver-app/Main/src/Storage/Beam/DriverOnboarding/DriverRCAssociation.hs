@@ -15,24 +15,18 @@
 
 module Storage.Beam.DriverOnboarding.DriverRCAssociation where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Sequelize
+import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverRCAssociationT f = DriverRCAssociationT
   { id :: B.C f Text,
     driverId :: B.C f Text,
     rcId :: B.C f Text,
-    associatedOn :: B.C f Time.UTCTime,
-    associatedTill :: B.C f (Maybe Time.UTCTime),
+    associatedOn :: B.C f UTCTime,
+    associatedTill :: B.C f (Maybe UTCTime),
     consent :: B.C f Bool,
-    consentTimestamp :: B.C f Time.UTCTime,
+    consentTimestamp :: B.C f UTCTime,
     isRcActive :: B.C f Bool
   }
   deriving (Generic, B.Beamable)

@@ -12,36 +12,21 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequestSpecialZone where
 
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as FareProductD
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Sequelize
 import Tools.Beam.UtilsTH
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
-  sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
+import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 
 data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     messageId :: B.C f Text,
-    startTime :: B.C f Time.UTCTime,
-    validTill :: B.C f Time.UTCTime,
+    startTime :: B.C f UTCTime,
+    validTill :: B.C f UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -50,8 +35,8 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

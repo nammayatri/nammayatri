@@ -12,19 +12,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.MerchantServiceConfig where
 
 import qualified Data.Aeson as A
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
+import Tools.Beam.UtilsTH
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -35,16 +30,14 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
-import Kernel.Prelude hiding (Generic)
-import Sequelize
-import Tools.Beam.UtilsTH
+import Kernel.Prelude
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
     serviceName :: B.C f Domain.ServiceName,
     configJSON :: B.C f A.Value,
-    updatedAt :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

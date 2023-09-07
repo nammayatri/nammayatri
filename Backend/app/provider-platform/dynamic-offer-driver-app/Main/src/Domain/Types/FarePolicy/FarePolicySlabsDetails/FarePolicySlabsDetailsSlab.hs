@@ -21,7 +21,7 @@ where
 
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
+import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.Common
 

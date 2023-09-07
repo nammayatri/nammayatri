@@ -13,30 +13,23 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant where
 
 import Data.ByteString.Internal (ByteString)
-import Data.Serialize
-import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
 import Database.PostgreSQL.Simple.FromField (fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
+import Tools.Beam.UtilsTH
+import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Utils.Common (Seconds)
-import Sequelize
-import Tools.Beam.UtilsTH
 
 fromFieldEnum' ::
   DPSF.Field ->
@@ -68,8 +61,8 @@ data MerchantT f = MerchantT
     cipherText :: B.C f (Maybe Base64),
     signatureExpiry :: B.C f Int,
     distanceWeightage :: B.C f Int,
-    updatedAt :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime,
     timeDiffFromUtc :: B.C f Seconds,
     dirCacheSlot :: B.C f [Domain.Slot],
     isAvoidToll :: B.C f Bool,

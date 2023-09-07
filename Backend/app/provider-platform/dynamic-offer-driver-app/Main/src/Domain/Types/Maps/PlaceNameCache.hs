@@ -16,8 +16,7 @@
 
 module Domain.Types.Maps.PlaceNameCache where
 
-import Database.Beam.MySQL ()
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForList)
+import Tools.Beam.UtilsTH (mkBeamInstancesForList)
 import Kernel.Prelude
 import Kernel.Types.Id
 
