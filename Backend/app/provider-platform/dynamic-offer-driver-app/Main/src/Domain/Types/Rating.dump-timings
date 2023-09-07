@@ -1,28 +1,26 @@
-Parser [Domain.Types.Rating]: alloc=513984 time=0.188
-Renamer/typechecker [Domain.Types.Rating]: alloc=27313616 time=10.096
-Desugar [Domain.Types.Rating]: alloc=3054456 time=1.691
-Simplifier [Domain.Types.Rating]: alloc=20931224 time=6.118
-Specialise [Domain.Types.Rating]: alloc=728664 time=0.217
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Rating]: alloc=3690632 time=1.185
-Simplifier [Domain.Types.Rating]: alloc=16455624 time=4.696
-Simplifier [Domain.Types.Rating]: alloc=16521728 time=4.718
-Simplifier [Domain.Types.Rating]: alloc=4001416 time=1.186
-Float inwards [Domain.Types.Rating]: alloc=19032 time=0.004
+Parser [Domain.Types.Rating]: alloc=513984 time=0.183
+Renamer/typechecker [Domain.Types.Rating]: alloc=27311336 time=10.140
+Desugar [Domain.Types.Rating]: alloc=3053496 time=1.668
+Simplifier [Domain.Types.Rating]: alloc=10142544 time=2.886
+Specialise [Domain.Types.Rating]: alloc=889552 time=0.294
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Rating]: alloc=3948168 time=1.191
+Simplifier [Domain.Types.Rating]: alloc=19359656 time=5.845
+Float inwards [Domain.Types.Rating]: alloc=19032 time=0.005
 Called arity analysis [Domain.Types.Rating]: alloc=20608 time=0.006
-Simplifier [Domain.Types.Rating]: alloc=5006816 time=1.423
-Demand analysis [Domain.Types.Rating]: alloc=3785320 time=0.943
-Worker Wrapper binds [Domain.Types.Rating]: alloc=152016 time=0.070
-Simplifier [Domain.Types.Rating]: alloc=12427384 time=3.178
-Exitification transformation [Domain.Types.Rating]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Rating]: alloc=3181224 time=0.961
+Simplifier [Domain.Types.Rating]: alloc=7181880 time=2.128
+Demand analysis [Domain.Types.Rating]: alloc=4990008 time=1.206
+Worker Wrapper binds [Domain.Types.Rating]: alloc=224736 time=0.107
+Simplifier [Domain.Types.Rating]: alloc=8062352 time=2.308
+Exitification transformation [Domain.Types.Rating]: alloc=21520 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Rating]: alloc=4053368 time=1.216
 Common sub-expression [Domain.Types.Rating]: alloc=20136 time=0.005
 Float inwards [Domain.Types.Rating]: alloc=19032 time=0.004
-Simplifier [Domain.Types.Rating]: alloc=14466896 time=3.948
-Demand analysis [Domain.Types.Rating]: alloc=4079880 time=1.097
-CoreTidy [Domain.Types.Rating]: alloc=2656808 time=0.926
-CorePrep [Domain.Types.Rating]: alloc=19992 time=0.010
-CodeGen [Domain.Types.Rating]: alloc=52535904 time=15.792
-systool:as: alloc=103512 time=0.208
-CorePrep [Domain.Types.Rating]: alloc=19992 time=0.016
-CodeGen [Domain.Types.Rating]: alloc=54083424 time=15.998
-systool:as: alloc=106384 time=0.215
+Simplifier [Domain.Types.Rating]: alloc=10444896 time=3.140
+Demand analysis [Domain.Types.Rating]: alloc=5223104 time=1.235
+CoreTidy [Domain.Types.Rating]: alloc=3028072 time=1.098
+CorePrep [Domain.Types.Rating]: alloc=19992 time=0.009
+CodeGen [Domain.Types.Rating]: alloc=77618088 time=24.440
+systool:as: alloc=102776 time=0.270
+CorePrep [Domain.Types.Rating]: alloc=19992 time=0.015
+CodeGen [Domain.Types.Rating]: alloc=80246016 time=24.833
+systool:as: alloc=105656 time=0.207

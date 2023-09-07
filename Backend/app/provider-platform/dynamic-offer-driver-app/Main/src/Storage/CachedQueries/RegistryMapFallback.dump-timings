@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.RegistryMapFallback]: alloc=1711520 time=0.396
-Renamer/typechecker [Storage.CachedQueries.RegistryMapFallback]: alloc=516092184 time=85.532
-Desugar [Storage.CachedQueries.RegistryMapFallback]: alloc=478715944 time=72.502
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=14317392 time=3.167
-Specialise [Storage.CachedQueries.RegistryMapFallback]: alloc=2043560 time=0.566
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.RegistryMapFallback]: alloc=10290776 time=2.865
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=66435712 time=18.675
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=157810344 time=51.254
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=176668968 time=58.758
+Parser [Storage.CachedQueries.RegistryMapFallback]: alloc=1711520 time=0.448
+Renamer/typechecker [Storage.CachedQueries.RegistryMapFallback]: alloc=516109424 time=93.409
+Desugar [Storage.CachedQueries.RegistryMapFallback]: alloc=478755664 time=78.307
+Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=8952784 time=2.232
+Specialise [Storage.CachedQueries.RegistryMapFallback]: alloc=2108696 time=0.620
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.RegistryMapFallback]: alloc=10770720 time=3.121
+Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=206877728 time=77.075
+Float inwards [Storage.CachedQueries.RegistryMapFallback]: alloc=25576 time=0.006
+Called arity analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=27152 time=0.007
+Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=52916976 time=17.736
+Demand analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=51290712 time=12.582
+Worker Wrapper binds [Storage.CachedQueries.RegistryMapFallback]: alloc=2268456 time=1.117
+Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=63138024 time=22.356
+Exitification transformation [Storage.CachedQueries.RegistryMapFallback]: alloc=28080 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.RegistryMapFallback]: alloc=50246408 time=17.241
+Common sub-expression [Storage.CachedQueries.RegistryMapFallback]: alloc=26680 time=0.008
 Float inwards [Storage.CachedQueries.RegistryMapFallback]: alloc=25576 time=0.005
-Called arity analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=27152 time=0.006
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=117087392 time=35.653
-Demand analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=50044848 time=11.058
-Worker Wrapper binds [Storage.CachedQueries.RegistryMapFallback]: alloc=2396160 time=1.048
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=178990864 time=56.537
-Exitification transformation [Storage.CachedQueries.RegistryMapFallback]: alloc=28080 time=0.019
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.RegistryMapFallback]: alloc=43296432 time=12.383
-Common sub-expression [Storage.CachedQueries.RegistryMapFallback]: alloc=26680 time=0.006
-Float inwards [Storage.CachedQueries.RegistryMapFallback]: alloc=25576 time=0.005
-Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=73626040 time=22.852
-Demand analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=48327568 time=9.583
-CoreTidy [Storage.CachedQueries.RegistryMapFallback]: alloc=6453712 time=2.984
-CorePrep [Storage.CachedQueries.RegistryMapFallback]: alloc=26552 time=0.011
-CodeGen [Storage.CachedQueries.RegistryMapFallback]: alloc=209553256 time=54.124
-systool:as: alloc=104896 time=0.277
-CorePrep [Storage.CachedQueries.RegistryMapFallback]: alloc=26552 time=0.051
-CodeGen [Storage.CachedQueries.RegistryMapFallback]: alloc=218772680 time=55.498
-systool:as: alloc=107776 time=0.239
+Simplifier [Storage.CachedQueries.RegistryMapFallback]: alloc=60514328 time=22.734
+Demand analysis [Storage.CachedQueries.RegistryMapFallback]: alloc=51985248 time=12.229
+CoreTidy [Storage.CachedQueries.RegistryMapFallback]: alloc=7653720 time=4.104
+CorePrep [Storage.CachedQueries.RegistryMapFallback]: alloc=26552 time=0.014
+CodeGen [Storage.CachedQueries.RegistryMapFallback]: alloc=239332168 time=83.612
+systool:as: alloc=104160 time=0.193
+CorePrep [Storage.CachedQueries.RegistryMapFallback]: alloc=26552 time=0.017
+CodeGen [Storage.CachedQueries.RegistryMapFallback]: alloc=250302408 time=69.160
+systool:as: alloc=107040 time=0.235

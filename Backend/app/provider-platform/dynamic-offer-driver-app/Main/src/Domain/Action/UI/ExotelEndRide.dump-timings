@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.ExotelEndRide]: alloc=1209768 time=0.371
-Renamer/typechecker [Domain.Action.UI.ExotelEndRide]: alloc=349393144 time=60.364
-Desugar [Domain.Action.UI.ExotelEndRide]: alloc=84608032 time=14.237
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=16275024 time=4.106
-Specialise [Domain.Action.UI.ExotelEndRide]: alloc=739336 time=0.185
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.ExotelEndRide]: alloc=2816272 time=0.736
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=5148184 time=1.291
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=4962112 time=1.235
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=2185864 time=0.540
-Float inwards [Domain.Action.UI.ExotelEndRide]: alloc=22296 time=0.004
+Parser [Domain.Action.UI.ExotelEndRide]: alloc=1209768 time=0.307
+Renamer/typechecker [Domain.Action.UI.ExotelEndRide]: alloc=349385168 time=65.570
+Desugar [Domain.Action.UI.ExotelEndRide]: alloc=84608672 time=16.751
+Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=8230136 time=2.349
+Specialise [Domain.Action.UI.ExotelEndRide]: alloc=1017832 time=0.209
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.ExotelEndRide]: alloc=4190936 time=1.149
+Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=13256880 time=3.781
+Float inwards [Domain.Action.UI.ExotelEndRide]: alloc=22296 time=0.005
 Called arity analysis [Domain.Action.UI.ExotelEndRide]: alloc=23872 time=0.005
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=5403680 time=1.185
-Demand analysis [Domain.Action.UI.ExotelEndRide]: alloc=2978000 time=0.583
-Worker Wrapper binds [Domain.Action.UI.ExotelEndRide]: alloc=174136 time=0.090
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=4906704 time=1.178
-Exitification transformation [Domain.Action.UI.ExotelEndRide]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.ExotelEndRide]: alloc=2164224 time=0.605
-Common sub-expression [Domain.Action.UI.ExotelEndRide]: alloc=23400 time=0.006
+Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=4647320 time=1.251
+Demand analysis [Domain.Action.UI.ExotelEndRide]: alloc=5149704 time=1.135
+Worker Wrapper binds [Domain.Action.UI.ExotelEndRide]: alloc=219912 time=0.101
+Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=4477872 time=1.303
+Exitification transformation [Domain.Action.UI.ExotelEndRide]: alloc=24816 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.ExotelEndRide]: alloc=3864808 time=1.113
+Common sub-expression [Domain.Action.UI.ExotelEndRide]: alloc=23400 time=0.005
 Float inwards [Domain.Action.UI.ExotelEndRide]: alloc=22296 time=0.004
-Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=5772872 time=1.494
-Demand analysis [Domain.Action.UI.ExotelEndRide]: alloc=3132344 time=0.630
-CoreTidy [Domain.Action.UI.ExotelEndRide]: alloc=823304 time=0.352
-CorePrep [Domain.Action.UI.ExotelEndRide]: alloc=23272 time=0.011
-CodeGen [Domain.Action.UI.ExotelEndRide]: alloc=24842352 time=7.145
-systool:as: alloc=104232 time=0.268
+Simplifier [Domain.Action.UI.ExotelEndRide]: alloc=5397392 time=1.514
+Demand analysis [Domain.Action.UI.ExotelEndRide]: alloc=5110480 time=1.092
+CoreTidy [Domain.Action.UI.ExotelEndRide]: alloc=1088896 time=0.432
+CorePrep [Domain.Action.UI.ExotelEndRide]: alloc=23272 time=0.010
+CodeGen [Domain.Action.UI.ExotelEndRide]: alloc=34739288 time=9.944
+systool:as: alloc=103480 time=0.163
 CorePrep [Domain.Action.UI.ExotelEndRide]: alloc=23272 time=0.015
-CodeGen [Domain.Action.UI.ExotelEndRide]: alloc=26339864 time=7.256
-systool:as: alloc=107080 time=0.133
+CodeGen [Domain.Action.UI.ExotelEndRide]: alloc=36426688 time=10.714
+systool:as: alloc=106352 time=0.161

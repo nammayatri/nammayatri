@@ -1,28 +1,26 @@
-Parser [Domain.Types.Driver.DriverFlowStatus]: alloc=2333424 time=0.530
-Renamer/typechecker [Domain.Types.Driver.DriverFlowStatus]: alloc=117916968 time=36.845
-Desugar [Domain.Types.Driver.DriverFlowStatus]: alloc=47402336 time=11.205
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=220350032 time=75.329
-Specialise [Domain.Types.Driver.DriverFlowStatus]: alloc=23678856 time=5.595
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Driver.DriverFlowStatus]: alloc=30852248 time=11.053
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=292482656 time=113.747
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=225709352 time=89.988
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=206920528 time=80.664
+Parser [Domain.Types.Driver.DriverFlowStatus]: alloc=2333424 time=0.595
+Renamer/typechecker [Domain.Types.Driver.DriverFlowStatus]: alloc=117890064 time=40.243
+Desugar [Domain.Types.Driver.DriverFlowStatus]: alloc=47392576 time=12.340
+Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=103255888 time=38.262
+Specialise [Domain.Types.Driver.DriverFlowStatus]: alloc=64330448 time=16.491
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Driver.DriverFlowStatus]: alloc=50665432 time=21.446
+Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=433714080 time=188.005
+Float inwards [Domain.Types.Driver.DriverFlowStatus]: alloc=24088 time=0.006
+Called arity analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=25664 time=0.007
+Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=125222256 time=48.590
+Demand analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=55327080 time=16.268
+Worker Wrapper binds [Domain.Types.Driver.DriverFlowStatus]: alloc=2318648 time=1.350
+Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=118735072 time=47.667
+Exitification transformation [Domain.Types.Driver.DriverFlowStatus]: alloc=26608 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Driver.DriverFlowStatus]: alloc=64182408 time=22.860
+Common sub-expression [Domain.Types.Driver.DriverFlowStatus]: alloc=25192 time=0.006
 Float inwards [Domain.Types.Driver.DriverFlowStatus]: alloc=24088 time=0.005
-Called arity analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=25664 time=0.006
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=171867776 time=62.458
-Demand analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=33000864 time=8.315
-Worker Wrapper binds [Domain.Types.Driver.DriverFlowStatus]: alloc=2309944 time=0.966
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=194408336 time=74.566
-Exitification transformation [Domain.Types.Driver.DriverFlowStatus]: alloc=26608 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Driver.DriverFlowStatus]: alloc=36915248 time=11.878
-Common sub-expression [Domain.Types.Driver.DriverFlowStatus]: alloc=25192 time=0.008
-Float inwards [Domain.Types.Driver.DriverFlowStatus]: alloc=24088 time=0.005
-Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=188860496 time=61.862
-Demand analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=31814832 time=7.882
-CoreTidy [Domain.Types.Driver.DriverFlowStatus]: alloc=24724592 time=7.782
-CorePrep [Domain.Types.Driver.DriverFlowStatus]: alloc=25064 time=0.040
-CodeGen [Domain.Types.Driver.DriverFlowStatus]: alloc=378627096 time=116.637
-systool:as: alloc=104584 time=0.238
-CorePrep [Domain.Types.Driver.DriverFlowStatus]: alloc=25064 time=0.016
-CodeGen [Domain.Types.Driver.DriverFlowStatus]: alloc=395786776 time=115.618
-systool:as: alloc=107456 time=0.292
+Simplifier [Domain.Types.Driver.DriverFlowStatus]: alloc=140619968 time=57.125
+Demand analysis [Domain.Types.Driver.DriverFlowStatus]: alloc=54444936 time=33.647
+CoreTidy [Domain.Types.Driver.DriverFlowStatus]: alloc=31280264 time=10.481
+CorePrep [Domain.Types.Driver.DriverFlowStatus]: alloc=25064 time=0.014
+CodeGen [Domain.Types.Driver.DriverFlowStatus]: alloc=523302000 time=174.952
+systool:as: alloc=103856 time=0.207
+CorePrep [Domain.Types.Driver.DriverFlowStatus]: alloc=25064 time=0.015
+CodeGen [Domain.Types.Driver.DriverFlowStatus]: alloc=551631304 time=176.780
+systool:as: alloc=106752 time=0.250

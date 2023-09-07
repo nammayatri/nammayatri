@@ -1,28 +1,26 @@
-Parser [SharedLogic.DriverLocation]: alloc=3782304 time=0.815
-Renamer/typechecker [SharedLogic.DriverLocation]: alloc=1902643752 time=328.222
-Desugar [SharedLogic.DriverLocation]: alloc=913741464 time=139.730
-Simplifier [SharedLogic.DriverLocation]: alloc=110285472 time=32.994
-Specialise [SharedLogic.DriverLocation]: alloc=5774536 time=1.740
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverLocation]: alloc=21822440 time=6.438
-Simplifier [SharedLogic.DriverLocation]: alloc=120650400 time=36.082
-Simplifier [SharedLogic.DriverLocation]: alloc=112488720 time=33.103
-Simplifier [SharedLogic.DriverLocation]: alloc=139189096 time=41.799
+Parser [SharedLogic.DriverLocation]: alloc=3782304 time=0.873
+Renamer/typechecker [SharedLogic.DriverLocation]: alloc=1902703720 time=378.383
+Desugar [SharedLogic.DriverLocation]: alloc=913787064 time=164.804
+Simplifier [SharedLogic.DriverLocation]: alloc=56619920 time=19.921
+Specialise [SharedLogic.DriverLocation]: alloc=11690528 time=4.198
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverLocation]: alloc=30897872 time=10.586
+Simplifier [SharedLogic.DriverLocation]: alloc=274354528 time=108.114
 Float inwards [SharedLogic.DriverLocation]: alloc=21096 time=0.005
 Called arity analysis [SharedLogic.DriverLocation]: alloc=22672 time=0.006
-Simplifier [SharedLogic.DriverLocation]: alloc=115541128 time=34.147
-Demand analysis [SharedLogic.DriverLocation]: alloc=38784128 time=9.062
-Worker Wrapper binds [SharedLogic.DriverLocation]: alloc=2344920 time=1.027
-Simplifier [SharedLogic.DriverLocation]: alloc=149653856 time=64.203
-Exitification transformation [SharedLogic.DriverLocation]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverLocation]: alloc=33751296 time=10.251
+Simplifier [SharedLogic.DriverLocation]: alloc=91944632 time=40.831
+Demand analysis [SharedLogic.DriverLocation]: alloc=52287120 time=14.139
+Worker Wrapper binds [SharedLogic.DriverLocation]: alloc=2626096 time=1.391
+Simplifier [SharedLogic.DriverLocation]: alloc=80798416 time=29.051
+Exitification transformation [SharedLogic.DriverLocation]: alloc=23616 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverLocation]: alloc=49178504 time=33.518
 Common sub-expression [SharedLogic.DriverLocation]: alloc=22200 time=0.006
 Float inwards [SharedLogic.DriverLocation]: alloc=21096 time=0.004
-Simplifier [SharedLogic.DriverLocation]: alloc=86537280 time=26.435
-Demand analysis [SharedLogic.DriverLocation]: alloc=47809352 time=9.726
-CoreTidy [SharedLogic.DriverLocation]: alloc=10173360 time=4.281
-CorePrep [SharedLogic.DriverLocation]: alloc=22088 time=0.036
-CodeGen [SharedLogic.DriverLocation]: alloc=237309488 time=62.965
-systool:as: alloc=103928 time=0.207
-CorePrep [SharedLogic.DriverLocation]: alloc=22088 time=0.016
-CodeGen [SharedLogic.DriverLocation]: alloc=247172480 time=64.501
-systool:as: alloc=106808 time=0.211
+Simplifier [SharedLogic.DriverLocation]: alloc=97631944 time=33.264
+Demand analysis [SharedLogic.DriverLocation]: alloc=51277408 time=13.713
+CoreTidy [SharedLogic.DriverLocation]: alloc=13924224 time=6.266
+CorePrep [SharedLogic.DriverLocation]: alloc=22088 time=0.012
+CodeGen [SharedLogic.DriverLocation]: alloc=195661208 time=68.511
+systool:as: alloc=103200 time=0.204
+CorePrep [SharedLogic.DriverLocation]: alloc=22088 time=0.014
+CodeGen [SharedLogic.DriverLocation]: alloc=204560592 time=63.676
+systool:as: alloc=106080 time=0.228

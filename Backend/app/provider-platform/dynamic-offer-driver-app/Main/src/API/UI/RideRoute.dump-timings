@@ -1,28 +1,26 @@
-Parser [API.UI.RideRoute]: alloc=750216 time=0.264
-Renamer/typechecker [API.UI.RideRoute]: alloc=49206832 time=14.776
-Desugar [API.UI.RideRoute]: alloc=675600 time=1.065
-Simplifier [API.UI.RideRoute]: alloc=68216056 time=20.017
-Specialise [API.UI.RideRoute]: alloc=2205312 time=1.540
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.RideRoute]: alloc=7156376 time=2.878
-Simplifier [API.UI.RideRoute]: alloc=99646944 time=29.205
-Simplifier [API.UI.RideRoute]: alloc=48417824 time=13.449
-Simplifier [API.UI.RideRoute]: alloc=11893000 time=3.420
-Float inwards [API.UI.RideRoute]: alloc=18120 time=0.004
-Called arity analysis [API.UI.RideRoute]: alloc=19696 time=0.006
-Simplifier [API.UI.RideRoute]: alloc=38938536 time=12.628
-Demand analysis [API.UI.RideRoute]: alloc=18272184 time=3.456
-Worker Wrapper binds [API.UI.RideRoute]: alloc=160360 time=0.163
-Simplifier [API.UI.RideRoute]: alloc=103820736 time=32.316
-Exitification transformation [API.UI.RideRoute]: alloc=20640 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.RideRoute]: alloc=8310720 time=2.888
-Common sub-expression [API.UI.RideRoute]: alloc=19224 time=0.006
+Parser [API.UI.RideRoute]: alloc=750216 time=0.254
+Renamer/typechecker [API.UI.RideRoute]: alloc=49202392 time=14.884
+Desugar [API.UI.RideRoute]: alloc=675760 time=1.001
+Simplifier [API.UI.RideRoute]: alloc=36369608 time=11.010
+Specialise [API.UI.RideRoute]: alloc=2982384 time=1.682
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.RideRoute]: alloc=9658328 time=3.209
+Simplifier [API.UI.RideRoute]: alloc=91097032 time=27.449
 Float inwards [API.UI.RideRoute]: alloc=18120 time=0.005
-Simplifier [API.UI.RideRoute]: alloc=39784560 time=22.861
-Demand analysis [API.UI.RideRoute]: alloc=16819432 time=2.930
-CoreTidy [API.UI.RideRoute]: alloc=4597320 time=1.479
-CorePrep [API.UI.RideRoute]: alloc=19112 time=0.016
-CodeGen [API.UI.RideRoute]: alloc=66276952 time=15.089
-systool:as: alloc=103304 time=0.201
-CorePrep [API.UI.RideRoute]: alloc=19112 time=0.014
-CodeGen [API.UI.RideRoute]: alloc=67659192 time=15.586
-systool:as: alloc=106184 time=0.171
+Called arity analysis [API.UI.RideRoute]: alloc=19696 time=0.006
+Simplifier [API.UI.RideRoute]: alloc=18554920 time=8.085
+Demand analysis [API.UI.RideRoute]: alloc=19238320 time=4.452
+Worker Wrapper binds [API.UI.RideRoute]: alloc=405728 time=0.156
+Simplifier [API.UI.RideRoute]: alloc=23945728 time=5.526
+Exitification transformation [API.UI.RideRoute]: alloc=20640 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.RideRoute]: alloc=11301408 time=3.863
+Common sub-expression [API.UI.RideRoute]: alloc=19224 time=0.006
+Float inwards [API.UI.RideRoute]: alloc=18120 time=0.004
+Simplifier [API.UI.RideRoute]: alloc=54016872 time=19.946
+Demand analysis [API.UI.RideRoute]: alloc=18660216 time=4.771
+CoreTidy [API.UI.RideRoute]: alloc=4716368 time=1.368
+CorePrep [API.UI.RideRoute]: alloc=19112 time=0.011
+CodeGen [API.UI.RideRoute]: alloc=72408480 time=15.842
+systool:as: alloc=102576 time=0.197
+CorePrep [API.UI.RideRoute]: alloc=19112 time=0.017
+CodeGen [API.UI.RideRoute]: alloc=73883936 time=16.691
+systool:as: alloc=105456 time=0.170

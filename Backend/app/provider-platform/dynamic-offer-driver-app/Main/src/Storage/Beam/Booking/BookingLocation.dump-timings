@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Booking.BookingLocation]: alloc=1706840 time=0.457
-Simplify [expr]: alloc=97256 time=0.078
-CorePrep [expr]: alloc=43488 time=0.055
-ByteCodeGen [Ghci1]: alloc=217456 time=0.092
-Simplify [expr]: alloc=47024 time=0.045
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.Booking.BookingLocation]: alloc=243357624 time=66.117
-Desugar [Storage.Beam.Booking.BookingLocation]: alloc=29285496 time=7.916
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=489138696 time=155.246
-Specialise [Storage.Beam.Booking.BookingLocation]: alloc=22994432 time=9.671
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Booking.BookingLocation]: alloc=78569944 time=24.524
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=663709560 time=225.015
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=573893360 time=199.870
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=525741120 time=195.334
+Parser [Storage.Beam.Booking.BookingLocation]: alloc=1706840 time=0.376
+Simplify [expr]: alloc=97256 time=0.047
+CorePrep [expr]: alloc=43488 time=0.029
+ByteCodeGen [Ghci1]: alloc=217456 time=0.075
+Simplify [expr]: alloc=47024 time=0.047
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.053
+Renamer/typechecker [Storage.Beam.Booking.BookingLocation]: alloc=243320624 time=66.227
+Desugar [Storage.Beam.Booking.BookingLocation]: alloc=29298136 time=8.122
+Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=153834232 time=48.526
+Specialise [Storage.Beam.Booking.BookingLocation]: alloc=65825336 time=19.198
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Booking.BookingLocation]: alloc=112263216 time=41.569
+Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=1459558680 time=542.388
 Float inwards [Storage.Beam.Booking.BookingLocation]: alloc=24088 time=0.006
 Called arity analysis [Storage.Beam.Booking.BookingLocation]: alloc=25664 time=0.006
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=408084264 time=135.131
-Demand analysis [Storage.Beam.Booking.BookingLocation]: alloc=61868152 time=17.054
-Worker Wrapper binds [Storage.Beam.Booking.BookingLocation]: alloc=2421976 time=2.066
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=557054872 time=175.939
+Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=457208752 time=161.821
+Demand analysis [Storage.Beam.Booking.BookingLocation]: alloc=366208888 time=95.247
+Worker Wrapper binds [Storage.Beam.Booking.BookingLocation]: alloc=9137584 time=3.846
+Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=502411864 time=164.296
 Exitification transformation [Storage.Beam.Booking.BookingLocation]: alloc=26608 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Booking.BookingLocation]: alloc=55752688 time=40.879
-Common sub-expression [Storage.Beam.Booking.BookingLocation]: alloc=25192 time=0.007
-Float inwards [Storage.Beam.Booking.BookingLocation]: alloc=24088 time=0.004
-Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=424430160 time=141.053
-Demand analysis [Storage.Beam.Booking.BookingLocation]: alloc=54437736 time=20.046
-CoreTidy [Storage.Beam.Booking.BookingLocation]: alloc=73703784 time=27.087
-CorePrep [Storage.Beam.Booking.BookingLocation]: alloc=25064 time=0.044
-CodeGen [Storage.Beam.Booking.BookingLocation]: alloc=491911584 time=171.883
-systool:as: alloc=104584 time=0.264
-CorePrep [Storage.Beam.Booking.BookingLocation]: alloc=25064 time=0.016
-CodeGen [Storage.Beam.Booking.BookingLocation]: alloc=515886056 time=151.520
-systool:as: alloc=107456 time=0.253
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Booking.BookingLocation]: alloc=315661928 time=158.688
+Common sub-expression [Storage.Beam.Booking.BookingLocation]: alloc=25192 time=0.008
+Float inwards [Storage.Beam.Booking.BookingLocation]: alloc=24088 time=0.005
+Simplifier [Storage.Beam.Booking.BookingLocation]: alloc=527685264 time=218.392
+Demand analysis [Storage.Beam.Booking.BookingLocation]: alloc=331831168 time=85.439
+CoreTidy [Storage.Beam.Booking.BookingLocation]: alloc=121499344 time=50.602
+CorePrep [Storage.Beam.Booking.BookingLocation]: alloc=25064 time=0.015
+CodeGen [Storage.Beam.Booking.BookingLocation]: alloc=1699205024 time=584.033
+systool:as: alloc=103864 time=0.287
+CorePrep [Storage.Beam.Booking.BookingLocation]: alloc=25064 time=0.017
+CodeGen [Storage.Beam.Booking.BookingLocation]: alloc=1752434216 time=533.463
+systool:as: alloc=106736 time=0.281

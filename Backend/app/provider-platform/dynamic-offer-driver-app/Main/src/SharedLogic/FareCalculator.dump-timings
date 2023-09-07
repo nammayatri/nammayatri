@@ -1,28 +1,26 @@
-Parser [SharedLogic.FareCalculator]: alloc=8968520 time=1.690
-Renamer/typechecker [SharedLogic.FareCalculator]: alloc=230487848 time=67.794
-Desugar [SharedLogic.FareCalculator]: alloc=185528456 time=33.772
-Simplifier [SharedLogic.FareCalculator]: alloc=87933024 time=29.353
-Specialise [SharedLogic.FareCalculator]: alloc=3971232 time=1.175
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FareCalculator]: alloc=16899688 time=5.469
-Simplifier [SharedLogic.FareCalculator]: alloc=74130040 time=27.170
-Simplifier [SharedLogic.FareCalculator]: alloc=65057040 time=19.772
-Simplifier [SharedLogic.FareCalculator]: alloc=58390064 time=18.575
+Parser [SharedLogic.FareCalculator]: alloc=8968520 time=1.624
+Renamer/typechecker [SharedLogic.FareCalculator]: alloc=230491016 time=72.176
+Desugar [SharedLogic.FareCalculator]: alloc=185529808 time=30.517
+Simplifier [SharedLogic.FareCalculator]: alloc=36855992 time=11.917
+Specialise [SharedLogic.FareCalculator]: alloc=5588832 time=1.530
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FareCalculator]: alloc=23793472 time=7.845
+Simplifier [SharedLogic.FareCalculator]: alloc=141252656 time=47.019
 Float inwards [SharedLogic.FareCalculator]: alloc=21096 time=0.005
 Called arity analysis [SharedLogic.FareCalculator]: alloc=22672 time=0.006
-Simplifier [SharedLogic.FareCalculator]: alloc=19606976 time=5.330
-Demand analysis [SharedLogic.FareCalculator]: alloc=19659832 time=4.767
-Worker Wrapper binds [SharedLogic.FareCalculator]: alloc=679912 time=0.431
-Simplifier [SharedLogic.FareCalculator]: alloc=51878936 time=18.178
+Simplifier [SharedLogic.FareCalculator]: alloc=44158304 time=13.457
+Demand analysis [SharedLogic.FareCalculator]: alloc=57587048 time=13.314
+Worker Wrapper binds [SharedLogic.FareCalculator]: alloc=1450824 time=0.858
+Simplifier [SharedLogic.FareCalculator]: alloc=54615424 time=17.916
 Exitification transformation [SharedLogic.FareCalculator]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FareCalculator]: alloc=13936728 time=4.219
-Common sub-expression [SharedLogic.FareCalculator]: alloc=22200 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FareCalculator]: alloc=43271904 time=14.388
+Common sub-expression [SharedLogic.FareCalculator]: alloc=22200 time=0.006
 Float inwards [SharedLogic.FareCalculator]: alloc=21096 time=0.004
-Simplifier [SharedLogic.FareCalculator]: alloc=37831848 time=10.988
-Demand analysis [SharedLogic.FareCalculator]: alloc=15101488 time=3.837
-CoreTidy [SharedLogic.FareCalculator]: alloc=5851008 time=2.071
+Simplifier [SharedLogic.FareCalculator]: alloc=56024264 time=19.849
+Demand analysis [SharedLogic.FareCalculator]: alloc=47481256 time=18.274
+CoreTidy [SharedLogic.FareCalculator]: alloc=10455680 time=3.840
 CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.009
-CodeGen [SharedLogic.FareCalculator]: alloc=187044624 time=57.279
-systool:as: alloc=103944 time=0.230
+CodeGen [SharedLogic.FareCalculator]: alloc=345376512 time=100.266
+systool:as: alloc=103200 time=0.225
 CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.017
-CodeGen [SharedLogic.FareCalculator]: alloc=195194896 time=56.600
-systool:as: alloc=106800 time=0.211
+CodeGen [SharedLogic.FareCalculator]: alloc=357401240 time=104.839
+systool:as: alloc=106104 time=0.241

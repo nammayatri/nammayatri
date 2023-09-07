@@ -1,34 +1,32 @@
-Parser [Storage.Beam.DriverQuote]: alloc=2390080 time=0.551
-Simplify [expr]: alloc=308992 time=0.095
-CorePrep [expr]: alloc=119088 time=0.063
-ByteCodeGen [Ghci1]: alloc=674144 time=0.199
+Parser [Storage.Beam.DriverQuote]: alloc=2390080 time=0.629
+Simplify [expr]: alloc=308512 time=0.093
+CorePrep [expr]: alloc=118928 time=0.064
+ByteCodeGen [Ghci1]: alloc=674184 time=0.148
 Simplify [expr]: alloc=47024 time=0.034
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.068
-Renamer/typechecker [Storage.Beam.DriverQuote]: alloc=412105408 time=101.830
-Desugar [Storage.Beam.DriverQuote]: alloc=38976408 time=9.995
-Simplifier [Storage.Beam.DriverQuote]: alloc=475013464 time=144.693
-Specialise [Storage.Beam.DriverQuote]: alloc=44531408 time=12.187
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverQuote]: alloc=120136160 time=37.680
-Simplifier [Storage.Beam.DriverQuote]: alloc=788375720 time=278.027
-Simplifier [Storage.Beam.DriverQuote]: alloc=610318616 time=208.353
-Simplifier [Storage.Beam.DriverQuote]: alloc=524516144 time=173.938
-Float inwards [Storage.Beam.DriverQuote]: alloc=20504 time=0.005
-Called arity analysis [Storage.Beam.DriverQuote]: alloc=22080 time=0.006
-Simplifier [Storage.Beam.DriverQuote]: alloc=418964944 time=141.093
-Demand analysis [Storage.Beam.DriverQuote]: alloc=109100576 time=25.948
-Worker Wrapper binds [Storage.Beam.DriverQuote]: alloc=3570760 time=3.549
-Simplifier [Storage.Beam.DriverQuote]: alloc=590884224 time=219.701
-Exitification transformation [Storage.Beam.DriverQuote]: alloc=23024 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverQuote]: alloc=94440752 time=31.502
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.053
+Renamer/typechecker [Storage.Beam.DriverQuote]: alloc=412226736 time=112.674
+Desugar [Storage.Beam.DriverQuote]: alloc=38974768 time=10.091
+Simplifier [Storage.Beam.DriverQuote]: alloc=234042248 time=72.439
+Specialise [Storage.Beam.DriverQuote]: alloc=124038360 time=34.224
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverQuote]: alloc=163071528 time=63.379
+Simplifier [Storage.Beam.DriverQuote]: alloc=2114032104 time=873.887
+Float inwards [Storage.Beam.DriverQuote]: alloc=20504 time=0.009
+Called arity analysis [Storage.Beam.DriverQuote]: alloc=22080 time=0.005
+Simplifier [Storage.Beam.DriverQuote]: alloc=646590576 time=241.480
+Demand analysis [Storage.Beam.DriverQuote]: alloc=598824160 time=137.763
+Worker Wrapper binds [Storage.Beam.DriverQuote]: alloc=14994248 time=10.738
+Simplifier [Storage.Beam.DriverQuote]: alloc=725345896 time=321.852
+Exitification transformation [Storage.Beam.DriverQuote]: alloc=23024 time=0.011
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverQuote]: alloc=499687440 time=202.114
 Common sub-expression [Storage.Beam.DriverQuote]: alloc=21608 time=0.007
 Float inwards [Storage.Beam.DriverQuote]: alloc=20504 time=0.004
-Simplifier [Storage.Beam.DriverQuote]: alloc=445994968 time=151.366
-Demand analysis [Storage.Beam.DriverQuote]: alloc=95306320 time=24.223
-CoreTidy [Storage.Beam.DriverQuote]: alloc=70138184 time=22.923
-CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.041
-CodeGen [Storage.Beam.DriverQuote]: alloc=818673312 time=218.721
-systool:as: alloc=103816 time=0.350
-CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.018
-CodeGen [Storage.Beam.DriverQuote]: alloc=857803328 time=228.739
-systool:as: alloc=106696 time=0.274
+Simplifier [Storage.Beam.DriverQuote]: alloc=751225296 time=357.951
+Demand analysis [Storage.Beam.DriverQuote]: alloc=542634160 time=121.589
+CoreTidy [Storage.Beam.DriverQuote]: alloc=148900544 time=71.823
+CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.013
+CodeGen [Storage.Beam.DriverQuote]: alloc=2786261320 time=956.708
+systool:as: alloc=103088 time=0.368
+CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.022
+CodeGen [Storage.Beam.DriverQuote]: alloc=2873903480 time=886.244
+systool:as: alloc=105968 time=0.295

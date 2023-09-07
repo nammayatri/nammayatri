@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=2346336 time=0.496
-Simplify [expr]: alloc=97336 time=0.060
-CorePrep [expr]: alloc=43528 time=0.028
-ByteCodeGen [Ghci1]: alloc=217456 time=0.093
-Simplify [expr]: alloc=47024 time=0.029
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.064
-Renamer/typechecker [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=330966216 time=83.498
-Desugar [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=35245336 time=8.963
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=393250984 time=120.454
-Specialise [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=34470608 time=9.906
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=104979000 time=33.370
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=673543512 time=243.179
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=591088328 time=200.232
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=498047728 time=174.051
-Float inwards [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.005
-Called arity analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=29536 time=0.006
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=386437624 time=132.891
-Demand analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=102072192 time=24.500
-Worker Wrapper binds [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=3546112 time=3.152
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=542460480 time=195.606
-Exitification transformation [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=30464 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=90880544 time=29.968
+Parser [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=2346336 time=0.622
+Simplify [expr]: alloc=97256 time=0.053
+CorePrep [expr]: alloc=43488 time=0.029
+ByteCodeGen [Ghci1]: alloc=217496 time=0.079
+Simplify [expr]: alloc=47024 time=0.024
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.056
+Renamer/typechecker [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=331029824 time=102.792
+Desugar [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=35283968 time=10.272
+Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=192991912 time=72.338
+Specialise [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=98529896 time=38.349
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=139472288 time=64.045
+Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=1789340736 time=786.524
+Float inwards [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.032
+Called arity analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=29536 time=0.007
+Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=547554776 time=1477.583
+Demand analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=506504304 time=115.345
+Worker Wrapper binds [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=12660408 time=8.737
+Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=610606008 time=269.199
+Exitification transformation [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=30464 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=430068976 time=196.427
 Common sub-expression [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=29064 time=0.007
-Float inwards [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.009
-Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=390986808 time=133.839
-Demand analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=80224688 time=20.889
-CoreTidy [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=57431928 time=18.902
-CorePrep [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.028
-CodeGen [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=715191704 time=201.108
-systool:as: alloc=105376 time=0.282
-CorePrep [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.036
-CodeGen [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=748557520 time=203.611
-systool:as: alloc=108256 time=0.228
+Float inwards [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.005
+Simplifier [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=636115496 time=298.737
+Demand analysis [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=458013272 time=99.999
+CoreTidy [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=121741208 time=45.457
+CorePrep [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.016
+CodeGen [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=2348771992 time=777.527
+systool:as: alloc=104648 time=0.299
+CorePrep [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.018
+CodeGen [Storage.Beam.Merchant.DriverIntelligentPoolConfig]: alloc=2421574176 time=744.365
+systool:as: alloc=107528 time=0.338

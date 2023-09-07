@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Person.Internal]: alloc=713360 time=0.264
-Renamer/typechecker [Storage.Queries.Person.Internal]: alloc=97895144 time=28.536
-Desugar [Storage.Queries.Person.Internal]: alloc=910512 time=1.117
-Simplifier [Storage.Queries.Person.Internal]: alloc=221336464 time=56.957
-Specialise [Storage.Queries.Person.Internal]: alloc=51578152 time=10.275
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.Internal]: alloc=17760176 time=5.314
-Simplifier [Storage.Queries.Person.Internal]: alloc=388464416 time=120.939
-Simplifier [Storage.Queries.Person.Internal]: alloc=98490096 time=33.694
-Simplifier [Storage.Queries.Person.Internal]: alloc=94349504 time=31.235
-Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.008
-Called arity analysis [Storage.Queries.Person.Internal]: alloc=24176 time=0.010
-Simplifier [Storage.Queries.Person.Internal]: alloc=57692552 time=14.985
-Demand analysis [Storage.Queries.Person.Internal]: alloc=16668224 time=4.720
-Worker Wrapper binds [Storage.Queries.Person.Internal]: alloc=640096 time=0.527
-Simplifier [Storage.Queries.Person.Internal]: alloc=49773896 time=14.336
-Exitification transformation [Storage.Queries.Person.Internal]: alloc=25104 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.Internal]: alloc=15530376 time=4.728
-Common sub-expression [Storage.Queries.Person.Internal]: alloc=23704 time=0.018
-Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.004
-Simplifier [Storage.Queries.Person.Internal]: alloc=127759264 time=39.475
-Demand analysis [Storage.Queries.Person.Internal]: alloc=16906312 time=5.059
-CoreTidy [Storage.Queries.Person.Internal]: alloc=19600368 time=6.984
-CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.042
-CodeGen [Storage.Queries.Person.Internal]: alloc=171661104 time=55.799
-systool:as: alloc=104304 time=0.228
-CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.016
-CodeGen [Storage.Queries.Person.Internal]: alloc=181994552 time=59.417
-systool:as: alloc=107184 time=0.262
+Parser [Storage.Queries.Person.Internal]: alloc=713360 time=0.267
+Renamer/typechecker [Storage.Queries.Person.Internal]: alloc=97893784 time=28.268
+Desugar [Storage.Queries.Person.Internal]: alloc=910432 time=1.065
+Simplifier [Storage.Queries.Person.Internal]: alloc=115888224 time=31.208
+Specialise [Storage.Queries.Person.Internal]: alloc=56003016 time=11.368
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.Internal]: alloc=23190824 time=8.028
+Simplifier [Storage.Queries.Person.Internal]: alloc=354165880 time=113.659
+Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.005
+Called arity analysis [Storage.Queries.Person.Internal]: alloc=24176 time=0.006
+Simplifier [Storage.Queries.Person.Internal]: alloc=63474504 time=16.369
+Demand analysis [Storage.Queries.Person.Internal]: alloc=18582912 time=5.107
+Worker Wrapper binds [Storage.Queries.Person.Internal]: alloc=728224 time=0.545
+Simplifier [Storage.Queries.Person.Internal]: alloc=53050840 time=16.289
+Exitification transformation [Storage.Queries.Person.Internal]: alloc=25104 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.Internal]: alloc=16014552 time=5.228
+Common sub-expression [Storage.Queries.Person.Internal]: alloc=23704 time=0.006
+Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.005
+Simplifier [Storage.Queries.Person.Internal]: alloc=80501320 time=26.944
+Demand analysis [Storage.Queries.Person.Internal]: alloc=20757040 time=6.643
+CoreTidy [Storage.Queries.Person.Internal]: alloc=21642848 time=7.360
+CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.015
+CodeGen [Storage.Queries.Person.Internal]: alloc=171172176 time=58.974
+systool:as: alloc=103568 time=0.218
+CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.014
+CodeGen [Storage.Queries.Person.Internal]: alloc=181680296 time=61.240
+systool:as: alloc=106440 time=0.236

@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1724808 time=0.455
-Renamer/typechecker [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=450907480 time=75.932
-Desugar [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=265047752 time=41.562
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=14039024 time=3.362
-Specialise [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1391160 time=0.435
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=7529656 time=2.240
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=44379800 time=13.100
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=83226480 time=27.235
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=94088672 time=30.836
+Parser [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1724808 time=0.413
+Renamer/typechecker [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=450918424 time=80.993
+Desugar [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=265067392 time=42.325
+Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=7028856 time=1.937
+Specialise [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1717744 time=0.556
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=8239528 time=2.268
+Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=102559392 time=36.087
 Float inwards [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=27368 time=0.005
 Called arity analysis [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28944 time=0.006
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=63716816 time=19.232
-Demand analysis [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=26127856 time=5.987
-Worker Wrapper binds [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1156008 time=0.535
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=93327440 time=28.829
-Exitification transformation [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=29872 time=0.032
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=22351272 time=6.286
+Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=25992248 time=8.171
+Demand analysis [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=24236072 time=5.867
+Worker Wrapper binds [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=1133232 time=0.502
+Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=29908712 time=9.966
+Exitification transformation [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=29872 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=22547016 time=7.153
 Common sub-expression [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28472 time=0.007
-Float inwards [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=27368 time=0.005
-Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=43775752 time=13.562
-Demand analysis [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=26716976 time=5.556
-CoreTidy [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=4144280 time=1.756
-CorePrep [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28328 time=0.009
-CodeGen [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=117887448 time=30.617
-systool:as: alloc=105320 time=0.211
-CorePrep [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28328 time=0.021
-CodeGen [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=123340944 time=31.846
-systool:as: alloc=108224 time=0.229
+Float inwards [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=27368 time=0.004
+Simplifier [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=29425744 time=9.941
+Demand analysis [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=20083296 time=4.536
+CoreTidy [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=3928856 time=2.003
+CorePrep [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28328 time=0.038
+CodeGen [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=104817288 time=30.123
+systool:as: alloc=104584 time=0.197
+CorePrep [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=28328 time=0.016
+CodeGen [Storage.CachedQueries.Merchant.DriverPoolConfig]: alloc=110053000 time=30.981
+systool:as: alloc=107456 time=0.230

@@ -1,28 +1,26 @@
-Parser [Domain.Types.RiderDetails]: alloc=1316712 time=0.388
-Renamer/typechecker [Domain.Types.RiderDetails]: alloc=39288592 time=11.962
-Desugar [Domain.Types.RiderDetails]: alloc=4785136 time=2.150
-Simplifier [Domain.Types.RiderDetails]: alloc=11297600 time=3.260
-Specialise [Domain.Types.RiderDetails]: alloc=814344 time=0.289
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RiderDetails]: alloc=3550568 time=1.164
-Simplifier [Domain.Types.RiderDetails]: alloc=22157448 time=6.670
-Simplifier [Domain.Types.RiderDetails]: alloc=10312680 time=3.136
-Simplifier [Domain.Types.RiderDetails]: alloc=10325776 time=3.114
-Float inwards [Domain.Types.RiderDetails]: alloc=20808 time=0.004
-Called arity analysis [Domain.Types.RiderDetails]: alloc=22384 time=0.005
-Simplifier [Domain.Types.RiderDetails]: alloc=6197768 time=1.715
-Demand analysis [Domain.Types.RiderDetails]: alloc=4837776 time=1.206
-Worker Wrapper binds [Domain.Types.RiderDetails]: alloc=289648 time=0.116
-Simplifier [Domain.Types.RiderDetails]: alloc=7769168 time=2.052
+Parser [Domain.Types.RiderDetails]: alloc=1316712 time=0.359
+Renamer/typechecker [Domain.Types.RiderDetails]: alloc=39268192 time=12.145
+Desugar [Domain.Types.RiderDetails]: alloc=4785256 time=2.098
+Simplifier [Domain.Types.RiderDetails]: alloc=6761232 time=1.882
+Specialise [Domain.Types.RiderDetails]: alloc=898344 time=0.232
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RiderDetails]: alloc=3641528 time=1.142
+Simplifier [Domain.Types.RiderDetails]: alloc=21961416 time=7.246
+Float inwards [Domain.Types.RiderDetails]: alloc=20808 time=0.005
+Called arity analysis [Domain.Types.RiderDetails]: alloc=22384 time=0.006
+Simplifier [Domain.Types.RiderDetails]: alloc=7951944 time=2.325
+Demand analysis [Domain.Types.RiderDetails]: alloc=7221704 time=1.784
+Worker Wrapper binds [Domain.Types.RiderDetails]: alloc=344328 time=0.133
+Simplifier [Domain.Types.RiderDetails]: alloc=10182280 time=2.912
 Exitification transformation [Domain.Types.RiderDetails]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RiderDetails]: alloc=4069112 time=1.268
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RiderDetails]: alloc=6027496 time=1.936
 Common sub-expression [Domain.Types.RiderDetails]: alloc=21912 time=0.005
 Float inwards [Domain.Types.RiderDetails]: alloc=20808 time=0.004
-Simplifier [Domain.Types.RiderDetails]: alloc=17991496 time=5.112
-Demand analysis [Domain.Types.RiderDetails]: alloc=4858480 time=1.241
-CoreTidy [Domain.Types.RiderDetails]: alloc=3787872 time=1.206
-CorePrep [Domain.Types.RiderDetails]: alloc=21784 time=0.010
-CodeGen [Domain.Types.RiderDetails]: alloc=46231696 time=14.858
-systool:as: alloc=103872 time=0.203
-CorePrep [Domain.Types.RiderDetails]: alloc=21784 time=0.014
-CodeGen [Domain.Types.RiderDetails]: alloc=47453152 time=15.227
-systool:as: alloc=106752 time=0.188
+Simplifier [Domain.Types.RiderDetails]: alloc=12755080 time=4.196
+Demand analysis [Domain.Types.RiderDetails]: alloc=7072056 time=2.013
+CoreTidy [Domain.Types.RiderDetails]: alloc=4136480 time=1.366
+CorePrep [Domain.Types.RiderDetails]: alloc=21784 time=0.008
+CodeGen [Domain.Types.RiderDetails]: alloc=56037944 time=17.919
+systool:as: alloc=103144 time=0.218
+CorePrep [Domain.Types.RiderDetails]: alloc=21784 time=0.018
+CodeGen [Domain.Types.RiderDetails]: alloc=57497040 time=18.014
+systool:as: alloc=106024 time=0.179

@@ -1,28 +1,26 @@
-Parser [Storage.Queries.FarePolicy]: alloc=3542248 time=0.716
-Renamer/typechecker [Storage.Queries.FarePolicy]: alloc=180704408 time=51.450
-Desugar [Storage.Queries.FarePolicy]: alloc=15902296 time=4.013
-Simplifier [Storage.Queries.FarePolicy]: alloc=141974664 time=44.776
-Specialise [Storage.Queries.FarePolicy]: alloc=16201216 time=4.344
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FarePolicy]: alloc=18535056 time=6.316
-Simplifier [Storage.Queries.FarePolicy]: alloc=661299872 time=195.403
-Simplifier [Storage.Queries.FarePolicy]: alloc=751292216 time=258.644
-Simplifier [Storage.Queries.FarePolicy]: alloc=718720576 time=242.642
+Parser [Storage.Queries.FarePolicy]: alloc=3542248 time=0.751
+Renamer/typechecker [Storage.Queries.FarePolicy]: alloc=180693008 time=54.157
+Desugar [Storage.Queries.FarePolicy]: alloc=15863544 time=3.784
+Simplifier [Storage.Queries.FarePolicy]: alloc=95287784 time=29.882
+Specialise [Storage.Queries.FarePolicy]: alloc=27631016 time=7.052
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FarePolicy]: alloc=29874704 time=11.395
+Simplifier [Storage.Queries.FarePolicy]: alloc=715303720 time=228.924
 Float inwards [Storage.Queries.FarePolicy]: alloc=21096 time=0.005
 Called arity analysis [Storage.Queries.FarePolicy]: alloc=22672 time=0.006
-Simplifier [Storage.Queries.FarePolicy]: alloc=524448640 time=183.583
-Demand analysis [Storage.Queries.FarePolicy]: alloc=39658080 time=13.314
-Worker Wrapper binds [Storage.Queries.FarePolicy]: alloc=1630272 time=0.905
-Simplifier [Storage.Queries.FarePolicy]: alloc=545793160 time=165.303
-Exitification transformation [Storage.Queries.FarePolicy]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FarePolicy]: alloc=33689880 time=14.653
-Common sub-expression [Storage.Queries.FarePolicy]: alloc=22200 time=0.006
-Float inwards [Storage.Queries.FarePolicy]: alloc=21096 time=0.004
-Simplifier [Storage.Queries.FarePolicy]: alloc=339031448 time=118.921
-Demand analysis [Storage.Queries.FarePolicy]: alloc=16014480 time=15.103
-CoreTidy [Storage.Queries.FarePolicy]: alloc=32848096 time=13.059
-CorePrep [Storage.Queries.FarePolicy]: alloc=22088 time=0.015
-CodeGen [Storage.Queries.FarePolicy]: alloc=160816080 time=65.033
-systool:as: alloc=103944 time=0.219
-CorePrep [Storage.Queries.FarePolicy]: alloc=22088 time=0.017
-CodeGen [Storage.Queries.FarePolicy]: alloc=171756088 time=55.660
-systool:as: alloc=106824 time=0.223
+Simplifier [Storage.Queries.FarePolicy]: alloc=201324968 time=78.600
+Demand analysis [Storage.Queries.FarePolicy]: alloc=38512840 time=20.710
+Worker Wrapper binds [Storage.Queries.FarePolicy]: alloc=1682064 time=1.009
+Simplifier [Storage.Queries.FarePolicy]: alloc=200683712 time=61.971
+Exitification transformation [Storage.Queries.FarePolicy]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FarePolicy]: alloc=37927472 time=17.082
+Common sub-expression [Storage.Queries.FarePolicy]: alloc=22200 time=0.008
+Float inwards [Storage.Queries.FarePolicy]: alloc=21096 time=0.005
+Simplifier [Storage.Queries.FarePolicy]: alloc=212350472 time=58.930
+Demand analysis [Storage.Queries.FarePolicy]: alloc=29960144 time=18.233
+CoreTidy [Storage.Queries.FarePolicy]: alloc=36140768 time=11.656
+CorePrep [Storage.Queries.FarePolicy]: alloc=22088 time=0.016
+CodeGen [Storage.Queries.FarePolicy]: alloc=194862288 time=65.608
+systool:as: alloc=103224 time=0.249
+CorePrep [Storage.Queries.FarePolicy]: alloc=22088 time=0.044
+CodeGen [Storage.Queries.FarePolicy]: alloc=207835840 time=68.585
+systool:as: alloc=106104 time=0.238

@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=6149584 time=1.256
-Renamer/typechecker [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=2060404192 time=371.816
-Desugar [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=696672088 time=110.499
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=63537096 time=15.934
-Specialise [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=3866872 time=1.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=17488904 time=4.639
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=49342560 time=12.431
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=34556296 time=8.686
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=94701792 time=26.540
-Float inwards [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=25864 time=0.005
-Called arity analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=27440 time=0.006
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=87921120 time=22.780
-Demand analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=37021328 time=8.041
-Worker Wrapper binds [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=1444824 time=0.783
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=53409760 time=15.582
+Parser [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=6149584 time=1.286
+Renamer/typechecker [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=2060431208 time=434.332
+Desugar [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=696702608 time=125.742
+Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=29451600 time=8.465
+Specialise [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=5474120 time=1.457
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=24441160 time=7.729
+Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=91502912 time=34.449
+Float inwards [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=25864 time=0.006
+Called arity analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=27440 time=0.007
+Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=46988376 time=12.673
+Demand analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=41432096 time=10.822
+Worker Wrapper binds [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=1501368 time=1.133
+Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=34579064 time=12.164
 Exitification transformation [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=28384 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=24364792 time=6.963
-Common sub-expression [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=26968 time=0.006
-Float inwards [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=25864 time=0.004
-Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=46186168 time=13.363
-Demand analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=19063504 time=4.013
-CoreTidy [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=4154496 time=2.117
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=31735744 time=17.230
+Common sub-expression [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=26968 time=0.008
+Float inwards [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=25864 time=0.005
+Simplifier [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=44546016 time=13.568
+Demand analysis [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=34547208 time=8.136
+CoreTidy [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=6254504 time=3.328
 CorePrep [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=26856 time=0.010
-CodeGen [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=160134448 time=44.607
-systool:as: alloc=104992 time=0.247
-CorePrep [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=26856 time=0.028
-CodeGen [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=171606520 time=45.995
-systool:as: alloc=107872 time=0.187
+CodeGen [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=236287672 time=77.046
+systool:as: alloc=104264 time=0.208
+CorePrep [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=26856 time=0.017
+CodeGen [Storage.CachedQueries.Driver.GoHomeRequest]: alloc=249255072 time=75.829
+systool:as: alloc=107144 time=0.220

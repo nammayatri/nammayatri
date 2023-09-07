@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Message.MessageTranslation]: alloc=1594528 time=0.374
-Renamer/typechecker [Storage.Queries.Message.MessageTranslation]: alloc=114218224 time=31.569
-Desugar [Storage.Queries.Message.MessageTranslation]: alloc=5472088 time=1.953
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=76898632 time=24.447
-Specialise [Storage.Queries.Message.MessageTranslation]: alloc=14130760 time=3.502
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Message.MessageTranslation]: alloc=14363288 time=4.016
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=379943344 time=112.787
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=131057768 time=49.079
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=129006704 time=37.038
+Parser [Storage.Queries.Message.MessageTranslation]: alloc=1594528 time=0.373
+Renamer/typechecker [Storage.Queries.Message.MessageTranslation]: alloc=114218024 time=34.107
+Desugar [Storage.Queries.Message.MessageTranslation]: alloc=5471368 time=1.991
+Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=48728296 time=15.557
+Specialise [Storage.Queries.Message.MessageTranslation]: alloc=16361248 time=4.596
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Message.MessageTranslation]: alloc=17992296 time=5.994
+Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=322187280 time=98.607
 Float inwards [Storage.Queries.Message.MessageTranslation]: alloc=25864 time=0.005
 Called arity analysis [Storage.Queries.Message.MessageTranslation]: alloc=27440 time=0.006
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=134740608 time=37.999
-Demand analysis [Storage.Queries.Message.MessageTranslation]: alloc=12218408 time=5.760
-Worker Wrapper binds [Storage.Queries.Message.MessageTranslation]: alloc=706536 time=0.503
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=201630792 time=57.182
+Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=72479616 time=23.666
+Demand analysis [Storage.Queries.Message.MessageTranslation]: alloc=13164976 time=7.310
+Worker Wrapper binds [Storage.Queries.Message.MessageTranslation]: alloc=727376 time=0.534
+Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=68827272 time=21.852
 Exitification transformation [Storage.Queries.Message.MessageTranslation]: alloc=28384 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Message.MessageTranslation]: alloc=12403136 time=5.333
-Common sub-expression [Storage.Queries.Message.MessageTranslation]: alloc=26968 time=0.010
-Float inwards [Storage.Queries.Message.MessageTranslation]: alloc=25864 time=0.004
-Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=208447208 time=59.271
-Demand analysis [Storage.Queries.Message.MessageTranslation]: alloc=10606216 time=5.490
-CoreTidy [Storage.Queries.Message.MessageTranslation]: alloc=13915640 time=5.242
-CorePrep [Storage.Queries.Message.MessageTranslation]: alloc=26856 time=0.042
-CodeGen [Storage.Queries.Message.MessageTranslation]: alloc=93904888 time=30.501
-systool:as: alloc=104968 time=0.244
-CorePrep [Storage.Queries.Message.MessageTranslation]: alloc=26856 time=0.020
-CodeGen [Storage.Queries.Message.MessageTranslation]: alloc=100756152 time=32.706
-systool:as: alloc=107872 time=0.260
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Message.MessageTranslation]: alloc=12441984 time=5.955
+Common sub-expression [Storage.Queries.Message.MessageTranslation]: alloc=26968 time=0.006
+Float inwards [Storage.Queries.Message.MessageTranslation]: alloc=25864 time=0.005
+Simplifier [Storage.Queries.Message.MessageTranslation]: alloc=83701904 time=34.935
+Demand analysis [Storage.Queries.Message.MessageTranslation]: alloc=13089176 time=6.249
+CoreTidy [Storage.Queries.Message.MessageTranslation]: alloc=14406304 time=4.928
+CorePrep [Storage.Queries.Message.MessageTranslation]: alloc=26856 time=0.039
+CodeGen [Storage.Queries.Message.MessageTranslation]: alloc=94531760 time=33.423
+systool:as: alloc=104240 time=0.227
+CorePrep [Storage.Queries.Message.MessageTranslation]: alloc=26856 time=0.017
+CodeGen [Storage.Queries.Message.MessageTranslation]: alloc=101431624 time=35.202
+systool:as: alloc=107120 time=0.245

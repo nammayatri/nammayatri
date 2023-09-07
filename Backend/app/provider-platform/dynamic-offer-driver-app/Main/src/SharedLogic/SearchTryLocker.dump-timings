@@ -1,28 +1,26 @@
-Parser [SharedLogic.SearchTryLocker]: alloc=1209872 time=0.319
-Renamer/typechecker [SharedLogic.SearchTryLocker]: alloc=429733576 time=80.326
-Desugar [SharedLogic.SearchTryLocker]: alloc=112530144 time=19.577
-Simplifier [SharedLogic.SearchTryLocker]: alloc=9837016 time=2.345
-Specialise [SharedLogic.SearchTryLocker]: alloc=476256 time=0.143
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.SearchTryLocker]: alloc=3043624 time=0.755
-Simplifier [SharedLogic.SearchTryLocker]: alloc=6999184 time=1.555
-Simplifier [SharedLogic.SearchTryLocker]: alloc=4729248 time=1.037
-Simplifier [SharedLogic.SearchTryLocker]: alloc=39363896 time=12.193
-Float inwards [SharedLogic.SearchTryLocker]: alloc=21416 time=0.006
-Called arity analysis [SharedLogic.SearchTryLocker]: alloc=22992 time=0.006
-Simplifier [SharedLogic.SearchTryLocker]: alloc=14000256 time=3.785
-Demand analysis [SharedLogic.SearchTryLocker]: alloc=16036776 time=3.803
-Worker Wrapper binds [SharedLogic.SearchTryLocker]: alloc=973424 time=0.404
-Simplifier [SharedLogic.SearchTryLocker]: alloc=47910624 time=15.277
+Parser [SharedLogic.SearchTryLocker]: alloc=1209872 time=0.324
+Renamer/typechecker [SharedLogic.SearchTryLocker]: alloc=429750928 time=74.715
+Desugar [SharedLogic.SearchTryLocker]: alloc=112540424 time=18.797
+Simplifier [SharedLogic.SearchTryLocker]: alloc=5029504 time=1.289
+Specialise [SharedLogic.SearchTryLocker]: alloc=694576 time=0.210
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.SearchTryLocker]: alloc=3388912 time=0.772
+Simplifier [SharedLogic.SearchTryLocker]: alloc=27502168 time=8.461
+Float inwards [SharedLogic.SearchTryLocker]: alloc=21416 time=0.005
+Called arity analysis [SharedLogic.SearchTryLocker]: alloc=22992 time=0.005
+Simplifier [SharedLogic.SearchTryLocker]: alloc=12395792 time=3.288
+Demand analysis [SharedLogic.SearchTryLocker]: alloc=13856312 time=3.028
+Worker Wrapper binds [SharedLogic.SearchTryLocker]: alloc=977544 time=0.344
+Simplifier [SharedLogic.SearchTryLocker]: alloc=14839512 time=4.603
 Exitification transformation [SharedLogic.SearchTryLocker]: alloc=23904 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.SearchTryLocker]: alloc=14548264 time=4.373
-Common sub-expression [SharedLogic.SearchTryLocker]: alloc=22520 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.SearchTryLocker]: alloc=14372312 time=4.316
+Common sub-expression [SharedLogic.SearchTryLocker]: alloc=22520 time=0.005
 Float inwards [SharedLogic.SearchTryLocker]: alloc=21416 time=0.004
-Simplifier [SharedLogic.SearchTryLocker]: alloc=28479376 time=9.091
-Demand analysis [SharedLogic.SearchTryLocker]: alloc=28393536 time=5.948
-CoreTidy [SharedLogic.SearchTryLocker]: alloc=3102144 time=1.522
-CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.010
-CodeGen [SharedLogic.SearchTryLocker]: alloc=122934432 time=33.728
-systool:as: alloc=104000 time=0.237
-CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.018
-CodeGen [SharedLogic.SearchTryLocker]: alloc=127298264 time=34.715
-systool:as: alloc=106872 time=0.210
+Simplifier [SharedLogic.SearchTryLocker]: alloc=15869584 time=5.062
+Demand analysis [SharedLogic.SearchTryLocker]: alloc=19731120 time=4.038
+CoreTidy [SharedLogic.SearchTryLocker]: alloc=3038656 time=1.241
+CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.008
+CodeGen [SharedLogic.SearchTryLocker]: alloc=94595792 time=27.477
+systool:as: alloc=103256 time=0.258
+CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.017
+CodeGen [SharedLogic.SearchTryLocker]: alloc=98018056 time=28.513
+systool:as: alloc=106136 time=0.256

@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.LeaderBoardConfig]: alloc=1029712 time=0.278
-Renamer/typechecker [Storage.CachedQueries.LeaderBoardConfig]: alloc=225782736 time=39.929
-Desugar [Storage.CachedQueries.LeaderBoardConfig]: alloc=204673664 time=31.827
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=8757840 time=2.079
-Specialise [Storage.CachedQueries.LeaderBoardConfig]: alloc=547056 time=0.190
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=2598600 time=0.633
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=7348592 time=1.727
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=5055144 time=1.186
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=22067448 time=6.052
+Parser [Storage.CachedQueries.LeaderBoardConfig]: alloc=1029712 time=0.290
+Renamer/typechecker [Storage.CachedQueries.LeaderBoardConfig]: alloc=225808504 time=42.829
+Desugar [Storage.CachedQueries.LeaderBoardConfig]: alloc=204689824 time=34.038
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=5312184 time=1.498
+Specialise [Storage.CachedQueries.LeaderBoardConfig]: alloc=666208 time=0.216
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=2937112 time=0.751
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=30296248 time=9.271
 Float inwards [Storage.CachedQueries.LeaderBoardConfig]: alloc=24984 time=0.005
 Called arity analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=26560 time=0.006
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=22080232 time=5.490
-Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=7241760 time=1.567
-Worker Wrapper binds [Storage.CachedQueries.LeaderBoardConfig]: alloc=579952 time=0.162
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=21699992 time=6.348
-Exitification transformation [Storage.CachedQueries.LeaderBoardConfig]: alloc=27488 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=6987384 time=1.819
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=14586816 time=3.792
+Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=15040328 time=3.323
+Worker Wrapper binds [Storage.CachedQueries.LeaderBoardConfig]: alloc=740096 time=0.255
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=14610056 time=4.570
+Exitification transformation [Storage.CachedQueries.LeaderBoardConfig]: alloc=27488 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.LeaderBoardConfig]: alloc=15147552 time=4.336
 Common sub-expression [Storage.CachedQueries.LeaderBoardConfig]: alloc=26088 time=0.005
 Float inwards [Storage.CachedQueries.LeaderBoardConfig]: alloc=24984 time=0.004
-Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=13094760 time=3.625
-Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=12479912 time=2.360
-CoreTidy [Storage.CachedQueries.LeaderBoardConfig]: alloc=1695216 time=0.651
-CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.009
-CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=60928816 time=15.286
-systool:as: alloc=104776 time=0.178
-CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.019
-CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=63283232 time=16.032
-systool:as: alloc=107656 time=0.177
+Simplifier [Storage.CachedQueries.LeaderBoardConfig]: alloc=17235992 time=5.208
+Demand analysis [Storage.CachedQueries.LeaderBoardConfig]: alloc=21470048 time=4.243
+CoreTidy [Storage.CachedQueries.LeaderBoardConfig]: alloc=2805008 time=1.214
+CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.011
+CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=96440200 time=26.336
+systool:as: alloc=104040 time=0.220
+CorePrep [Storage.CachedQueries.LeaderBoardConfig]: alloc=25944 time=0.017
+CodeGen [Storage.CachedQueries.LeaderBoardConfig]: alloc=100109520 time=28.593
+systool:as: alloc=106912 time=0.183

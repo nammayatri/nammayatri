@@ -1,34 +1,32 @@
-Parser [Storage.Beam.BusinessEvent]: alloc=1691688 time=0.458
-Simplify [expr]: alloc=97336 time=0.063
-CorePrep [expr]: alloc=43528 time=0.045
-ByteCodeGen [Ghci1]: alloc=217456 time=0.103
-Simplify [expr]: alloc=47024 time=0.023
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.072
-Renamer/typechecker [Storage.Beam.BusinessEvent]: alloc=214185864 time=69.813
-Desugar [Storage.Beam.BusinessEvent]: alloc=26127232 time=7.265
-Simplifier [Storage.Beam.BusinessEvent]: alloc=354433112 time=123.849
-Specialise [Storage.Beam.BusinessEvent]: alloc=27069032 time=11.999
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BusinessEvent]: alloc=73927112 time=33.253
-Simplifier [Storage.Beam.BusinessEvent]: alloc=784107288 time=699.902
-Simplifier [Storage.Beam.BusinessEvent]: alloc=756720656 time=257.632
-Simplifier [Storage.Beam.BusinessEvent]: alloc=680455536 time=228.896
+Parser [Storage.Beam.BusinessEvent]: alloc=1691688 time=0.475
+Simplify [expr]: alloc=97336 time=0.073
+CorePrep [expr]: alloc=43528 time=0.040
+ByteCodeGen [Ghci1]: alloc=217456 time=0.084
+Simplify [expr]: alloc=47024 time=0.042
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.051
+Renamer/typechecker [Storage.Beam.BusinessEvent]: alloc=214194368 time=60.488
+Desugar [Storage.Beam.BusinessEvent]: alloc=26131952 time=7.480
+Simplifier [Storage.Beam.BusinessEvent]: alloc=129184360 time=42.536
+Specialise [Storage.Beam.BusinessEvent]: alloc=60488800 time=17.704
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BusinessEvent]: alloc=103782296 time=38.680
+Simplifier [Storage.Beam.BusinessEvent]: alloc=1625188136 time=617.496
 Float inwards [Storage.Beam.BusinessEvent]: alloc=21096 time=0.005
 Called arity analysis [Storage.Beam.BusinessEvent]: alloc=22672 time=0.006
-Simplifier [Storage.Beam.BusinessEvent]: alloc=494536448 time=176.655
-Demand analysis [Storage.Beam.BusinessEvent]: alloc=100382552 time=28.329
-Worker Wrapper binds [Storage.Beam.BusinessEvent]: alloc=3712344 time=1.943
-Simplifier [Storage.Beam.BusinessEvent]: alloc=715986168 time=230.834
-Exitification transformation [Storage.Beam.BusinessEvent]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BusinessEvent]: alloc=77678552 time=25.086
-Common sub-expression [Storage.Beam.BusinessEvent]: alloc=22200 time=0.006
+Simplifier [Storage.Beam.BusinessEvent]: alloc=427311704 time=166.428
+Demand analysis [Storage.Beam.BusinessEvent]: alloc=329571424 time=97.038
+Worker Wrapper binds [Storage.Beam.BusinessEvent]: alloc=8593728 time=4.530
+Simplifier [Storage.Beam.BusinessEvent]: alloc=480040480 time=191.138
+Exitification transformation [Storage.Beam.BusinessEvent]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BusinessEvent]: alloc=285698288 time=144.500
+Common sub-expression [Storage.Beam.BusinessEvent]: alloc=22200 time=0.007
 Float inwards [Storage.Beam.BusinessEvent]: alloc=21096 time=0.004
-Simplifier [Storage.Beam.BusinessEvent]: alloc=458182136 time=159.820
-Demand analysis [Storage.Beam.BusinessEvent]: alloc=57859168 time=19.344
-CoreTidy [Storage.Beam.BusinessEvent]: alloc=57312360 time=22.493
-CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.030
-CodeGen [Storage.Beam.BusinessEvent]: alloc=462330696 time=134.244
-systool:as: alloc=103928 time=0.242
-CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.028
-CodeGen [Storage.Beam.BusinessEvent]: alloc=484073080 time=138.644
-systool:as: alloc=106808 time=0.247
+Simplifier [Storage.Beam.BusinessEvent]: alloc=486055664 time=212.484
+Demand analysis [Storage.Beam.BusinessEvent]: alloc=287018832 time=82.583
+CoreTidy [Storage.Beam.BusinessEvent]: alloc=94318152 time=28.871
+CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.015
+CodeGen [Storage.Beam.BusinessEvent]: alloc=1468038608 time=540.853
+systool:as: alloc=103232 time=0.239
+CorePrep [Storage.Beam.BusinessEvent]: alloc=22088 time=0.016
+CodeGen [Storage.Beam.BusinessEvent]: alloc=1516353168 time=494.678
+systool:as: alloc=106088 time=0.272

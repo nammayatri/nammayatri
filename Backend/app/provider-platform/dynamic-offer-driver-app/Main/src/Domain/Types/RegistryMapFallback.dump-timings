@@ -1,28 +1,26 @@
-Parser [Domain.Types.RegistryMapFallback]: alloc=336208 time=0.141
-Renamer/typechecker [Domain.Types.RegistryMapFallback]: alloc=26492728 time=10.581
-Desugar [Domain.Types.RegistryMapFallback]: alloc=1523160 time=1.233
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=41554288 time=14.753
-Specialise [Domain.Types.RegistryMapFallback]: alloc=2190880 time=0.717
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistryMapFallback]: alloc=10132584 time=3.593
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=75714624 time=24.717
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=70739048 time=22.347
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=63431048 time=20.379
-Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.005
-Called arity analysis [Domain.Types.RegistryMapFallback]: alloc=24464 time=0.006
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=45869568 time=13.697
-Demand analysis [Domain.Types.RegistryMapFallback]: alloc=10641808 time=2.736
-Worker Wrapper binds [Domain.Types.RegistryMapFallback]: alloc=376072 time=0.238
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=51161624 time=15.607
-Exitification transformation [Domain.Types.RegistryMapFallback]: alloc=25408 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistryMapFallback]: alloc=10576328 time=3.240
-Common sub-expression [Domain.Types.RegistryMapFallback]: alloc=23992 time=0.017
+Parser [Domain.Types.RegistryMapFallback]: alloc=336208 time=0.117
+Renamer/typechecker [Domain.Types.RegistryMapFallback]: alloc=26490768 time=11.376
+Desugar [Domain.Types.RegistryMapFallback]: alloc=1523560 time=1.292
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=21409944 time=8.051
+Specialise [Domain.Types.RegistryMapFallback]: alloc=5125504 time=1.929
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistryMapFallback]: alloc=13617776 time=5.137
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=143077856 time=54.454
 Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.004
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=37732592 time=12.208
-Demand analysis [Domain.Types.RegistryMapFallback]: alloc=9850056 time=2.740
-CoreTidy [Domain.Types.RegistryMapFallback]: alloc=4796456 time=1.927
-CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.008
-CodeGen [Domain.Types.RegistryMapFallback]: alloc=67526336 time=23.837
-systool:as: alloc=104296 time=0.193
-CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.043
-CodeGen [Domain.Types.RegistryMapFallback]: alloc=70074848 time=22.983
-systool:as: alloc=107176 time=0.206
+Called arity analysis [Domain.Types.RegistryMapFallback]: alloc=24464 time=0.006
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=36681880 time=12.765
+Demand analysis [Domain.Types.RegistryMapFallback]: alloc=19851784 time=5.356
+Worker Wrapper binds [Domain.Types.RegistryMapFallback]: alloc=629912 time=0.420
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=37559920 time=12.886
+Exitification transformation [Domain.Types.RegistryMapFallback]: alloc=25408 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistryMapFallback]: alloc=21123424 time=7.886
+Common sub-expression [Domain.Types.RegistryMapFallback]: alloc=23992 time=0.032
+Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.004
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=44513280 time=17.437
+Demand analysis [Domain.Types.RegistryMapFallback]: alloc=18737032 time=5.633
+CoreTidy [Domain.Types.RegistryMapFallback]: alloc=6888176 time=3.093
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.009
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=97867960 time=36.563
+systool:as: alloc=103576 time=0.238
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.018
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=101952224 time=34.712
+systool:as: alloc=106456 time=0.194

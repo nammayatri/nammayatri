@@ -1,28 +1,26 @@
-Parser [API.Beckn.Select]: alloc=1192680 time=0.357
-Renamer/typechecker [API.Beckn.Select]: alloc=48702168 time=15.295
-Desugar [API.Beckn.Select]: alloc=840424 time=1.096
-Simplifier [API.Beckn.Select]: alloc=82891328 time=22.264
-Specialise [API.Beckn.Select]: alloc=2464656 time=1.301
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Select]: alloc=9785176 time=3.340
-Simplifier [API.Beckn.Select]: alloc=77785536 time=22.413
-Simplifier [API.Beckn.Select]: alloc=25784144 time=6.182
-Simplifier [API.Beckn.Select]: alloc=67095848 time=17.757
-Float inwards [API.Beckn.Select]: alloc=18120 time=0.004
+Parser [API.Beckn.Select]: alloc=1192680 time=0.416
+Renamer/typechecker [API.Beckn.Select]: alloc=48686104 time=18.037
+Desugar [API.Beckn.Select]: alloc=840504 time=1.336
+Simplifier [API.Beckn.Select]: alloc=40491528 time=12.803
+Specialise [API.Beckn.Select]: alloc=3164952 time=1.691
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Select]: alloc=11969896 time=3.985
+Simplifier [API.Beckn.Select]: alloc=115596128 time=36.741
+Float inwards [API.Beckn.Select]: alloc=18120 time=0.005
 Called arity analysis [API.Beckn.Select]: alloc=19696 time=0.005
-Simplifier [API.Beckn.Select]: alloc=38005528 time=11.523
-Demand analysis [API.Beckn.Select]: alloc=31379872 time=5.552
-Worker Wrapper binds [API.Beckn.Select]: alloc=299128 time=0.185
-Simplifier [API.Beckn.Select]: alloc=163850320 time=44.993
-Exitification transformation [API.Beckn.Select]: alloc=20640 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Select]: alloc=17505536 time=4.817
-Common sub-expression [API.Beckn.Select]: alloc=19224 time=0.005
+Simplifier [API.Beckn.Select]: alloc=28512448 time=11.092
+Demand analysis [API.Beckn.Select]: alloc=42812176 time=10.022
+Worker Wrapper binds [API.Beckn.Select]: alloc=552016 time=0.331
+Simplifier [API.Beckn.Select]: alloc=44498600 time=11.955
+Exitification transformation [API.Beckn.Select]: alloc=20640 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Select]: alloc=30298776 time=10.512
+Common sub-expression [API.Beckn.Select]: alloc=19224 time=0.006
 Float inwards [API.Beckn.Select]: alloc=18120 time=0.004
-Simplifier [API.Beckn.Select]: alloc=68876376 time=16.594
-Demand analysis [API.Beckn.Select]: alloc=37110992 time=6.489
-CoreTidy [API.Beckn.Select]: alloc=14259320 time=3.399
-CorePrep [API.Beckn.Select]: alloc=19112 time=0.009
-CodeGen [API.Beckn.Select]: alloc=155907096 time=35.434
-systool:as: alloc=103312 time=0.192
+Simplifier [API.Beckn.Select]: alloc=79587280 time=30.957
+Demand analysis [API.Beckn.Select]: alloc=48350144 time=11.697
+CoreTidy [API.Beckn.Select]: alloc=17933184 time=5.808
 CorePrep [API.Beckn.Select]: alloc=19112 time=0.014
-CodeGen [API.Beckn.Select]: alloc=160181320 time=36.477
-systool:as: alloc=106192 time=0.212
+CodeGen [API.Beckn.Select]: alloc=206804576 time=55.188
+systool:as: alloc=102584 time=0.261
+CorePrep [API.Beckn.Select]: alloc=19112 time=0.020
+CodeGen [API.Beckn.Select]: alloc=212490104 time=57.900
+systool:as: alloc=105464 time=0.273

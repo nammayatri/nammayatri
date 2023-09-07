@@ -1,28 +1,26 @@
-Parser [Storage.Queries.RegistryMapFallback]: alloc=1249288 time=0.306
-Renamer/typechecker [Storage.Queries.RegistryMapFallback]: alloc=105031000 time=28.416
-Desugar [Storage.Queries.RegistryMapFallback]: alloc=3000376 time=1.533
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31115800 time=10.392
-Specialise [Storage.Queries.RegistryMapFallback]: alloc=3928784 time=1.198
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.RegistryMapFallback]: alloc=4842424 time=1.423
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=92440440 time=26.881
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31166032 time=9.347
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=30213384 time=8.745
-Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.005
+Parser [Storage.Queries.RegistryMapFallback]: alloc=1249288 time=0.314
+Renamer/typechecker [Storage.Queries.RegistryMapFallback]: alloc=105042256 time=31.208
+Desugar [Storage.Queries.RegistryMapFallback]: alloc=3001696 time=1.546
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=19184336 time=6.924
+Specialise [Storage.Queries.RegistryMapFallback]: alloc=4635432 time=1.751
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.RegistryMapFallback]: alloc=6307576 time=2.203
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=79300616 time=25.380
+Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.007
 Called arity analysis [Storage.Queries.RegistryMapFallback]: alloc=25376 time=0.006
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=17258432 time=4.758
-Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4854960 time=1.680
-Worker Wrapper binds [Storage.Queries.RegistryMapFallback]: alloc=296592 time=0.147
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31800256 time=8.967
-Exitification transformation [Storage.Queries.RegistryMapFallback]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.RegistryMapFallback]: alloc=4634328 time=1.629
-Common sub-expression [Storage.Queries.RegistryMapFallback]: alloc=24904 time=0.004
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=17678768 time=5.526
+Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=5146696 time=1.651
+Worker Wrapper binds [Storage.Queries.RegistryMapFallback]: alloc=302480 time=0.191
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=16320216 time=4.964
+Exitification transformation [Storage.Queries.RegistryMapFallback]: alloc=26288 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.RegistryMapFallback]: alloc=4925824 time=1.742
+Common sub-expression [Storage.Queries.RegistryMapFallback]: alloc=24904 time=0.005
 Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.004
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=31556320 time=9.174
-Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4018024 time=1.332
-CoreTidy [Storage.Queries.RegistryMapFallback]: alloc=3331160 time=1.418
-CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.011
-CodeGen [Storage.Queries.RegistryMapFallback]: alloc=41767320 time=13.904
-systool:as: alloc=104512 time=0.198
-CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.018
-CodeGen [Storage.Queries.RegistryMapFallback]: alloc=44763584 time=14.492
-systool:as: alloc=107384 time=0.188
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=18229312 time=6.114
+Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4333136 time=1.469
+CoreTidy [Storage.Queries.RegistryMapFallback]: alloc=3397080 time=1.375
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.010
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=41765184 time=14.750
+systool:as: alloc=103768 time=0.271
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.021
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=44813000 time=16.224
+systool:as: alloc=106648 time=0.230

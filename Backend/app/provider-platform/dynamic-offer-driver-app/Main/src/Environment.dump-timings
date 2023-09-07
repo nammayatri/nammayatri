@@ -1,28 +1,26 @@
-Parser [Environment]: alloc=6832960 time=1.294
-Renamer/typechecker [Environment]: alloc=822370296 time=198.888
-Desugar [Environment]: alloc=242797288 time=44.356
-Simplifier [Environment]: alloc=829987448 time=254.400
-Specialise [Environment]: alloc=82863168 time=35.039
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Environment]: alloc=152871264 time=34.199
-Simplifier [Environment]: alloc=971563712 time=311.213
-Simplifier [Environment]: alloc=605905704 time=190.332
-Simplifier [Environment]: alloc=822287696 time=260.686
+Parser [Environment]: alloc=6832960 time=1.556
+Renamer/typechecker [Environment]: alloc=822214728 time=226.309
+Desugar [Environment]: alloc=242783888 time=55.444
+Simplifier [Environment]: alloc=284155984 time=97.215
+Specialise [Environment]: alloc=55252496 time=13.827
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Environment]: alloc=148282856 time=53.096
+Simplifier [Environment]: alloc=765833624 time=302.786
 Float inwards [Environment]: alloc=16648 time=0.005
-Called arity analysis [Environment]: alloc=18224 time=0.005
-Simplifier [Environment]: alloc=655137176 time=201.037
-Demand analysis [Environment]: alloc=348645296 time=54.727
-Worker Wrapper binds [Environment]: alloc=3608232 time=2.027
-Simplifier [Environment]: alloc=1492259128 time=402.985
-Exitification transformation [Environment]: alloc=19136 time=0.031
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Environment]: alloc=166624128 time=65.695
+Called arity analysis [Environment]: alloc=18224 time=0.006
+Simplifier [Environment]: alloc=254921080 time=97.818
+Demand analysis [Environment]: alloc=353165040 time=72.092
+Worker Wrapper binds [Environment]: alloc=3644904 time=3.455
+Simplifier [Environment]: alloc=407075840 time=130.651
+Exitification transformation [Environment]: alloc=19136 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Environment]: alloc=173129480 time=2340.328
 Common sub-expression [Environment]: alloc=17752 time=0.007
 Float inwards [Environment]: alloc=16648 time=0.004
-Simplifier [Environment]: alloc=799946456 time=223.176
-Demand analysis [Environment]: alloc=317412840 time=51.848
-CoreTidy [Environment]: alloc=190138904 time=74.896
-CorePrep [Environment]: alloc=17608 time=0.041
-CodeGen [Environment]: alloc=1370342024 time=360.775
-systool:as: alloc=102968 time=0.307
-CorePrep [Environment]: alloc=17608 time=0.017
-CodeGen [Environment]: alloc=1394352240 time=335.411
-systool:as: alloc=105864 time=0.296
+Simplifier [Environment]: alloc=483536000 time=135.607
+Demand analysis [Environment]: alloc=320970760 time=51.576
+CoreTidy [Environment]: alloc=186287128 time=48.608
+CorePrep [Environment]: alloc=17608 time=0.027
+CodeGen [Environment]: alloc=1388049576 time=397.243
+systool:as: alloc=102224 time=0.313
+CorePrep [Environment]: alloc=17608 time=0.028
+CodeGen [Environment]: alloc=1413378792 time=355.362
+systool:as: alloc=105104 time=0.295

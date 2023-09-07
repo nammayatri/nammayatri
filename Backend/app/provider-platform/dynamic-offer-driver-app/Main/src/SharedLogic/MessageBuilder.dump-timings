@@ -1,28 +1,26 @@
-Parser [SharedLogic.MessageBuilder]: alloc=3907768 time=0.851
-Renamer/typechecker [SharedLogic.MessageBuilder]: alloc=838221912 time=147.645
-Desugar [SharedLogic.MessageBuilder]: alloc=286642176 time=46.700
-Simplifier [SharedLogic.MessageBuilder]: alloc=52211040 time=14.027
-Specialise [SharedLogic.MessageBuilder]: alloc=2752544 time=0.638
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.MessageBuilder]: alloc=12355968 time=3.124
-Simplifier [SharedLogic.MessageBuilder]: alloc=45660624 time=12.278
-Simplifier [SharedLogic.MessageBuilder]: alloc=29014752 time=7.450
-Simplifier [SharedLogic.MessageBuilder]: alloc=62186600 time=16.219
+Parser [SharedLogic.MessageBuilder]: alloc=3907768 time=0.758
+Renamer/typechecker [SharedLogic.MessageBuilder]: alloc=838262992 time=183.475
+Desugar [SharedLogic.MessageBuilder]: alloc=286657016 time=52.934
+Simplifier [SharedLogic.MessageBuilder]: alloc=23410024 time=9.346
+Specialise [SharedLogic.MessageBuilder]: alloc=3304032 time=0.845
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.MessageBuilder]: alloc=14493472 time=4.215
+Simplifier [SharedLogic.MessageBuilder]: alloc=136518000 time=46.906
 Float inwards [SharedLogic.MessageBuilder]: alloc=21096 time=0.005
 Called arity analysis [SharedLogic.MessageBuilder]: alloc=22672 time=0.006
-Simplifier [SharedLogic.MessageBuilder]: alloc=38885576 time=12.195
-Demand analysis [SharedLogic.MessageBuilder]: alloc=17228424 time=3.609
-Worker Wrapper binds [SharedLogic.MessageBuilder]: alloc=2385936 time=0.716
-Simplifier [SharedLogic.MessageBuilder]: alloc=81976736 time=21.251
-Exitification transformation [SharedLogic.MessageBuilder]: alloc=23616 time=0.032
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.MessageBuilder]: alloc=18054248 time=4.791
-Common sub-expression [SharedLogic.MessageBuilder]: alloc=22200 time=0.006
-Float inwards [SharedLogic.MessageBuilder]: alloc=21096 time=0.004
-Simplifier [SharedLogic.MessageBuilder]: alloc=46782104 time=12.936
-Demand analysis [SharedLogic.MessageBuilder]: alloc=21938464 time=4.481
-CoreTidy [SharedLogic.MessageBuilder]: alloc=7236064 time=3.396
-CorePrep [SharedLogic.MessageBuilder]: alloc=22088 time=0.009
-CodeGen [SharedLogic.MessageBuilder]: alloc=184248600 time=55.576
-systool:as: alloc=103928 time=0.231
-CorePrep [SharedLogic.MessageBuilder]: alloc=22088 time=0.020
-CodeGen [SharedLogic.MessageBuilder]: alloc=193029928 time=53.208
-systool:as: alloc=106808 time=0.215
+Simplifier [SharedLogic.MessageBuilder]: alloc=53822808 time=17.528
+Demand analysis [SharedLogic.MessageBuilder]: alloc=65136216 time=16.928
+Worker Wrapper binds [SharedLogic.MessageBuilder]: alloc=3393904 time=1.656
+Simplifier [SharedLogic.MessageBuilder]: alloc=67053904 time=26.804
+Exitification transformation [SharedLogic.MessageBuilder]: alloc=23616 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.MessageBuilder]: alloc=60353352 time=19.452
+Common sub-expression [SharedLogic.MessageBuilder]: alloc=22200 time=0.008
+Float inwards [SharedLogic.MessageBuilder]: alloc=21096 time=0.005
+Simplifier [SharedLogic.MessageBuilder]: alloc=72725536 time=27.606
+Demand analysis [SharedLogic.MessageBuilder]: alloc=65610184 time=16.410
+CoreTidy [SharedLogic.MessageBuilder]: alloc=13328648 time=11.741
+CorePrep [SharedLogic.MessageBuilder]: alloc=22088 time=0.014
+CodeGen [SharedLogic.MessageBuilder]: alloc=403173504 time=135.524
+systool:as: alloc=103200 time=0.196
+CorePrep [SharedLogic.MessageBuilder]: alloc=22088 time=0.016
+CodeGen [SharedLogic.MessageBuilder]: alloc=417102240 time=136.464
+systool:as: alloc=106080 time=0.250

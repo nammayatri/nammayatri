@@ -1,28 +1,26 @@
-Parser [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=2253432 time=0.491
-Renamer/typechecker [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=239021296 time=61.968
-Desugar [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=7412368 time=2.427
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=167058264 time=51.242
-Specialise [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=32612256 time=7.720
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=27155144 time=8.952
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=672523048 time=202.052
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=549821800 time=173.102
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=533270952 time=181.964
+Parser [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=2253432 time=0.484
+Renamer/typechecker [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=239029392 time=71.274
+Desugar [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=7411248 time=2.352
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=103282264 time=33.064
+Specialise [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=38758864 time=11.625
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=34372552 time=14.102
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=625935688 time=216.382
 Float inwards [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=28856 time=0.006
-Called arity analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=30432 time=0.007
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=401096176 time=118.382
-Demand analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=36184744 time=15.160
-Worker Wrapper binds [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=1670648 time=1.054
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=414903072 time=146.235
+Called arity analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=30432 time=0.006
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=147421776 time=46.812
+Demand analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=35031352 time=15.705
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=1567320 time=1.024
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=143069712 time=46.301
 Exitification transformation [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=31376 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=33015264 time=12.870
-Common sub-expression [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29960 time=0.007
-Float inwards [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=28856 time=0.005
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=386325544 time=113.696
-Demand analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=19942360 time=10.923
-CoreTidy [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=24818768 time=9.835
-CorePrep [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29832 time=0.028
-CodeGen [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=161710504 time=50.470
-systool:as: alloc=105648 time=0.218
-CorePrep [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29832 time=0.015
-CodeGen [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=173558728 time=53.371
-systool:as: alloc=108496 time=0.261
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=33267736 time=14.009
+Common sub-expression [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29960 time=0.009
+Float inwards [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=28856 time=0.006
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=158849176 time=70.014
+Demand analysis [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=26929920 time=14.130
+CoreTidy [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=25801768 time=11.338
+CorePrep [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29832 time=0.017
+CodeGen [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=174485384 time=60.802
+systool:as: alloc=104904 time=0.195
+CorePrep [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=29832 time=0.017
+CodeGen [Storage.Queries.DriverOnboarding.AadhaarVerification]: alloc=186965016 time=60.464
+systool:as: alloc=107800 time=0.267

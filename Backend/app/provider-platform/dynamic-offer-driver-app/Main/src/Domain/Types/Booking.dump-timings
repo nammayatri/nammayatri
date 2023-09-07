@@ -1,34 +1,32 @@
-Parser [Domain.Types.Booking]: alloc=2035360 time=0.493
-Simplify [expr]: alloc=34464 time=0.046
-CorePrep [expr]: alloc=22952 time=0.017
-ByteCodeGen [Ghci1]: alloc=94056 time=0.063
-Simplify [expr]: alloc=34464 time=0.046
+Parser [Domain.Types.Booking]: alloc=2035360 time=0.500
+Simplify [expr]: alloc=34464 time=0.016
 CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.073
-Renamer/typechecker [x]: alloc=158571312 time=47.683
-Desugar [Domain.Types.Booking]: alloc=97186752 time=21.685
-Simplifier [Domain.Types.Booking]: alloc=177867528 time=58.569
-Specialise [Domain.Types.Booking]: alloc=12269240 time=2.996
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Booking]: alloc=30362776 time=9.251
-Simplifier [Domain.Types.Booking]: alloc=210639400 time=77.694
-Simplifier [Domain.Types.Booking]: alloc=200226656 time=68.484
-Simplifier [Domain.Types.Booking]: alloc=208716168 time=76.646
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Simplify [expr]: alloc=34464 time=0.015
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Booking]: alloc=158576672 time=50.173
+Desugar [Domain.Types.Booking]: alloc=97184872 time=22.407
+Simplifier [Domain.Types.Booking]: alloc=72696312 time=22.218
+Specialise [Domain.Types.Booking]: alloc=14605768 time=4.515
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Booking]: alloc=36319512 time=12.174
+Simplifier [Domain.Types.Booking]: alloc=278912992 time=115.980
 Float inwards [Domain.Types.Booking]: alloc=19320 time=0.005
-Called arity analysis [Domain.Types.Booking]: alloc=20896 time=0.005
-Simplifier [Domain.Types.Booking]: alloc=162710824 time=62.397
-Demand analysis [Domain.Types.Booking]: alloc=51222224 time=11.487
-Worker Wrapper binds [Domain.Types.Booking]: alloc=3630248 time=1.212
-Simplifier [Domain.Types.Booking]: alloc=245671728 time=67.693
-Exitification transformation [Domain.Types.Booking]: alloc=21840 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Booking]: alloc=38643528 time=12.422
-Common sub-expression [Domain.Types.Booking]: alloc=20424 time=0.008
+Called arity analysis [Domain.Types.Booking]: alloc=20896 time=0.006
+Simplifier [Domain.Types.Booking]: alloc=77699560 time=22.614
+Demand analysis [Domain.Types.Booking]: alloc=53717664 time=12.253
+Worker Wrapper binds [Domain.Types.Booking]: alloc=2556528 time=1.162
+Simplifier [Domain.Types.Booking]: alloc=102247616 time=29.210
+Exitification transformation [Domain.Types.Booking]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Booking]: alloc=50687144 time=16.464
+Common sub-expression [Domain.Types.Booking]: alloc=20424 time=0.006
 Float inwards [Domain.Types.Booking]: alloc=19320 time=0.004
-Simplifier [Domain.Types.Booking]: alloc=227792200 time=60.674
-Demand analysis [Domain.Types.Booking]: alloc=47535704 time=10.506
-CoreTidy [Domain.Types.Booking]: alloc=31992616 time=10.176
-CorePrep [Domain.Types.Booking]: alloc=20296 time=0.015
-CodeGen [Domain.Types.Booking]: alloc=352307000 time=120.521
-systool:as: alloc=103568 time=0.238
-CorePrep [Domain.Types.Booking]: alloc=20296 time=0.043
-CodeGen [Domain.Types.Booking]: alloc=362850232 time=105.676
-systool:as: alloc=106440 time=0.223
+Simplifier [Domain.Types.Booking]: alloc=114832632 time=38.499
+Demand analysis [Domain.Types.Booking]: alloc=51063032 time=12.893
+CoreTidy [Domain.Types.Booking]: alloc=32982736 time=32.574
+CorePrep [Domain.Types.Booking]: alloc=20296 time=0.026
+CodeGen [Domain.Types.Booking]: alloc=414343472 time=127.611
+systool:as: alloc=102872 time=0.316
+CorePrep [Domain.Types.Booking]: alloc=20296 time=0.017
+CodeGen [Domain.Types.Booking]: alloc=430992016 time=130.189
+systool:as: alloc=105720 time=0.282

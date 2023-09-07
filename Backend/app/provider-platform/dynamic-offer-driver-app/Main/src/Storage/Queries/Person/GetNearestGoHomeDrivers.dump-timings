@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=3978368 time=0.763
-Renamer/typechecker [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=85928656 time=32.068
-Desugar [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=13948728 time=3.870
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=113191896 time=33.010
-Specialise [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=7925264 time=1.923
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=34278776 time=10.070
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=106097120 time=37.440
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=79941800 time=24.730
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=95116864 time=28.244
-Float inwards [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=27064 time=0.032
-Called arity analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28640 time=0.008
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=95787648 time=35.196
-Demand analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=27300752 time=6.173
-Worker Wrapper binds [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=894168 time=0.505
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=122734376 time=35.500
-Exitification transformation [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=29584 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=30702592 time=8.900
-Common sub-expression [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28168 time=0.033
-Float inwards [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=27064 time=0.006
-Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=126774584 time=48.169
-Demand analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=36987600 time=7.804
-CoreTidy [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=11134784 time=3.864
-CorePrep [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28040 time=0.039
-CodeGen [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=290290360 time=77.287
-systool:as: alloc=105216 time=0.240
-CorePrep [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28040 time=0.018
-CodeGen [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=302649944 time=79.808
-systool:as: alloc=108088 time=0.259
+Parser [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=3978368 time=0.731
+Renamer/typechecker [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=85882992 time=35.870
+Desugar [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=13952808 time=4.002
+Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=59477648 time=18.675
+Specialise [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=9728888 time=2.663
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=39229896 time=12.196
+Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=159674352 time=52.689
+Float inwards [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=27064 time=0.010
+Called arity analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28640 time=0.007
+Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=53867632 time=15.670
+Demand analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=56682624 time=14.200
+Worker Wrapper binds [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=1578000 time=0.820
+Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=66851040 time=21.191
+Exitification transformation [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=29584 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=57372024 time=18.317
+Common sub-expression [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28168 time=0.007
+Float inwards [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=27064 time=0.005
+Simplifier [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=77921896 time=27.557
+Demand analysis [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=67478768 time=15.826
+CoreTidy [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=15744656 time=4.834
+CorePrep [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28040 time=0.013
+CodeGen [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=448270384 time=128.140
+systool:as: alloc=104488 time=0.232
+CorePrep [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=28040 time=0.015
+CodeGen [Storage.Queries.Person.GetNearestGoHomeDrivers]: alloc=465550536 time=129.432
+systool:as: alloc=107360 time=0.224

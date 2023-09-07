@@ -1,28 +1,26 @@
-Parser [Domain.Types.DriverReferral]: alloc=402720 time=0.160
-Renamer/typechecker [Domain.Types.DriverReferral]: alloc=16507992 time=6.650
-Desugar [Domain.Types.DriverReferral]: alloc=1531200 time=1.339
-Simplifier [Domain.Types.DriverReferral]: alloc=10197568 time=3.177
-Specialise [Domain.Types.DriverReferral]: alloc=349208 time=0.095
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverReferral]: alloc=1632552 time=0.519
-Simplifier [Domain.Types.DriverReferral]: alloc=8261144 time=2.527
-Simplifier [Domain.Types.DriverReferral]: alloc=8472776 time=2.555
-Simplifier [Domain.Types.DriverReferral]: alloc=1988648 time=0.614
+Parser [Domain.Types.DriverReferral]: alloc=402720 time=0.147
+Renamer/typechecker [Domain.Types.DriverReferral]: alloc=16512352 time=6.297
+Desugar [Domain.Types.DriverReferral]: alloc=1530840 time=1.280
+Simplifier [Domain.Types.DriverReferral]: alloc=4809784 time=1.584
+Specialise [Domain.Types.DriverReferral]: alloc=405512 time=0.101
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverReferral]: alloc=1860056 time=0.632
+Simplifier [Domain.Types.DriverReferral]: alloc=8778488 time=2.888
 Float inwards [Domain.Types.DriverReferral]: alloc=21416 time=0.004
-Called arity analysis [Domain.Types.DriverReferral]: alloc=22992 time=0.006
-Simplifier [Domain.Types.DriverReferral]: alloc=2525320 time=0.753
-Demand analysis [Domain.Types.DriverReferral]: alloc=1689992 time=0.453
-Worker Wrapper binds [Domain.Types.DriverReferral]: alloc=103088 time=0.042
-Simplifier [Domain.Types.DriverReferral]: alloc=6660616 time=1.909
+Called arity analysis [Domain.Types.DriverReferral]: alloc=22992 time=0.005
+Simplifier [Domain.Types.DriverReferral]: alloc=3236424 time=0.995
+Demand analysis [Domain.Types.DriverReferral]: alloc=2139264 time=0.597
+Worker Wrapper binds [Domain.Types.DriverReferral]: alloc=137592 time=0.055
+Simplifier [Domain.Types.DriverReferral]: alloc=4129744 time=1.322
 Exitification transformation [Domain.Types.DriverReferral]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverReferral]: alloc=1673960 time=0.492
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverReferral]: alloc=1999888 time=0.664
 Common sub-expression [Domain.Types.DriverReferral]: alloc=22520 time=0.005
 Float inwards [Domain.Types.DriverReferral]: alloc=21416 time=0.004
-Simplifier [Domain.Types.DriverReferral]: alloc=7440568 time=2.225
-Demand analysis [Domain.Types.DriverReferral]: alloc=2112568 time=0.530
-CoreTidy [Domain.Types.DriverReferral]: alloc=1358064 time=0.494
+Simplifier [Domain.Types.DriverReferral]: alloc=4924536 time=1.592
+Demand analysis [Domain.Types.DriverReferral]: alloc=2538648 time=0.639
+CoreTidy [Domain.Types.DriverReferral]: alloc=1383640 time=0.528
 CorePrep [Domain.Types.DriverReferral]: alloc=22376 time=0.009
-CodeGen [Domain.Types.DriverReferral]: alloc=30150776 time=9.670
-systool:as: alloc=104000 time=0.168
-CorePrep [Domain.Types.DriverReferral]: alloc=22376 time=0.017
-CodeGen [Domain.Types.DriverReferral]: alloc=31044408 time=9.892
-systool:as: alloc=106872 time=0.127
+CodeGen [Domain.Types.DriverReferral]: alloc=39105560 time=12.708
+systool:as: alloc=103264 time=0.173
+CorePrep [Domain.Types.DriverReferral]: alloc=22376 time=0.015
+CodeGen [Domain.Types.DriverReferral]: alloc=40314712 time=12.882
+systool:as: alloc=106144 time=0.173

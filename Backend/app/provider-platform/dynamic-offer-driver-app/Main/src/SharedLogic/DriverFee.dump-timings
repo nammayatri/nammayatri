@@ -1,28 +1,26 @@
-Parser [SharedLogic.DriverFee]: alloc=5176184 time=0.999
-Renamer/typechecker [SharedLogic.DriverFee]: alloc=331055096 time=76.115
-Desugar [SharedLogic.DriverFee]: alloc=313122608 time=55.826
-Simplifier [SharedLogic.DriverFee]: alloc=82638184 time=24.833
-Specialise [SharedLogic.DriverFee]: alloc=3763648 time=1.036
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverFee]: alloc=13667264 time=4.281
-Simplifier [SharedLogic.DriverFee]: alloc=53191056 time=20.054
-Simplifier [SharedLogic.DriverFee]: alloc=27805072 time=7.861
-Simplifier [SharedLogic.DriverFee]: alloc=48172744 time=14.093
+Parser [SharedLogic.DriverFee]: alloc=5176184 time=0.981
+Renamer/typechecker [SharedLogic.DriverFee]: alloc=331044976 time=77.930
+Desugar [SharedLogic.DriverFee]: alloc=313121888 time=53.489
+Simplifier [SharedLogic.DriverFee]: alloc=37076960 time=11.412
+Specialise [SharedLogic.DriverFee]: alloc=6153856 time=1.563
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverFee]: alloc=22610032 time=6.933
+Simplifier [SharedLogic.DriverFee]: alloc=71295976 time=21.076
 Float inwards [SharedLogic.DriverFee]: alloc=19624 time=0.005
-Called arity analysis [SharedLogic.DriverFee]: alloc=21200 time=0.006
-Simplifier [SharedLogic.DriverFee]: alloc=27205824 time=7.985
-Demand analysis [SharedLogic.DriverFee]: alloc=14260576 time=3.561
-Worker Wrapper binds [SharedLogic.DriverFee]: alloc=809560 time=0.374
-Simplifier [SharedLogic.DriverFee]: alloc=51562936 time=15.078
-Exitification transformation [SharedLogic.DriverFee]: alloc=22128 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverFee]: alloc=10427920 time=3.416
+Called arity analysis [SharedLogic.DriverFee]: alloc=21200 time=0.005
+Simplifier [SharedLogic.DriverFee]: alloc=18824232 time=5.201
+Demand analysis [SharedLogic.DriverFee]: alloc=16301552 time=3.876
+Worker Wrapper binds [SharedLogic.DriverFee]: alloc=776704 time=0.332
+Simplifier [SharedLogic.DriverFee]: alloc=23699544 time=6.709
+Exitification transformation [SharedLogic.DriverFee]: alloc=22128 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverFee]: alloc=13019808 time=3.995
 Common sub-expression [SharedLogic.DriverFee]: alloc=20728 time=0.005
 Float inwards [SharedLogic.DriverFee]: alloc=19624 time=0.004
-Simplifier [SharedLogic.DriverFee]: alloc=37585688 time=11.591
-Demand analysis [SharedLogic.DriverFee]: alloc=13034056 time=9.907
-CoreTidy [SharedLogic.DriverFee]: alloc=6804536 time=2.559
+Simplifier [SharedLogic.DriverFee]: alloc=28881960 time=8.483
+Demand analysis [SharedLogic.DriverFee]: alloc=15392560 time=3.850
+CoreTidy [SharedLogic.DriverFee]: alloc=6910984 time=2.274
 CorePrep [SharedLogic.DriverFee]: alloc=20584 time=0.010
-CodeGen [SharedLogic.DriverFee]: alloc=134114968 time=40.701
-systool:as: alloc=103632 time=0.235
-CorePrep [SharedLogic.DriverFee]: alloc=20584 time=0.015
-CodeGen [SharedLogic.DriverFee]: alloc=139868664 time=41.752
-systool:as: alloc=106504 time=0.217
+CodeGen [SharedLogic.DriverFee]: alloc=148627888 time=46.253
+systool:as: alloc=102896 time=0.206
+CorePrep [SharedLogic.DriverFee]: alloc=20584 time=0.016
+CodeGen [SharedLogic.DriverFee]: alloc=155270512 time=47.577
+systool:as: alloc=105792 time=0.214

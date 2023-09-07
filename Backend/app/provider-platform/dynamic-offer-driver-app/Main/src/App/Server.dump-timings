@@ -1,28 +1,26 @@
-Parser [App.Server]: alloc=745104 time=0.293
-Renamer/typechecker [App.Server]: alloc=786214320 time=213.755
-Desugar [App.Server]: alloc=2949408 time=1.500
-Simplifier [App.Server]: alloc=952430136 time=312.592
-Specialise [App.Server]: alloc=1917376192 time=340.830
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [App.Server]: alloc=305401784 time=137.247
-Simplifier [App.Server]: alloc=6005092008 time=2511.985
-Simplifier [App.Server]: alloc=5182845688 time=2304.826
-Simplifier [App.Server]: alloc=4940842296 time=2228.881
+Parser [App.Server]: alloc=745104 time=0.268
+Renamer/typechecker [App.Server]: alloc=786055160 time=243.757
+Desugar [App.Server]: alloc=2949648 time=1.571
+Simplifier [App.Server]: alloc=484095464 time=176.221
+Specialise [App.Server]: alloc=3830974224 time=679.474
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [App.Server]: alloc=322906240 time=155.205
+Simplifier [App.Server]: alloc=5334638816 time=2376.458
 Float inwards [App.Server]: alloc=16328 time=0.006
-Called arity analysis [App.Server]: alloc=17904 time=0.005
-Simplifier [App.Server]: alloc=8946954448 time=5612.202
-Demand analysis [App.Server]: alloc=1412306360 time=252.429
-Worker Wrapper binds [App.Server]: alloc=34382096 time=10.936
-Simplifier [App.Server]: alloc=5809891816 time=2473.339
+Called arity analysis [App.Server]: alloc=17904 time=0.006
+Simplifier [App.Server]: alloc=5418810976 time=1751.507
+Demand analysis [App.Server]: alloc=1434775664 time=330.293
+Worker Wrapper binds [App.Server]: alloc=34694136 time=14.406
+Simplifier [App.Server]: alloc=1600043032 time=786.675
 Exitification transformation [App.Server]: alloc=18848 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [App.Server]: alloc=638693440 time=255.834
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [App.Server]: alloc=676898048 time=342.971
 Common sub-expression [App.Server]: alloc=17432 time=0.006
 Float inwards [App.Server]: alloc=16328 time=0.004
-Simplifier [App.Server]: alloc=3912705336 time=1841.506
-Demand analysis [App.Server]: alloc=1231060712 time=220.495
-CoreTidy [App.Server]: alloc=411307280 time=217.521
-CorePrep [App.Server]: alloc=17320 time=0.015
-CodeGen [App.Server]: alloc=3699902408 time=1459.954
-systool:as: alloc=102912 time=0.300
-CorePrep [App.Server]: alloc=17320 time=0.029
-CodeGen [App.Server]: alloc=3880146040 time=1328.849
-systool:as: alloc=105792 time=0.278
+Simplifier [App.Server]: alloc=1828383000 time=1061.657
+Demand analysis [App.Server]: alloc=1338276080 time=295.812
+CoreTidy [App.Server]: alloc=428181704 time=206.464
+CorePrep [App.Server]: alloc=17320 time=0.018
+CodeGen [App.Server]: alloc=3718668560 time=1496.488
+systool:as: alloc=102184 time=0.258
+CorePrep [App.Server]: alloc=17320 time=0.016
+CodeGen [App.Server]: alloc=3901262496 time=1511.596
+systool:as: alloc=105064 time=0.398

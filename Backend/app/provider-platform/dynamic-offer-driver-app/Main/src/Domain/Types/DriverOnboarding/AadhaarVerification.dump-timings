@@ -1,28 +1,26 @@
-Parser [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=534152 time=0.167
-Renamer/typechecker [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=65672144 time=20.112
-Desugar [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=3806928 time=1.938
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=105998624 time=35.752
-Specialise [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=6371840 time=1.698
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=22811256 time=7.524
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=159274448 time=50.977
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=127841576 time=51.594
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=104279960 time=31.745
-Float inwards [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=27960 time=0.033
-Called arity analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=29536 time=0.007
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=77529400 time=21.981
-Demand analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=18019032 time=4.196
-Worker Wrapper binds [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=623464 time=0.425
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=90893480 time=25.747
-Exitification transformation [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=30464 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=19427984 time=6.233
-Common sub-expression [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=29064 time=0.019
-Float inwards [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=27960 time=0.004
-Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=67664016 time=18.645
-Demand analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=17229520 time=4.007
-CoreTidy [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=9067856 time=3.066
-CorePrep [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=28936 time=0.010
-CodeGen [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=124868840 time=36.989
-systool:as: alloc=105416 time=0.221
-CorePrep [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=28936 time=0.030
-CodeGen [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=130021120 time=39.763
-systool:as: alloc=108296 time=0.208
+Parser [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=534152 time=0.171
+Renamer/typechecker [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=65670184 time=19.329
+Desugar [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=3808728 time=1.877
+Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=57487272 time=19.952
+Specialise [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=14393600 time=4.731
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=30645432 time=11.154
+Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=432268920 time=174.374
+Float inwards [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=27960 time=0.006
+Called arity analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=29536 time=0.006
+Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=114210568 time=54.579
+Demand analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=57735928 time=15.354
+Worker Wrapper binds [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=1881416 time=1.312
+Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=119259072 time=45.757
+Exitification transformation [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=30464 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=61311024 time=21.570
+Common sub-expression [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=29064 time=0.008
+Float inwards [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=27960 time=0.005
+Simplifier [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=131780688 time=43.027
+Demand analysis [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=50784464 time=13.470
+CoreTidy [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=16149168 time=4.739
+CorePrep [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=28936 time=0.016
+CodeGen [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=178077088 time=57.350
+systool:as: alloc=104688 time=0.220
+CorePrep [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=28936 time=0.044
+CodeGen [Domain.Types.DriverOnboarding.AadhaarVerification]: alloc=185726584 time=59.575
+systool:as: alloc=107568 time=0.224

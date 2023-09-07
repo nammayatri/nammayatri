@@ -1,28 +1,26 @@
-Parser [SharedLogic.Merchant]: alloc=456728 time=0.201
-Renamer/typechecker [SharedLogic.Merchant]: alloc=15101960 time=6.283
-Desugar [SharedLogic.Merchant]: alloc=339896 time=0.823
-Simplifier [SharedLogic.Merchant]: alloc=18740104 time=4.071
-Specialise [SharedLogic.Merchant]: alloc=1241352 time=0.265
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Merchant]: alloc=5312264 time=1.167
-Simplifier [SharedLogic.Merchant]: alloc=33603952 time=6.755
-Simplifier [SharedLogic.Merchant]: alloc=13526424 time=2.661
-Simplifier [SharedLogic.Merchant]: alloc=6716808 time=1.222
-Float inwards [SharedLogic.Merchant]: alloc=19320 time=0.017
+Parser [SharedLogic.Merchant]: alloc=456728 time=0.189
+Renamer/typechecker [SharedLogic.Merchant]: alloc=15102456 time=6.731
+Desugar [SharedLogic.Merchant]: alloc=339896 time=0.876
+Simplifier [SharedLogic.Merchant]: alloc=7127544 time=1.730
+Specialise [SharedLogic.Merchant]: alloc=1724160 time=0.272
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Merchant]: alloc=7331448 time=1.586
+Simplifier [SharedLogic.Merchant]: alloc=27424736 time=5.692
+Float inwards [SharedLogic.Merchant]: alloc=19320 time=0.004
 Called arity analysis [SharedLogic.Merchant]: alloc=20896 time=0.006
-Simplifier [SharedLogic.Merchant]: alloc=21289216 time=3.882
-Demand analysis [SharedLogic.Merchant]: alloc=15093680 time=2.199
-Worker Wrapper binds [SharedLogic.Merchant]: alloc=119592 time=0.078
-Simplifier [SharedLogic.Merchant]: alloc=12432248 time=1.832
-Exitification transformation [SharedLogic.Merchant]: alloc=21840 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Merchant]: alloc=6154848 time=1.416
+Simplifier [SharedLogic.Merchant]: alloc=8441592 time=1.553
+Demand analysis [SharedLogic.Merchant]: alloc=15139872 time=2.050
+Worker Wrapper binds [SharedLogic.Merchant]: alloc=119936 time=0.062
+Simplifier [SharedLogic.Merchant]: alloc=12466680 time=1.801
+Exitification transformation [SharedLogic.Merchant]: alloc=21840 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Merchant]: alloc=6145328 time=1.332
 Common sub-expression [SharedLogic.Merchant]: alloc=20424 time=0.004
 Float inwards [SharedLogic.Merchant]: alloc=19320 time=0.004
-Simplifier [SharedLogic.Merchant]: alloc=28824824 time=4.711
-Demand analysis [SharedLogic.Merchant]: alloc=15098960 time=2.253
-CoreTidy [SharedLogic.Merchant]: alloc=4723424 time=1.071
-CorePrep [SharedLogic.Merchant]: alloc=20296 time=0.010
-CodeGen [SharedLogic.Merchant]: alloc=72019640 time=15.858
-systool:as: alloc=103592 time=0.224
-CorePrep [SharedLogic.Merchant]: alloc=20296 time=0.014
-CodeGen [SharedLogic.Merchant]: alloc=73317912 time=15.955
-systool:as: alloc=106440 time=0.206
+Simplifier [SharedLogic.Merchant]: alloc=16850152 time=2.717
+Demand analysis [SharedLogic.Merchant]: alloc=15097776 time=2.073
+CoreTidy [SharedLogic.Merchant]: alloc=4566456 time=0.871
+CorePrep [SharedLogic.Merchant]: alloc=20296 time=0.009
+CodeGen [SharedLogic.Merchant]: alloc=71890688 time=15.870
+systool:as: alloc=102840 time=0.185
+CorePrep [SharedLogic.Merchant]: alloc=20296 time=0.013
+CodeGen [SharedLogic.Merchant]: alloc=73306440 time=16.246
+systool:as: alloc=105712 time=0.185

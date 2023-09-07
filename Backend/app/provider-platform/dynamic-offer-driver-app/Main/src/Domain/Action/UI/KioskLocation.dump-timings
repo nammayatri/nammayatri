@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.KioskLocation]: alloc=1142072 time=0.382
-Renamer/typechecker [Domain.Action.UI.KioskLocation]: alloc=375457128 time=69.360
-Desugar [Domain.Action.UI.KioskLocation]: alloc=148507992 time=23.104
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=34590728 time=7.867
-Specialise [Domain.Action.UI.KioskLocation]: alloc=1850040 time=0.382
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.KioskLocation]: alloc=6080904 time=1.342
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=36660160 time=7.280
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=15908144 time=3.045
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=15560360 time=3.073
-Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.017
+Parser [Domain.Action.UI.KioskLocation]: alloc=1142072 time=0.408
+Renamer/typechecker [Domain.Action.UI.KioskLocation]: alloc=375464008 time=75.613
+Desugar [Domain.Action.UI.KioskLocation]: alloc=148508672 time=24.695
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=12880680 time=3.336
+Specialise [Domain.Action.UI.KioskLocation]: alloc=2622352 time=0.511
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.KioskLocation]: alloc=9087480 time=2.149
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=30056176 time=6.250
+Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.005
 Called arity analysis [Domain.Action.UI.KioskLocation]: alloc=23872 time=0.005
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=32924768 time=6.293
-Demand analysis [Domain.Action.UI.KioskLocation]: alloc=16024064 time=2.357
-Worker Wrapper binds [Domain.Action.UI.KioskLocation]: alloc=168208 time=0.109
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=26550328 time=4.196
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=10484896 time=2.079
+Demand analysis [Domain.Action.UI.KioskLocation]: alloc=16344352 time=2.421
+Worker Wrapper binds [Domain.Action.UI.KioskLocation]: alloc=163152 time=0.080
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=13967864 time=2.334
 Exitification transformation [Domain.Action.UI.KioskLocation]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.KioskLocation]: alloc=6997208 time=1.673
-Common sub-expression [Domain.Action.UI.KioskLocation]: alloc=23400 time=0.005
-Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.017
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=30800624 time=5.214
-Demand analysis [Domain.Action.UI.KioskLocation]: alloc=15908480 time=2.356
-CoreTidy [Domain.Action.UI.KioskLocation]: alloc=5009248 time=1.163
-CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.007
-CodeGen [Domain.Action.UI.KioskLocation]: alloc=81909560 time=18.585
-systool:as: alloc=104208 time=0.227
-CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.015
-CodeGen [Domain.Action.UI.KioskLocation]: alloc=83723664 time=19.168
-systool:as: alloc=107080 time=0.173
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.KioskLocation]: alloc=7047624 time=1.624
+Common sub-expression [Domain.Action.UI.KioskLocation]: alloc=23400 time=0.004
+Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.004
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=18254624 time=3.255
+Demand analysis [Domain.Action.UI.KioskLocation]: alloc=15915800 time=2.259
+CoreTidy [Domain.Action.UI.KioskLocation]: alloc=4855264 time=1.055
+CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.008
+CodeGen [Domain.Action.UI.KioskLocation]: alloc=82107280 time=19.101
+systool:as: alloc=103480 time=0.196
+CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.017
+CodeGen [Domain.Action.UI.KioskLocation]: alloc=83928744 time=20.038
+systool:as: alloc=106352 time=0.179

@@ -1,28 +1,26 @@
-Parser [API.UI.Driver]: alloc=7743120 time=1.190
-Renamer/typechecker [API.UI.Driver]: alloc=430889880 time=91.459
-Desugar [API.UI.Driver]: alloc=2014360 time=1.377
-Simplifier [API.UI.Driver]: alloc=315979968 time=95.572
-Specialise [API.UI.Driver]: alloc=9673984 time=8.460
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Driver]: alloc=26497384 time=10.152
-Simplifier [API.UI.Driver]: alloc=302731448 time=88.790
-Simplifier [API.UI.Driver]: alloc=36584632 time=10.954
-Simplifier [API.UI.Driver]: alloc=36584632 time=10.788
+Parser [API.UI.Driver]: alloc=7743120 time=1.185
+Renamer/typechecker [API.UI.Driver]: alloc=430828712 time=98.117
+Desugar [API.UI.Driver]: alloc=2014480 time=1.435
+Simplifier [API.UI.Driver]: alloc=165463960 time=54.484
+Specialise [API.UI.Driver]: alloc=15155808 time=8.710
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Driver]: alloc=30051848 time=13.138
+Simplifier [API.UI.Driver]: alloc=329040592 time=108.459
 Float inwards [API.UI.Driver]: alloc=17240 time=0.005
 Called arity analysis [API.UI.Driver]: alloc=18816 time=0.006
-Simplifier [API.UI.Driver]: alloc=94953504 time=31.148
-Demand analysis [API.UI.Driver]: alloc=51880136 time=9.822
-Worker Wrapper binds [API.UI.Driver]: alloc=739712 time=0.392
-Simplifier [API.UI.Driver]: alloc=536140712 time=165.868
+Simplifier [API.UI.Driver]: alloc=59081672 time=28.826
+Demand analysis [API.UI.Driver]: alloc=54535472 time=14.891
+Worker Wrapper binds [API.UI.Driver]: alloc=871872 time=0.478
+Simplifier [API.UI.Driver]: alloc=95880024 time=21.949
 Exitification transformation [API.UI.Driver]: alloc=19744 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Driver]: alloc=26186464 time=10.280
-Common sub-expression [API.UI.Driver]: alloc=18344 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Driver]: alloc=40690352 time=14.561
+Common sub-expression [API.UI.Driver]: alloc=18344 time=0.008
 Float inwards [API.UI.Driver]: alloc=17240 time=0.004
-Simplifier [API.UI.Driver]: alloc=174617896 time=52.835
-Demand analysis [API.UI.Driver]: alloc=55377144 time=12.729
-CoreTidy [API.UI.Driver]: alloc=35305088 time=11.082
-CorePrep [API.UI.Driver]: alloc=18200 time=0.013
-CodeGen [API.UI.Driver]: alloc=256794640 time=61.963
-systool:as: alloc=103128 time=0.247
-CorePrep [API.UI.Driver]: alloc=18200 time=0.015
-CodeGen [API.UI.Driver]: alloc=264481552 time=65.092
-systool:as: alloc=106000 time=0.231
+Simplifier [API.UI.Driver]: alloc=270864352 time=100.000
+Demand analysis [API.UI.Driver]: alloc=61442064 time=21.623
+CoreTidy [API.UI.Driver]: alloc=48774936 time=15.278
+CorePrep [API.UI.Driver]: alloc=18200 time=0.027
+CodeGen [API.UI.Driver]: alloc=269039824 time=90.453
+systool:as: alloc=102392 time=0.208
+CorePrep [API.UI.Driver]: alloc=18200 time=0.016
+CodeGen [API.UI.Driver]: alloc=277181624 time=74.852
+systool:as: alloc=105264 time=0.190

@@ -1,28 +1,26 @@
-Parser [Lib.Utils]: alloc=10112872 time=1.390
-Renamer/typechecker [Lib.Utils]: alloc=116314624 time=28.466
-Desugar [Lib.Utils]: alloc=165607968 time=35.656
-Simplifier [Lib.Utils]: alloc=33514288 time=10.094
-Specialise [Lib.Utils]: alloc=1702808 time=0.560
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.Utils]: alloc=5495208 time=1.709
-Simplifier [Lib.Utils]: alloc=67183256 time=23.060
-Simplifier [Lib.Utils]: alloc=54795528 time=15.574
-Simplifier [Lib.Utils]: alloc=36906544 time=10.607
+Parser [Lib.Utils]: alloc=10112872 time=1.253
+Renamer/typechecker [Lib.Utils]: alloc=116313160 time=27.627
+Desugar [Lib.Utils]: alloc=165597048 time=35.021
+Simplifier [Lib.Utils]: alloc=11882784 time=3.578
+Specialise [Lib.Utils]: alloc=2033016 time=0.667
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.Utils]: alloc=6780632 time=2.018
+Simplifier [Lib.Utils]: alloc=55590272 time=16.373
 Float inwards [Lib.Utils]: alloc=16040 time=0.004
 Called arity analysis [Lib.Utils]: alloc=17616 time=0.005
-Simplifier [Lib.Utils]: alloc=26813568 time=7.103
-Demand analysis [Lib.Utils]: alloc=20565992 time=4.734
-Worker Wrapper binds [Lib.Utils]: alloc=5006920 time=1.049
-Simplifier [Lib.Utils]: alloc=135067176 time=41.963
-Exitification transformation [Lib.Utils]: alloc=18544 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.Utils]: alloc=20841792 time=6.589
+Simplifier [Lib.Utils]: alloc=26559784 time=7.410
+Demand analysis [Lib.Utils]: alloc=19676112 time=4.456
+Worker Wrapper binds [Lib.Utils]: alloc=2628208 time=0.697
+Simplifier [Lib.Utils]: alloc=50223184 time=12.556
+Exitification transformation [Lib.Utils]: alloc=18544 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.Utils]: alloc=29739104 time=9.000
 Common sub-expression [Lib.Utils]: alloc=17144 time=0.006
 Float inwards [Lib.Utils]: alloc=16040 time=0.004
-Simplifier [Lib.Utils]: alloc=59144664 time=17.843
-Demand analysis [Lib.Utils]: alloc=20931720 time=4.757
-CoreTidy [Lib.Utils]: alloc=10464384 time=3.251
-CorePrep [Lib.Utils]: alloc=17016 time=0.022
-CodeGen [Lib.Utils]: alloc=158485928 time=48.459
-systool:as: alloc=102848 time=0.219
-CorePrep [Lib.Utils]: alloc=17016 time=0.015
-CodeGen [Lib.Utils]: alloc=165284128 time=46.104
-systool:as: alloc=105728 time=0.179
+Simplifier [Lib.Utils]: alloc=40177968 time=13.629
+Demand analysis [Lib.Utils]: alloc=21027632 time=5.114
+CoreTidy [Lib.Utils]: alloc=7933304 time=3.023
+CorePrep [Lib.Utils]: alloc=17016 time=0.037
+CodeGen [Lib.Utils]: alloc=177319920 time=52.622
+systool:as: alloc=102144 time=0.241
+CorePrep [Lib.Utils]: alloc=17016 time=0.017
+CodeGen [Lib.Utils]: alloc=185150456 time=55.402
+systool:as: alloc=105000 time=0.198

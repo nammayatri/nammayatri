@@ -1,28 +1,26 @@
-Parser [API.Beckn.Search]: alloc=1649160 time=0.450
-Renamer/typechecker [API.Beckn.Search]: alloc=169753880 time=41.645
-Desugar [API.Beckn.Search]: alloc=1026400 time=1.321
-Simplifier [API.Beckn.Search]: alloc=177806384 time=69.099
-Specialise [API.Beckn.Search]: alloc=4889960 time=3.457
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Search]: alloc=19073888 time=7.474
-Simplifier [API.Beckn.Search]: alloc=254152824 time=90.412
-Simplifier [API.Beckn.Search]: alloc=140466384 time=57.459
-Simplifier [API.Beckn.Search]: alloc=164888360 time=67.889
+Parser [API.Beckn.Search]: alloc=1649160 time=0.514
+Renamer/typechecker [API.Beckn.Search]: alloc=169727512 time=42.326
+Desugar [API.Beckn.Search]: alloc=1026920 time=1.152
+Simplifier [API.Beckn.Search]: alloc=99014312 time=30.804
+Specialise [API.Beckn.Search]: alloc=6591344 time=4.243
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Search]: alloc=22791536 time=9.042
+Simplifier [API.Beckn.Search]: alloc=317291576 time=107.419
 Float inwards [API.Beckn.Search]: alloc=18120 time=0.005
 Called arity analysis [API.Beckn.Search]: alloc=19696 time=0.006
-Simplifier [API.Beckn.Search]: alloc=128383112 time=46.542
-Demand analysis [API.Beckn.Search]: alloc=54348128 time=21.226
-Worker Wrapper binds [API.Beckn.Search]: alloc=857688 time=0.565
-Simplifier [API.Beckn.Search]: alloc=388781944 time=159.898
-Exitification transformation [API.Beckn.Search]: alloc=20640 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Search]: alloc=36373080 time=23.331
-Common sub-expression [API.Beckn.Search]: alloc=19224 time=0.006
+Simplifier [API.Beckn.Search]: alloc=63208512 time=28.770
+Demand analysis [API.Beckn.Search]: alloc=71646232 time=17.407
+Worker Wrapper binds [API.Beckn.Search]: alloc=1262640 time=0.817
+Simplifier [API.Beckn.Search]: alloc=93131008 time=26.202
+Exitification transformation [API.Beckn.Search]: alloc=20640 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Search]: alloc=60120144 time=19.880
+Common sub-expression [API.Beckn.Search]: alloc=19224 time=0.008
 Float inwards [API.Beckn.Search]: alloc=18120 time=0.004
-Simplifier [API.Beckn.Search]: alloc=139591296 time=42.570
-Demand analysis [API.Beckn.Search]: alloc=58007456 time=19.210
-CoreTidy [API.Beckn.Search]: alloc=26079056 time=7.487
-CorePrep [API.Beckn.Search]: alloc=19112 time=0.011
-CodeGen [API.Beckn.Search]: alloc=246473240 time=77.488
-systool:as: alloc=103336 time=0.244
-CorePrep [API.Beckn.Search]: alloc=19112 time=0.027
-CodeGen [API.Beckn.Search]: alloc=254899096 time=65.527
-systool:as: alloc=106192 time=0.200
+Simplifier [API.Beckn.Search]: alloc=217622864 time=78.551
+Demand analysis [API.Beckn.Search]: alloc=77518328 time=22.531
+CoreTidy [API.Beckn.Search]: alloc=34890368 time=10.910
+CorePrep [API.Beckn.Search]: alloc=19112 time=0.016
+CodeGen [API.Beckn.Search]: alloc=328895072 time=123.470
+systool:as: alloc=102584 time=0.180
+CorePrep [API.Beckn.Search]: alloc=19112 time=0.016
+CodeGen [API.Beckn.Search]: alloc=339807152 time=90.844
+systool:as: alloc=105488 time=0.227

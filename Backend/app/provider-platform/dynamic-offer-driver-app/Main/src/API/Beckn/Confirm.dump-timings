@@ -1,28 +1,26 @@
-Parser [API.Beckn.Confirm]: alloc=2877848 time=0.690
-Renamer/typechecker [API.Beckn.Confirm]: alloc=2855677064 time=469.918
-Desugar [API.Beckn.Confirm]: alloc=4774249728 time=702.977
-Simplifier [API.Beckn.Confirm]: alloc=330476288 time=107.583
-Specialise [API.Beckn.Confirm]: alloc=12734160 time=8.724
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Confirm]: alloc=33819208 time=16.011
-Simplifier [API.Beckn.Confirm]: alloc=396396816 time=144.024
-Simplifier [API.Beckn.Confirm]: alloc=87929016 time=26.679
-Simplifier [API.Beckn.Confirm]: alloc=190282008 time=61.947
-Float inwards [API.Beckn.Confirm]: alloc=18424 time=0.005
+Parser [API.Beckn.Confirm]: alloc=2877848 time=0.771
+Renamer/typechecker [API.Beckn.Confirm]: alloc=2855624480 time=528.948
+Desugar [API.Beckn.Confirm]: alloc=4774249208 time=781.332
+Simplifier [API.Beckn.Confirm]: alloc=173084176 time=55.994
+Specialise [API.Beckn.Confirm]: alloc=20408408 time=9.533
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Confirm]: alloc=38233608 time=15.553
+Simplifier [API.Beckn.Confirm]: alloc=428441728 time=150.197
+Float inwards [API.Beckn.Confirm]: alloc=18424 time=0.004
 Called arity analysis [API.Beckn.Confirm]: alloc=20000 time=0.006
-Simplifier [API.Beckn.Confirm]: alloc=159514600 time=54.396
-Demand analysis [API.Beckn.Confirm]: alloc=70853088 time=13.387
-Worker Wrapper binds [API.Beckn.Confirm]: alloc=870128 time=0.570
-Simplifier [API.Beckn.Confirm]: alloc=567472080 time=209.911
-Exitification transformation [API.Beckn.Confirm]: alloc=20928 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Confirm]: alloc=42202184 time=13.346
+Simplifier [API.Beckn.Confirm]: alloc=79051888 time=49.957
+Demand analysis [API.Beckn.Confirm]: alloc=91015408 time=22.604
+Worker Wrapper binds [API.Beckn.Confirm]: alloc=1370112 time=0.975
+Simplifier [API.Beckn.Confirm]: alloc=120580040 time=44.241
+Exitification transformation [API.Beckn.Confirm]: alloc=20928 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Confirm]: alloc=72370848 time=26.193
 Common sub-expression [API.Beckn.Confirm]: alloc=19528 time=0.006
 Float inwards [API.Beckn.Confirm]: alloc=18424 time=0.004
-Simplifier [API.Beckn.Confirm]: alloc=194041800 time=65.185
-Demand analysis [API.Beckn.Confirm]: alloc=78484712 time=15.160
-CoreTidy [API.Beckn.Confirm]: alloc=43494944 time=11.074
-CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.013
-CodeGen [API.Beckn.Confirm]: alloc=383605440 time=88.531
-systool:as: alloc=103376 time=0.244
+Simplifier [API.Beckn.Confirm]: alloc=303813096 time=135.896
+Demand analysis [API.Beckn.Confirm]: alloc=100274808 time=26.944
+CoreTidy [API.Beckn.Confirm]: alloc=57178624 time=16.580
 CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.018
-CodeGen [API.Beckn.Confirm]: alloc=395414680 time=90.390
-systool:as: alloc=106256 time=0.193
+CodeGen [API.Beckn.Confirm]: alloc=472292768 time=125.058
+systool:as: alloc=102640 time=0.232
+CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.018
+CodeGen [API.Beckn.Confirm]: alloc=486575576 time=123.658
+systool:as: alloc=105544 time=0.246

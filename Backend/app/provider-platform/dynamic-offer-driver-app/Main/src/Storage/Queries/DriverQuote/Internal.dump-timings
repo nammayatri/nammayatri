@@ -1,28 +1,26 @@
-Parser [Storage.Queries.DriverQuote.Internal]: alloc=606952 time=0.226
-Renamer/typechecker [Storage.Queries.DriverQuote.Internal]: alloc=77491280 time=22.999
-Desugar [Storage.Queries.DriverQuote.Internal]: alloc=822720 time=1.026
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=89147624 time=25.008
-Specialise [Storage.Queries.DriverQuote.Internal]: alloc=678248 time=0.393
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverQuote.Internal]: alloc=2182176 time=0.610
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=10107752 time=2.927
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9667216 time=2.860
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9518592 time=2.676
+Parser [Storage.Queries.DriverQuote.Internal]: alloc=606952 time=0.235
+Renamer/typechecker [Storage.Queries.DriverQuote.Internal]: alloc=77500960 time=23.293
+Desugar [Storage.Queries.DriverQuote.Internal]: alloc=822880 time=1.071
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=77433352 time=21.129
+Specialise [Storage.Queries.DriverQuote.Internal]: alloc=6566280 time=2.294
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverQuote.Internal]: alloc=8035216 time=2.881
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=111858048 time=36.455
 Float inwards [Storage.Queries.DriverQuote.Internal]: alloc=24088 time=0.005
-Called arity analysis [Storage.Queries.DriverQuote.Internal]: alloc=25664 time=0.006
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=6001992 time=1.580
-Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=2125776 time=0.636
-Worker Wrapper binds [Storage.Queries.DriverQuote.Internal]: alloc=122976 time=0.100
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=9993560 time=2.837
-Exitification transformation [Storage.Queries.DriverQuote.Internal]: alloc=26608 time=0.018
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverQuote.Internal]: alloc=2056880 time=0.531
+Called arity analysis [Storage.Queries.DriverQuote.Internal]: alloc=25664 time=0.010
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=22531224 time=6.932
+Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=7027840 time=2.144
+Worker Wrapper binds [Storage.Queries.DriverQuote.Internal]: alloc=461080 time=0.232
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=19812656 time=6.184
+Exitification transformation [Storage.Queries.DriverQuote.Internal]: alloc=26608 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverQuote.Internal]: alloc=7116064 time=2.374
 Common sub-expression [Storage.Queries.DriverQuote.Internal]: alloc=25192 time=0.005
-Float inwards [Storage.Queries.DriverQuote.Internal]: alloc=24088 time=0.004
-Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=11016216 time=3.159
-Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=2187008 time=0.618
-CoreTidy [Storage.Queries.DriverQuote.Internal]: alloc=4120344 time=1.140
-CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.012
-CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=35996176 time=12.160
-systool:as: alloc=104624 time=0.189
-CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.015
-CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=37843664 time=12.785
-systool:as: alloc=107496 time=0.182
+Float inwards [Storage.Queries.DriverQuote.Internal]: alloc=24088 time=0.005
+Simplifier [Storage.Queries.DriverQuote.Internal]: alloc=32503480 time=9.422
+Demand analysis [Storage.Queries.DriverQuote.Internal]: alloc=8727336 time=2.280
+CoreTidy [Storage.Queries.DriverQuote.Internal]: alloc=5991904 time=1.887
+CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.011
+CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=35478560 time=13.139
+systool:as: alloc=103896 time=0.202
+CorePrep [Storage.Queries.DriverQuote.Internal]: alloc=25064 time=0.016
+CodeGen [Storage.Queries.DriverQuote.Internal]: alloc=37464992 time=13.634
+systool:as: alloc=106768 time=0.193

@@ -1,28 +1,26 @@
-Parser [Tools.Ticket]: alloc=1123696 time=0.308
-Renamer/typechecker [Tools.Ticket]: alloc=366111320 time=64.117
-Desugar [Tools.Ticket]: alloc=797511424 time=118.915
-Simplifier [Tools.Ticket]: alloc=9456488 time=3.079
-Specialise [Tools.Ticket]: alloc=681624 time=0.198
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Ticket]: alloc=2290040 time=0.581
-Simplifier [Tools.Ticket]: alloc=4318936 time=1.168
-Simplifier [Tools.Ticket]: alloc=4698368 time=1.121
-Simplifier [Tools.Ticket]: alloc=2110760 time=0.528
+Parser [Tools.Ticket]: alloc=1123696 time=0.330
+Renamer/typechecker [Tools.Ticket]: alloc=366116112 time=65.988
+Desugar [Tools.Ticket]: alloc=797538984 time=125.089
+Simplifier [Tools.Ticket]: alloc=5242664 time=2.229
+Specialise [Tools.Ticket]: alloc=796072 time=0.218
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Ticket]: alloc=2707392 time=0.732
+Simplifier [Tools.Ticket]: alloc=11048024 time=3.328
 Float inwards [Tools.Ticket]: alloc=16936 time=0.004
 Called arity analysis [Tools.Ticket]: alloc=18512 time=0.004
-Simplifier [Tools.Ticket]: alloc=6488800 time=1.298
-Demand analysis [Tools.Ticket]: alloc=2824728 time=0.591
-Worker Wrapper binds [Tools.Ticket]: alloc=235008 time=0.094
-Simplifier [Tools.Ticket]: alloc=4310360 time=1.055
+Simplifier [Tools.Ticket]: alloc=5745304 time=1.497
+Demand analysis [Tools.Ticket]: alloc=4995600 time=1.085
+Worker Wrapper binds [Tools.Ticket]: alloc=280784 time=0.104
+Simplifier [Tools.Ticket]: alloc=4084784 time=1.317
 Exitification transformation [Tools.Ticket]: alloc=19456 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Ticket]: alloc=1992904 time=0.483
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Ticket]: alloc=3685008 time=1.039
 Common sub-expression [Tools.Ticket]: alloc=18040 time=0.004
 Float inwards [Tools.Ticket]: alloc=16936 time=0.003
-Simplifier [Tools.Ticket]: alloc=5541096 time=1.336
-Demand analysis [Tools.Ticket]: alloc=2320912 time=0.449
-CoreTidy [Tools.Ticket]: alloc=650864 time=0.273
+Simplifier [Tools.Ticket]: alloc=5493480 time=1.515
+Demand analysis [Tools.Ticket]: alloc=4299312 time=0.898
+CoreTidy [Tools.Ticket]: alloc=905272 time=0.407
 CorePrep [Tools.Ticket]: alloc=17912 time=0.008
-CodeGen [Tools.Ticket]: alloc=19667912 time=6.107
-systool:as: alloc=103048 time=0.188
+CodeGen [Tools.Ticket]: alloc=29529016 time=9.095
+systool:as: alloc=102344 time=0.185
 CorePrep [Tools.Ticket]: alloc=17912 time=0.010
-CodeGen [Tools.Ticket]: alloc=20843984 time=6.260
-systool:as: alloc=105920 time=0.136
+CodeGen [Tools.Ticket]: alloc=30984368 time=9.267
+systool:as: alloc=105192 time=0.151

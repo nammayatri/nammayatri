@@ -1,28 +1,26 @@
-Parser [Storage.Queries.DriverInformation]: alloc=9420824 time=1.668
-Renamer/typechecker [Storage.Queries.DriverInformation]: alloc=1890560744 time=544.730
-Desugar [Storage.Queries.DriverInformation]: alloc=87608816 time=17.458
-Simplifier [Storage.Queries.DriverInformation]: alloc=2644592376 time=764.972
-Specialise [Storage.Queries.DriverInformation]: alloc=97136352 time=26.414
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverInformation]: alloc=90167064 time=30.421
-Simplifier [Storage.Queries.DriverInformation]: alloc=1298327352 time=460.449
-Simplifier [Storage.Queries.DriverInformation]: alloc=958599712 time=352.696
-Simplifier [Storage.Queries.DriverInformation]: alloc=926449232 time=368.212
-Float inwards [Storage.Queries.DriverInformation]: alloc=23192 time=0.033
-Called arity analysis [Storage.Queries.DriverInformation]: alloc=24768 time=0.006
-Simplifier [Storage.Queries.DriverInformation]: alloc=759684776 time=262.503
-Demand analysis [Storage.Queries.DriverInformation]: alloc=132592416 time=31.466
-Worker Wrapper binds [Storage.Queries.DriverInformation]: alloc=5407184 time=3.132
-Simplifier [Storage.Queries.DriverInformation]: alloc=987490632 time=380.651
-Exitification transformation [Storage.Queries.DriverInformation]: alloc=25696 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverInformation]: alloc=117610240 time=33.903
+Parser [Storage.Queries.DriverInformation]: alloc=9420824 time=1.792
+Renamer/typechecker [Storage.Queries.DriverInformation]: alloc=1890677640 time=566.085
+Desugar [Storage.Queries.DriverInformation]: alloc=87600896 time=17.659
+Simplifier [Storage.Queries.DriverInformation]: alloc=2001383736 time=666.870
+Specialise [Storage.Queries.DriverInformation]: alloc=278935584 time=87.290
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverInformation]: alloc=198968520 time=105.406
+Simplifier [Storage.Queries.DriverInformation]: alloc=1480856176 time=606.276
+Float inwards [Storage.Queries.DriverInformation]: alloc=23192 time=0.006
+Called arity analysis [Storage.Queries.DriverInformation]: alloc=24768 time=0.005
+Simplifier [Storage.Queries.DriverInformation]: alloc=395909720 time=129.724
+Demand analysis [Storage.Queries.DriverInformation]: alloc=167184624 time=51.088
+Worker Wrapper binds [Storage.Queries.DriverInformation]: alloc=6229872 time=2.373
+Simplifier [Storage.Queries.DriverInformation]: alloc=297823968 time=132.396
+Exitification transformation [Storage.Queries.DriverInformation]: alloc=25696 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverInformation]: alloc=141559104 time=69.653
 Common sub-expression [Storage.Queries.DriverInformation]: alloc=24296 time=0.008
 Float inwards [Storage.Queries.DriverInformation]: alloc=23192 time=0.004
-Simplifier [Storage.Queries.DriverInformation]: alloc=493877440 time=198.197
-Demand analysis [Storage.Queries.DriverInformation]: alloc=73578616 time=20.044
-CoreTidy [Storage.Queries.DriverInformation]: alloc=46423144 time=19.092
-CorePrep [Storage.Queries.DriverInformation]: alloc=24168 time=0.039
-CodeGen [Storage.Queries.DriverInformation]: alloc=501326528 time=183.384
-systool:as: alloc=104384 time=0.269
-CorePrep [Storage.Queries.DriverInformation]: alloc=24168 time=0.017
-CodeGen [Storage.Queries.DriverInformation]: alloc=538749424 time=156.784
-systool:as: alloc=107264 time=0.261
+Simplifier [Storage.Queries.DriverInformation]: alloc=310575064 time=129.819
+Demand analysis [Storage.Queries.DriverInformation]: alloc=106810736 time=33.637
+CoreTidy [Storage.Queries.DriverInformation]: alloc=53608968 time=36.935
+CorePrep [Storage.Queries.DriverInformation]: alloc=24168 time=0.015
+CodeGen [Storage.Queries.DriverInformation]: alloc=603342664 time=242.125
+systool:as: alloc=103648 time=0.277
+CorePrep [Storage.Queries.DriverInformation]: alloc=24168 time=0.018
+CodeGen [Storage.Queries.DriverInformation]: alloc=643955944 time=221.534
+systool:as: alloc=106528 time=0.258

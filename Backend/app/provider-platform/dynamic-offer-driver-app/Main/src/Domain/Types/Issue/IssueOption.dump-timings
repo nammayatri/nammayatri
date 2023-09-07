@@ -1,28 +1,26 @@
-Parser [Domain.Types.Issue.IssueOption]: alloc=408152 time=0.153
-Renamer/typechecker [Domain.Types.Issue.IssueOption]: alloc=27386936 time=9.672
-Desugar [Domain.Types.Issue.IssueOption]: alloc=1624800 time=1.242
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=42565792 time=15.645
-Specialise [Domain.Types.Issue.IssueOption]: alloc=2226096 time=0.652
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueOption]: alloc=10265424 time=3.479
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=76884784 time=30.611
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=72360272 time=28.053
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=64382488 time=23.830
-Float inwards [Domain.Types.Issue.IssueOption]: alloc=22296 time=0.005
+Parser [Domain.Types.Issue.IssueOption]: alloc=408152 time=0.132
+Renamer/typechecker [Domain.Types.Issue.IssueOption]: alloc=27389096 time=9.491
+Desugar [Domain.Types.Issue.IssueOption]: alloc=1623200 time=1.276
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=21823600 time=7.674
+Specialise [Domain.Types.Issue.IssueOption]: alloc=5181152 time=1.843
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueOption]: alloc=13916192 time=5.121
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=148397624 time=63.707
+Float inwards [Domain.Types.Issue.IssueOption]: alloc=22296 time=0.006
 Called arity analysis [Domain.Types.Issue.IssueOption]: alloc=23872 time=0.006
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=46671720 time=16.380
-Demand analysis [Domain.Types.Issue.IssueOption]: alloc=10866496 time=3.605
-Worker Wrapper binds [Domain.Types.Issue.IssueOption]: alloc=381344 time=0.199
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=52080984 time=18.872
-Exitification transformation [Domain.Types.Issue.IssueOption]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueOption]: alloc=10775536 time=3.928
-Common sub-expression [Domain.Types.Issue.IssueOption]: alloc=23400 time=0.005
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=37780056 time=14.242
+Demand analysis [Domain.Types.Issue.IssueOption]: alloc=19723432 time=5.999
+Worker Wrapper binds [Domain.Types.Issue.IssueOption]: alloc=639880 time=5.136
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=38946680 time=12.549
+Exitification transformation [Domain.Types.Issue.IssueOption]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueOption]: alloc=20978776 time=7.822
+Common sub-expression [Domain.Types.Issue.IssueOption]: alloc=23400 time=0.007
 Float inwards [Domain.Types.Issue.IssueOption]: alloc=22296 time=0.004
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=38441880 time=14.849
-Demand analysis [Domain.Types.Issue.IssueOption]: alloc=10112728 time=3.141
-CoreTidy [Domain.Types.Issue.IssueOption]: alloc=4798280 time=2.219
-CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.012
-CodeGen [Domain.Types.Issue.IssueOption]: alloc=71252512 time=24.562
-systool:as: alloc=104208 time=0.213
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=45927064 time=23.329
+Demand analysis [Domain.Types.Issue.IssueOption]: alloc=18614712 time=5.175
+CoreTidy [Domain.Types.Issue.IssueOption]: alloc=6941616 time=2.801
+CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.010
+CodeGen [Domain.Types.Issue.IssueOption]: alloc=98351088 time=37.067
+systool:as: alloc=103480 time=0.196
 CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.017
-CodeGen [Domain.Types.Issue.IssueOption]: alloc=74153488 time=24.875
-systool:as: alloc=107080 time=0.252
+CodeGen [Domain.Types.Issue.IssueOption]: alloc=102539336 time=36.100
+systool:as: alloc=106376 time=0.208

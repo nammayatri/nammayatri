@@ -1,37 +1,35 @@
 Parser [Domain.Types.RegistrationToken]: alloc=1215168 time=0.329
-Simplify [expr]: alloc=34464 time=0.029
-CorePrep [expr]: alloc=22952 time=0.021
-ByteCodeGen [Ghci1]: alloc=94056 time=0.064
-Simplify [expr]: alloc=34464 time=0.040
+Simplify [expr]: alloc=34464 time=0.022
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Simplify [expr]: alloc=34464 time=0.015
 CorePrep [expr]: alloc=22952 time=0.013
-ByteCodeGen [Ghci1]: alloc=94056 time=0.037
-Simplify [expr]: alloc=34464 time=0.040
+ByteCodeGen [Ghci1]: alloc=94056 time=0.035
+Simplify [expr]: alloc=34464 time=0.013
 CorePrep [expr]: alloc=22952 time=0.012
-ByteCodeGen [Ghci1]: alloc=94056 time=0.034
-Renamer/typechecker [Domain.Types.RegistrationToken]: alloc=129056672 time=42.592
-Desugar [Domain.Types.RegistrationToken]: alloc=131616352 time=29.249
-Simplifier [Domain.Types.RegistrationToken]: alloc=162676856 time=49.555
-Specialise [Domain.Types.RegistrationToken]: alloc=7275872 time=1.874
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistrationToken]: alloc=26613936 time=8.299
-Simplifier [Domain.Types.RegistrationToken]: alloc=181064640 time=66.086
-Simplifier [Domain.Types.RegistrationToken]: alloc=191673072 time=60.598
-Simplifier [Domain.Types.RegistrationToken]: alloc=159255744 time=71.462
-Float inwards [Domain.Types.RegistrationToken]: alloc=22296 time=0.006
-Called arity analysis [Domain.Types.RegistrationToken]: alloc=23872 time=0.032
-Simplifier [Domain.Types.RegistrationToken]: alloc=122264160 time=35.699
-Demand analysis [Domain.Types.RegistrationToken]: alloc=32672672 time=7.615
-Worker Wrapper binds [Domain.Types.RegistrationToken]: alloc=4476368 time=1.168
-Simplifier [Domain.Types.RegistrationToken]: alloc=203700272 time=56.513
+ByteCodeGen [Ghci1]: alloc=94056 time=0.032
+Renamer/typechecker [Domain.Types.RegistrationToken]: alloc=129097440 time=43.919
+Desugar [Domain.Types.RegistrationToken]: alloc=131626072 time=30.019
+Simplifier [Domain.Types.RegistrationToken]: alloc=71836312 time=22.671
+Specialise [Domain.Types.RegistrationToken]: alloc=12220056 time=3.931
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistrationToken]: alloc=32751104 time=11.031
+Simplifier [Domain.Types.RegistrationToken]: alloc=279738672 time=112.072
+Float inwards [Domain.Types.RegistrationToken]: alloc=22296 time=0.005
+Called arity analysis [Domain.Types.RegistrationToken]: alloc=23872 time=0.006
+Simplifier [Domain.Types.RegistrationToken]: alloc=73107504 time=32.450
+Demand analysis [Domain.Types.RegistrationToken]: alloc=44469112 time=10.577
+Worker Wrapper binds [Domain.Types.RegistrationToken]: alloc=3128192 time=1.208
+Simplifier [Domain.Types.RegistrationToken]: alloc=99349824 time=29.240
 Exitification transformation [Domain.Types.RegistrationToken]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistrationToken]: alloc=29966640 time=9.645
-Common sub-expression [Domain.Types.RegistrationToken]: alloc=23400 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistrationToken]: alloc=49902936 time=15.783
+Common sub-expression [Domain.Types.RegistrationToken]: alloc=23400 time=0.006
 Float inwards [Domain.Types.RegistrationToken]: alloc=22296 time=0.004
-Simplifier [Domain.Types.RegistrationToken]: alloc=115795584 time=63.535
-Demand analysis [Domain.Types.RegistrationToken]: alloc=28319800 time=6.818
-CoreTidy [Domain.Types.RegistrationToken]: alloc=20528296 time=6.911
-CorePrep [Domain.Types.RegistrationToken]: alloc=23272 time=0.039
-CodeGen [Domain.Types.RegistrationToken]: alloc=296378568 time=95.094
-systool:as: alloc=104176 time=0.241
+Simplifier [Domain.Types.RegistrationToken]: alloc=101290384 time=31.930
+Demand analysis [Domain.Types.RegistrationToken]: alloc=41557864 time=10.290
+CoreTidy [Domain.Types.RegistrationToken]: alloc=22501688 time=9.382
+CorePrep [Domain.Types.RegistrationToken]: alloc=23272 time=0.012
+CodeGen [Domain.Types.RegistrationToken]: alloc=457436056 time=154.289
+systool:as: alloc=103456 time=0.200
 CorePrep [Domain.Types.RegistrationToken]: alloc=23272 time=0.017
-CodeGen [Domain.Types.RegistrationToken]: alloc=306064720 time=90.219
-systool:as: alloc=107072 time=0.272
+CodeGen [Domain.Types.RegistrationToken]: alloc=476992408 time=149.946
+systool:as: alloc=106328 time=0.217

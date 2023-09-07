@@ -1,28 +1,26 @@
-Parser [SharedLogic.DeleteDriver]: alloc=2331616 time=0.519
-Renamer/typechecker [SharedLogic.DeleteDriver]: alloc=321914120 time=67.548
-Desugar [SharedLogic.DeleteDriver]: alloc=51917168 time=10.565
-Simplifier [SharedLogic.DeleteDriver]: alloc=115123056 time=32.982
-Specialise [SharedLogic.DeleteDriver]: alloc=4465496 time=2.192
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DeleteDriver]: alloc=14691104 time=5.032
-Simplifier [SharedLogic.DeleteDriver]: alloc=146789984 time=40.920
-Simplifier [SharedLogic.DeleteDriver]: alloc=59652720 time=16.268
-Simplifier [SharedLogic.DeleteDriver]: alloc=82579224 time=22.474
-Float inwards [SharedLogic.DeleteDriver]: alloc=20504 time=0.004
+Parser [SharedLogic.DeleteDriver]: alloc=2331616 time=0.670
+Renamer/typechecker [SharedLogic.DeleteDriver]: alloc=321922520 time=78.038
+Desugar [SharedLogic.DeleteDriver]: alloc=51917008 time=10.533
+Simplifier [SharedLogic.DeleteDriver]: alloc=52907552 time=16.305
+Specialise [SharedLogic.DeleteDriver]: alloc=6822480 time=2.702
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DeleteDriver]: alloc=21272488 time=6.921
+Simplifier [SharedLogic.DeleteDriver]: alloc=165350984 time=60.336
+Float inwards [SharedLogic.DeleteDriver]: alloc=20504 time=0.005
 Called arity analysis [SharedLogic.DeleteDriver]: alloc=22080 time=0.006
-Simplifier [SharedLogic.DeleteDriver]: alloc=71033912 time=20.852
-Demand analysis [SharedLogic.DeleteDriver]: alloc=31512440 time=6.349
-Worker Wrapper binds [SharedLogic.DeleteDriver]: alloc=1248880 time=0.494
-Simplifier [SharedLogic.DeleteDriver]: alloc=143711896 time=41.266
-Exitification transformation [SharedLogic.DeleteDriver]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DeleteDriver]: alloc=15718192 time=4.471
-Common sub-expression [SharedLogic.DeleteDriver]: alloc=21608 time=0.006
-Float inwards [SharedLogic.DeleteDriver]: alloc=20504 time=0.004
-Simplifier [SharedLogic.DeleteDriver]: alloc=66618240 time=17.791
-Demand analysis [SharedLogic.DeleteDriver]: alloc=31444592 time=5.503
-CoreTidy [SharedLogic.DeleteDriver]: alloc=8551592 time=2.661
-CorePrep [SharedLogic.DeleteDriver]: alloc=21496 time=0.041
-CodeGen [SharedLogic.DeleteDriver]: alloc=186826184 time=41.542
-systool:as: alloc=103808 time=0.178
-CorePrep [SharedLogic.DeleteDriver]: alloc=21496 time=0.015
-CodeGen [SharedLogic.DeleteDriver]: alloc=192914080 time=43.361
-systool:as: alloc=106688 time=0.188
+Simplifier [SharedLogic.DeleteDriver]: alloc=39355432 time=12.436
+Demand analysis [SharedLogic.DeleteDriver]: alloc=39483104 time=9.118
+Worker Wrapper binds [SharedLogic.DeleteDriver]: alloc=1482176 time=0.605
+Simplifier [SharedLogic.DeleteDriver]: alloc=40786440 time=11.809
+Exitification transformation [SharedLogic.DeleteDriver]: alloc=23024 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DeleteDriver]: alloc=23186008 time=13.816
+Common sub-expression [SharedLogic.DeleteDriver]: alloc=21608 time=0.007
+Float inwards [SharedLogic.DeleteDriver]: alloc=20504 time=0.005
+Simplifier [SharedLogic.DeleteDriver]: alloc=74739752 time=24.915
+Demand analysis [SharedLogic.DeleteDriver]: alloc=37664120 time=8.736
+CoreTidy [SharedLogic.DeleteDriver]: alloc=9183824 time=3.334
+CorePrep [SharedLogic.DeleteDriver]: alloc=21496 time=0.012
+CodeGen [SharedLogic.DeleteDriver]: alloc=210672512 time=63.193
+systool:as: alloc=103080 time=0.212
+CorePrep [SharedLogic.DeleteDriver]: alloc=21496 time=0.016
+CodeGen [SharedLogic.DeleteDriver]: alloc=217316720 time=56.155
+systool:as: alloc=105960 time=0.216

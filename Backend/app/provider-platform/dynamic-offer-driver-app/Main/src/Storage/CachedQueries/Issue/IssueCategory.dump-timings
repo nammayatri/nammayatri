@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Issue.IssueCategory]: alloc=2949648 time=0.560
-Renamer/typechecker [Storage.CachedQueries.Issue.IssueCategory]: alloc=1021771152 time=167.058
-Desugar [Storage.CachedQueries.Issue.IssueCategory]: alloc=696878432 time=104.055
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=34343864 time=7.138
-Specialise [Storage.CachedQueries.Issue.IssueCategory]: alloc=4121792 time=1.079
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=17440568 time=4.431
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=172899024 time=47.805
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=586884216 time=227.817
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=534455488 time=192.990
+Parser [Storage.CachedQueries.Issue.IssueCategory]: alloc=2949648 time=0.558
+Renamer/typechecker [Storage.CachedQueries.Issue.IssueCategory]: alloc=1021815800 time=184.478
+Desugar [Storage.CachedQueries.Issue.IssueCategory]: alloc=696927712 time=110.299
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=15149360 time=3.284
+Specialise [Storage.CachedQueries.Issue.IssueCategory]: alloc=4296520 time=1.161
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=17748728 time=4.694
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=633590632 time=234.033
 Float inwards [Storage.CachedQueries.Issue.IssueCategory]: alloc=25576 time=0.005
-Called arity analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=27152 time=0.019
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=325104016 time=114.052
-Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=138906520 time=30.370
-Worker Wrapper binds [Storage.CachedQueries.Issue.IssueCategory]: alloc=6603864 time=2.542
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=519787552 time=198.065
-Exitification transformation [Storage.CachedQueries.Issue.IssueCategory]: alloc=28080 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=113131904 time=32.279
-Common sub-expression [Storage.CachedQueries.Issue.IssueCategory]: alloc=26680 time=0.034
-Float inwards [Storage.CachedQueries.Issue.IssueCategory]: alloc=25576 time=0.004
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=143437232 time=45.257
-Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=71296744 time=14.934
-CoreTidy [Storage.CachedQueries.Issue.IssueCategory]: alloc=11272752 time=4.825
-CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.038
-CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=330442144 time=93.664
-systool:as: alloc=104928 time=0.286
-CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.018
-CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=343840120 time=92.406
-systool:as: alloc=107808 time=0.259
+Called arity analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=27152 time=0.006
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=110327656 time=63.115
+Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=95807416 time=23.636
+Worker Wrapper binds [Storage.CachedQueries.Issue.IssueCategory]: alloc=4624928 time=1.918
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=134062720 time=42.903
+Exitification transformation [Storage.CachedQueries.Issue.IssueCategory]: alloc=28080 time=0.010
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=91498520 time=27.064
+Common sub-expression [Storage.CachedQueries.Issue.IssueCategory]: alloc=26680 time=0.007
+Float inwards [Storage.CachedQueries.Issue.IssueCategory]: alloc=25576 time=0.005
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=115462632 time=39.402
+Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=78354456 time=17.962
+CoreTidy [Storage.CachedQueries.Issue.IssueCategory]: alloc=13307368 time=6.474
+CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.025
+CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=379800968 time=106.813
+systool:as: alloc=104192 time=0.263
+CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.029
+CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=397551424 time=113.247
+systool:as: alloc=107096 time=0.275

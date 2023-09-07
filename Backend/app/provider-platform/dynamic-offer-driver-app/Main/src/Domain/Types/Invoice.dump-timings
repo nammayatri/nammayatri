@@ -1,31 +1,29 @@
-Parser [Domain.Types.Invoice]: alloc=978672 time=0.348
-Simplify [expr]: alloc=34464 time=0.046
-CorePrep [expr]: alloc=22952 time=0.030
-ByteCodeGen [Ghci1]: alloc=94056 time=0.047
-Renamer/typechecker [Domain.Types.Invoice]: alloc=108717464 time=35.872
-Desugar [Domain.Types.Invoice]: alloc=45279752 time=11.205
-Simplifier [Domain.Types.Invoice]: alloc=165183304 time=60.426
-Specialise [Domain.Types.Invoice]: alloc=14738200 time=3.768
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Invoice]: alloc=28666688 time=9.568
-Simplifier [Domain.Types.Invoice]: alloc=226974104 time=87.125
-Simplifier [Domain.Types.Invoice]: alloc=193191528 time=77.785
-Simplifier [Domain.Types.Invoice]: alloc=187512232 time=79.854
-Float inwards [Domain.Types.Invoice]: alloc=19320 time=0.005
-Called arity analysis [Domain.Types.Invoice]: alloc=20896 time=0.006
-Simplifier [Domain.Types.Invoice]: alloc=147753008 time=55.183
-Demand analysis [Domain.Types.Invoice]: alloc=37895784 time=9.199
-Worker Wrapper binds [Domain.Types.Invoice]: alloc=2260416 time=0.987
-Simplifier [Domain.Types.Invoice]: alloc=173317664 time=66.104
-Exitification transformation [Domain.Types.Invoice]: alloc=21840 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Invoice]: alloc=34453760 time=11.068
-Common sub-expression [Domain.Types.Invoice]: alloc=20424 time=0.007
+Parser [Domain.Types.Invoice]: alloc=978672 time=0.334
+Simplify [expr]: alloc=34464 time=0.030
+CorePrep [expr]: alloc=22952 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.073
+Renamer/typechecker [Domain.Types.Invoice]: alloc=108716112 time=35.592
+Desugar [Domain.Types.Invoice]: alloc=45269872 time=11.074
+Simplifier [Domain.Types.Invoice]: alloc=84965816 time=29.262
+Specialise [Domain.Types.Invoice]: alloc=21825000 time=7.230
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Invoice]: alloc=40456152 time=15.080
+Simplifier [Domain.Types.Invoice]: alloc=498136984 time=200.138
 Float inwards [Domain.Types.Invoice]: alloc=19320 time=0.004
-Simplifier [Domain.Types.Invoice]: alloc=164617208 time=68.251
-Demand analysis [Domain.Types.Invoice]: alloc=33872776 time=14.833
-CoreTidy [Domain.Types.Invoice]: alloc=17508768 time=5.290
-CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.026
-CodeGen [Domain.Types.Invoice]: alloc=276833752 time=94.283
-systool:as: alloc=103568 time=0.237
-CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.015
-CodeGen [Domain.Types.Invoice]: alloc=287732216 time=90.195
-systool:as: alloc=106440 time=0.145
+Called arity analysis [Domain.Types.Invoice]: alloc=20896 time=0.006
+Simplifier [Domain.Types.Invoice]: alloc=132396848 time=44.177
+Demand analysis [Domain.Types.Invoice]: alloc=69094656 time=18.292
+Worker Wrapper binds [Domain.Types.Invoice]: alloc=2653768 time=1.513
+Simplifier [Domain.Types.Invoice]: alloc=138046024 time=63.671
+Exitification transformation [Domain.Types.Invoice]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Invoice]: alloc=75366232 time=26.084
+Common sub-expression [Domain.Types.Invoice]: alloc=20424 time=0.006
+Float inwards [Domain.Types.Invoice]: alloc=19320 time=0.004
+Simplifier [Domain.Types.Invoice]: alloc=153906112 time=76.133
+Demand analysis [Domain.Types.Invoice]: alloc=61020800 time=16.201
+CoreTidy [Domain.Types.Invoice]: alloc=24405096 time=10.009
+CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.014
+CodeGen [Domain.Types.Invoice]: alloc=365625304 time=113.440
+systool:as: alloc=102872 time=0.247
+CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.019
+CodeGen [Domain.Types.Invoice]: alloc=382678880 time=131.258
+systool:as: alloc=105720 time=0.237

@@ -1,34 +1,32 @@
-Parser [Storage.Beam.RegistrationToken]: alloc=1975576 time=0.409
-Simplify [expr]: alloc=246216 time=0.085
-CorePrep [expr]: alloc=96344 time=0.056
-ByteCodeGen [Ghci1]: alloc=527152 time=0.169
-Simplify [expr]: alloc=47024 time=0.033
-CorePrep [expr]: alloc=26752 time=0.014
-ByteCodeGen [Ghci1]: alloc=131880 time=0.063
-Renamer/typechecker [Storage.Beam.RegistrationToken]: alloc=301207080 time=77.598
-Desugar [Storage.Beam.RegistrationToken]: alloc=32734936 time=8.519
-Simplifier [Storage.Beam.RegistrationToken]: alloc=565111984 time=167.105
-Specialise [Storage.Beam.RegistrationToken]: alloc=30803864 time=13.771
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RegistrationToken]: alloc=94917568 time=30.351
-Simplifier [Storage.Beam.RegistrationToken]: alloc=919009184 time=309.119
-Simplifier [Storage.Beam.RegistrationToken]: alloc=788972488 time=271.475
-Simplifier [Storage.Beam.RegistrationToken]: alloc=721450888 time=252.332
-Float inwards [Storage.Beam.RegistrationToken]: alloc=22296 time=0.004
+Parser [Storage.Beam.RegistrationToken]: alloc=1975576 time=0.430
+Simplify [expr]: alloc=246296 time=0.085
+CorePrep [expr]: alloc=96464 time=0.074
+ByteCodeGen [Ghci1]: alloc=527112 time=0.125
+Simplify [expr]: alloc=47024 time=0.021
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.054
+Renamer/typechecker [Storage.Beam.RegistrationToken]: alloc=301327816 time=83.565
+Desugar [Storage.Beam.RegistrationToken]: alloc=32761576 time=9.366
+Simplifier [Storage.Beam.RegistrationToken]: alloc=177080720 time=55.057
+Specialise [Storage.Beam.RegistrationToken]: alloc=82916792 time=22.827
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RegistrationToken]: alloc=127989256 time=49.316
+Simplifier [Storage.Beam.RegistrationToken]: alloc=1842221944 time=699.335
+Float inwards [Storage.Beam.RegistrationToken]: alloc=22296 time=0.005
 Called arity analysis [Storage.Beam.RegistrationToken]: alloc=23872 time=0.006
-Simplifier [Storage.Beam.RegistrationToken]: alloc=561414432 time=184.155
-Demand analysis [Storage.Beam.RegistrationToken]: alloc=78450760 time=29.324
-Worker Wrapper binds [Storage.Beam.RegistrationToken]: alloc=2788968 time=2.694
-Simplifier [Storage.Beam.RegistrationToken]: alloc=764137432 time=253.793
-Exitification transformation [Storage.Beam.RegistrationToken]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RegistrationToken]: alloc=70259208 time=21.468
-Common sub-expression [Storage.Beam.RegistrationToken]: alloc=23400 time=0.008
-Float inwards [Storage.Beam.RegistrationToken]: alloc=22296 time=0.017
-Simplifier [Storage.Beam.RegistrationToken]: alloc=582307968 time=189.957
-Demand analysis [Storage.Beam.RegistrationToken]: alloc=69201976 time=27.564
-CoreTidy [Storage.Beam.RegistrationToken]: alloc=110702920 time=40.165
-CorePrep [Storage.Beam.RegistrationToken]: alloc=23272 time=0.029
-CodeGen [Storage.Beam.RegistrationToken]: alloc=616045272 time=229.240
-systool:as: alloc=104176 time=0.264
-CorePrep [Storage.Beam.RegistrationToken]: alloc=23272 time=0.016
-CodeGen [Storage.Beam.RegistrationToken]: alloc=645648168 time=189.563
-systool:as: alloc=107048 time=0.277
+Simplifier [Storage.Beam.RegistrationToken]: alloc=552469072 time=214.283
+Demand analysis [Storage.Beam.RegistrationToken]: alloc=447750960 time=106.195
+Worker Wrapper binds [Storage.Beam.RegistrationToken]: alloc=11236096 time=7.566
+Simplifier [Storage.Beam.RegistrationToken]: alloc=612689680 time=237.305
+Exitification transformation [Storage.Beam.RegistrationToken]: alloc=24816 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RegistrationToken]: alloc=379760664 time=171.133
+Common sub-expression [Storage.Beam.RegistrationToken]: alloc=23400 time=0.006
+Float inwards [Storage.Beam.RegistrationToken]: alloc=22296 time=0.004
+Simplifier [Storage.Beam.RegistrationToken]: alloc=635567944 time=234.178
+Demand analysis [Storage.Beam.RegistrationToken]: alloc=407950632 time=104.820
+CoreTidy [Storage.Beam.RegistrationToken]: alloc=169857672 time=67.284
+CorePrep [Storage.Beam.RegistrationToken]: alloc=23272 time=0.042
+CodeGen [Storage.Beam.RegistrationToken]: alloc=2133452416 time=704.499
+systool:as: alloc=103456 time=0.342
+CorePrep [Storage.Beam.RegistrationToken]: alloc=23272 time=0.044
+CodeGen [Storage.Beam.RegistrationToken]: alloc=2199990040 time=669.741
+systool:as: alloc=106328 time=0.258

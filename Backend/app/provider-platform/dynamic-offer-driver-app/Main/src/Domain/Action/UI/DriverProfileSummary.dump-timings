@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.DriverProfileSummary]: alloc=4227360 time=0.919
-Renamer/typechecker [Domain.Action.UI.DriverProfileSummary]: alloc=341170512 time=94.444
-Desugar [Domain.Action.UI.DriverProfileSummary]: alloc=225804632 time=39.642
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=379571224 time=113.522
-Specialise [Domain.Action.UI.DriverProfileSummary]: alloc=43927792 time=9.728
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverProfileSummary]: alloc=52939816 time=17.124
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=368185736 time=144.486
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=284453536 time=96.873
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=233995640 time=73.884
+Parser [Domain.Action.UI.DriverProfileSummary]: alloc=4227360 time=0.902
+Renamer/typechecker [Domain.Action.UI.DriverProfileSummary]: alloc=341193984 time=102.252
+Desugar [Domain.Action.UI.DriverProfileSummary]: alloc=225814032 time=39.230
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=178652520 time=58.563
+Specialise [Domain.Action.UI.DriverProfileSummary]: alloc=44896376 time=14.117
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverProfileSummary]: alloc=81163136 time=28.332
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=1786118640 time=747.978
 Float inwards [Domain.Action.UI.DriverProfileSummary]: alloc=24392 time=0.005
-Called arity analysis [Domain.Action.UI.DriverProfileSummary]: alloc=25968 time=0.007
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=185469896 time=74.381
-Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=46864008 time=10.662
-Worker Wrapper binds [Domain.Action.UI.DriverProfileSummary]: alloc=1478424 time=0.837
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=260515752 time=78.425
-Exitification transformation [Domain.Action.UI.DriverProfileSummary]: alloc=26896 time=0.012
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverProfileSummary]: alloc=45814768 time=12.699
-Common sub-expression [Domain.Action.UI.DriverProfileSummary]: alloc=25496 time=0.006
-Float inwards [Domain.Action.UI.DriverProfileSummary]: alloc=24392 time=0.004
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=152723288 time=44.994
-Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=41707856 time=9.977
-CoreTidy [Domain.Action.UI.DriverProfileSummary]: alloc=24837376 time=8.654
-CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.012
-CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=332695448 time=90.924
-systool:as: alloc=104640 time=0.209
-CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.041
-CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=347596544 time=93.306
-systool:as: alloc=107536 time=0.243
+Called arity analysis [Domain.Action.UI.DriverProfileSummary]: alloc=25968 time=0.006
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=440901392 time=185.348
+Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=263081792 time=74.051
+Worker Wrapper binds [Domain.Action.UI.DriverProfileSummary]: alloc=9216952 time=4.754
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=464997080 time=188.332
+Exitification transformation [Domain.Action.UI.DriverProfileSummary]: alloc=26896 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverProfileSummary]: alloc=249282080 time=141.508
+Common sub-expression [Domain.Action.UI.DriverProfileSummary]: alloc=25496 time=0.010
+Float inwards [Domain.Action.UI.DriverProfileSummary]: alloc=24392 time=0.005
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=437966160 time=147.538
+Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=166915224 time=46.547
+CoreTidy [Domain.Action.UI.DriverProfileSummary]: alloc=42655624 time=16.570
+CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.014
+CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=431375592 time=128.490
+systool:as: alloc=103904 time=0.216
+CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.016
+CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=450595000 time=132.332
+systool:as: alloc=106776 time=0.238

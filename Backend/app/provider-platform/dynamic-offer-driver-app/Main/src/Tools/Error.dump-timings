@@ -1,71 +1,20 @@
-Parser [Tools.Error]: alloc=17828704 time=3.031
-Simplify [expr]: alloc=55952 time=0.049
-CorePrep [expr]: alloc=31288 time=0.017
-ByteCodeGen [Ghci1]: alloc=167768 time=0.086
-Simplify [expr]: alloc=55952 time=0.018
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.048
+Parser [Tools.Error]: alloc=17795872 time=2.990
+Simplify [expr]: alloc=55952 time=0.023
+CorePrep [expr]: alloc=31288 time=0.019
+ByteCodeGen [Ghci1]: alloc=167768 time=0.066
+Simplify [expr]: alloc=55952 time=0.021
+CorePrep [expr]: alloc=31288 time=0.018
+ByteCodeGen [Ghci1]: alloc=167768 time=0.058
 Simplify [expr]: alloc=55952 time=0.017
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.050
-Simplify [expr]: alloc=55952 time=0.044
-CorePrep [expr]: alloc=31288 time=0.015
-ByteCodeGen [Ghci1]: alloc=167768 time=0.061
-Simplify [expr]: alloc=55952 time=0.043
-CorePrep [expr]: alloc=31288 time=0.026
-ByteCodeGen [Ghci1]: alloc=167768 time=0.061
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.044
-Simplify [expr]: alloc=55952 time=0.024
-CorePrep [expr]: alloc=31288 time=0.024
-ByteCodeGen [Ghci1]: alloc=167768 time=0.042
-Simplify [expr]: alloc=55952 time=0.015
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.040
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.044
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.043
-Simplify [expr]: alloc=55952 time=0.018
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.046
-Simplify [expr]: alloc=55952 time=0.042
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.042
-Simplify [expr]: alloc=55952 time=0.041
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.041
-Simplify [expr]: alloc=55952 time=0.015
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.043
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.043
-Simplify [expr]: alloc=55952 time=0.015
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.043
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.042
-Simplify [expr]: alloc=55952 time=0.015
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.062
-Simplify [expr]: alloc=55952 time=0.020
 CorePrep [expr]: alloc=31288 time=0.014
 ByteCodeGen [Ghci1]: alloc=167768 time=0.046
-Simplify [expr]: alloc=55952 time=0.018
-CorePrep [expr]: alloc=31288 time=0.013
-ByteCodeGen [Ghci1]: alloc=167768 time=0.041
-Simplify [expr]: alloc=55952 time=0.015
+Simplify [expr]: alloc=55952 time=0.016
 CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.042
-Simplify [expr]: alloc=55952 time=0.015
+ByteCodeGen [Ghci1]: alloc=167768 time=0.044
+Simplify [expr]: alloc=55952 time=0.016
 CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.042
-Simplify [expr]: alloc=55952 time=0.015
+ByteCodeGen [Ghci1]: alloc=167768 time=0.044
+Simplify [expr]: alloc=55952 time=0.016
 CorePrep [expr]: alloc=31288 time=0.012
 ByteCodeGen [Ghci1]: alloc=167768 time=0.041
 Simplify [expr]: alloc=55952 time=0.016
@@ -73,40 +22,89 @@ CorePrep [expr]: alloc=31288 time=0.012
 ByteCodeGen [Ghci1]: alloc=167768 time=0.043
 Simplify [expr]: alloc=55952 time=0.016
 CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.041
-Simplify [expr]: alloc=55952 time=0.016
-CorePrep [expr]: alloc=31288 time=0.012
 ByteCodeGen [Ghci1]: alloc=167768 time=0.042
 Simplify [expr]: alloc=55952 time=0.015
-CorePrep [expr]: alloc=31288 time=0.012
-ByteCodeGen [Ghci1]: alloc=167768 time=0.043
-Simplify [expr]: alloc=55952 time=0.022
 CorePrep [expr]: alloc=31288 time=0.016
-ByteCodeGen [Ghci1]: alloc=167768 time=0.051
-Renamer/typechecker [Tools.Error]: alloc=189532296 time=97.311
-Desugar [Tools.Error]: alloc=18145336 time=5.185
-Simplifier [Tools.Error]: alloc=281972624 time=88.401
-Specialise [Tools.Error]: alloc=13351816 time=2.501
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Error]: alloc=41920280 time=12.409
-Simplifier [Tools.Error]: alloc=383251856 time=127.933
-Simplifier [Tools.Error]: alloc=354716280 time=128.296
-Simplifier [Tools.Error]: alloc=689119912 time=257.209
-Float inwards [Tools.Error]: alloc=16648 time=0.004
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.042
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.011
+ByteCodeGen [Ghci1]: alloc=167768 time=0.047
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.017
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.045
+Simplify [expr]: alloc=55952 time=0.017
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.046
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.042
+Simplify [expr]: alloc=55952 time=0.018
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.047
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.047
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.018
+CorePrep [expr]: alloc=31288 time=0.021
+ByteCodeGen [Ghci1]: alloc=167768 time=0.048
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.042
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.045
+Simplify [expr]: alloc=55952 time=0.017
+CorePrep [expr]: alloc=31288 time=0.020
+ByteCodeGen [Ghci1]: alloc=167768 time=0.048
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.011
+ByteCodeGen [Ghci1]: alloc=167768 time=0.044
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.011
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.012
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.011
+ByteCodeGen [Ghci1]: alloc=167768 time=0.042
+Simplify [expr]: alloc=55952 time=0.015
+CorePrep [expr]: alloc=31288 time=0.011
+ByteCodeGen [Ghci1]: alloc=167768 time=0.043
+Simplify [expr]: alloc=55952 time=0.016
+CorePrep [expr]: alloc=31288 time=0.020
+ByteCodeGen [Ghci1]: alloc=167768 time=0.054
+Renamer/typechecker [Tools.Error]: alloc=189288168 time=98.621
+Desugar [Tools.Error]: alloc=18126176 time=5.506
+Simplifier [Tools.Error]: alloc=117266808 time=38.296
+Specialise [Tools.Error]: alloc=26973976 time=7.025
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Error]: alloc=51672832 time=18.179
+Simplifier [Tools.Error]: alloc=1801618472 time=763.876
+Float inwards [Tools.Error]: alloc=16648 time=0.005
 Called arity analysis [Tools.Error]: alloc=18224 time=0.005
-Simplifier [Tools.Error]: alloc=507285832 time=174.769
-Demand analysis [Tools.Error]: alloc=201889512 time=45.081
-Worker Wrapper binds [Tools.Error]: alloc=4452608 time=3.284
-Simplifier [Tools.Error]: alloc=744521752 time=280.529
+Simplifier [Tools.Error]: alloc=621243328 time=244.463
+Demand analysis [Tools.Error]: alloc=775314736 time=204.237
+Worker Wrapper binds [Tools.Error]: alloc=16809568 time=5.662
+Simplifier [Tools.Error]: alloc=757354880 time=323.395
 Exitification transformation [Tools.Error]: alloc=19136 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Error]: alloc=204322336 time=80.408
-Common sub-expression [Tools.Error]: alloc=17752 time=0.006
-Float inwards [Tools.Error]: alloc=16648 time=0.003
-Simplifier [Tools.Error]: alloc=437933592 time=158.447
-Demand analysis [Tools.Error]: alloc=308614080 time=61.507
-CoreTidy [Tools.Error]: alloc=61917640 time=42.248
-CorePrep [Tools.Error]: alloc=17608 time=0.041
-CodeGen [Tools.Error]: alloc=1934021096 time=563.774
-systool:as: alloc=102992 time=0.311
-CorePrep [Tools.Error]: alloc=17608 time=0.021
-CodeGen [Tools.Error]: alloc=2001801744 time=555.043
-systool:as: alloc=105864 time=0.338
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Error]: alloc=717895808 time=304.842
+Common sub-expression [Tools.Error]: alloc=17752 time=0.007
+Float inwards [Tools.Error]: alloc=16648 time=0.004
+Simplifier [Tools.Error]: alloc=874756328 time=387.194
+Demand analysis [Tools.Error]: alloc=920357520 time=218.383
+CoreTidy [Tools.Error]: alloc=148599088 time=74.859
+CorePrep [Tools.Error]: alloc=17608 time=0.015
+CodeGen [Tools.Error]: alloc=4730930800 time=1619.266
+systool:as: alloc=102248 time=0.313
+CorePrep [Tools.Error]: alloc=17608 time=0.018
+CodeGen [Tools.Error]: alloc=4869489528 time=1636.222
+systool:as: alloc=105128 time=0.319

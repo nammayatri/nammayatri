@@ -1,31 +1,29 @@
-Parser [Domain.Types.BookingCancellationReason]: alloc=1073888 time=0.306
-Simplify [expr]: alloc=34464 time=0.033
+Parser [Domain.Types.BookingCancellationReason]: alloc=1073888 time=0.330
+Simplify [expr]: alloc=34464 time=0.017
 CorePrep [expr]: alloc=22952 time=0.018
-ByteCodeGen [Ghci1]: alloc=94056 time=0.063
-Renamer/typechecker [Domain.Types.BookingCancellationReason]: alloc=80061864 time=25.702
-Desugar [Domain.Types.BookingCancellationReason]: alloc=45636056 time=11.067
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=73975672 time=23.439
-Specialise [Domain.Types.BookingCancellationReason]: alloc=3387280 time=0.978
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BookingCancellationReason]: alloc=13227336 time=4.067
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=100135520 time=37.150
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=91044744 time=26.608
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=87744872 time=26.993
-Float inwards [Domain.Types.BookingCancellationReason]: alloc=24680 time=0.005
-Called arity analysis [Domain.Types.BookingCancellationReason]: alloc=26256 time=0.007
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=68050128 time=19.981
-Demand analysis [Domain.Types.BookingCancellationReason]: alloc=14872984 time=15.695
-Worker Wrapper binds [Domain.Types.BookingCancellationReason]: alloc=1709600 time=0.505
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=98805168 time=27.277
-Exitification transformation [Domain.Types.BookingCancellationReason]: alloc=27200 time=0.032
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BookingCancellationReason]: alloc=14709736 time=4.345
-Common sub-expression [Domain.Types.BookingCancellationReason]: alloc=25784 time=0.019
-Float inwards [Domain.Types.BookingCancellationReason]: alloc=24680 time=0.005
-Simplifier [Domain.Types.BookingCancellationReason]: alloc=60273560 time=18.548
-Demand analysis [Domain.Types.BookingCancellationReason]: alloc=13882880 time=3.605
-CoreTidy [Domain.Types.BookingCancellationReason]: alloc=10444456 time=16.263
-CorePrep [Domain.Types.BookingCancellationReason]: alloc=25656 time=0.040
-CodeGen [Domain.Types.BookingCancellationReason]: alloc=131856168 time=38.886
-systool:as: alloc=104664 time=0.207
-CorePrep [Domain.Types.BookingCancellationReason]: alloc=25656 time=0.016
-CodeGen [Domain.Types.BookingCancellationReason]: alloc=135994416 time=40.027
-systool:as: alloc=107536 time=0.214
+ByteCodeGen [Ghci1]: alloc=94056 time=0.051
+Renamer/typechecker [Domain.Types.BookingCancellationReason]: alloc=80054200 time=26.091
+Desugar [Domain.Types.BookingCancellationReason]: alloc=45641016 time=11.220
+Simplifier [Domain.Types.BookingCancellationReason]: alloc=36960104 time=12.344
+Specialise [Domain.Types.BookingCancellationReason]: alloc=6845656 time=2.335
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BookingCancellationReason]: alloc=18249936 time=6.185
+Simplifier [Domain.Types.BookingCancellationReason]: alloc=157035888 time=53.621
+Float inwards [Domain.Types.BookingCancellationReason]: alloc=24680 time=0.006
+Called arity analysis [Domain.Types.BookingCancellationReason]: alloc=26256 time=0.006
+Simplifier [Domain.Types.BookingCancellationReason]: alloc=41453560 time=22.156
+Demand analysis [Domain.Types.BookingCancellationReason]: alloc=22064816 time=5.790
+Worker Wrapper binds [Domain.Types.BookingCancellationReason]: alloc=1274448 time=0.594
+Simplifier [Domain.Types.BookingCancellationReason]: alloc=52167984 time=15.211
+Exitification transformation [Domain.Types.BookingCancellationReason]: alloc=27200 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BookingCancellationReason]: alloc=25369744 time=8.200
+Common sub-expression [Domain.Types.BookingCancellationReason]: alloc=25784 time=0.006
+Float inwards [Domain.Types.BookingCancellationReason]: alloc=24680 time=0.004
+Simplifier [Domain.Types.BookingCancellationReason]: alloc=54218208 time=19.147
+Demand analysis [Domain.Types.BookingCancellationReason]: alloc=20847064 time=5.690
+CoreTidy [Domain.Types.BookingCancellationReason]: alloc=12057072 time=3.507
+CorePrep [Domain.Types.BookingCancellationReason]: alloc=25656 time=0.025
+CodeGen [Domain.Types.BookingCancellationReason]: alloc=192124576 time=58.335
+systool:as: alloc=103944 time=0.199
+CorePrep [Domain.Types.BookingCancellationReason]: alloc=25656 time=0.017
+CodeGen [Domain.Types.BookingCancellationReason]: alloc=200733104 time=58.665
+systool:as: alloc=106840 time=0.231

@@ -1,28 +1,26 @@
-Parser [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=17062648 time=3.047
-Renamer/typechecker [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=4407991880 time=790.888
-Desugar [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=6960356936 time=1052.932
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=219633712 time=65.927
-Specialise [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=10629296 time=3.046
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=50603264 time=15.813
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=200782488 time=69.099
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=221447000 time=75.286
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=428584776 time=158.200
-Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=37192 time=0.006
+Parser [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=17062648 time=2.834
+Renamer/typechecker [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=4408088072 time=814.882
+Desugar [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=6960628096 time=1100.090
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=98420416 time=30.309
+Specialise [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=20039432 time=5.950
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=67840792 time=21.827
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=583668584 time=234.956
+Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=37192 time=0.007
 Called arity analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38768 time=0.007
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=437101216 time=143.973
-Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=170104680 time=42.432
-Worker Wrapper binds [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=3728448 time=2.060
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=461037008 time=171.426
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=234955512 time=80.046
+Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=247434440 time=62.724
+Worker Wrapper binds [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=5448512 time=3.033
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=222887760 time=87.025
 Exitification transformation [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=39712 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=133926184 time=40.643
-Common sub-expression [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38296 time=0.008
-Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=37192 time=0.006
-Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=272502352 time=87.562
-Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=217504328 time=49.764
-CoreTidy [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=27555096 time=12.092
-CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38184 time=0.038
-CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=1121594760 time=328.918
-systool:as: alloc=107512 time=0.212
-CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38184 time=0.016
-CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=1167431368 time=302.522
-systool:as: alloc=110392 time=0.227
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=215006936 time=69.680
+Common sub-expression [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38296 time=0.010
+Float inwards [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=37192 time=0.005
+Simplifier [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=274273000 time=93.851
+Demand analysis [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=279214624 time=64.906
+CoreTidy [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38274000 time=18.554
+CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38184 time=0.014
+CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=1410067544 time=439.228
+systool:as: alloc=106784 time=0.297
+CorePrep [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=38184 time=0.025
+CodeGen [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool]: alloc=1462907512 time=414.040
+systool:as: alloc=109664 time=0.322

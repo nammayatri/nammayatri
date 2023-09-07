@@ -1,31 +1,29 @@
-Parser [Domain.Types.MediaFile]: alloc=676752 time=0.216
-Simplify [expr]: alloc=34464 time=0.020
-CorePrep [expr]: alloc=22952 time=0.014
-ByteCodeGen [Ghci1]: alloc=94056 time=0.062
-Renamer/typechecker [Domain.Types.MediaFile]: alloc=91464584 time=26.729
-Desugar [Domain.Types.MediaFile]: alloc=43914288 time=10.678
-Simplifier [Domain.Types.MediaFile]: alloc=125845008 time=41.886
-Specialise [Domain.Types.MediaFile]: alloc=8371456 time=2.361
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.MediaFile]: alloc=21960440 time=7.052
-Simplifier [Domain.Types.MediaFile]: alloc=172440720 time=65.389
-Simplifier [Domain.Types.MediaFile]: alloc=152929016 time=48.728
-Simplifier [Domain.Types.MediaFile]: alloc=138855976 time=60.465
+Parser [Domain.Types.MediaFile]: alloc=676752 time=0.204
+Simplify [expr]: alloc=34464 time=0.016
+CorePrep [expr]: alloc=22952 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.047
+Renamer/typechecker [Domain.Types.MediaFile]: alloc=91479224 time=28.687
+Desugar [Domain.Types.MediaFile]: alloc=43912728 time=10.733
+Simplifier [Domain.Types.MediaFile]: alloc=68717248 time=23.696
+Specialise [Domain.Types.MediaFile]: alloc=15771808 time=5.698
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.MediaFile]: alloc=32696680 time=11.841
+Simplifier [Domain.Types.MediaFile]: alloc=326061936 time=130.083
 Float inwards [Domain.Types.MediaFile]: alloc=19912 time=0.005
 Called arity analysis [Domain.Types.MediaFile]: alloc=21488 time=0.006
-Simplifier [Domain.Types.MediaFile]: alloc=108432544 time=32.472
-Demand analysis [Domain.Types.MediaFile]: alloc=22900296 time=5.800
-Worker Wrapper binds [Domain.Types.MediaFile]: alloc=1897856 time=0.713
-Simplifier [Domain.Types.MediaFile]: alloc=130467560 time=55.205
-Exitification transformation [Domain.Types.MediaFile]: alloc=22432 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.MediaFile]: alloc=24125184 time=7.184
-Common sub-expression [Domain.Types.MediaFile]: alloc=21016 time=0.017
-Float inwards [Domain.Types.MediaFile]: alloc=19912 time=0.003
-Simplifier [Domain.Types.MediaFile]: alloc=85446200 time=27.086
-Demand analysis [Domain.Types.MediaFile]: alloc=19898800 time=5.010
-CoreTidy [Domain.Types.MediaFile]: alloc=14123592 time=5.033
-CorePrep [Domain.Types.MediaFile]: alloc=20888 time=0.010
-CodeGen [Domain.Types.MediaFile]: alloc=174859160 time=59.600
-systool:as: alloc=103688 time=0.212
+Simplifier [Domain.Types.MediaFile]: alloc=88642344 time=28.795
+Demand analysis [Domain.Types.MediaFile]: alloc=43119272 time=11.736
+Worker Wrapper binds [Domain.Types.MediaFile]: alloc=1800200 time=1.001
+Simplifier [Domain.Types.MediaFile]: alloc=91899392 time=44.640
+Exitification transformation [Domain.Types.MediaFile]: alloc=22432 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.MediaFile]: alloc=50776456 time=17.903
+Common sub-expression [Domain.Types.MediaFile]: alloc=21016 time=0.007
+Float inwards [Domain.Types.MediaFile]: alloc=19912 time=0.004
+Simplifier [Domain.Types.MediaFile]: alloc=106321416 time=39.838
+Demand analysis [Domain.Types.MediaFile]: alloc=40105440 time=11.899
+CoreTidy [Domain.Types.MediaFile]: alloc=19431096 time=23.549
 CorePrep [Domain.Types.MediaFile]: alloc=20888 time=0.015
-CodeGen [Domain.Types.MediaFile]: alloc=183034344 time=55.433
-systool:as: alloc=106560 time=0.229
+CodeGen [Domain.Types.MediaFile]: alloc=283375960 time=87.858
+systool:as: alloc=102968 time=0.212
+CorePrep [Domain.Types.MediaFile]: alloc=20888 time=0.015
+CodeGen [Domain.Types.MediaFile]: alloc=300178096 time=92.885
+systool:as: alloc=105840 time=0.213

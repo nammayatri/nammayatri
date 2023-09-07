@@ -1,28 +1,26 @@
-Parser [Domain.Action.Dashboard.DriverReferral]: alloc=2332256 time=0.730
-Renamer/typechecker [Domain.Action.Dashboard.DriverReferral]: alloc=82634648 time=25.716
-Desugar [Domain.Action.Dashboard.DriverReferral]: alloc=1976232 time=1.477
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=78296048 time=21.116
-Specialise [Domain.Action.Dashboard.DriverReferral]: alloc=8060328 time=1.771
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.DriverReferral]: alloc=32404648 time=8.760
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=132409392 time=33.473
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=99690048 time=24.771
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=126929784 time=34.956
-Float inwards [Domain.Action.Dashboard.DriverReferral]: alloc=24680 time=0.006
-Called arity analysis [Domain.Action.Dashboard.DriverReferral]: alloc=26256 time=0.006
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=97715424 time=27.129
-Demand analysis [Domain.Action.Dashboard.DriverReferral]: alloc=51060240 time=9.810
-Worker Wrapper binds [Domain.Action.Dashboard.DriverReferral]: alloc=947856 time=0.579
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=120769536 time=33.048
+Parser [Domain.Action.Dashboard.DriverReferral]: alloc=2332256 time=0.655
+Renamer/typechecker [Domain.Action.Dashboard.DriverReferral]: alloc=82597472 time=25.273
+Desugar [Domain.Action.Dashboard.DriverReferral]: alloc=1976312 time=1.477
+Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=26835704 time=7.812
+Specialise [Domain.Action.Dashboard.DriverReferral]: alloc=9475608 time=2.082
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.DriverReferral]: alloc=37864560 time=10.425
+Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=166435152 time=54.941
+Float inwards [Domain.Action.Dashboard.DriverReferral]: alloc=24680 time=0.005
+Called arity analysis [Domain.Action.Dashboard.DriverReferral]: alloc=26256 time=0.007
+Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=47049280 time=14.020
+Demand analysis [Domain.Action.Dashboard.DriverReferral]: alloc=61324800 time=12.568
+Worker Wrapper binds [Domain.Action.Dashboard.DriverReferral]: alloc=1093072 time=0.602
+Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=54971560 time=15.535
 Exitification transformation [Domain.Action.Dashboard.DriverReferral]: alloc=27200 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.DriverReferral]: alloc=27491424 time=8.449
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.DriverReferral]: alloc=38299496 time=11.856
 Common sub-expression [Domain.Action.Dashboard.DriverReferral]: alloc=25784 time=0.007
 Float inwards [Domain.Action.Dashboard.DriverReferral]: alloc=24680 time=0.004
-Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=86856832 time=26.093
-Demand analysis [Domain.Action.Dashboard.DriverReferral]: alloc=45729496 time=33.781
-CoreTidy [Domain.Action.Dashboard.DriverReferral]: alloc=12887680 time=3.941
-CorePrep [Domain.Action.Dashboard.DriverReferral]: alloc=25656 time=0.010
-CodeGen [Domain.Action.Dashboard.DriverReferral]: alloc=257899072 time=65.599
-systool:as: alloc=104728 time=0.198
+Simplifier [Domain.Action.Dashboard.DriverReferral]: alloc=63694960 time=31.561
+Demand analysis [Domain.Action.Dashboard.DriverReferral]: alloc=57555168 time=11.625
+CoreTidy [Domain.Action.Dashboard.DriverReferral]: alloc=14260400 time=4.961
 CorePrep [Domain.Action.Dashboard.DriverReferral]: alloc=25656 time=0.016
-CodeGen [Domain.Action.Dashboard.DriverReferral]: alloc=265791016 time=64.961
-systool:as: alloc=107600 time=0.218
+CodeGen [Domain.Action.Dashboard.DriverReferral]: alloc=327775656 time=86.686
+systool:as: alloc=104024 time=0.252
+CorePrep [Domain.Action.Dashboard.DriverReferral]: alloc=25656 time=0.018
+CodeGen [Domain.Action.Dashboard.DriverReferral]: alloc=337254696 time=86.807
+systool:as: alloc=106896 time=0.228

@@ -1,28 +1,26 @@
-Parser [Domain.Types.Message.MessageTranslation]: alloc=465984 time=0.175
-Renamer/typechecker [Domain.Types.Message.MessageTranslation]: alloc=12322256 time=4.234
-Desugar [Domain.Types.Message.MessageTranslation]: alloc=2326096 time=1.517
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=4156336 time=1.297
-Specialise [Domain.Types.Message.MessageTranslation]: alloc=345392 time=0.098
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Message.MessageTranslation]: alloc=1341880 time=0.425
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=1772624 time=0.598
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=1730248 time=0.490
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=1730248 time=0.477
-Float inwards [Domain.Types.Message.MessageTranslation]: alloc=24984 time=0.018
+Parser [Domain.Types.Message.MessageTranslation]: alloc=465984 time=0.149
+Renamer/typechecker [Domain.Types.Message.MessageTranslation]: alloc=12322456 time=4.104
+Desugar [Domain.Types.Message.MessageTranslation]: alloc=2325776 time=1.558
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2448208 time=0.785
+Specialise [Domain.Types.Message.MessageTranslation]: alloc=344480 time=0.083
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Message.MessageTranslation]: alloc=1345704 time=0.422
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=1774856 time=0.554
+Float inwards [Domain.Types.Message.MessageTranslation]: alloc=24984 time=0.005
 Called arity analysis [Domain.Types.Message.MessageTranslation]: alloc=26560 time=0.005
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2185728 time=0.602
-Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1651384 time=0.435
-Worker Wrapper binds [Domain.Types.Message.MessageTranslation]: alloc=72608 time=0.038
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2935968 time=0.749
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2185168 time=0.646
+Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1651008 time=0.425
+Worker Wrapper binds [Domain.Types.Message.MessageTranslation]: alloc=72608 time=0.027
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2939144 time=0.766
 Exitification transformation [Domain.Types.Message.MessageTranslation]: alloc=27488 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Message.MessageTranslation]: alloc=1351368 time=0.436
-Common sub-expression [Domain.Types.Message.MessageTranslation]: alloc=26088 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Message.MessageTranslation]: alloc=1350448 time=0.413
+Common sub-expression [Domain.Types.Message.MessageTranslation]: alloc=26088 time=0.005
 Float inwards [Domain.Types.Message.MessageTranslation]: alloc=24984 time=0.004
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=4012288 time=1.201
-Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1657656 time=0.426
-CoreTidy [Domain.Types.Message.MessageTranslation]: alloc=1293600 time=0.408
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=4015544 time=1.175
+Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1657280 time=0.420
+CoreTidy [Domain.Types.Message.MessageTranslation]: alloc=1292600 time=0.489
 CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.010
-CodeGen [Domain.Types.Message.MessageTranslation]: alloc=19687248 time=6.935
-systool:as: alloc=104768 time=0.241
-CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.015
-CodeGen [Domain.Types.Message.MessageTranslation]: alloc=20259424 time=7.004
-systool:as: alloc=107648 time=0.150
+CodeGen [Domain.Types.Message.MessageTranslation]: alloc=19680784 time=6.999
+systool:as: alloc=104040 time=0.214
+CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.017
+CodeGen [Domain.Types.Message.MessageTranslation]: alloc=20242480 time=7.029
+systool:as: alloc=106912 time=0.193

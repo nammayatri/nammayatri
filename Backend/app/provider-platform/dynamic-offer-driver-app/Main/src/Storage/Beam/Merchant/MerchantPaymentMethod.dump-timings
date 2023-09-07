@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=1617152 time=0.362
-Simplify [expr]: alloc=183976 time=0.066
-CorePrep [expr]: alloc=73944 time=0.055
-ByteCodeGen [Ghci1]: alloc=379944 time=0.161
-Simplify [expr]: alloc=47024 time=0.016
-CorePrep [expr]: alloc=26752 time=0.015
+Parser [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=1617152 time=0.491
+Simplify [expr]: alloc=184296 time=0.055
+CorePrep [expr]: alloc=74104 time=0.053
+ByteCodeGen [Ghci1]: alloc=379864 time=0.101
+Simplify [expr]: alloc=47024 time=0.018
+CorePrep [expr]: alloc=26752 time=0.028
 ByteCodeGen [Ghci1]: alloc=131880 time=0.049
-Renamer/typechecker [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=174432960 time=50.273
-Desugar [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=23684144 time=6.820
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=271138760 time=83.123
-Specialise [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=18208496 time=5.785
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=59594008 time=18.798
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=457796072 time=156.319
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=351539848 time=106.630
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=322139760 time=97.073
+Renamer/typechecker [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=174404288 time=52.923
+Desugar [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=23687584 time=6.978
+Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=118983112 time=36.194
+Specialise [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=37678304 time=12.495
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=79111632 time=29.281
+Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=944979480 time=354.096
 Float inwards [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=26184 time=0.005
-Called arity analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27760 time=0.007
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=250474992 time=111.921
-Demand analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=45043192 time=13.481
-Worker Wrapper binds [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=1671408 time=1.003
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=352021072 time=100.865
+Called arity analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27760 time=0.006
+Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=268398976 time=107.231
+Demand analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=238287632 time=60.213
+Worker Wrapper binds [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=5956088 time=3.565
+Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=307949392 time=120.270
 Exitification transformation [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=28672 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=37670496 time=13.088
-Common sub-expression [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27288 time=0.006
-Float inwards [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=26184 time=0.004
-Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=268388104 time=128.349
-Demand analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=41465824 time=12.379
-CoreTidy [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=31509840 time=11.993
-CorePrep [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.029
-CodeGen [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=303050832 time=90.428
-systool:as: alloc=105040 time=0.245
-CorePrep [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.029
-CodeGen [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=317328856 time=93.567
-systool:as: alloc=107888 time=0.236
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=201518360 time=67.189
+Common sub-expression [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27288 time=0.033
+Float inwards [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=26184 time=0.005
+Simplifier [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=318897256 time=112.426
+Demand analysis [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=218706904 time=54.836
+CoreTidy [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=60651512 time=54.949
+CorePrep [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.041
+CodeGen [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=1118696856 time=347.270
+systool:as: alloc=104280 time=0.318
+CorePrep [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=27144 time=0.019
+CodeGen [Storage.Beam.Merchant.MerchantPaymentMethod]: alloc=1153148712 time=361.412
+systool:as: alloc=107160 time=0.321

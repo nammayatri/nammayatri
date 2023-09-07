@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.RideRoute]: alloc=650368 time=0.286
-Renamer/typechecker [Domain.Action.UI.RideRoute]: alloc=194561944 time=38.413
-Desugar [Domain.Action.UI.RideRoute]: alloc=176802952 time=29.232
-Simplifier [Domain.Action.UI.RideRoute]: alloc=6501328 time=1.769
-Specialise [Domain.Action.UI.RideRoute]: alloc=266096 time=0.100
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.RideRoute]: alloc=1332216 time=0.353
-Simplifier [Domain.Action.UI.RideRoute]: alloc=4226688 time=1.114
-Simplifier [Domain.Action.UI.RideRoute]: alloc=2215088 time=0.525
-Simplifier [Domain.Action.UI.RideRoute]: alloc=1071112 time=0.314
-Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.004
+Parser [Domain.Action.UI.RideRoute]: alloc=650368 time=0.227
+Renamer/typechecker [Domain.Action.UI.RideRoute]: alloc=194557744 time=37.717
+Desugar [Domain.Action.UI.RideRoute]: alloc=176812352 time=29.378
+Simplifier [Domain.Action.UI.RideRoute]: alloc=5441912 time=1.412
+Specialise [Domain.Action.UI.RideRoute]: alloc=294944 time=0.083
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.RideRoute]: alloc=1544096 time=0.385
+Simplifier [Domain.Action.UI.RideRoute]: alloc=3489128 time=0.962
+Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.005
 Called arity analysis [Domain.Action.UI.RideRoute]: alloc=22672 time=0.005
-Simplifier [Domain.Action.UI.RideRoute]: alloc=2957376 time=0.726
-Demand analysis [Domain.Action.UI.RideRoute]: alloc=1140016 time=0.257
-Worker Wrapper binds [Domain.Action.UI.RideRoute]: alloc=231984 time=0.079
-Simplifier [Domain.Action.UI.RideRoute]: alloc=3486640 time=0.976
+Simplifier [Domain.Action.UI.RideRoute]: alloc=1964656 time=0.460
+Demand analysis [Domain.Action.UI.RideRoute]: alloc=1138640 time=0.258
+Worker Wrapper binds [Domain.Action.UI.RideRoute]: alloc=231984 time=0.067
+Simplifier [Domain.Action.UI.RideRoute]: alloc=2287624 time=0.660
 Exitification transformation [Domain.Action.UI.RideRoute]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.RideRoute]: alloc=1086704 time=0.296
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.RideRoute]: alloc=1614624 time=0.405
 Common sub-expression [Domain.Action.UI.RideRoute]: alloc=22200 time=0.004
-Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.004
-Simplifier [Domain.Action.UI.RideRoute]: alloc=3157728 time=0.805
-Demand analysis [Domain.Action.UI.RideRoute]: alloc=1320056 time=0.290
-CoreTidy [Domain.Action.UI.RideRoute]: alloc=582384 time=0.242
+Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.003
+Simplifier [Domain.Action.UI.RideRoute]: alloc=2226088 time=0.603
+Demand analysis [Domain.Action.UI.RideRoute]: alloc=1319160 time=0.298
+CoreTidy [Domain.Action.UI.RideRoute]: alloc=582056 time=0.256
 CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.010
-CodeGen [Domain.Action.UI.RideRoute]: alloc=11239992 time=3.975
-systool:as: alloc=103960 time=0.291
-CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.011
-CodeGen [Domain.Action.UI.RideRoute]: alloc=11860728 time=4.017
-systool:as: alloc=106840 time=0.123
+CodeGen [Domain.Action.UI.RideRoute]: alloc=11222016 time=3.673
+systool:as: alloc=103232 time=0.147
+CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.014
+CodeGen [Domain.Action.UI.RideRoute]: alloc=11843056 time=3.943
+systool:as: alloc=106112 time=0.136

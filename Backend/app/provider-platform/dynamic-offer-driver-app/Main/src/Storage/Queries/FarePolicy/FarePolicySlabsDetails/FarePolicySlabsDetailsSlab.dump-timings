@@ -1,28 +1,26 @@
-Parser [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=2077808 time=0.643
-Renamer/typechecker [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=144298456 time=41.945
-Desugar [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=8261136 time=2.389
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=97201968 time=31.296
-Specialise [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=15048160 time=3.571
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=13916592 time=4.493
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=537119864 time=160.580
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=250598640 time=91.644
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=248584224 time=65.410
-Float inwards [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36008 time=0.033
+Parser [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=2044976 time=0.437
+Renamer/typechecker [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=144279816 time=42.466
+Desugar [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=8261456 time=2.602
+Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=63220664 time=20.395
+Specialise [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=19473592 time=5.114
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=19324904 time=7.339
+Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=418634224 time=122.577
+Float inwards [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36008 time=0.007
 Called arity analysis [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=37584 time=0.007
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=130675880 time=38.214
-Demand analysis [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=12518248 time=11.519
-Worker Wrapper binds [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=643896 time=0.500
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=258780008 time=81.568
+Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=132843872 time=42.512
+Demand analysis [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=13572584 time=13.760
+Worker Wrapper binds [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=669688 time=0.242
+Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=131520272 time=32.412
 Exitification transformation [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=38528 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=12395720 time=7.383
-Common sub-expression [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=37112 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=12657272 time=7.455
+Common sub-expression [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=37112 time=0.008
 Float inwards [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36008 time=0.006
-Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=258043328 time=89.005
-Demand analysis [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=9962352 time=7.628
-CoreTidy [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=24512608 time=8.251
-CorePrep [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36984 time=0.027
-CodeGen [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=104048192 time=37.514
-systool:as: alloc=107192 time=0.220
-CorePrep [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36984 time=0.019
-CodeGen [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=111185080 time=37.227
-systool:as: alloc=110040 time=0.256
+Simplifier [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=137155592 time=43.378
+Demand analysis [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=10881760 time=11.270
+CoreTidy [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=24864880 time=8.305
+CorePrep [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36984 time=0.016
+CodeGen [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=104125472 time=38.444
+systool:as: alloc=106448 time=0.186
+CorePrep [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36984 time=0.018
+CodeGen [Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=111275232 time=38.715
+systool:as: alloc=109320 time=0.197

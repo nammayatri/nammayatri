@@ -1,28 +1,26 @@
-Parser [SharedLogic.Ride]: alloc=1162200 time=0.344
-Renamer/typechecker [SharedLogic.Ride]: alloc=582962904 time=102.451
-Desugar [SharedLogic.Ride]: alloc=293377080 time=45.883
-Simplifier [SharedLogic.Ride]: alloc=11135256 time=2.728
-Specialise [SharedLogic.Ride]: alloc=1662744 time=0.491
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Ride]: alloc=7819568 time=2.250
-Simplifier [SharedLogic.Ride]: alloc=72592912 time=22.136
-Simplifier [SharedLogic.Ride]: alloc=115740992 time=38.133
-Simplifier [SharedLogic.Ride]: alloc=123516016 time=40.784
-Float inwards [SharedLogic.Ride]: alloc=18120 time=0.004
+Parser [SharedLogic.Ride]: alloc=1162200 time=0.356
+Renamer/typechecker [SharedLogic.Ride]: alloc=582973032 time=103.873
+Desugar [SharedLogic.Ride]: alloc=293391840 time=48.277
+Simplifier [SharedLogic.Ride]: alloc=5679384 time=1.842
+Specialise [SharedLogic.Ride]: alloc=1747056 time=0.599
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Ride]: alloc=8010152 time=2.854
+Simplifier [SharedLogic.Ride]: alloc=131221456 time=49.127
+Float inwards [SharedLogic.Ride]: alloc=18120 time=0.005
 Called arity analysis [SharedLogic.Ride]: alloc=19696 time=0.005
-Simplifier [SharedLogic.Ride]: alloc=84321072 time=25.871
-Demand analysis [SharedLogic.Ride]: alloc=29224440 time=6.728
-Worker Wrapper binds [SharedLogic.Ride]: alloc=1353640 time=0.677
-Simplifier [SharedLogic.Ride]: alloc=123717304 time=40.427
+Simplifier [SharedLogic.Ride]: alloc=31130800 time=9.759
+Demand analysis [SharedLogic.Ride]: alloc=22458760 time=5.443
+Worker Wrapper binds [SharedLogic.Ride]: alloc=1132992 time=0.458
+Simplifier [SharedLogic.Ride]: alloc=33651472 time=11.259
 Exitification transformation [SharedLogic.Ride]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Ride]: alloc=24676336 time=7.438
-Common sub-expression [SharedLogic.Ride]: alloc=19224 time=0.009
-Float inwards [SharedLogic.Ride]: alloc=18120 time=0.003
-Simplifier [SharedLogic.Ride]: alloc=53807000 time=16.779
-Demand analysis [SharedLogic.Ride]: alloc=26967648 time=5.604
-CoreTidy [SharedLogic.Ride]: alloc=4346992 time=2.075
-CorePrep [SharedLogic.Ride]: alloc=19112 time=0.037
-CodeGen [SharedLogic.Ride]: alloc=115732136 time=30.599
-systool:as: alloc=103320 time=0.218
-CorePrep [SharedLogic.Ride]: alloc=19112 time=0.017
-CodeGen [SharedLogic.Ride]: alloc=120426128 time=33.598
-systool:as: alloc=106200 time=0.205
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Ride]: alloc=22150520 time=6.946
+Common sub-expression [SharedLogic.Ride]: alloc=19224 time=0.005
+Float inwards [SharedLogic.Ride]: alloc=18120 time=0.004
+Simplifier [SharedLogic.Ride]: alloc=32534832 time=11.270
+Demand analysis [SharedLogic.Ride]: alloc=19387128 time=4.399
+CoreTidy [SharedLogic.Ride]: alloc=4147040 time=1.769
+CorePrep [SharedLogic.Ride]: alloc=19112 time=0.009
+CodeGen [SharedLogic.Ride]: alloc=93906208 time=27.695
+systool:as: alloc=102592 time=0.186
+CorePrep [SharedLogic.Ride]: alloc=19112 time=0.014
+CodeGen [SharedLogic.Ride]: alloc=98444880 time=29.055
+systool:as: alloc=105472 time=0.202

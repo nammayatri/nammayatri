@@ -1,34 +1,32 @@
-Parser [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=1340312 time=0.370
-Simplify [expr]: alloc=97336 time=0.062
-CorePrep [expr]: alloc=43528 time=0.044
-ByteCodeGen [Ghci1]: alloc=217456 time=0.093
-Simplify [expr]: alloc=47024 time=0.020
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.047
-Renamer/typechecker [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=131041240 time=39.686
-Desugar [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=20463400 time=5.635
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=167335256 time=50.244
-Specialise [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=14376984 time=3.894
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=46782928 time=14.352
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=288682976 time=96.761
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=213859904 time=77.322
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=197752112 time=72.634
+Parser [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=1340312 time=0.417
+Simplify [expr]: alloc=97336 time=0.052
+CorePrep [expr]: alloc=43528 time=0.030
+ByteCodeGen [Ghci1]: alloc=217456 time=0.078
+Simplify [expr]: alloc=47024 time=0.021
+CorePrep [expr]: alloc=26752 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.060
+Renamer/typechecker [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=131091720 time=42.611
+Desugar [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=20459800 time=6.063
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=75918640 time=24.571
+Specialise [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=25900320 time=8.664
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=60501032 time=22.619
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=595625432 time=231.442
+Float inwards [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26184 time=0.006
+Called arity analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27760 time=0.007
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=164458360 time=75.814
+Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=155111344 time=38.972
+Worker Wrapper binds [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=4096600 time=2.562
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=194720856 time=77.815
+Exitification transformation [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=28672 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=131866512 time=44.406
+Common sub-expression [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27288 time=0.008
 Float inwards [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26184 time=0.005
-Called arity analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27760 time=0.006
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=153665392 time=52.603
-Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=30872432 time=8.331
-Worker Wrapper binds [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=1386768 time=0.820
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=219264120 time=76.359
-Exitification transformation [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=28672 time=0.033
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26677568 time=8.810
-Common sub-expression [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27288 time=0.007
-Float inwards [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=26184 time=0.004
-Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=165099024 time=62.445
-Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=28206184 time=7.512
-CoreTidy [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=15923688 time=6.343
-CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.040
-CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=214275488 time=65.771
-systool:as: alloc=105032 time=0.254
-CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.016
-CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=224129176 time=67.311
-systool:as: alloc=107904 time=0.181
+Simplifier [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=199715712 time=98.927
+Demand analysis [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=142222088 time=35.278
+CoreTidy [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=34625216 time=16.329
+CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.015
+CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=748066304 time=256.781
+systool:as: alloc=104296 time=0.290
+CorePrep [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=27144 time=0.017
+CodeGen [Storage.Beam.FarePolicy.RestrictedExtraFare]: alloc=771351848 time=247.181
+systool:as: alloc=107176 time=0.294

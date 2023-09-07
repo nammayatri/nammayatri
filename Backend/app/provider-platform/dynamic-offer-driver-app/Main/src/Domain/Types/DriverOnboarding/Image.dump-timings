@@ -1,31 +1,29 @@
-Parser [Domain.Types.DriverOnboarding.Image]: alloc=710648 time=0.226
-Simplify [expr]: alloc=34464 time=0.018
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.044
-Renamer/typechecker [Domain.Types.DriverOnboarding.Image]: alloc=104225688 time=31.884
-Desugar [Domain.Types.DriverOnboarding.Image]: alloc=45283968 time=11.322
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=136082600 time=48.003
-Specialise [Domain.Types.DriverOnboarding.Image]: alloc=14149096 time=3.553
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.Image]: alloc=25949224 time=8.672
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=203548336 time=68.384
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=174700016 time=79.016
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=163590808 time=57.030
-Float inwards [Domain.Types.DriverOnboarding.Image]: alloc=23800 time=0.018
+Parser [Domain.Types.DriverOnboarding.Image]: alloc=710648 time=0.244
+Simplify [expr]: alloc=34464 time=0.021
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.049
+Renamer/typechecker [Domain.Types.DriverOnboarding.Image]: alloc=104232424 time=32.539
+Desugar [Domain.Types.DriverOnboarding.Image]: alloc=45288488 time=11.491
+Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=68504616 time=24.715
+Specialise [Domain.Types.DriverOnboarding.Image]: alloc=19810664 time=6.566
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.Image]: alloc=35486992 time=13.401
+Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=473661824 time=192.648
+Float inwards [Domain.Types.DriverOnboarding.Image]: alloc=23800 time=0.005
 Called arity analysis [Domain.Types.DriverOnboarding.Image]: alloc=25376 time=0.006
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=126874744 time=48.723
-Demand analysis [Domain.Types.DriverOnboarding.Image]: alloc=29709480 time=7.187
-Worker Wrapper binds [Domain.Types.DriverOnboarding.Image]: alloc=2002136 time=0.866
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=155209856 time=47.121
-Exitification transformation [Domain.Types.DriverOnboarding.Image]: alloc=26288 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.Image]: alloc=29189064 time=9.629
+Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=126454680 time=45.261
+Demand analysis [Domain.Types.DriverOnboarding.Image]: alloc=63493336 time=18.139
+Worker Wrapper binds [Domain.Types.DriverOnboarding.Image]: alloc=2504744 time=1.558
+Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=137425048 time=66.655
+Exitification transformation [Domain.Types.DriverOnboarding.Image]: alloc=26288 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.Image]: alloc=72722016 time=25.080
 Common sub-expression [Domain.Types.DriverOnboarding.Image]: alloc=24904 time=0.007
 Float inwards [Domain.Types.DriverOnboarding.Image]: alloc=23800 time=0.004
-Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=103624488 time=55.559
-Demand analysis [Domain.Types.DriverOnboarding.Image]: alloc=25765272 time=6.555
-CoreTidy [Domain.Types.DriverOnboarding.Image]: alloc=14488592 time=5.546
-CorePrep [Domain.Types.DriverOnboarding.Image]: alloc=24760 time=0.024
-CodeGen [Domain.Types.DriverOnboarding.Image]: alloc=217114240 time=70.917
-systool:as: alloc=104568 time=0.226
-CorePrep [Domain.Types.DriverOnboarding.Image]: alloc=24760 time=0.017
-CodeGen [Domain.Types.DriverOnboarding.Image]: alloc=226692368 time=71.609
-systool:as: alloc=107464 time=0.234
+Simplifier [Domain.Types.DriverOnboarding.Image]: alloc=149247408 time=57.320
+Demand analysis [Domain.Types.DriverOnboarding.Image]: alloc=55167856 time=38.279
+CoreTidy [Domain.Types.DriverOnboarding.Image]: alloc=20750296 time=6.848
+CorePrep [Domain.Types.DriverOnboarding.Image]: alloc=24760 time=0.039
+CodeGen [Domain.Types.DriverOnboarding.Image]: alloc=256239424 time=86.813
+systool:as: alloc=103832 time=0.249
+CorePrep [Domain.Types.DriverOnboarding.Image]: alloc=24760 time=0.019
+CodeGen [Domain.Types.DriverOnboarding.Image]: alloc=268449984 time=90.057
+systool:as: alloc=106712 time=0.231

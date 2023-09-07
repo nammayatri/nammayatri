@@ -1,28 +1,26 @@
-Parser [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=2648112 time=0.560
-Renamer/typechecker [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=368085528 time=100.613
-Desugar [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=12948624 time=3.760
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=295051416 time=92.207
-Specialise [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=56706120 time=13.610
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=39310512 time=13.390
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=608820736 time=224.296
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=349062080 time=136.473
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=329896040 time=124.873
+Parser [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=2648112 time=0.577
+Renamer/typechecker [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=368060024 time=107.049
+Desugar [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=12947544 time=3.988
+Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=186976752 time=59.139
+Specialise [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=73897880 time=18.353
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=52301808 time=20.841
+Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=619561384 time=242.781
 Float inwards [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=27064 time=0.006
-Called arity analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28640 time=0.007
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=256949256 time=90.473
-Demand analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=44336512 time=11.798
-Worker Wrapper binds [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=2117560 time=1.331
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=259771024 time=100.106
-Exitification transformation [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=29584 time=0.033
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=42732784 time=13.818
-Common sub-expression [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28168 time=0.034
-Float inwards [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=27064 time=0.004
-Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=251101112 time=85.517
-Demand analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=27436488 time=8.012
-CoreTidy [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=21472232 time=8.805
-CorePrep [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28040 time=0.043
-CodeGen [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=207181112 time=63.823
-systool:as: alloc=105256 time=0.271
-CorePrep [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28040 time=0.017
-CodeGen [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=224915296 time=68.200
-systool:as: alloc=108128 time=0.291
+Called arity analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28640 time=0.019
+Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=108449648 time=37.953
+Demand analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=44689984 time=12.941
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=2049552 time=1.415
+Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=91226368 time=29.855
+Exitification transformation [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=29584 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=42741808 time=15.119
+Common sub-expression [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28168 time=0.007
+Float inwards [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=27064 time=0.005
+Simplifier [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=132667488 time=48.342
+Demand analysis [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=39031816 time=11.730
+CoreTidy [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=23492336 time=10.054
+CorePrep [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28040 time=0.019
+CodeGen [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=223753680 time=72.771
+systool:as: alloc=104536 time=0.222
+CorePrep [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=28040 time=0.018
+CodeGen [Storage.Queries.DriverOnboarding.DriverLicense]: alloc=242155656 time=77.382
+systool:as: alloc=107408 time=0.219

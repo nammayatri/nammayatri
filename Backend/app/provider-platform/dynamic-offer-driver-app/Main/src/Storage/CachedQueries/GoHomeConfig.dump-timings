@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.GoHomeConfig]: alloc=993840 time=0.313
-Renamer/typechecker [Storage.CachedQueries.GoHomeConfig]: alloc=95008320 time=18.257
-Desugar [Storage.CachedQueries.GoHomeConfig]: alloc=141279112 time=22.178
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=3417824 time=0.946
-Specialise [Storage.CachedQueries.GoHomeConfig]: alloc=276880 time=0.120
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.GoHomeConfig]: alloc=1523136 time=0.392
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=2559320 time=0.694
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=2741640 time=0.694
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=20023280 time=6.091
-Float inwards [Storage.CachedQueries.GoHomeConfig]: alloc=23480 time=0.004
-Called arity analysis [Storage.CachedQueries.GoHomeConfig]: alloc=25056 time=0.005
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=7032800 time=1.956
-Demand analysis [Storage.CachedQueries.GoHomeConfig]: alloc=8231528 time=1.786
-Worker Wrapper binds [Storage.CachedQueries.GoHomeConfig]: alloc=376248 time=0.189
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=25233608 time=7.494
-Exitification transformation [Storage.CachedQueries.GoHomeConfig]: alloc=26000 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.GoHomeConfig]: alloc=7312912 time=1.987
-Common sub-expression [Storage.CachedQueries.GoHomeConfig]: alloc=24584 time=0.005
-Float inwards [Storage.CachedQueries.GoHomeConfig]: alloc=23480 time=0.004
-Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=15747232 time=4.399
-Demand analysis [Storage.CachedQueries.GoHomeConfig]: alloc=14304016 time=2.579
-CoreTidy [Storage.CachedQueries.GoHomeConfig]: alloc=1585352 time=0.650
-CorePrep [Storage.CachedQueries.GoHomeConfig]: alloc=24472 time=0.010
-CodeGen [Storage.CachedQueries.GoHomeConfig]: alloc=61268904 time=16.127
-systool:as: alloc=104464 time=0.215
-CorePrep [Storage.CachedQueries.GoHomeConfig]: alloc=24472 time=0.016
-CodeGen [Storage.CachedQueries.GoHomeConfig]: alloc=63869704 time=16.768
-systool:as: alloc=107344 time=0.201
+Parser [Storage.CachedQueries.GoHomeConfig]: alloc=993840 time=0.285
+Renamer/typechecker [Storage.CachedQueries.GoHomeConfig]: alloc=95010920 time=22.697
+Desugar [Storage.CachedQueries.GoHomeConfig]: alloc=141289072 time=27.375
+Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=2293720 time=0.817
+Specialise [Storage.CachedQueries.GoHomeConfig]: alloc=313256 time=0.106
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.GoHomeConfig]: alloc=1771248 time=0.515
+Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=17831816 time=6.510
+Float inwards [Storage.CachedQueries.GoHomeConfig]: alloc=23480 time=0.006
+Called arity analysis [Storage.CachedQueries.GoHomeConfig]: alloc=25056 time=0.006
+Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=7554800 time=2.484
+Demand analysis [Storage.CachedQueries.GoHomeConfig]: alloc=9305968 time=2.323
+Worker Wrapper binds [Storage.CachedQueries.GoHomeConfig]: alloc=320856 time=0.187
+Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=8533264 time=3.100
+Exitification transformation [Storage.CachedQueries.GoHomeConfig]: alloc=26000 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.GoHomeConfig]: alloc=8521608 time=2.917
+Common sub-expression [Storage.CachedQueries.GoHomeConfig]: alloc=24584 time=0.008
+Float inwards [Storage.CachedQueries.GoHomeConfig]: alloc=23480 time=0.005
+Simplifier [Storage.CachedQueries.GoHomeConfig]: alloc=10289064 time=3.799
+Demand analysis [Storage.CachedQueries.GoHomeConfig]: alloc=11929952 time=2.887
+CoreTidy [Storage.CachedQueries.GoHomeConfig]: alloc=1530520 time=0.876
+CorePrep [Storage.CachedQueries.GoHomeConfig]: alloc=24472 time=0.012
+CodeGen [Storage.CachedQueries.GoHomeConfig]: alloc=56937768 time=19.305
+systool:as: alloc=103736 time=0.201
+CorePrep [Storage.CachedQueries.GoHomeConfig]: alloc=24472 time=0.019
+CodeGen [Storage.CachedQueries.GoHomeConfig]: alloc=59006888 time=18.922
+systool:as: alloc=106616 time=0.219

@@ -1,28 +1,26 @@
-Parser [Domain.Types.SearchRequestSpecialZone]: alloc=846400 time=0.265
-Renamer/typechecker [Domain.Types.SearchRequestSpecialZone]: alloc=51287408 time=15.068
-Desugar [Domain.Types.SearchRequestSpecialZone]: alloc=6254400 time=2.263
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=90351584 time=26.369
-Specialise [Domain.Types.SearchRequestSpecialZone]: alloc=2595240 time=0.757
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequestSpecialZone]: alloc=13125080 time=3.684
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=53268424 time=14.840
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=37812888 time=9.581
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=10898824 time=2.835
-Float inwards [Domain.Types.SearchRequestSpecialZone]: alloc=24392 time=0.018
-Called arity analysis [Domain.Types.SearchRequestSpecialZone]: alloc=25968 time=0.006
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=13227944 time=3.301
-Demand analysis [Domain.Types.SearchRequestSpecialZone]: alloc=10646184 time=2.151
-Worker Wrapper binds [Domain.Types.SearchRequestSpecialZone]: alloc=441736 time=0.191
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=46891032 time=11.699
-Exitification transformation [Domain.Types.SearchRequestSpecialZone]: alloc=26896 time=0.032
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequestSpecialZone]: alloc=9071784 time=2.588
-Common sub-expression [Domain.Types.SearchRequestSpecialZone]: alloc=25496 time=0.018
+Parser [Domain.Types.SearchRequestSpecialZone]: alloc=846400 time=0.267
+Renamer/typechecker [Domain.Types.SearchRequestSpecialZone]: alloc=51289648 time=15.988
+Desugar [Domain.Types.SearchRequestSpecialZone]: alloc=6254160 time=2.421
+Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=44853544 time=14.965
+Specialise [Domain.Types.SearchRequestSpecialZone]: alloc=4420112 time=1.500
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequestSpecialZone]: alloc=14487968 time=4.638
+Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=51809760 time=15.729
+Float inwards [Domain.Types.SearchRequestSpecialZone]: alloc=24392 time=0.005
+Called arity analysis [Domain.Types.SearchRequestSpecialZone]: alloc=25968 time=0.007
+Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=17356896 time=5.042
+Demand analysis [Domain.Types.SearchRequestSpecialZone]: alloc=13109168 time=2.927
+Worker Wrapper binds [Domain.Types.SearchRequestSpecialZone]: alloc=587192 time=0.307
+Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=19337968 time=5.568
+Exitification transformation [Domain.Types.SearchRequestSpecialZone]: alloc=26896 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequestSpecialZone]: alloc=10590160 time=3.300
+Common sub-expression [Domain.Types.SearchRequestSpecialZone]: alloc=25496 time=0.006
 Float inwards [Domain.Types.SearchRequestSpecialZone]: alloc=24392 time=0.004
-Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=35917464 time=9.155
-Demand analysis [Domain.Types.SearchRequestSpecialZone]: alloc=11172824 time=2.405
-CoreTidy [Domain.Types.SearchRequestSpecialZone]: alloc=7443720 time=2.155
-CorePrep [Domain.Types.SearchRequestSpecialZone]: alloc=25352 time=0.009
-CodeGen [Domain.Types.SearchRequestSpecialZone]: alloc=129493824 time=36.324
-systool:as: alloc=104608 time=0.193
-CorePrep [Domain.Types.SearchRequestSpecialZone]: alloc=25352 time=0.015
-CodeGen [Domain.Types.SearchRequestSpecialZone]: alloc=134782808 time=38.486
-systool:as: alloc=107480 time=0.235
+Simplifier [Domain.Types.SearchRequestSpecialZone]: alloc=25332304 time=7.725
+Demand analysis [Domain.Types.SearchRequestSpecialZone]: alloc=13858704 time=3.228
+CoreTidy [Domain.Types.SearchRequestSpecialZone]: alloc=8204552 time=2.683
+CorePrep [Domain.Types.SearchRequestSpecialZone]: alloc=25352 time=0.023
+CodeGen [Domain.Types.SearchRequestSpecialZone]: alloc=185802680 time=56.766
+systool:as: alloc=103880 time=0.228
+CorePrep [Domain.Types.SearchRequestSpecialZone]: alloc=25352 time=0.044
+CodeGen [Domain.Types.SearchRequestSpecialZone]: alloc=193527408 time=57.982
+systool:as: alloc=106752 time=0.229

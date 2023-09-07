@@ -1,28 +1,26 @@
-Parser [Lib.LocationUpdates]: alloc=3306856 time=0.859
-Renamer/typechecker [Lib.LocationUpdates]: alloc=644460184 time=130.830
-Desugar [Lib.LocationUpdates]: alloc=590591952 time=96.201
-Simplifier [Lib.LocationUpdates]: alloc=160191056 time=60.723
-Specialise [Lib.LocationUpdates]: alloc=5095688 time=2.863
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.LocationUpdates]: alloc=18076400 time=6.474
-Simplifier [Lib.LocationUpdates]: alloc=219591416 time=66.452
-Simplifier [Lib.LocationUpdates]: alloc=81632736 time=24.031
-Simplifier [Lib.LocationUpdates]: alloc=159777552 time=48.276
+Parser [Lib.LocationUpdates]: alloc=3306856 time=0.822
+Renamer/typechecker [Lib.LocationUpdates]: alloc=644460784 time=135.923
+Desugar [Lib.LocationUpdates]: alloc=590637712 time=94.326
+Simplifier [Lib.LocationUpdates]: alloc=80358408 time=24.705
+Specialise [Lib.LocationUpdates]: alloc=7164288 time=3.288
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.LocationUpdates]: alloc=22185168 time=7.877
+Simplifier [Lib.LocationUpdates]: alloc=321390056 time=117.912
+Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.006
+Called arity analysis [Lib.LocationUpdates]: alloc=20608 time=0.005
+Simplifier [Lib.LocationUpdates]: alloc=84348040 time=37.290
+Demand analysis [Lib.LocationUpdates]: alloc=104018608 time=23.678
+Worker Wrapper binds [Lib.LocationUpdates]: alloc=1947768 time=1.067
+Simplifier [Lib.LocationUpdates]: alloc=107809656 time=34.493
+Exitification transformation [Lib.LocationUpdates]: alloc=21520 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.LocationUpdates]: alloc=84943664 time=27.309
+Common sub-expression [Lib.LocationUpdates]: alloc=20136 time=0.007
 Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.004
-Called arity analysis [Lib.LocationUpdates]: alloc=20608 time=0.006
-Simplifier [Lib.LocationUpdates]: alloc=126206544 time=41.896
-Demand analysis [Lib.LocationUpdates]: alloc=62009472 time=23.986
-Worker Wrapper binds [Lib.LocationUpdates]: alloc=1065960 time=0.629
-Simplifier [Lib.LocationUpdates]: alloc=317822136 time=104.613
-Exitification transformation [Lib.LocationUpdates]: alloc=21520 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.LocationUpdates]: alloc=40155168 time=13.548
-Common sub-expression [Lib.LocationUpdates]: alloc=20136 time=0.006
-Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.003
-Simplifier [Lib.LocationUpdates]: alloc=135053360 time=44.963
-Demand analysis [Lib.LocationUpdates]: alloc=79820296 time=17.754
-CoreTidy [Lib.LocationUpdates]: alloc=22031472 time=7.902
-CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.038
-CodeGen [Lib.LocationUpdates]: alloc=394499152 time=120.882
-systool:as: alloc=103472 time=0.189
-CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.013
-CodeGen [Lib.LocationUpdates]: alloc=407458776 time=97.367
-systool:as: alloc=106344 time=0.285
+Simplifier [Lib.LocationUpdates]: alloc=195123912 time=66.684
+Demand analysis [Lib.LocationUpdates]: alloc=126268600 time=29.313
+CoreTidy [Lib.LocationUpdates]: alloc=32398376 time=11.325
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.014
+CodeGen [Lib.LocationUpdates]: alloc=580128816 time=154.832
+systool:as: alloc=102728 time=0.214
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.017
+CodeGen [Lib.LocationUpdates]: alloc=598082504 time=162.290
+systool:as: alloc=105608 time=0.219

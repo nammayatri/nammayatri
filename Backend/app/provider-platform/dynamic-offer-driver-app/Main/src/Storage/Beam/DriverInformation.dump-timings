@@ -1,34 +1,32 @@
-Parser [Storage.Beam.DriverInformation]: alloc=2404864 time=0.534
-Simplify [expr]: alloc=97336 time=0.082
-CorePrep [expr]: alloc=43528 time=0.030
-ByteCodeGen [Ghci1]: alloc=217456 time=0.082
-Simplify [expr]: alloc=47024 time=0.020
+Parser [Storage.Beam.DriverInformation]: alloc=2404864 time=0.496
+Simplify [expr]: alloc=97336 time=0.050
+CorePrep [expr]: alloc=43528 time=0.028
+ByteCodeGen [Ghci1]: alloc=217456 time=0.074
+Simplify [expr]: alloc=47024 time=0.028
 CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.051
-Renamer/typechecker [Storage.Beam.DriverInformation]: alloc=422245120 time=103.102
-Desugar [Storage.Beam.DriverInformation]: alloc=41442984 time=10.149
-Simplifier [Storage.Beam.DriverInformation]: alloc=503644808 time=148.620
-Specialise [Storage.Beam.DriverInformation]: alloc=37147664 time=10.568
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverInformation]: alloc=114908176 time=43.911
-Simplifier [Storage.Beam.DriverInformation]: alloc=817366680 time=259.521
-Simplifier [Storage.Beam.DriverInformation]: alloc=800648232 time=270.856
-Simplifier [Storage.Beam.DriverInformation]: alloc=691818224 time=236.760
-Float inwards [Storage.Beam.DriverInformation]: alloc=22296 time=0.031
+ByteCodeGen [Ghci1]: alloc=131880 time=0.052
+Renamer/typechecker [Storage.Beam.DriverInformation]: alloc=422184784 time=117.362
+Desugar [Storage.Beam.DriverInformation]: alloc=41472024 time=11.122
+Simplifier [Storage.Beam.DriverInformation]: alloc=266426928 time=100.573
+Specialise [Storage.Beam.DriverInformation]: alloc=145382080 time=37.369
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverInformation]: alloc=182390896 time=94.379
+Simplifier [Storage.Beam.DriverInformation]: alloc=2538500072 time=1046.647
+Float inwards [Storage.Beam.DriverInformation]: alloc=22296 time=0.005
 Called arity analysis [Storage.Beam.DriverInformation]: alloc=23872 time=0.006
-Simplifier [Storage.Beam.DriverInformation]: alloc=522051280 time=174.290
-Demand analysis [Storage.Beam.DriverInformation]: alloc=151054000 time=35.199
-Worker Wrapper binds [Storage.Beam.DriverInformation]: alloc=5078480 time=4.572
-Simplifier [Storage.Beam.DriverInformation]: alloc=762854400 time=277.394
+Simplifier [Storage.Beam.DriverInformation]: alloc=752883952 time=305.693
+Demand analysis [Storage.Beam.DriverInformation]: alloc=656778840 time=190.794
+Worker Wrapper binds [Storage.Beam.DriverInformation]: alloc=16918232 time=8.760
+Simplifier [Storage.Beam.DriverInformation]: alloc=833147840 time=378.348
 Exitification transformation [Storage.Beam.DriverInformation]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverInformation]: alloc=123554728 time=40.003
-Common sub-expression [Storage.Beam.DriverInformation]: alloc=23400 time=0.005
-Float inwards [Storage.Beam.DriverInformation]: alloc=22296 time=0.004
-Simplifier [Storage.Beam.DriverInformation]: alloc=513265720 time=178.707
-Demand analysis [Storage.Beam.DriverInformation]: alloc=105516152 time=26.602
-CoreTidy [Storage.Beam.DriverInformation]: alloc=79404416 time=25.681
-CorePrep [Storage.Beam.DriverInformation]: alloc=23272 time=0.040
-CodeGen [Storage.Beam.DriverInformation]: alloc=934019720 time=292.693
-systool:as: alloc=104176 time=0.229
-CorePrep [Storage.Beam.DriverInformation]: alloc=23272 time=0.017
-CodeGen [Storage.Beam.DriverInformation]: alloc=978008216 time=261.402
-systool:as: alloc=107048 time=0.279
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverInformation]: alloc=562840480 time=898.517
+Common sub-expression [Storage.Beam.DriverInformation]: alloc=23400 time=0.008
+Float inwards [Storage.Beam.DriverInformation]: alloc=22296 time=0.005
+Simplifier [Storage.Beam.DriverInformation]: alloc=862074272 time=425.888
+Demand analysis [Storage.Beam.DriverInformation]: alloc=582897336 time=130.528
+CoreTidy [Storage.Beam.DriverInformation]: alloc=168723136 time=78.764
+CorePrep [Storage.Beam.DriverInformation]: alloc=23272 time=0.015
+CodeGen [Storage.Beam.DriverInformation]: alloc=3079937280 time=1014.541
+systool:as: alloc=103456 time=0.384
+CorePrep [Storage.Beam.DriverInformation]: alloc=23272 time=0.018
+CodeGen [Storage.Beam.DriverInformation]: alloc=3177983784 time=966.041
+systool:as: alloc=106328 time=0.360

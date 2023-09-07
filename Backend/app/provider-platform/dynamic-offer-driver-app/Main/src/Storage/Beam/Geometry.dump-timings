@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Geometry]: alloc=1009088 time=0.343
-Simplify [expr]: alloc=97336 time=0.040
-CorePrep [expr]: alloc=43528 time=0.026
-ByteCodeGen [Ghci1]: alloc=217456 time=0.075
-Simplify [expr]: alloc=47024 time=0.015
-CorePrep [expr]: alloc=26752 time=0.013
-ByteCodeGen [Ghci1]: alloc=131880 time=0.040
-Renamer/typechecker [Storage.Beam.Geometry]: alloc=76437192 time=25.956
-Desugar [Storage.Beam.Geometry]: alloc=17295032 time=4.757
-Simplifier [Storage.Beam.Geometry]: alloc=87665824 time=28.297
-Specialise [Storage.Beam.Geometry]: alloc=7848640 time=2.041
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Geometry]: alloc=33127416 time=10.242
-Simplifier [Storage.Beam.Geometry]: alloc=147647536 time=47.648
-Simplifier [Storage.Beam.Geometry]: alloc=115991832 time=37.974
-Simplifier [Storage.Beam.Geometry]: alloc=107027512 time=34.894
-Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.004
+Parser [Storage.Beam.Geometry]: alloc=1009088 time=0.319
+Simplify [expr]: alloc=97256 time=0.053
+CorePrep [expr]: alloc=43488 time=0.045
+ByteCodeGen [Ghci1]: alloc=217456 time=0.087
+Simplify [expr]: alloc=47024 time=0.018
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.Geometry]: alloc=76446760 time=29.154
+Desugar [Storage.Beam.Geometry]: alloc=17304272 time=5.449
+Simplifier [Storage.Beam.Geometry]: alloc=38230576 time=14.173
+Specialise [Storage.Beam.Geometry]: alloc=12720664 time=4.342
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Geometry]: alloc=40762072 time=15.015
+Simplifier [Storage.Beam.Geometry]: alloc=302748080 time=125.306
+Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.005
 Called arity analysis [Storage.Beam.Geometry]: alloc=21200 time=0.006
-Simplifier [Storage.Beam.Geometry]: alloc=81980424 time=26.289
-Demand analysis [Storage.Beam.Geometry]: alloc=18768904 time=5.553
-Worker Wrapper binds [Storage.Beam.Geometry]: alloc=1136224 time=0.610
-Simplifier [Storage.Beam.Geometry]: alloc=123861352 time=40.532
+Simplifier [Storage.Beam.Geometry]: alloc=81992736 time=29.144
+Demand analysis [Storage.Beam.Geometry]: alloc=81547920 time=39.307
+Worker Wrapper binds [Storage.Beam.Geometry]: alloc=2549104 time=1.014
+Simplifier [Storage.Beam.Geometry]: alloc=103946112 time=35.246
 Exitification transformation [Storage.Beam.Geometry]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Geometry]: alloc=16880720 time=5.813
-Common sub-expression [Storage.Beam.Geometry]: alloc=20728 time=0.018
-Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.004
-Simplifier [Storage.Beam.Geometry]: alloc=95970008 time=31.842
-Demand analysis [Storage.Beam.Geometry]: alloc=16195240 time=4.827
-CoreTidy [Storage.Beam.Geometry]: alloc=7660328 time=3.771
-CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.038
-CodeGen [Storage.Beam.Geometry]: alloc=132859056 time=42.955
-systool:as: alloc=103632 time=0.202
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Geometry]: alloc=72343304 time=26.136
+Common sub-expression [Storage.Beam.Geometry]: alloc=20728 time=0.007
+Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.005
+Simplifier [Storage.Beam.Geometry]: alloc=105521536 time=60.668
+Demand analysis [Storage.Beam.Geometry]: alloc=74247568 time=17.928
+CoreTidy [Storage.Beam.Geometry]: alloc=17171784 time=8.837
+CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.039
+CodeGen [Storage.Beam.Geometry]: alloc=417470288 time=151.808
+systool:as: alloc=102904 time=0.248
 CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.016
-CodeGen [Storage.Beam.Geometry]: alloc=139085960 time=43.600
-systool:as: alloc=106504 time=0.181
+CodeGen [Storage.Beam.Geometry]: alloc=430898880 time=140.230
+systool:as: alloc=105776 time=0.262

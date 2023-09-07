@@ -1,34 +1,32 @@
-Parser [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=1321952 time=0.342
-Simplify [expr]: alloc=184136 time=0.075
-CorePrep [expr]: alloc=74104 time=0.054
-ByteCodeGen [Ghci1]: alloc=379864 time=0.128
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.028
+Parser [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=1321952 time=0.348
+Simplify [expr]: alloc=183976 time=0.083
+CorePrep [expr]: alloc=73944 time=0.039
+ByteCodeGen [Ghci1]: alloc=379944 time=0.102
+Simplify [expr]: alloc=47024 time=0.016
+CorePrep [expr]: alloc=26752 time=0.027
 ByteCodeGen [Ghci1]: alloc=131880 time=0.045
-Renamer/typechecker [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=127366952 time=39.688
-Desugar [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=20507488 time=5.659
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=170355552 time=51.961
-Specialise [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=14959472 time=4.115
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=48241496 time=15.023
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=330288096 time=109.713
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=305517712 time=116.260
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=272868944 time=90.622
+Renamer/typechecker [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=127365280 time=41.766
+Desugar [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=20541120 time=6.398
+Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=77788904 time=25.822
+Specialise [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=28480672 time=9.279
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=63403832 time=23.045
+Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=713153048 time=293.609
+Float inwards [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=26472 time=0.006
+Called arity analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=28048 time=0.006
+Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=190216512 time=77.620
+Demand analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=173307840 time=43.357
+Worker Wrapper binds [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=4716552 time=2.859
+Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=225133072 time=94.161
+Exitification transformation [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=28992 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=148783504 time=50.490
+Common sub-expression [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27576 time=0.008
 Float inwards [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=26472 time=0.005
-Called arity analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=28048 time=0.018
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=200618848 time=78.481
-Demand analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=46098392 time=11.626
-Worker Wrapper binds [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=1945136 time=1.027
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=294723728 time=102.458
-Exitification transformation [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=28992 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=38445792 time=12.043
-Common sub-expression [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27576 time=0.006
-Float inwards [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=26472 time=0.004
-Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=193871464 time=74.662
-Demand analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=30799488 time=8.344
-CoreTidy [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=17605016 time=7.312
-CorePrep [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.026
-CodeGen [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=247142392 time=76.344
-systool:as: alloc=105088 time=0.244
-CorePrep [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.016
-CodeGen [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=258529680 time=78.268
-systool:as: alloc=107960 time=0.308
+Simplifier [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=227366528 time=114.317
+Demand analysis [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=154965072 time=37.951
+CoreTidy [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=37419096 time=18.352
+CorePrep [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.028
+CodeGen [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=820043256 time=280.197
+systool:as: alloc=104368 time=0.336
+CorePrep [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.035
+CodeGen [Storage.Beam.FarePolicy.DriverExtraFeeBounds]: alloc=846383944 time=267.009
+systool:as: alloc=107264 time=0.268

@@ -1,28 +1,26 @@
-Parser [API.UI.DriverProfileSummary]: alloc=657480 time=0.242
-Renamer/typechecker [API.UI.DriverProfileSummary]: alloc=46350416 time=12.620
-Desugar [API.UI.DriverProfileSummary]: alloc=350856 time=0.871
-Simplifier [API.UI.DriverProfileSummary]: alloc=57471256 time=17.949
-Specialise [API.UI.DriverProfileSummary]: alloc=1341392 time=1.267
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.DriverProfileSummary]: alloc=4474480 time=2.283
-Simplifier [API.UI.DriverProfileSummary]: alloc=48428144 time=15.949
-Simplifier [API.UI.DriverProfileSummary]: alloc=4782904 time=1.592
-Simplifier [API.UI.DriverProfileSummary]: alloc=4782904 time=1.529
-Float inwards [API.UI.DriverProfileSummary]: alloc=21416 time=0.004
-Called arity analysis [API.UI.DriverProfileSummary]: alloc=22992 time=0.005
-Simplifier [API.UI.DriverProfileSummary]: alloc=11986448 time=5.094
-Demand analysis [API.UI.DriverProfileSummary]: alloc=7902848 time=1.681
-Worker Wrapper binds [API.UI.DriverProfileSummary]: alloc=133272 time=0.057
-Simplifier [API.UI.DriverProfileSummary]: alloc=90060512 time=29.790
+Parser [API.UI.DriverProfileSummary]: alloc=657480 time=0.206
+Renamer/typechecker [API.UI.DriverProfileSummary]: alloc=46347576 time=12.499
+Desugar [API.UI.DriverProfileSummary]: alloc=351016 time=0.859
+Simplifier [API.UI.DriverProfileSummary]: alloc=32874248 time=9.792
+Specialise [API.UI.DriverProfileSummary]: alloc=1940000 time=1.105
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.DriverProfileSummary]: alloc=6299608 time=2.306
+Simplifier [API.UI.DriverProfileSummary]: alloc=58644256 time=18.087
+Float inwards [API.UI.DriverProfileSummary]: alloc=21416 time=0.005
+Called arity analysis [API.UI.DriverProfileSummary]: alloc=22992 time=0.006
+Simplifier [API.UI.DriverProfileSummary]: alloc=7333048 time=3.740
+Demand analysis [API.UI.DriverProfileSummary]: alloc=8435192 time=2.135
+Worker Wrapper binds [API.UI.DriverProfileSummary]: alloc=159104 time=0.066
+Simplifier [API.UI.DriverProfileSummary]: alloc=15013864 time=3.149
 Exitification transformation [API.UI.DriverProfileSummary]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.DriverProfileSummary]: alloc=3829024 time=1.396
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.DriverProfileSummary]: alloc=6755104 time=2.376
 Common sub-expression [API.UI.DriverProfileSummary]: alloc=22520 time=0.005
 Float inwards [API.UI.DriverProfileSummary]: alloc=21416 time=0.004
-Simplifier [API.UI.DriverProfileSummary]: alloc=25620168 time=7.103
-Demand analysis [API.UI.DriverProfileSummary]: alloc=8825088 time=2.049
-CoreTidy [API.UI.DriverProfileSummary]: alloc=5853872 time=1.535
-CorePrep [API.UI.DriverProfileSummary]: alloc=22376 time=0.010
-CodeGen [API.UI.DriverProfileSummary]: alloc=38120240 time=10.497
-systool:as: alloc=103984 time=0.186
-CorePrep [API.UI.DriverProfileSummary]: alloc=22376 time=0.013
-CodeGen [API.UI.DriverProfileSummary]: alloc=39151208 time=9.652
-systool:as: alloc=106856 time=0.162
+Simplifier [API.UI.DriverProfileSummary]: alloc=44391432 time=16.104
+Demand analysis [API.UI.DriverProfileSummary]: alloc=10018912 time=3.297
+CoreTidy [API.UI.DriverProfileSummary]: alloc=8304448 time=2.345
+CorePrep [API.UI.DriverProfileSummary]: alloc=22376 time=0.011
+CodeGen [API.UI.DriverProfileSummary]: alloc=40234648 time=10.828
+systool:as: alloc=103240 time=0.201
+CorePrep [API.UI.DriverProfileSummary]: alloc=22376 time=0.014
+CodeGen [API.UI.DriverProfileSummary]: alloc=41332832 time=10.722
+systool:as: alloc=106120 time=0.156

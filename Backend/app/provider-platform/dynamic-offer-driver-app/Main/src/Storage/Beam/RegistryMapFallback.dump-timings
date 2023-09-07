@@ -1,34 +1,32 @@
-Parser [Storage.Beam.RegistryMapFallback]: alloc=1503584 time=0.400
-Simplify [expr]: alloc=124064 time=0.057
-CorePrep [expr]: alloc=53504 time=0.032
-ByteCodeGen [Ghci1]: alloc=318080 time=0.122
-Simplify [expr]: alloc=47024 time=0.016
-CorePrep [expr]: alloc=26752 time=0.013
-ByteCodeGen [Ghci1]: alloc=131880 time=0.043
-Renamer/typechecker [Storage.Beam.RegistryMapFallback]: alloc=95213952 time=31.529
-Desugar [Storage.Beam.RegistryMapFallback]: alloc=18414488 time=5.187
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=115282592 time=37.310
-Specialise [Storage.Beam.RegistryMapFallback]: alloc=9094496 time=2.714
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RegistryMapFallback]: alloc=37430312 time=12.221
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=176827496 time=66.538
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=141593696 time=52.156
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=129427176 time=47.374
+Parser [Storage.Beam.RegistryMapFallback]: alloc=1536416 time=0.584
+Simplify [expr]: alloc=124144 time=0.073
+CorePrep [expr]: alloc=53544 time=0.060
+ByteCodeGen [Ghci1]: alloc=318080 time=0.100
+Simplify [expr]: alloc=47024 time=0.015
+CorePrep [expr]: alloc=26752 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.047
+Renamer/typechecker [Storage.Beam.RegistryMapFallback]: alloc=95194024 time=33.389
+Desugar [Storage.Beam.RegistryMapFallback]: alloc=18470832 time=5.751
+Simplifier [Storage.Beam.RegistryMapFallback]: alloc=51471744 time=17.048
+Specialise [Storage.Beam.RegistryMapFallback]: alloc=15787896 time=5.165
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RegistryMapFallback]: alloc=46642592 time=16.689
+Simplifier [Storage.Beam.RegistryMapFallback]: alloc=383083664 time=136.196
 Float inwards [Storage.Beam.RegistryMapFallback]: alloc=22888 time=0.005
 Called arity analysis [Storage.Beam.RegistryMapFallback]: alloc=24464 time=0.006
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=99223848 time=30.546
-Demand analysis [Storage.Beam.RegistryMapFallback]: alloc=22505608 time=5.991
-Worker Wrapper binds [Storage.Beam.RegistryMapFallback]: alloc=1227408 time=0.694
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=149236488 time=64.115
-Exitification transformation [Storage.Beam.RegistryMapFallback]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RegistryMapFallback]: alloc=20152088 time=6.696
-Common sub-expression [Storage.Beam.RegistryMapFallback]: alloc=23992 time=0.006
-Float inwards [Storage.Beam.RegistryMapFallback]: alloc=22888 time=0.004
-Simplifier [Storage.Beam.RegistryMapFallback]: alloc=109972152 time=41.325
-Demand analysis [Storage.Beam.RegistryMapFallback]: alloc=19712160 time=5.399
-CoreTidy [Storage.Beam.RegistryMapFallback]: alloc=10181800 time=4.413
-CorePrep [Storage.Beam.RegistryMapFallback]: alloc=23880 time=0.011
-CodeGen [Storage.Beam.RegistryMapFallback]: alloc=163744648 time=60.050
-systool:as: alloc=104296 time=0.237
-CorePrep [Storage.Beam.RegistryMapFallback]: alloc=23880 time=0.015
-CodeGen [Storage.Beam.RegistryMapFallback]: alloc=171193520 time=53.649
-systool:as: alloc=107176 time=0.202
+Simplifier [Storage.Beam.RegistryMapFallback]: alloc=107784112 time=36.981
+Demand analysis [Storage.Beam.RegistryMapFallback]: alloc=109660464 time=27.248
+Worker Wrapper binds [Storage.Beam.RegistryMapFallback]: alloc=3147000 time=1.946
+Simplifier [Storage.Beam.RegistryMapFallback]: alloc=133539104 time=67.145
+Exitification transformation [Storage.Beam.RegistryMapFallback]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RegistryMapFallback]: alloc=95368536 time=32.016
+Common sub-expression [Storage.Beam.RegistryMapFallback]: alloc=23992 time=0.007
+Float inwards [Storage.Beam.RegistryMapFallback]: alloc=22888 time=0.005
+Simplifier [Storage.Beam.RegistryMapFallback]: alloc=135686520 time=48.682
+Demand analysis [Storage.Beam.RegistryMapFallback]: alloc=100355608 time=24.203
+CoreTidy [Storage.Beam.RegistryMapFallback]: alloc=23406176 time=11.169
+CorePrep [Storage.Beam.RegistryMapFallback]: alloc=23880 time=0.039
+CodeGen [Storage.Beam.RegistryMapFallback]: alloc=552770824 time=169.863
+systool:as: alloc=103576 time=0.231
+CorePrep [Storage.Beam.RegistryMapFallback]: alloc=23880 time=0.030
+CodeGen [Storage.Beam.RegistryMapFallback]: alloc=569917104 time=173.947
+systool:as: alloc=106456 time=0.247

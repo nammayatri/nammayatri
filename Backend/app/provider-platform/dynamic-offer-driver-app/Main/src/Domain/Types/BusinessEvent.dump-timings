@@ -1,34 +1,32 @@
-Parser [Domain.Types.BusinessEvent]: alloc=1149312 time=0.286
-Simplify [expr]: alloc=34464 time=0.044
-CorePrep [expr]: alloc=22952 time=0.021
-ByteCodeGen [Ghci1]: alloc=94056 time=0.049
-Simplify [expr]: alloc=34464 time=0.014
-CorePrep [expr]: alloc=22952 time=0.014
-ByteCodeGen [Ghci1]: alloc=94056 time=0.054
-Renamer/typechecker [Domain.Types.BusinessEvent]: alloc=106182688 time=35.058
-Desugar [Domain.Types.BusinessEvent]: alloc=87631672 time=19.428
-Simplifier [Domain.Types.BusinessEvent]: alloc=121064712 time=39.717
-Specialise [Domain.Types.BusinessEvent]: alloc=8899176 time=2.268
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BusinessEvent]: alloc=20042328 time=6.638
-Simplifier [Domain.Types.BusinessEvent]: alloc=155900408 time=59.861
-Simplifier [Domain.Types.BusinessEvent]: alloc=147769200 time=47.231
-Simplifier [Domain.Types.BusinessEvent]: alloc=139642072 time=61.738
+Parser [Domain.Types.BusinessEvent]: alloc=1149312 time=0.309
+Simplify [expr]: alloc=34464 time=0.042
+CorePrep [expr]: alloc=22952 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Simplify [expr]: alloc=34464 time=0.013
+CorePrep [expr]: alloc=22952 time=0.013
+ByteCodeGen [Ghci1]: alloc=94056 time=0.034
+Renamer/typechecker [Domain.Types.BusinessEvent]: alloc=106163400 time=34.425
+Desugar [Domain.Types.BusinessEvent]: alloc=87638032 time=20.555
+Simplifier [Domain.Types.BusinessEvent]: alloc=57358472 time=19.712
+Specialise [Domain.Types.BusinessEvent]: alloc=12157800 time=4.092
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BusinessEvent]: alloc=26881496 time=9.018
+Simplifier [Domain.Types.BusinessEvent]: alloc=244424352 time=86.046
 Float inwards [Domain.Types.BusinessEvent]: alloc=21096 time=0.005
-Called arity analysis [Domain.Types.BusinessEvent]: alloc=22672 time=0.019
-Simplifier [Domain.Types.BusinessEvent]: alloc=110657616 time=32.831
-Demand analysis [Domain.Types.BusinessEvent]: alloc=24060960 time=6.024
-Worker Wrapper binds [Domain.Types.BusinessEvent]: alloc=3163648 time=0.957
-Simplifier [Domain.Types.BusinessEvent]: alloc=169382952 time=73.696
-Exitification transformation [Domain.Types.BusinessEvent]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BusinessEvent]: alloc=23511800 time=7.135
+Called arity analysis [Domain.Types.BusinessEvent]: alloc=22672 time=0.006
+Simplifier [Domain.Types.BusinessEvent]: alloc=64118328 time=21.785
+Demand analysis [Domain.Types.BusinessEvent]: alloc=34222208 time=9.429
+Worker Wrapper binds [Domain.Types.BusinessEvent]: alloc=2233784 time=1.132
+Simplifier [Domain.Types.BusinessEvent]: alloc=81834608 time=26.080
+Exitification transformation [Domain.Types.BusinessEvent]: alloc=23616 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BusinessEvent]: alloc=40180704 time=14.229
 Common sub-expression [Domain.Types.BusinessEvent]: alloc=22200 time=0.006
 Float inwards [Domain.Types.BusinessEvent]: alloc=21096 time=0.004
-Simplifier [Domain.Types.BusinessEvent]: alloc=93580216 time=29.040
-Demand analysis [Domain.Types.BusinessEvent]: alloc=21095248 time=5.329
-CoreTidy [Domain.Types.BusinessEvent]: alloc=16384584 time=5.927
-CorePrep [Domain.Types.BusinessEvent]: alloc=22088 time=0.037
-CodeGen [Domain.Types.BusinessEvent]: alloc=206624416 time=71.023
-systool:as: alloc=103928 time=0.179
-CorePrep [Domain.Types.BusinessEvent]: alloc=22088 time=0.015
-CodeGen [Domain.Types.BusinessEvent]: alloc=213951792 time=66.867
-systool:as: alloc=106808 time=0.234
+Simplifier [Domain.Types.BusinessEvent]: alloc=83220984 time=53.585
+Demand analysis [Domain.Types.BusinessEvent]: alloc=31933368 time=8.415
+CoreTidy [Domain.Types.BusinessEvent]: alloc=18641784 time=7.411
+CorePrep [Domain.Types.BusinessEvent]: alloc=22088 time=0.012
+CodeGen [Domain.Types.BusinessEvent]: alloc=304461384 time=97.534
+systool:as: alloc=103208 time=0.260
+CorePrep [Domain.Types.BusinessEvent]: alloc=22088 time=0.043
+CodeGen [Domain.Types.BusinessEvent]: alloc=319406424 time=98.424
+systool:as: alloc=106088 time=0.212

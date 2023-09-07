@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Feedback.FeedbackForm]: alloc=1178552 time=0.326
-Renamer/typechecker [Storage.Queries.Feedback.FeedbackForm]: alloc=94699944 time=27.943
-Desugar [Storage.Queries.Feedback.FeedbackForm]: alloc=2677480 time=1.468
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=39531296 time=13.494
-Specialise [Storage.Queries.Feedback.FeedbackForm]: alloc=9140040 time=2.544
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Feedback.FeedbackForm]: alloc=14840096 time=4.976
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=364721784 time=122.863
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=301216376 time=109.640
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=286245168 time=101.514
+Parser [Storage.Queries.Feedback.FeedbackForm]: alloc=1178552 time=0.314
+Renamer/typechecker [Storage.Queries.Feedback.FeedbackForm]: alloc=94694584 time=30.102
+Desugar [Storage.Queries.Feedback.FeedbackForm]: alloc=2677800 time=1.519
+Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=23883656 time=7.777
+Specialise [Storage.Queries.Feedback.FeedbackForm]: alloc=10300352 time=3.105
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Feedback.FeedbackForm]: alloc=16865904 time=6.177
+Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=374617592 time=128.476
+Float inwards [Storage.Queries.Feedback.FeedbackForm]: alloc=24392 time=0.007
+Called arity analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=25968 time=0.007
+Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=77562120 time=27.929
+Demand analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=26976032 time=9.746
+Worker Wrapper binds [Storage.Queries.Feedback.FeedbackForm]: alloc=1062816 time=0.733
+Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=79110296 time=27.014
+Exitification transformation [Storage.Queries.Feedback.FeedbackForm]: alloc=26896 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Feedback.FeedbackForm]: alloc=25646984 time=10.271
+Common sub-expression [Storage.Queries.Feedback.FeedbackForm]: alloc=25496 time=0.008
 Float inwards [Storage.Queries.Feedback.FeedbackForm]: alloc=24392 time=0.005
-Called arity analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=25968 time=0.005
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=209510064 time=76.467
-Demand analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=27568872 time=7.236
-Worker Wrapper binds [Storage.Queries.Feedback.FeedbackForm]: alloc=1151328 time=0.615
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=223054064 time=66.192
-Exitification transformation [Storage.Queries.Feedback.FeedbackForm]: alloc=26896 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Feedback.FeedbackForm]: alloc=24249896 time=9.247
-Common sub-expression [Storage.Queries.Feedback.FeedbackForm]: alloc=25496 time=0.007
-Float inwards [Storage.Queries.Feedback.FeedbackForm]: alloc=24392 time=0.005
-Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=144396536 time=53.688
-Demand analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=14644464 time=5.696
-CoreTidy [Storage.Queries.Feedback.FeedbackForm]: alloc=13063736 time=5.803
-CorePrep [Storage.Queries.Feedback.FeedbackForm]: alloc=25352 time=0.046
-CodeGen [Storage.Queries.Feedback.FeedbackForm]: alloc=119620592 time=46.538
-systool:as: alloc=104680 time=0.207
-CorePrep [Storage.Queries.Feedback.FeedbackForm]: alloc=25352 time=0.016
-CodeGen [Storage.Queries.Feedback.FeedbackForm]: alloc=127441488 time=40.869
-systool:as: alloc=107576 time=0.266
+Simplifier [Storage.Queries.Feedback.FeedbackForm]: alloc=89399904 time=28.334
+Demand analysis [Storage.Queries.Feedback.FeedbackForm]: alloc=21737520 time=7.824
+CoreTidy [Storage.Queries.Feedback.FeedbackForm]: alloc=13944576 time=6.301
+CorePrep [Storage.Queries.Feedback.FeedbackForm]: alloc=25352 time=0.015
+CodeGen [Storage.Queries.Feedback.FeedbackForm]: alloc=141941672 time=47.617
+systool:as: alloc=103944 time=0.220
+CorePrep [Storage.Queries.Feedback.FeedbackForm]: alloc=25352 time=0.018
+CodeGen [Storage.Queries.Feedback.FeedbackForm]: alloc=150771880 time=49.468
+systool:as: alloc=106816 time=0.227

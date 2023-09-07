@@ -1,31 +1,29 @@
-Parser [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=2277888 time=0.463
-Simplify [expr]: alloc=97256 time=0.071
-CorePrep [expr]: alloc=43488 time=0.027
-ByteCodeGen [Ghci1]: alloc=217456 time=0.075
-Renamer/typechecker [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=164759568 time=45.889
-Desugar [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=23548080 time=6.328
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=261201128 time=76.712
-Specialise [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=13530680 time=3.430
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=57136360 time=18.249
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=403157848 time=128.563
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=326062448 time=112.171
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=297429608 time=114.204
+Parser [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=2277888 time=0.495
+Simplify [expr]: alloc=97336 time=0.046
+CorePrep [expr]: alloc=43528 time=0.038
+ByteCodeGen [Ghci1]: alloc=217456 time=0.080
+Renamer/typechecker [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=164744792 time=51.535
+Desugar [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=23552120 time=6.639
+Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=113151520 time=34.251
+Specialise [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=31788520 time=9.124
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=75758296 time=27.553
+Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=828747456 time=303.380
 Float inwards [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=28856 time=0.006
-Called arity analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=30432 time=0.006
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=229153536 time=66.240
-Demand analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=38373000 time=11.974
-Worker Wrapper binds [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=1552192 time=0.886
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=319576968 time=115.572
-Exitification transformation [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=31376 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=34259128 time=11.521
-Common sub-expression [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29960 time=0.006
+Called arity analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=30432 time=0.007
+Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=245434072 time=99.884
+Demand analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=222719896 time=56.054
+Worker Wrapper binds [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=5588616 time=3.432
+Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=284421688 time=115.883
+Exitification transformation [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=31376 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=189975624 time=63.562
+Common sub-expression [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29960 time=0.007
 Float inwards [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=28856 time=0.005
-Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=171819536 time=51.181
-Demand analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=35486800 time=33.303
-CoreTidy [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29867920 time=7.558
-CorePrep [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.041
-CodeGen [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=273909200 time=82.864
-systool:as: alloc=105648 time=0.269
-CorePrep [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.044
-CodeGen [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=286489744 time=83.978
-systool:as: alloc=108496 time=0.250
+Simplifier [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=296765640 time=102.405
+Demand analysis [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=205356976 time=96.363
+CoreTidy [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=56746080 time=16.476
+CorePrep [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.015
+CodeGen [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=1038498464 time=356.097
+systool:as: alloc=104904 time=0.252
+CorePrep [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.018
+CodeGen [Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation]: alloc=1069617440 time=327.980
+systool:as: alloc=107776 time=0.269

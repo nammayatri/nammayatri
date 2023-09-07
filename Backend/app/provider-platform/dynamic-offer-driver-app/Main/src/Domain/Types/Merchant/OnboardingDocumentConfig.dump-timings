@@ -1,34 +1,32 @@
-Parser [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=1119048 time=0.296
-Simplify [expr]: alloc=34464 time=0.028
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.051
-Simplify [expr]: alloc=34464 time=0.014
+Parser [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=1119048 time=0.320
+Simplify [expr]: alloc=34464 time=0.020
+CorePrep [expr]: alloc=22952 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Simplify [expr]: alloc=34464 time=0.017
 CorePrep [expr]: alloc=22952 time=0.015
 ByteCodeGen [Ghci1]: alloc=94056 time=0.041
-Renamer/typechecker [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=178168088 time=56.108
-Desugar [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=88785096 time=19.929
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=266654608 time=99.641
-Specialise [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=19078816 time=5.009
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=44539904 time=14.928
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=343938352 time=138.333
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=330789336 time=128.201
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=274372752 time=105.905
-Float inwards [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.006
+Renamer/typechecker [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=178229704 time=63.598
+Desugar [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=88794976 time=21.413
+Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=137898872 time=52.214
+Specialise [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=37048568 time=20.482
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=64436864 time=22.196
+Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=1016254160 time=461.202
+Float inwards [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.032
 Called arity analysis [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28640 time=0.006
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=208689320 time=72.640
-Demand analysis [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=49438224 time=25.442
-Worker Wrapper binds [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=4065744 time=0.950
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=275756920 time=102.416
+Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=250810872 time=105.298
+Demand analysis [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=143632720 time=48.195
+Worker Wrapper binds [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=6008672 time=2.487
+Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=282140512 time=132.282
 Exitification transformation [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=29584 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=51243128 time=16.389
-Common sub-expression [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28168 time=0.007
-Float inwards [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.004
-Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=164086280 time=65.414
-Demand analysis [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=38145600 time=10.099
-CoreTidy [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=26390296 time=9.880
-CorePrep [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.027
-CodeGen [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=369566392 time=130.886
-systool:as: alloc=105192 time=0.256
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=156140952 time=71.398
+Common sub-expression [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28168 time=0.008
+Float inwards [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.005
+Simplifier [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=284010808 time=145.910
+Demand analysis [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=107508976 time=479.185
+CoreTidy [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=40902400 time=14.224
+CorePrep [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.015
+CodeGen [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=653067120 time=204.440
+systool:as: alloc=104472 time=0.300
 CorePrep [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.017
-CodeGen [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=383544384 time=122.112
-systool:as: alloc=108064 time=0.213
+CodeGen [Domain.Types.Merchant.OnboardingDocumentConfig]: alloc=684644032 time=208.528
+systool:as: alloc=107368 time=0.292

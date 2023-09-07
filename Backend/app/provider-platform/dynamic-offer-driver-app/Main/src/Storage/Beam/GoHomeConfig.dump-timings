@@ -1,31 +1,29 @@
-Parser [Storage.Beam.GoHomeConfig]: alloc=2670456 time=0.558
-Simplify [expr]: alloc=97256 time=0.070
-CorePrep [expr]: alloc=43488 time=0.028
-ByteCodeGen [Ghci1]: alloc=217496 time=0.075
-Renamer/typechecker [Storage.Beam.GoHomeConfig]: alloc=262165056 time=68.318
-Desugar [Storage.Beam.GoHomeConfig]: alloc=30257160 time=7.896
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=529260960 time=151.835
-Specialise [Storage.Beam.GoHomeConfig]: alloc=22036184 time=5.721
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.GoHomeConfig]: alloc=83706288 time=26.405
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=726329976 time=239.848
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=641336312 time=221.294
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=581663480 time=192.897
+Parser [Storage.Beam.GoHomeConfig]: alloc=2670456 time=0.631
+Simplify [expr]: alloc=97256 time=0.042
+CorePrep [expr]: alloc=43488 time=0.029
+ByteCodeGen [Ghci1]: alloc=217496 time=0.096
+Renamer/typechecker [Storage.Beam.GoHomeConfig]: alloc=262158896 time=76.034
+Desugar [Storage.Beam.GoHomeConfig]: alloc=30286032 time=8.393
+Simplifier [Storage.Beam.GoHomeConfig]: alloc=152445136 time=50.212
+Specialise [Storage.Beam.GoHomeConfig]: alloc=60947968 time=17.958
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.GoHomeConfig]: alloc=113854872 time=51.020
+Simplifier [Storage.Beam.GoHomeConfig]: alloc=1475835864 time=623.029
 Float inwards [Storage.Beam.GoHomeConfig]: alloc=20808 time=0.005
 Called arity analysis [Storage.Beam.GoHomeConfig]: alloc=22384 time=0.006
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=450641696 time=129.939
-Demand analysis [Storage.Beam.GoHomeConfig]: alloc=66409312 time=23.099
-Worker Wrapper binds [Storage.Beam.GoHomeConfig]: alloc=2439952 time=2.064
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=608531328 time=216.644
+Simplifier [Storage.Beam.GoHomeConfig]: alloc=455037384 time=176.427
+Demand analysis [Storage.Beam.GoHomeConfig]: alloc=375575312 time=104.114
+Worker Wrapper binds [Storage.Beam.GoHomeConfig]: alloc=9553016 time=5.302
+Simplifier [Storage.Beam.GoHomeConfig]: alloc=504058376 time=224.711
 Exitification transformation [Storage.Beam.GoHomeConfig]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.GoHomeConfig]: alloc=60532912 time=19.867
-Common sub-expression [Storage.Beam.GoHomeConfig]: alloc=21912 time=0.033
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.GoHomeConfig]: alloc=317365136 time=152.555
+Common sub-expression [Storage.Beam.GoHomeConfig]: alloc=21912 time=0.008
 Float inwards [Storage.Beam.GoHomeConfig]: alloc=20808 time=0.004
-Simplifier [Storage.Beam.GoHomeConfig]: alloc=324493984 time=121.722
-Demand analysis [Storage.Beam.GoHomeConfig]: alloc=58246888 time=20.949
-CoreTidy [Storage.Beam.GoHomeConfig]: alloc=83305344 time=29.356
-CorePrep [Storage.Beam.GoHomeConfig]: alloc=21784 time=0.042
-CodeGen [Storage.Beam.GoHomeConfig]: alloc=522751776 time=205.757
-systool:as: alloc=103872 time=0.227
-CorePrep [Storage.Beam.GoHomeConfig]: alloc=21784 time=0.016
-CodeGen [Storage.Beam.GoHomeConfig]: alloc=548184328 time=152.043
-systool:as: alloc=106752 time=0.234
+Simplifier [Storage.Beam.GoHomeConfig]: alloc=525311384 time=243.686
+Demand analysis [Storage.Beam.GoHomeConfig]: alloc=342651896 time=1272.139
+CoreTidy [Storage.Beam.GoHomeConfig]: alloc=131351344 time=36.404
+CorePrep [Storage.Beam.GoHomeConfig]: alloc=21784 time=0.014
+CodeGen [Storage.Beam.GoHomeConfig]: alloc=1782946608 time=591.030
+systool:as: alloc=103144 time=0.214
+CorePrep [Storage.Beam.GoHomeConfig]: alloc=21784 time=0.017
+CodeGen [Storage.Beam.GoHomeConfig]: alloc=1839400088 time=551.271
+systool:as: alloc=106024 time=0.278

@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Maps.PlaceNameCache]: alloc=1810480 time=0.432
-Simplify [expr]: alloc=246376 time=0.121
-CorePrep [expr]: alloc=96424 time=0.072
-ByteCodeGen [Ghci1]: alloc=527152 time=0.144
-Simplify [expr]: alloc=47024 time=0.046
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.049
-Renamer/typechecker [Storage.Beam.Maps.PlaceNameCache]: alloc=191084976 time=63.055
-Desugar [Storage.Beam.Maps.PlaceNameCache]: alloc=24947744 time=7.505
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=332580704 time=109.339
-Specialise [Storage.Beam.Maps.PlaceNameCache]: alloc=20159288 time=9.138
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Maps.PlaceNameCache]: alloc=66008328 time=1084.527
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=564717000 time=169.840
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=508188848 time=168.466
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=461019408 time=163.932
+Parser [Storage.Beam.Maps.PlaceNameCache]: alloc=1810480 time=0.424
+Simplify [expr]: alloc=246296 time=0.075
+CorePrep [expr]: alloc=96464 time=0.059
+ByteCodeGen [Ghci1]: alloc=527112 time=0.139
+Simplify [expr]: alloc=47024 time=0.022
+CorePrep [expr]: alloc=26752 time=0.032
+ByteCodeGen [Ghci1]: alloc=131880 time=0.054
+Renamer/typechecker [Storage.Beam.Maps.PlaceNameCache]: alloc=191169120 time=60.522
+Desugar [Storage.Beam.Maps.PlaceNameCache]: alloc=24962184 time=7.125
+Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=146352768 time=45.930
+Specialise [Storage.Beam.Maps.PlaceNameCache]: alloc=47242704 time=15.958
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Maps.PlaceNameCache]: alloc=90945808 time=34.755
+Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=1434647208 time=574.530
 Float inwards [Storage.Beam.Maps.PlaceNameCache]: alloc=22888 time=0.005
 Called arity analysis [Storage.Beam.Maps.PlaceNameCache]: alloc=24464 time=0.006
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=343495768 time=102.142
-Demand analysis [Storage.Beam.Maps.PlaceNameCache]: alloc=67834776 time=19.620
-Worker Wrapper binds [Storage.Beam.Maps.PlaceNameCache]: alloc=2522576 time=1.373
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=489243264 time=144.099
-Exitification transformation [Storage.Beam.Maps.PlaceNameCache]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Maps.PlaceNameCache]: alloc=54098400 time=18.607
-Common sub-expression [Storage.Beam.Maps.PlaceNameCache]: alloc=23992 time=0.006
+Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=390767368 time=156.122
+Demand analysis [Storage.Beam.Maps.PlaceNameCache]: alloc=345719680 time=83.240
+Worker Wrapper binds [Storage.Beam.Maps.PlaceNameCache]: alloc=9970008 time=5.734
+Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=450392240 time=163.476
+Exitification transformation [Storage.Beam.Maps.PlaceNameCache]: alloc=25408 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Maps.PlaceNameCache]: alloc=290897408 time=99.236
+Common sub-expression [Storage.Beam.Maps.PlaceNameCache]: alloc=23992 time=0.007
 Float inwards [Storage.Beam.Maps.PlaceNameCache]: alloc=22888 time=0.004
-Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=345576120 time=152.794
-Demand analysis [Storage.Beam.Maps.PlaceNameCache]: alloc=51803248 time=16.216
-CoreTidy [Storage.Beam.Maps.PlaceNameCache]: alloc=43195808 time=16.666
-CorePrep [Storage.Beam.Maps.PlaceNameCache]: alloc=23880 time=0.048
-CodeGen [Storage.Beam.Maps.PlaceNameCache]: alloc=375922744 time=113.844
-systool:as: alloc=104320 time=0.258
+Simplifier [Storage.Beam.Maps.PlaceNameCache]: alloc=443109872 time=201.019
+Demand analysis [Storage.Beam.Maps.PlaceNameCache]: alloc=287720560 time=72.815
+CoreTidy [Storage.Beam.Maps.PlaceNameCache]: alloc=78104296 time=57.788
 CorePrep [Storage.Beam.Maps.PlaceNameCache]: alloc=23880 time=0.016
-CodeGen [Storage.Beam.Maps.PlaceNameCache]: alloc=393921144 time=115.567
-systool:as: alloc=107200 time=0.290
+CodeGen [Storage.Beam.Maps.PlaceNameCache]: alloc=1337787544 time=453.735
+systool:as: alloc=103600 time=0.273
+CorePrep [Storage.Beam.Maps.PlaceNameCache]: alloc=23880 time=0.044
+CodeGen [Storage.Beam.Maps.PlaceNameCache]: alloc=1380710280 time=433.166
+systool:as: alloc=106480 time=0.311

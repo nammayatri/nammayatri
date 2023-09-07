@@ -1,28 +1,26 @@
-Parser [Domain.Types.Geometry]: alloc=311464 time=0.157
-Renamer/typechecker [Domain.Types.Geometry]: alloc=9954392 time=3.730
-Desugar [Domain.Types.Geometry]: alloc=1061928 time=1.153
-Simplifier [Domain.Types.Geometry]: alloc=6999352 time=2.363
-Specialise [Domain.Types.Geometry]: alloc=234536 time=0.083
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Geometry]: alloc=1094664 time=0.389
-Simplifier [Domain.Types.Geometry]: alloc=3688320 time=1.292
-Simplifier [Domain.Types.Geometry]: alloc=4030120 time=1.372
-Simplifier [Domain.Types.Geometry]: alloc=1194328 time=0.434
+Parser [Domain.Types.Geometry]: alloc=311464 time=0.121
+Renamer/typechecker [Domain.Types.Geometry]: alloc=9952672 time=3.755
+Desugar [Domain.Types.Geometry]: alloc=1061528 time=1.159
+Simplifier [Domain.Types.Geometry]: alloc=3292456 time=1.163
+Specialise [Domain.Types.Geometry]: alloc=274728 time=0.082
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Geometry]: alloc=1285904 time=0.457
+Simplifier [Domain.Types.Geometry]: alloc=4061864 time=1.538
 Float inwards [Domain.Types.Geometry]: alloc=19624 time=0.005
-Called arity analysis [Domain.Types.Geometry]: alloc=21200 time=0.006
-Simplifier [Domain.Types.Geometry]: alloc=1513480 time=0.517
-Demand analysis [Domain.Types.Geometry]: alloc=909464 time=0.284
-Worker Wrapper binds [Domain.Types.Geometry]: alloc=58880 time=0.029
-Simplifier [Domain.Types.Geometry]: alloc=3693008 time=1.202
-Exitification transformation [Domain.Types.Geometry]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Geometry]: alloc=901248 time=0.305
+Called arity analysis [Domain.Types.Geometry]: alloc=21200 time=0.005
+Simplifier [Domain.Types.Geometry]: alloc=2049984 time=0.732
+Demand analysis [Domain.Types.Geometry]: alloc=1254976 time=0.390
+Worker Wrapper binds [Domain.Types.Geometry]: alloc=84896 time=0.044
+Simplifier [Domain.Types.Geometry]: alloc=2331224 time=0.816
+Exitification transformation [Domain.Types.Geometry]: alloc=22128 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Geometry]: alloc=1112536 time=0.384
 Common sub-expression [Domain.Types.Geometry]: alloc=20728 time=0.005
 Float inwards [Domain.Types.Geometry]: alloc=19624 time=0.004
-Simplifier [Domain.Types.Geometry]: alloc=2393040 time=0.877
-Demand analysis [Domain.Types.Geometry]: alloc=1023472 time=0.314
-CoreTidy [Domain.Types.Geometry]: alloc=718192 time=0.317
-CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.010
-CodeGen [Domain.Types.Geometry]: alloc=18004032 time=6.955
-systool:as: alloc=103632 time=0.157
-CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.013
-CodeGen [Domain.Types.Geometry]: alloc=18628640 time=6.197
-systool:as: alloc=106504 time=0.120
+Simplifier [Domain.Types.Geometry]: alloc=2868304 time=1.036
+Demand analysis [Domain.Types.Geometry]: alloc=1351376 time=0.395
+CoreTidy [Domain.Types.Geometry]: alloc=722080 time=0.320
+CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.009
+CodeGen [Domain.Types.Geometry]: alloc=25087112 time=8.708
+systool:as: alloc=102896 time=0.202
+CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.019
+CodeGen [Domain.Types.Geometry]: alloc=25963176 time=10.159
+systool:as: alloc=105768 time=0.165

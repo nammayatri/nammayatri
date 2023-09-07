@@ -1,28 +1,26 @@
-Parser [SharedLogic.Estimate]: alloc=4870648 time=1.004
-Renamer/typechecker [SharedLogic.Estimate]: alloc=241651624 time=56.484
-Desugar [SharedLogic.Estimate]: alloc=1259676936 time=213.554
-Simplifier [SharedLogic.Estimate]: alloc=38623528 time=12.098
-Specialise [SharedLogic.Estimate]: alloc=1307280 time=0.415
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Estimate]: alloc=5254872 time=1.754
-Simplifier [SharedLogic.Estimate]: alloc=23615792 time=7.573
-Simplifier [SharedLogic.Estimate]: alloc=17704448 time=5.324
-Simplifier [SharedLogic.Estimate]: alloc=25623664 time=10.624
+Parser [SharedLogic.Estimate]: alloc=4870648 time=1.125
+Renamer/typechecker [SharedLogic.Estimate]: alloc=241660608 time=51.172
+Desugar [SharedLogic.Estimate]: alloc=1259756456 time=197.507
+Simplifier [SharedLogic.Estimate]: alloc=20125400 time=5.918
+Specialise [SharedLogic.Estimate]: alloc=2805064 time=0.776
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Estimate]: alloc=8471376 time=2.758
+Simplifier [SharedLogic.Estimate]: alloc=104834496 time=35.275
 Float inwards [SharedLogic.Estimate]: alloc=19320 time=0.005
-Called arity analysis [SharedLogic.Estimate]: alloc=20896 time=0.005
-Simplifier [SharedLogic.Estimate]: alloc=14797176 time=4.118
-Demand analysis [SharedLogic.Estimate]: alloc=7522208 time=1.829
-Worker Wrapper binds [SharedLogic.Estimate]: alloc=408032 time=0.158
-Simplifier [SharedLogic.Estimate]: alloc=22995744 time=6.915
+Called arity analysis [SharedLogic.Estimate]: alloc=20896 time=0.006
+Simplifier [SharedLogic.Estimate]: alloc=37893632 time=11.876
+Demand analysis [SharedLogic.Estimate]: alloc=54077968 time=12.349
+Worker Wrapper binds [SharedLogic.Estimate]: alloc=1392384 time=0.665
+Simplifier [SharedLogic.Estimate]: alloc=50017712 time=16.257
 Exitification transformation [SharedLogic.Estimate]: alloc=21840 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Estimate]: alloc=6841368 time=2.094
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Estimate]: alloc=45479056 time=14.333
 Common sub-expression [SharedLogic.Estimate]: alloc=20424 time=0.006
 Float inwards [SharedLogic.Estimate]: alloc=19320 time=0.004
-Simplifier [SharedLogic.Estimate]: alloc=17228376 time=5.210
-Demand analysis [SharedLogic.Estimate]: alloc=9187664 time=2.227
-CoreTidy [SharedLogic.Estimate]: alloc=2496888 time=0.863
+Simplifier [SharedLogic.Estimate]: alloc=50144968 time=16.867
+Demand analysis [SharedLogic.Estimate]: alloc=53208680 time=11.776
+CoreTidy [SharedLogic.Estimate]: alloc=8264312 time=3.537
 CorePrep [SharedLogic.Estimate]: alloc=20296 time=0.009
-CodeGen [SharedLogic.Estimate]: alloc=86589928 time=25.483
-systool:as: alloc=103568 time=0.225
-CorePrep [SharedLogic.Estimate]: alloc=20296 time=0.018
-CodeGen [SharedLogic.Estimate]: alloc=90932680 time=26.217
-systool:as: alloc=106440 time=0.219
+CodeGen [SharedLogic.Estimate]: alloc=298849280 time=85.288
+systool:as: alloc=102840 time=0.273
+CorePrep [SharedLogic.Estimate]: alloc=20296 time=0.015
+CodeGen [SharedLogic.Estimate]: alloc=308141192 time=90.880
+systool:as: alloc=105712 time=0.274

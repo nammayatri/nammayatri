@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=1052736 time=0.311
-Renamer/typechecker [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=225740280 time=39.362
-Desugar [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=204686240 time=31.729
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=8763240 time=2.108
-Specialise [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=548984 time=0.154
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=2603512 time=0.605
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=7347504 time=1.716
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=5055424 time=1.178
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=22065680 time=6.140
-Float inwards [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=27656 time=0.005
-Called arity analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=29232 time=0.006
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=22075016 time=5.468
-Demand analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=7245872 time=1.541
-Worker Wrapper binds [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=582640 time=0.208
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=21724344 time=6.460
-Exitification transformation [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=30176 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=6990488 time=1.805
-Common sub-expression [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28760 time=0.018
+Parser [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=1052736 time=0.282
+Renamer/typechecker [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=225770040 time=42.283
+Desugar [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=204699920 time=33.062
+Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=5314096 time=1.501
+Specialise [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=668096 time=0.212
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=2938264 time=0.754
+Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=30307816 time=9.477
 Float inwards [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=27656 time=0.006
-Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=13101048 time=3.662
-Demand analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=12480024 time=2.330
-CoreTidy [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=1694344 time=0.686
-CorePrep [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28648 time=0.009
-CodeGen [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=60890888 time=15.403
-systool:as: alloc=105400 time=0.198
-CorePrep [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28648 time=0.017
-CodeGen [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=63303544 time=16.031
-systool:as: alloc=108256 time=0.197
+Called arity analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=29232 time=0.006
+Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=14600704 time=3.840
+Demand analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=15042856 time=3.353
+Worker Wrapper binds [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=742784 time=0.277
+Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=14615360 time=4.675
+Exitification transformation [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=30176 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=15156776 time=4.361
+Common sub-expression [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28760 time=0.005
+Float inwards [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=27656 time=0.005
+Simplifier [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=17246984 time=5.139
+Demand analysis [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=21470552 time=4.251
+CoreTidy [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=2808104 time=1.206
+CorePrep [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28648 time=0.011
+CodeGen [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=96643984 time=26.734
+systool:as: alloc=104648 time=0.245
+CorePrep [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=28648 time=0.018
+CodeGen [Storage.CachedQueries.Merchant.LeaderBoardConfig]: alloc=100262376 time=27.312
+systool:as: alloc=107528 time=0.176

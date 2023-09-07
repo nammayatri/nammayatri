@@ -1,34 +1,32 @@
-Parser [Storage.Beam.LeaderBoardConfig]: alloc=1603680 time=0.370
-Simplify [expr]: alloc=184136 time=0.101
-CorePrep [expr]: alloc=74024 time=0.067
-ByteCodeGen [Ghci1]: alloc=379864 time=0.114
-Simplify [expr]: alloc=47024 time=0.045
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.060
-Renamer/typechecker [Storage.Beam.LeaderBoardConfig]: alloc=173170128 time=51.859
-Desugar [Storage.Beam.LeaderBoardConfig]: alloc=23670440 time=6.589
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=270275544 time=83.235
-Specialise [Storage.Beam.LeaderBoardConfig]: alloc=17093368 time=6.123
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.LeaderBoardConfig]: alloc=58299968 time=16.836
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=450005344 time=146.965
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=353073448 time=125.712
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=322050680 time=120.692
-Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.006
-Called arity analysis [Storage.Beam.LeaderBoardConfig]: alloc=23872 time=0.007
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=249866552 time=91.661
-Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=45420272 time=28.756
-Worker Wrapper binds [Storage.Beam.LeaderBoardConfig]: alloc=1670728 time=0.749
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=350251792 time=112.972
-Exitification transformation [Storage.Beam.LeaderBoardConfig]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.LeaderBoardConfig]: alloc=38148576 time=13.012
+Parser [Storage.Beam.LeaderBoardConfig]: alloc=1603680 time=0.483
+Simplify [expr]: alloc=184216 time=0.065
+CorePrep [expr]: alloc=74144 time=0.039
+ByteCodeGen [Ghci1]: alloc=379904 time=0.165
+Simplify [expr]: alloc=47024 time=0.031
+CorePrep [expr]: alloc=26752 time=0.029
+ByteCodeGen [Ghci1]: alloc=131880 time=0.053
+Renamer/typechecker [Storage.Beam.LeaderBoardConfig]: alloc=173202136 time=54.008
+Desugar [Storage.Beam.LeaderBoardConfig]: alloc=23671200 time=6.679
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=118682368 time=34.837
+Specialise [Storage.Beam.LeaderBoardConfig]: alloc=36995752 time=11.960
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.LeaderBoardConfig]: alloc=77427808 time=28.139
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=897930768 time=335.089
+Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.005
+Called arity analysis [Storage.Beam.LeaderBoardConfig]: alloc=23872 time=0.006
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=259382304 time=101.272
+Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=237584704 time=60.439
+Worker Wrapper binds [Storage.Beam.LeaderBoardConfig]: alloc=5962816 time=3.703
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=300974024 time=116.425
+Exitification transformation [Storage.Beam.LeaderBoardConfig]: alloc=24816 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.LeaderBoardConfig]: alloc=199268480 time=66.384
 Common sub-expression [Storage.Beam.LeaderBoardConfig]: alloc=23400 time=0.007
-Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.004
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=267708120 time=104.173
-Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=41465776 time=9.725
-CoreTidy [Storage.Beam.LeaderBoardConfig]: alloc=31275784 time=8.804
-CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.042
-CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=305835288 time=113.881
-systool:as: alloc=104176 time=0.191
+Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.005
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=310988832 time=145.812
+Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=218638600 time=53.257
+CoreTidy [Storage.Beam.LeaderBoardConfig]: alloc=60008752 time=45.023
 CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.016
-CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=320311792 time=98.280
-systool:as: alloc=107048 time=0.227
+CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=1120196976 time=350.696
+systool:as: alloc=103456 time=0.260
+CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.018
+CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=1154304120 time=352.669
+systool:as: alloc=106328 time=0.294

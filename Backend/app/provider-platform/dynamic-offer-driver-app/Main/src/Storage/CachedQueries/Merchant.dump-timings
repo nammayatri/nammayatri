@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Merchant]: alloc=2708192 time=0.610
-Renamer/typechecker [Storage.CachedQueries.Merchant]: alloc=639675152 time=107.926
-Desugar [Storage.CachedQueries.Merchant]: alloc=701328464 time=105.000
-Simplifier [Storage.CachedQueries.Merchant]: alloc=29638112 time=6.494
-Specialise [Storage.CachedQueries.Merchant]: alloc=1861968 time=0.562
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant]: alloc=9899976 time=2.218
-Simplifier [Storage.CachedQueries.Merchant]: alloc=22482728 time=5.394
-Simplifier [Storage.CachedQueries.Merchant]: alloc=14492952 time=3.218
-Simplifier [Storage.CachedQueries.Merchant]: alloc=110009864 time=32.472
+Parser [Storage.CachedQueries.Merchant]: alloc=2708192 time=0.565
+Renamer/typechecker [Storage.CachedQueries.Merchant]: alloc=639691416 time=127.543
+Desugar [Storage.CachedQueries.Merchant]: alloc=701386064 time=130.538
+Simplifier [Storage.CachedQueries.Merchant]: alloc=14073560 time=3.750
+Specialise [Storage.CachedQueries.Merchant]: alloc=2634144 time=0.887
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant]: alloc=11927864 time=3.282
+Simplifier [Storage.CachedQueries.Merchant]: alloc=54367824 time=18.120
 Float inwards [Storage.CachedQueries.Merchant]: alloc=22296 time=0.005
 Called arity analysis [Storage.CachedQueries.Merchant]: alloc=23872 time=0.006
-Simplifier [Storage.CachedQueries.Merchant]: alloc=65107728 time=17.683
-Demand analysis [Storage.CachedQueries.Merchant]: alloc=46139072 time=10.427
-Worker Wrapper binds [Storage.CachedQueries.Merchant]: alloc=2101800 time=0.791
-Simplifier [Storage.CachedQueries.Merchant]: alloc=131468432 time=40.362
-Exitification transformation [Storage.CachedQueries.Merchant]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant]: alloc=40580856 time=11.684
-Common sub-expression [Storage.CachedQueries.Merchant]: alloc=23400 time=0.033
+Simplifier [Storage.CachedQueries.Merchant]: alloc=27735912 time=8.115
+Demand analysis [Storage.CachedQueries.Merchant]: alloc=26523920 time=6.414
+Worker Wrapper binds [Storage.CachedQueries.Merchant]: alloc=1702784 time=0.734
+Simplifier [Storage.CachedQueries.Merchant]: alloc=24885368 time=8.650
+Exitification transformation [Storage.CachedQueries.Merchant]: alloc=24816 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant]: alloc=25534512 time=8.597
+Common sub-expression [Storage.CachedQueries.Merchant]: alloc=23400 time=0.008
 Float inwards [Storage.CachedQueries.Merchant]: alloc=22296 time=0.004
-Simplifier [Storage.CachedQueries.Merchant]: alloc=78469880 time=23.434
-Demand analysis [Storage.CachedQueries.Merchant]: alloc=78002248 time=15.412
-CoreTidy [Storage.CachedQueries.Merchant]: alloc=8215008 time=3.655
-CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.010
-CodeGen [Storage.CachedQueries.Merchant]: alloc=315700600 time=77.953
-systool:as: alloc=104224 time=0.215
-CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.043
-CodeGen [Storage.CachedQueries.Merchant]: alloc=326897608 time=81.664
-systool:as: alloc=107120 time=0.261
+Simplifier [Storage.CachedQueries.Merchant]: alloc=28052232 time=10.540
+Demand analysis [Storage.CachedQueries.Merchant]: alloc=33109680 time=7.488
+CoreTidy [Storage.CachedQueries.Merchant]: alloc=4859144 time=2.749
+CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.014
+CodeGen [Storage.CachedQueries.Merchant]: alloc=160651408 time=50.439
+systool:as: alloc=103496 time=0.242
+CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.018
+CodeGen [Storage.CachedQueries.Merchant]: alloc=167183880 time=49.063
+systool:as: alloc=106368 time=0.198

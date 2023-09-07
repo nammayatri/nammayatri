@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=6825824 time=1.278
-Renamer/typechecker [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=3727854872 time=623.413
-Desugar [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=1963528272 time=296.450
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=88251672 time=22.146
-Specialise [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=7364568 time=1.501
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=24799112 time=6.385
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=56179816 time=13.456
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=34590744 time=8.019
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=121465680 time=32.781
-Float inwards [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=25576 time=0.005
-Called arity analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=27152 time=0.006
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=98983712 time=21.004
-Demand analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=52647928 time=12.830
-Worker Wrapper binds [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=1338064 time=0.589
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=137200800 time=44.569
+Parser [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=6825824 time=1.471
+Renamer/typechecker [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=3727888992 time=721.249
+Desugar [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=1963603152 time=308.053
+Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=36902264 time=10.559
+Specialise [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=11415280 time=2.426
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=35499048 time=10.376
+Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=113304744 time=33.823
+Float inwards [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=25576 time=0.008
+Called arity analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=27152 time=0.007
+Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=72197216 time=14.722
+Demand analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=53553504 time=11.838
+Worker Wrapper binds [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=1411184 time=0.607
+Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=40894776 time=16.023
 Exitification transformation [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=28080 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=40576312 time=11.285
-Common sub-expression [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26680 time=0.006
-Float inwards [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=25576 time=0.004
-Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=98051048 time=27.002
-Demand analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=67261912 time=15.094
-CoreTidy [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=9711792 time=3.171
-CorePrep [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26552 time=0.008
-CodeGen [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=356867032 time=83.852
-systool:as: alloc=104960 time=0.177
-CorePrep [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26552 time=0.014
-CodeGen [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=370568936 time=88.535
-systool:as: alloc=107840 time=0.210
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=41988584 time=12.928
+Common sub-expression [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26680 time=0.007
+Float inwards [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=25576 time=0.005
+Simplifier [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=68573992 time=21.093
+Demand analysis [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=54224264 time=12.060
+CoreTidy [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=9172744 time=3.627
+CorePrep [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26552 time=0.009
+CodeGen [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=316829072 time=82.758
+systool:as: alloc=104224 time=0.223
+CorePrep [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=26552 time=0.019
+CodeGen [Domain.Action.UI.Ride.CancelRide.Internal]: alloc=329855504 time=89.522
+systool:as: alloc=107104 time=0.195

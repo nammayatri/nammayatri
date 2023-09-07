@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=1310288 time=0.296
-Renamer/typechecker [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=46963192 time=14.677
-Desugar [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=2329240 time=1.328
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=24652968 time=8.213
-Specialise [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=5497392 time=1.468
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=7794768 time=2.202
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=321874432 time=88.675
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=133706648 time=39.342
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=132366984 time=38.752
-Float inwards [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=25864 time=0.006
+Parser [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=1310288 time=0.303
+Renamer/typechecker [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=46963072 time=15.627
+Desugar [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=2330120 time=1.369
+Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=16032016 time=5.276
+Specialise [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=5819240 time=1.728
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=8718592 time=2.717
+Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=264186624 time=73.168
+Float inwards [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=25864 time=0.017
 Called arity analysis [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=27440 time=0.007
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=69720080 time=20.111
-Demand analysis [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=7591568 time=6.043
-Worker Wrapper binds [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=371080 time=0.316
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=136468128 time=38.969
-Exitification transformation [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=28384 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=7186136 time=4.124
-Common sub-expression [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26968 time=0.018
+Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=70904224 time=21.568
+Demand analysis [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=8092696 time=6.470
+Worker Wrapper binds [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=387144 time=0.276
+Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=69383656 time=21.144
+Exitification transformation [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=28384 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=7344128 time=4.534
+Common sub-expression [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26968 time=0.007
 Float inwards [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=25864 time=0.005
-Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=143019416 time=41.404
-Demand analysis [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=7263344 time=5.807
-CoreTidy [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=13351520 time=5.098
-CorePrep [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26856 time=0.014
-CodeGen [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=72517112 time=24.252
-systool:as: alloc=104976 time=0.183
-CorePrep [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26856 time=0.015
-CodeGen [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=77295096 time=25.748
-systool:as: alloc=107880 time=0.206
+Simplifier [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=76461416 time=26.251
+Demand analysis [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=8218208 time=6.474
+CoreTidy [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=13767416 time=5.248
+CorePrep [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26856 time=0.017
+CodeGen [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=70807104 time=25.097
+systool:as: alloc=104248 time=0.215
+CorePrep [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=26856 time=0.017
+CodeGen [Storage.Queries.Merchant.LeaderBoardConfig]: alloc=75548360 time=26.539
+systool:as: alloc=107128 time=0.223

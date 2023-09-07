@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Ride.CancelRide]: alloc=6393896 time=1.413
-Renamer/typechecker [Domain.Action.UI.Ride.CancelRide]: alloc=1840670880 time=327.691
-Desugar [Domain.Action.UI.Ride.CancelRide]: alloc=1709976248 time=251.010
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=438574336 time=168.640
-Specialise [Domain.Action.UI.Ride.CancelRide]: alloc=22678248 time=9.722
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.CancelRide]: alloc=51161368 time=19.110
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=478125824 time=161.767
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=253278128 time=87.115
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=310913840 time=113.195
+Parser [Domain.Action.UI.Ride.CancelRide]: alloc=6393896 time=1.497
+Renamer/typechecker [Domain.Action.UI.Ride.CancelRide]: alloc=1840638544 time=356.261
+Desugar [Domain.Action.UI.Ride.CancelRide]: alloc=1710050448 time=270.924
+Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=215528352 time=72.744
+Specialise [Domain.Action.UI.Ride.CancelRide]: alloc=24498720 time=11.961
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.CancelRide]: alloc=65781344 time=25.612
+Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=711737928 time=283.345
 Float inwards [Domain.Action.UI.Ride.CancelRide]: alloc=22888 time=0.005
-Called arity analysis [Domain.Action.UI.Ride.CancelRide]: alloc=24464 time=0.006
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=257084120 time=97.066
-Demand analysis [Domain.Action.UI.Ride.CancelRide]: alloc=107567496 time=21.993
-Worker Wrapper binds [Domain.Action.UI.Ride.CancelRide]: alloc=2190040 time=1.232
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=734588592 time=277.147
+Called arity analysis [Domain.Action.UI.Ride.CancelRide]: alloc=24464 time=0.005
+Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=171894112 time=84.712
+Demand analysis [Domain.Action.UI.Ride.CancelRide]: alloc=158997520 time=39.400
+Worker Wrapper binds [Domain.Action.UI.Ride.CancelRide]: alloc=3404624 time=2.356
+Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=219005544 time=68.528
 Exitification transformation [Domain.Action.UI.Ride.CancelRide]: alloc=25408 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.CancelRide]: alloc=81607728 time=24.463
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.CancelRide]: alloc=143159016 time=51.556
 Common sub-expression [Domain.Action.UI.Ride.CancelRide]: alloc=23992 time=0.007
 Float inwards [Domain.Action.UI.Ride.CancelRide]: alloc=22888 time=0.004
-Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=301123600 time=85.464
-Demand analysis [Domain.Action.UI.Ride.CancelRide]: alloc=139998000 time=27.561
-CoreTidy [Domain.Action.UI.Ride.CancelRide]: alloc=52884664 time=16.737
-CorePrep [Domain.Action.UI.Ride.CancelRide]: alloc=23880 time=0.041
-CodeGen [Domain.Action.UI.Ride.CancelRide]: alloc=687593576 time=198.671
-systool:as: alloc=104344 time=0.247
-CorePrep [Domain.Action.UI.Ride.CancelRide]: alloc=23880 time=0.028
-CodeGen [Domain.Action.UI.Ride.CancelRide]: alloc=711385872 time=172.663
-systool:as: alloc=107224 time=0.225
+Simplifier [Domain.Action.UI.Ride.CancelRide]: alloc=419861584 time=200.507
+Demand analysis [Domain.Action.UI.Ride.CancelRide]: alloc=191018120 time=51.347
+CoreTidy [Domain.Action.UI.Ride.CancelRide]: alloc=71983464 time=28.519
+CorePrep [Domain.Action.UI.Ride.CancelRide]: alloc=23880 time=0.017
+CodeGen [Domain.Action.UI.Ride.CancelRide]: alloc=878854896 time=306.829
+systool:as: alloc=103616 time=0.233
+CorePrep [Domain.Action.UI.Ride.CancelRide]: alloc=23880 time=0.015
+CodeGen [Domain.Action.UI.Ride.CancelRide]: alloc=909206328 time=261.158
+systool:as: alloc=106496 time=0.238

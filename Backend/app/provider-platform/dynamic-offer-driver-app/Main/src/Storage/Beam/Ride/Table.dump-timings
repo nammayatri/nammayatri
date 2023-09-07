@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Ride.Table]: alloc=2785768 time=0.532
-Simplify [expr]: alloc=308512 time=0.078
-CorePrep [expr]: alloc=118928 time=0.068
-ByteCodeGen [Ghci1]: alloc=674144 time=0.185
-Simplify [expr]: alloc=47024 time=0.032
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.068
-Renamer/typechecker [Storage.Beam.Ride.Table]: alloc=498722840 time=131.426
-Desugar [Storage.Beam.Ride.Table]: alloc=47174160 time=11.504
-Simplifier [Storage.Beam.Ride.Table]: alloc=624610656 time=215.977
-Specialise [Storage.Beam.Ride.Table]: alloc=63672928 time=30.096
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Ride.Table]: alloc=162241560 time=46.469
-Simplifier [Storage.Beam.Ride.Table]: alloc=1194350936 time=442.280
-Simplifier [Storage.Beam.Ride.Table]: alloc=1087480808 time=396.769
-Simplifier [Storage.Beam.Ride.Table]: alloc=923636144 time=346.244
+Parser [Storage.Beam.Ride.Table]: alloc=2785768 time=0.595
+Simplify [expr]: alloc=308512 time=0.109
+CorePrep [expr]: alloc=118848 time=0.093
+ByteCodeGen [Ghci1]: alloc=674144 time=0.161
+Simplify [expr]: alloc=47024 time=0.043
+CorePrep [expr]: alloc=26752 time=0.020
+ByteCodeGen [Ghci1]: alloc=131880 time=0.053
+Renamer/typechecker [Storage.Beam.Ride.Table]: alloc=498789328 time=128.102
+Desugar [Storage.Beam.Ride.Table]: alloc=47217904 time=12.022
+Simplifier [Storage.Beam.Ride.Table]: alloc=316158464 time=96.794
+Specialise [Storage.Beam.Ride.Table]: alloc=201170632 time=51.829
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Ride.Table]: alloc=223053952 time=84.198
+Simplifier [Storage.Beam.Ride.Table]: alloc=3290216576 time=1295.946
 Float inwards [Storage.Beam.Ride.Table]: alloc=20216 time=0.005
 Called arity analysis [Storage.Beam.Ride.Table]: alloc=21792 time=0.006
-Simplifier [Storage.Beam.Ride.Table]: alloc=700986008 time=263.052
-Demand analysis [Storage.Beam.Ride.Table]: alloc=194743000 time=56.787
-Worker Wrapper binds [Storage.Beam.Ride.Table]: alloc=6194440 time=5.110
-Simplifier [Storage.Beam.Ride.Table]: alloc=1008101144 time=1763.974
+Simplifier [Storage.Beam.Ride.Table]: alloc=1005363208 time=389.846
+Demand analysis [Storage.Beam.Ride.Table]: alloc=839031712 time=200.082
+Worker Wrapper binds [Storage.Beam.Ride.Table]: alloc=22133712 time=64.485
+Simplifier [Storage.Beam.Ride.Table]: alloc=1089969400 time=412.342
 Exitification transformation [Storage.Beam.Ride.Table]: alloc=22720 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Ride.Table]: alloc=169400288 time=95.704
-Common sub-expression [Storage.Beam.Ride.Table]: alloc=21320 time=0.034
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Ride.Table]: alloc=730389976 time=370.611
+Common sub-expression [Storage.Beam.Ride.Table]: alloc=21320 time=0.007
 Float inwards [Storage.Beam.Ride.Table]: alloc=20216 time=0.004
-Simplifier [Storage.Beam.Ride.Table]: alloc=683207600 time=238.294
-Demand analysis [Storage.Beam.Ride.Table]: alloc=137558784 time=33.816
-CoreTidy [Storage.Beam.Ride.Table]: alloc=109639024 time=47.579
+Simplifier [Storage.Beam.Ride.Table]: alloc=1138101632 time=479.103
+Demand analysis [Storage.Beam.Ride.Table]: alloc=742920840 time=168.260
+CoreTidy [Storage.Beam.Ride.Table]: alloc=218876584 time=105.324
 CorePrep [Storage.Beam.Ride.Table]: alloc=21176 time=0.041
-CodeGen [Storage.Beam.Ride.Table]: alloc=1185400848 time=319.848
-systool:as: alloc=103776 time=0.287
-CorePrep [Storage.Beam.Ride.Table]: alloc=21176 time=0.017
-CodeGen [Storage.Beam.Ride.Table]: alloc=1240009128 time=327.471
-systool:as: alloc=106656 time=0.312
+CodeGen [Storage.Beam.Ride.Table]: alloc=3719928904 time=1217.098
+systool:as: alloc=103048 time=0.333
+CorePrep [Storage.Beam.Ride.Table]: alloc=21176 time=0.018
+CodeGen [Storage.Beam.Ride.Table]: alloc=3839713672 time=1207.912
+systool:as: alloc=105920 time=0.307

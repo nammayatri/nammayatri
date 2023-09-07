@@ -1,33 +1,31 @@
-systool:linker: alloc=51112 time=0.154
-systool:linker: alloc=38496 time=0.095
-systool:linker: alloc=43816 time=0.121
-systool:linker: alloc=43856 time=0.094
-systool:linker: alloc=43848 time=0.144
-Parser [Domain.Types.BapMetadata]: alloc=346736 time=0.168
-Renamer/typechecker [Domain.Types.BapMetadata]: alloc=976673488 time=624.864
-Desugar [Domain.Types.BapMetadata]: alloc=13900880 time=6.396
-Simplifier [Domain.Types.BapMetadata]: alloc=96140088 time=34.294
-Specialise [Domain.Types.BapMetadata]: alloc=5173320 time=1.558
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BapMetadata]: alloc=10588496 time=3.718
-Simplifier [Domain.Types.BapMetadata]: alloc=78554216 time=27.091
-Simplifier [Domain.Types.BapMetadata]: alloc=70564704 time=24.088
-Simplifier [Domain.Types.BapMetadata]: alloc=62602400 time=26.969
+systool:linker: alloc=51112 time=0.163
+systool:linker: alloc=38496 time=0.098
+systool:linker: alloc=43816 time=0.136
+systool:linker: alloc=43856 time=0.117
+systool:linker: alloc=43848 time=0.160
+Parser [Domain.Types.BapMetadata]: alloc=346736 time=0.131
+Renamer/typechecker [Domain.Types.BapMetadata]: alloc=976689936 time=650.021
+Desugar [Domain.Types.BapMetadata]: alloc=13884432 time=7.030
+Simplifier [Domain.Types.BapMetadata]: alloc=75697792 time=28.724
+Specialise [Domain.Types.BapMetadata]: alloc=10247832 time=3.359
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BapMetadata]: alloc=14081776 time=5.559
+Simplifier [Domain.Types.BapMetadata]: alloc=145693232 time=67.071
 Float inwards [Domain.Types.BapMetadata]: alloc=20504 time=0.005
-Called arity analysis [Domain.Types.BapMetadata]: alloc=22080 time=0.005
-Simplifier [Domain.Types.BapMetadata]: alloc=46326480 time=14.368
-Demand analysis [Domain.Types.BapMetadata]: alloc=27112488 time=15.143
-Worker Wrapper binds [Domain.Types.BapMetadata]: alloc=379944 time=0.232
-Simplifier [Domain.Types.BapMetadata]: alloc=52258184 time=16.049
+Called arity analysis [Domain.Types.BapMetadata]: alloc=22080 time=0.006
+Simplifier [Domain.Types.BapMetadata]: alloc=37686736 time=12.530
+Demand analysis [Domain.Types.BapMetadata]: alloc=36481944 time=19.938
+Worker Wrapper binds [Domain.Types.BapMetadata]: alloc=638072 time=0.258
+Simplifier [Domain.Types.BapMetadata]: alloc=38856392 time=13.122
 Exitification transformation [Domain.Types.BapMetadata]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BapMetadata]: alloc=10661480 time=3.336
-Common sub-expression [Domain.Types.BapMetadata]: alloc=21608 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BapMetadata]: alloc=21346152 time=7.736
+Common sub-expression [Domain.Types.BapMetadata]: alloc=21608 time=0.005
 Float inwards [Domain.Types.BapMetadata]: alloc=20504 time=0.004
-Simplifier [Domain.Types.BapMetadata]: alloc=38326112 time=12.273
-Demand analysis [Domain.Types.BapMetadata]: alloc=10001304 time=2.701
-CoreTidy [Domain.Types.BapMetadata]: alloc=5267680 time=2.062
-CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.007
-CodeGen [Domain.Types.BapMetadata]: alloc=67878328 time=22.405
-systool:as: alloc=105960 time=0.188
-CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.016
-CodeGen [Domain.Types.BapMetadata]: alloc=70227648 time=23.018
-systool:as: alloc=108400 time=0.246
+Simplifier [Domain.Types.BapMetadata]: alloc=45705968 time=17.308
+Demand analysis [Domain.Types.BapMetadata]: alloc=18977600 time=5.601
+CoreTidy [Domain.Types.BapMetadata]: alloc=7414512 time=3.230
+CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.008
+CodeGen [Domain.Types.BapMetadata]: alloc=98793536 time=38.405
+systool:as: alloc=105248 time=0.146
+CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.014
+CodeGen [Domain.Types.BapMetadata]: alloc=102558760 time=34.426
+systool:as: alloc=107664 time=0.196

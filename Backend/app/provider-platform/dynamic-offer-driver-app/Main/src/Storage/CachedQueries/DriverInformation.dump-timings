@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.DriverInformation]: alloc=4388720 time=0.728
-Renamer/typechecker [Storage.CachedQueries.DriverInformation]: alloc=3195774160 time=516.292
-Desugar [Storage.CachedQueries.DriverInformation]: alloc=774886848 time=115.729
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=42684968 time=8.918
-Specialise [Storage.CachedQueries.DriverInformation]: alloc=2515016 time=0.771
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.DriverInformation]: alloc=13308368 time=2.564
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=32329520 time=6.584
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=21373208 time=4.151
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=64685560 time=15.682
+Parser [Storage.CachedQueries.DriverInformation]: alloc=4388720 time=0.965
+Renamer/typechecker [Storage.CachedQueries.DriverInformation]: alloc=3195862664 time=636.243
+Desugar [Storage.CachedQueries.DriverInformation]: alloc=774930568 time=134.423
+Simplifier [Storage.CachedQueries.DriverInformation]: alloc=21114120 time=5.004
+Specialise [Storage.CachedQueries.DriverInformation]: alloc=4198584 time=1.330
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.DriverInformation]: alloc=15014896 time=3.474
+Simplifier [Storage.CachedQueries.DriverInformation]: alloc=43400504 time=15.394
 Float inwards [Storage.CachedQueries.DriverInformation]: alloc=24984 time=0.005
-Called arity analysis [Storage.CachedQueries.DriverInformation]: alloc=26560 time=0.007
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=42563752 time=9.518
-Demand analysis [Storage.CachedQueries.DriverInformation]: alloc=22898224 time=4.634
-Worker Wrapper binds [Storage.CachedQueries.DriverInformation]: alloc=4020528 time=1.061
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=64148872 time=17.120
-Exitification transformation [Storage.CachedQueries.DriverInformation]: alloc=27488 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.DriverInformation]: alloc=18890576 time=4.884
-Common sub-expression [Storage.CachedQueries.DriverInformation]: alloc=26088 time=0.005
+Called arity analysis [Storage.CachedQueries.DriverInformation]: alloc=26560 time=0.006
+Simplifier [Storage.CachedQueries.DriverInformation]: alloc=24197000 time=5.392
+Demand analysis [Storage.CachedQueries.DriverInformation]: alloc=18557688 time=4.312
+Worker Wrapper binds [Storage.CachedQueries.DriverInformation]: alloc=3926672 time=1.226
+Simplifier [Storage.CachedQueries.DriverInformation]: alloc=22485024 time=6.224
+Exitification transformation [Storage.CachedQueries.DriverInformation]: alloc=27488 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.DriverInformation]: alloc=19219120 time=5.540
+Common sub-expression [Storage.CachedQueries.DriverInformation]: alloc=26088 time=0.006
 Float inwards [Storage.CachedQueries.DriverInformation]: alloc=24984 time=0.005
-Simplifier [Storage.CachedQueries.DriverInformation]: alloc=33049600 time=8.814
-Demand analysis [Storage.CachedQueries.DriverInformation]: alloc=30386016 time=5.566
-CoreTidy [Storage.CachedQueries.DriverInformation]: alloc=6024376 time=2.458
+Simplifier [Storage.CachedQueries.DriverInformation]: alloc=18823224 time=5.847
+Demand analysis [Storage.CachedQueries.DriverInformation]: alloc=19659120 time=4.172
+CoreTidy [Storage.CachedQueries.DriverInformation]: alloc=5586808 time=1.924
 CorePrep [Storage.CachedQueries.DriverInformation]: alloc=25944 time=0.010
-CodeGen [Storage.CachedQueries.DriverInformation]: alloc=159110000 time=41.646
-systool:as: alloc=104776 time=0.185
-CorePrep [Storage.CachedQueries.DriverInformation]: alloc=25944 time=0.015
-CodeGen [Storage.CachedQueries.DriverInformation]: alloc=165506024 time=41.233
-systool:as: alloc=107656 time=0.183
+CodeGen [Storage.CachedQueries.DriverInformation]: alloc=122104440 time=38.731
+systool:as: alloc=104040 time=0.204
+CorePrep [Storage.CachedQueries.DriverInformation]: alloc=25944 time=0.014
+CodeGen [Storage.CachedQueries.DriverInformation]: alloc=127659248 time=38.307
+systool:as: alloc=106912 time=0.188

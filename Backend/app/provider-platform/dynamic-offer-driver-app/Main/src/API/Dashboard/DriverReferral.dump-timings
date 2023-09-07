@@ -1,28 +1,26 @@
-Parser [API.Dashboard.DriverReferral]: alloc=902616 time=0.270
-Renamer/typechecker [API.Dashboard.DriverReferral]: alloc=7666544 time=3.953
-Desugar [API.Dashboard.DriverReferral]: alloc=345808 time=0.867
-Simplifier [API.Dashboard.DriverReferral]: alloc=3960616 time=1.078
-Specialise [API.Dashboard.DriverReferral]: alloc=249296 time=0.069
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.DriverReferral]: alloc=762816 time=0.197
-Simplifier [API.Dashboard.DriverReferral]: alloc=962216 time=0.233
-Simplifier [API.Dashboard.DriverReferral]: alloc=937080 time=0.191
-Simplifier [API.Dashboard.DriverReferral]: alloc=937080 time=0.184
+Parser [API.Dashboard.DriverReferral]: alloc=902616 time=0.264
+Renamer/typechecker [API.Dashboard.DriverReferral]: alloc=7668920 time=3.900
+Desugar [API.Dashboard.DriverReferral]: alloc=345888 time=0.920
+Simplifier [API.Dashboard.DriverReferral]: alloc=2938456 time=0.814
+Specialise [API.Dashboard.DriverReferral]: alloc=691408 time=0.139
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.DriverReferral]: alloc=2624320 time=0.598
+Simplifier [API.Dashboard.DriverReferral]: alloc=1032712 time=0.264
 Float inwards [API.Dashboard.DriverReferral]: alloc=21704 time=0.004
 Called arity analysis [API.Dashboard.DriverReferral]: alloc=23280 time=0.005
-Simplifier [API.Dashboard.DriverReferral]: alloc=1100592 time=0.248
-Demand analysis [API.Dashboard.DriverReferral]: alloc=1883512 time=0.337
-Worker Wrapper binds [API.Dashboard.DriverReferral]: alloc=32800 time=0.013
-Simplifier [API.Dashboard.DriverReferral]: alloc=1837272 time=0.344
-Exitification transformation [API.Dashboard.DriverReferral]: alloc=24224 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.DriverReferral]: alloc=753104 time=0.185
+Simplifier [API.Dashboard.DriverReferral]: alloc=1097216 time=0.257
+Demand analysis [API.Dashboard.DriverReferral]: alloc=1879648 time=0.356
+Worker Wrapper binds [API.Dashboard.DriverReferral]: alloc=32800 time=0.014
+Simplifier [API.Dashboard.DriverReferral]: alloc=1828824 time=0.354
+Exitification transformation [API.Dashboard.DriverReferral]: alloc=24224 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.DriverReferral]: alloc=747104 time=0.199
 Common sub-expression [API.Dashboard.DriverReferral]: alloc=22808 time=0.004
-Float inwards [API.Dashboard.DriverReferral]: alloc=21704 time=0.004
-Simplifier [API.Dashboard.DriverReferral]: alloc=2324904 time=0.480
-Demand analysis [API.Dashboard.DriverReferral]: alloc=1885696 time=0.323
-CoreTidy [API.Dashboard.DriverReferral]: alloc=614096 time=0.172
-CorePrep [API.Dashboard.DriverReferral]: alloc=22680 time=0.007
-CodeGen [API.Dashboard.DriverReferral]: alloc=9885624 time=3.066
-systool:as: alloc=104088 time=0.151
-CorePrep [API.Dashboard.DriverReferral]: alloc=22680 time=0.011
-CodeGen [API.Dashboard.DriverReferral]: alloc=10141784 time=3.003
-systool:as: alloc=106936 time=0.107
+Float inwards [API.Dashboard.DriverReferral]: alloc=21704 time=0.003
+Simplifier [API.Dashboard.DriverReferral]: alloc=2314496 time=0.484
+Demand analysis [API.Dashboard.DriverReferral]: alloc=1881832 time=0.344
+CoreTidy [API.Dashboard.DriverReferral]: alloc=610576 time=0.192
+CorePrep [API.Dashboard.DriverReferral]: alloc=22680 time=0.010
+CodeGen [API.Dashboard.DriverReferral]: alloc=9859680 time=3.015
+systool:as: alloc=103336 time=0.145
+CorePrep [API.Dashboard.DriverReferral]: alloc=22680 time=0.013
+CodeGen [API.Dashboard.DriverReferral]: alloc=10129912 time=3.046
+systool:as: alloc=106208 time=0.120

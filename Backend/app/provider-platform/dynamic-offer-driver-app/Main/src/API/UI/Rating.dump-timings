@@ -1,28 +1,26 @@
-Parser [API.UI.Rating]: alloc=793296 time=0.267
-Renamer/typechecker [API.UI.Rating]: alloc=45009496 time=12.611
-Desugar [API.UI.Rating]: alloc=654184 time=1.086
-Simplifier [API.UI.Rating]: alloc=57477632 time=17.489
-Specialise [API.UI.Rating]: alloc=1339280 time=1.344
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Rating]: alloc=4480256 time=2.330
-Simplifier [API.UI.Rating]: alloc=48480016 time=15.823
-Simplifier [API.UI.Rating]: alloc=4810408 time=1.777
-Simplifier [API.UI.Rating]: alloc=4810408 time=1.662
+Parser [API.UI.Rating]: alloc=793296 time=0.271
+Renamer/typechecker [API.UI.Rating]: alloc=45005112 time=12.205
+Desugar [API.UI.Rating]: alloc=654384 time=1.007
+Simplifier [API.UI.Rating]: alloc=32797544 time=10.179
+Specialise [API.UI.Rating]: alloc=1929288 time=1.162
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Rating]: alloc=6318568 time=2.294
+Simplifier [API.UI.Rating]: alloc=58719840 time=18.367
 Float inwards [API.UI.Rating]: alloc=17240 time=0.004
 Called arity analysis [API.UI.Rating]: alloc=18816 time=0.005
-Simplifier [API.UI.Rating]: alloc=12030888 time=5.505
-Demand analysis [API.UI.Rating]: alloc=7913448 time=1.786
-Worker Wrapper binds [API.UI.Rating]: alloc=135976 time=0.091
-Simplifier [API.UI.Rating]: alloc=90414360 time=31.064
-Exitification transformation [API.UI.Rating]: alloc=19744 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Rating]: alloc=3896048 time=1.564
+Simplifier [API.UI.Rating]: alloc=7342712 time=3.824
+Demand analysis [API.UI.Rating]: alloc=8438648 time=2.213
+Worker Wrapper binds [API.UI.Rating]: alloc=161808 time=0.078
+Simplifier [API.UI.Rating]: alloc=15153416 time=3.321
+Exitification transformation [API.UI.Rating]: alloc=19744 time=0.004
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Rating]: alloc=6801968 time=2.488
 Common sub-expression [API.UI.Rating]: alloc=18344 time=0.004
 Float inwards [API.UI.Rating]: alloc=17240 time=0.004
-Simplifier [API.UI.Rating]: alloc=25455800 time=7.437
-Demand analysis [API.UI.Rating]: alloc=8875360 time=2.053
-CoreTidy [API.UI.Rating]: alloc=5818888 time=1.572
-CorePrep [API.UI.Rating]: alloc=18200 time=0.039
-CodeGen [API.UI.Rating]: alloc=38134392 time=10.277
-systool:as: alloc=103128 time=0.219
-CorePrep [API.UI.Rating]: alloc=18200 time=0.013
-CodeGen [API.UI.Rating]: alloc=39260168 time=10.214
-systool:as: alloc=106000 time=0.165
+Simplifier [API.UI.Rating]: alloc=44443856 time=16.849
+Demand analysis [API.UI.Rating]: alloc=10047536 time=3.689
+CoreTidy [API.UI.Rating]: alloc=8250720 time=2.366
+CorePrep [API.UI.Rating]: alloc=18200 time=0.009
+CodeGen [API.UI.Rating]: alloc=40222824 time=11.068
+systool:as: alloc=102392 time=0.199
+CorePrep [API.UI.Rating]: alloc=18200 time=0.014
+CodeGen [API.UI.Rating]: alloc=41411552 time=11.402
+systool:as: alloc=105264 time=0.223

@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Maps]: alloc=3695816 time=0.866
-Renamer/typechecker [Domain.Action.UI.Maps]: alloc=598343864 time=112.874
-Desugar [Domain.Action.UI.Maps]: alloc=2391516528 time=363.267
-Simplifier [Domain.Action.UI.Maps]: alloc=111541784 time=35.492
-Specialise [Domain.Action.UI.Maps]: alloc=5225960 time=1.625
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Maps]: alloc=20056936 time=6.265
-Simplifier [Domain.Action.UI.Maps]: alloc=128139448 time=41.896
-Simplifier [Domain.Action.UI.Maps]: alloc=113868672 time=37.206
-Simplifier [Domain.Action.UI.Maps]: alloc=120468656 time=38.380
+Parser [Domain.Action.UI.Maps]: alloc=3695816 time=0.870
+Renamer/typechecker [Domain.Action.UI.Maps]: alloc=598361232 time=134.670
+Desugar [Domain.Action.UI.Maps]: alloc=2391631168 time=421.366
+Simplifier [Domain.Action.UI.Maps]: alloc=63834904 time=26.763
+Specialise [Domain.Action.UI.Maps]: alloc=15526984 time=4.716
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Maps]: alloc=33338680 time=12.090
+Simplifier [Domain.Action.UI.Maps]: alloc=403797856 time=167.971
 Float inwards [Domain.Action.UI.Maps]: alloc=19624 time=0.005
-Called arity analysis [Domain.Action.UI.Maps]: alloc=21200 time=0.007
-Simplifier [Domain.Action.UI.Maps]: alloc=99232664 time=31.092
-Demand analysis [Domain.Action.UI.Maps]: alloc=30891352 time=7.885
-Worker Wrapper binds [Domain.Action.UI.Maps]: alloc=1421952 time=0.649
-Simplifier [Domain.Action.UI.Maps]: alloc=102978240 time=30.180
-Exitification transformation [Domain.Action.UI.Maps]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Maps]: alloc=24276840 time=7.216
-Common sub-expression [Domain.Action.UI.Maps]: alloc=20728 time=0.005
-Float inwards [Domain.Action.UI.Maps]: alloc=19624 time=0.005
-Simplifier [Domain.Action.UI.Maps]: alloc=76532152 time=23.233
-Demand analysis [Domain.Action.UI.Maps]: alloc=26072832 time=6.303
-CoreTidy [Domain.Action.UI.Maps]: alloc=9812768 time=3.642
+Called arity analysis [Domain.Action.UI.Maps]: alloc=21200 time=0.006
+Simplifier [Domain.Action.UI.Maps]: alloc=109196064 time=40.855
+Demand analysis [Domain.Action.UI.Maps]: alloc=63377216 time=33.074
+Worker Wrapper binds [Domain.Action.UI.Maps]: alloc=2606656 time=1.442
+Simplifier [Domain.Action.UI.Maps]: alloc=105561328 time=36.365
+Exitification transformation [Domain.Action.UI.Maps]: alloc=22128 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Maps]: alloc=60082168 time=22.780
+Common sub-expression [Domain.Action.UI.Maps]: alloc=20728 time=0.006
+Float inwards [Domain.Action.UI.Maps]: alloc=19624 time=0.004
+Simplifier [Domain.Action.UI.Maps]: alloc=121939496 time=63.211
+Demand analysis [Domain.Action.UI.Maps]: alloc=52700736 time=14.863
+CoreTidy [Domain.Action.UI.Maps]: alloc=15606904 time=6.740
 CorePrep [Domain.Action.UI.Maps]: alloc=20584 time=0.010
-CodeGen [Domain.Action.UI.Maps]: alloc=163387544 time=49.145
-systool:as: alloc=103664 time=0.241
+CodeGen [Domain.Action.UI.Maps]: alloc=186115864 time=68.950
+systool:as: alloc=102928 time=0.201
 CorePrep [Domain.Action.UI.Maps]: alloc=20584 time=0.014
-CodeGen [Domain.Action.UI.Maps]: alloc=171414328 time=51.254
-systool:as: alloc=106536 time=0.235
+CodeGen [Domain.Action.UI.Maps]: alloc=195343744 time=65.315
+systool:as: alloc=105800 time=0.204

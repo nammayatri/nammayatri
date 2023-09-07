@@ -1,28 +1,26 @@
-Parser [SharedLogic.Person]: alloc=432424 time=0.150
-Renamer/typechecker [SharedLogic.Person]: alloc=8013384 time=4.060
-Desugar [SharedLogic.Person]: alloc=328120 time=0.873
-Simplifier [SharedLogic.Person]: alloc=6261968 time=1.796
-Specialise [SharedLogic.Person]: alloc=124856 time=0.055
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Person]: alloc=487152 time=0.170
-Simplifier [SharedLogic.Person]: alloc=11464288 time=3.171
-Simplifier [SharedLogic.Person]: alloc=3377712 time=0.869
-Simplifier [SharedLogic.Person]: alloc=1647216 time=0.408
+Parser [SharedLogic.Person]: alloc=432424 time=0.174
+Renamer/typechecker [SharedLogic.Person]: alloc=8021480 time=4.723
+Desugar [SharedLogic.Person]: alloc=328120 time=0.870
+Simplifier [SharedLogic.Person]: alloc=4882672 time=1.530
+Specialise [SharedLogic.Person]: alloc=583208 time=0.159
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Person]: alloc=2392048 time=0.647
+Simplifier [SharedLogic.Person]: alloc=10367248 time=3.051
 Float inwards [SharedLogic.Person]: alloc=18712 time=0.004
 Called arity analysis [SharedLogic.Person]: alloc=20288 time=0.005
-Simplifier [SharedLogic.Person]: alloc=5219696 time=1.366
-Demand analysis [SharedLogic.Person]: alloc=2514384 time=0.427
-Worker Wrapper binds [SharedLogic.Person]: alloc=95088 time=0.048
-Simplifier [SharedLogic.Person]: alloc=1505176 time=0.417
-Exitification transformation [SharedLogic.Person]: alloc=21232 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Person]: alloc=1367800 time=0.394
-Common sub-expression [SharedLogic.Person]: alloc=19816 time=0.004
-Float inwards [SharedLogic.Person]: alloc=18712 time=0.003
-Simplifier [SharedLogic.Person]: alloc=3483496 time=0.992
-Demand analysis [SharedLogic.Person]: alloc=2488528 time=0.451
-CoreTidy [SharedLogic.Person]: alloc=563624 time=0.235
-CorePrep [SharedLogic.Person]: alloc=19704 time=0.009
-CodeGen [SharedLogic.Person]: alloc=24748784 time=5.956
-systool:as: alloc=103440 time=0.173
-CorePrep [SharedLogic.Person]: alloc=19704 time=0.016
-CodeGen [SharedLogic.Person]: alloc=25622880 time=6.247
-systool:as: alloc=106344 time=0.156
+Simplifier [SharedLogic.Person]: alloc=2531848 time=0.948
+Demand analysis [SharedLogic.Person]: alloc=2564032 time=0.475
+Worker Wrapper binds [SharedLogic.Person]: alloc=95432 time=0.052
+Simplifier [SharedLogic.Person]: alloc=1546368 time=0.453
+Exitification transformation [SharedLogic.Person]: alloc=21232 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Person]: alloc=1364720 time=0.417
+Common sub-expression [SharedLogic.Person]: alloc=19816 time=0.006
+Float inwards [SharedLogic.Person]: alloc=18712 time=0.004
+Simplifier [SharedLogic.Person]: alloc=2105792 time=0.705
+Demand analysis [SharedLogic.Person]: alloc=2490784 time=0.463
+CoreTidy [SharedLogic.Person]: alloc=454824 time=0.209
+CorePrep [SharedLogic.Person]: alloc=19704 time=0.008
+CodeGen [SharedLogic.Person]: alloc=24849848 time=6.622
+systool:as: alloc=102712 time=0.182
+CorePrep [SharedLogic.Person]: alloc=19704 time=0.012
+CodeGen [SharedLogic.Person]: alloc=25543408 time=6.782
+systool:as: alloc=105592 time=0.164

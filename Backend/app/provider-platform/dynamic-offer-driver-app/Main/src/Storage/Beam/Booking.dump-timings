@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Booking]: alloc=2950000 time=0.591
-Simplify [expr]: alloc=246216 time=0.078
-CorePrep [expr]: alloc=96344 time=0.047
-ByteCodeGen [Ghci1]: alloc=527152 time=0.172
-Simplify [expr]: alloc=47024 time=0.030
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.086
-Renamer/typechecker [Storage.Beam.Booking]: alloc=545460488 time=161.130
-Desugar [Storage.Beam.Booking]: alloc=50755880 time=14.385
-Simplifier [Storage.Beam.Booking]: alloc=689084360 time=634.121
-Specialise [Storage.Beam.Booking]: alloc=78130760 time=19.885
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Booking]: alloc=179636184 time=85.150
-Simplifier [Storage.Beam.Booking]: alloc=1343910152 time=458.661
-Simplifier [Storage.Beam.Booking]: alloc=1161497560 time=386.339
-Simplifier [Storage.Beam.Booking]: alloc=974121632 time=330.938
+Parser [Storage.Beam.Booking]: alloc=2950000 time=0.612
+Simplify [expr]: alloc=246136 time=0.103
+CorePrep [expr]: alloc=96304 time=0.049
+ByteCodeGen [Ghci1]: alloc=527232 time=0.123
+Simplify [expr]: alloc=47024 time=0.024
+CorePrep [expr]: alloc=26752 time=0.019
+ByteCodeGen [Ghci1]: alloc=131880 time=0.055
+Renamer/typechecker [Storage.Beam.Booking]: alloc=545388040 time=140.133
+Desugar [Storage.Beam.Booking]: alloc=50782320 time=12.406
+Simplifier [Storage.Beam.Booking]: alloc=348165960 time=109.793
+Specialise [Storage.Beam.Booking]: alloc=230744312 time=82.653
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Booking]: alloc=237980816 time=78.158
+Simplifier [Storage.Beam.Booking]: alloc=3509885872 time=1390.674
 Float inwards [Storage.Beam.Booking]: alloc=19320 time=0.005
 Called arity analysis [Storage.Beam.Booking]: alloc=20896 time=0.006
-Simplifier [Storage.Beam.Booking]: alloc=748914208 time=261.077
-Demand analysis [Storage.Beam.Booking]: alloc=206731960 time=42.902
-Worker Wrapper binds [Storage.Beam.Booking]: alloc=6338760 time=5.977
-Simplifier [Storage.Beam.Booking]: alloc=1072140040 time=349.545
-Exitification transformation [Storage.Beam.Booking]: alloc=21840 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Booking]: alloc=176246808 time=91.141
-Common sub-expression [Storage.Beam.Booking]: alloc=20424 time=0.034
-Float inwards [Storage.Beam.Booking]: alloc=19320 time=0.005
-Simplifier [Storage.Beam.Booking]: alloc=745908176 time=271.845
-Demand analysis [Storage.Beam.Booking]: alloc=153247160 time=33.898
-CoreTidy [Storage.Beam.Booking]: alloc=125895488 time=35.217
-CorePrep [Storage.Beam.Booking]: alloc=20296 time=0.042
-CodeGen [Storage.Beam.Booking]: alloc=1294758768 time=408.132
-systool:as: alloc=103568 time=0.277
-CorePrep [Storage.Beam.Booking]: alloc=20296 time=0.018
-CodeGen [Storage.Beam.Booking]: alloc=1352119384 time=376.451
-systool:as: alloc=106440 time=0.291
+Simplifier [Storage.Beam.Booking]: alloc=1045480968 time=423.731
+Demand analysis [Storage.Beam.Booking]: alloc=886344744 time=235.256
+Worker Wrapper binds [Storage.Beam.Booking]: alloc=21983136 time=12.950
+Simplifier [Storage.Beam.Booking]: alloc=1141770448 time=495.936
+Exitification transformation [Storage.Beam.Booking]: alloc=21840 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Booking]: alloc=755727392 time=371.657
+Common sub-expression [Storage.Beam.Booking]: alloc=20424 time=0.007
+Float inwards [Storage.Beam.Booking]: alloc=19320 time=0.004
+Simplifier [Storage.Beam.Booking]: alloc=1182004784 time=1165.847
+Demand analysis [Storage.Beam.Booking]: alloc=789131152 time=183.100
+CoreTidy [Storage.Beam.Booking]: alloc=241444728 time=113.443
+CorePrep [Storage.Beam.Booking]: alloc=20296 time=0.015
+CodeGen [Storage.Beam.Booking]: alloc=4033184872 time=1299.506
+systool:as: alloc=102848 time=0.405
+CorePrep [Storage.Beam.Booking]: alloc=20296 time=0.016
+CodeGen [Storage.Beam.Booking]: alloc=4159588912 time=1258.537
+systool:as: alloc=105720 time=0.339

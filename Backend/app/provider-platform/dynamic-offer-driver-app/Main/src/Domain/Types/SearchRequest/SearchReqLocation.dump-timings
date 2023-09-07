@@ -1,28 +1,26 @@
-Parser [Domain.Types.SearchRequest.SearchReqLocation]: alloc=1109824 time=0.332
-Renamer/typechecker [Domain.Types.SearchRequest.SearchReqLocation]: alloc=183697632 time=50.459
-Desugar [Domain.Types.SearchRequest.SearchReqLocation]: alloc=10201512 time=3.318
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=346815488 time=117.322
-Specialise [Domain.Types.SearchRequest.SearchReqLocation]: alloc=33893632 time=8.372
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequest.SearchReqLocation]: alloc=58085128 time=19.943
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=397103600 time=151.434
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=304605688 time=124.140
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=245189488 time=78.064
+Parser [Domain.Types.SearchRequest.SearchReqLocation]: alloc=1109824 time=0.269
+Renamer/typechecker [Domain.Types.SearchRequest.SearchReqLocation]: alloc=183681192 time=54.396
+Desugar [Domain.Types.SearchRequest.SearchReqLocation]: alloc=10201712 time=3.423
+Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=195383640 time=66.981
+Specialise [Domain.Types.SearchRequest.SearchReqLocation]: alloc=55456016 time=19.180
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequest.SearchReqLocation]: alloc=84742776 time=33.161
+Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=950514080 time=376.413
 Float inwards [Domain.Types.SearchRequest.SearchReqLocation]: alloc=26472 time=0.006
-Called arity analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=28048 time=0.006
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=192656016 time=71.638
-Demand analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=45331544 time=11.133
-Worker Wrapper binds [Domain.Types.SearchRequest.SearchReqLocation]: alloc=1627560 time=1.022
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=283062240 time=111.602
-Exitification transformation [Domain.Types.SearchRequest.SearchReqLocation]: alloc=28992 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequest.SearchReqLocation]: alloc=48683760 time=15.252
-Common sub-expression [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27576 time=0.006
+Called arity analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=28048 time=0.007
+Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=327251736 time=125.358
+Demand analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=147628912 time=55.347
+Worker Wrapper binds [Domain.Types.SearchRequest.SearchReqLocation]: alloc=4359024 time=2.665
+Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=300612456 time=116.717
+Exitification transformation [Domain.Types.SearchRequest.SearchReqLocation]: alloc=28992 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequest.SearchReqLocation]: alloc=159902656 time=79.553
+Common sub-expression [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27576 time=0.007
 Float inwards [Domain.Types.SearchRequest.SearchReqLocation]: alloc=26472 time=0.004
-Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=156507160 time=49.287
-Demand analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=40033048 time=10.027
-CoreTidy [Domain.Types.SearchRequest.SearchReqLocation]: alloc=23981896 time=8.638
-CorePrep [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27448 time=0.041
-CodeGen [Domain.Types.SearchRequest.SearchReqLocation]: alloc=335615440 time=105.465
-systool:as: alloc=105104 time=0.247
-CorePrep [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27448 time=0.016
-CodeGen [Domain.Types.SearchRequest.SearchReqLocation]: alloc=351076984 time=101.456
-systool:as: alloc=108000 time=0.213
+Simplifier [Domain.Types.SearchRequest.SearchReqLocation]: alloc=357282072 time=132.177
+Demand analysis [Domain.Types.SearchRequest.SearchReqLocation]: alloc=130464608 time=51.296
+CoreTidy [Domain.Types.SearchRequest.SearchReqLocation]: alloc=43577736 time=13.119
+CorePrep [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27448 time=0.015
+CodeGen [Domain.Types.SearchRequest.SearchReqLocation]: alloc=471222184 time=167.796
+systool:as: alloc=104384 time=0.229
+CorePrep [Domain.Types.SearchRequest.SearchReqLocation]: alloc=27448 time=0.020
+CodeGen [Domain.Types.SearchRequest.SearchReqLocation]: alloc=493465888 time=155.886
+systool:as: alloc=107256 time=0.229

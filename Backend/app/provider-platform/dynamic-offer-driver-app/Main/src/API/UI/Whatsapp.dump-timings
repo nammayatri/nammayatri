@@ -1,28 +1,26 @@
-Parser [API.UI.Whatsapp]: alloc=777232 time=0.269
-Renamer/typechecker [API.UI.Whatsapp]: alloc=47095544 time=14.767
-Desugar [API.UI.Whatsapp]: alloc=735880 time=1.110
-Simplifier [API.UI.Whatsapp]: alloc=74373584 time=21.166
-Specialise [API.UI.Whatsapp]: alloc=2097168 time=1.457
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Whatsapp]: alloc=8777904 time=3.214
-Simplifier [API.UI.Whatsapp]: alloc=72326632 time=20.566
-Simplifier [API.UI.Whatsapp]: alloc=11539080 time=2.751
-Simplifier [API.UI.Whatsapp]: alloc=11539080 time=2.723
-Float inwards [API.UI.Whatsapp]: alloc=17832 time=0.017
-Called arity analysis [API.UI.Whatsapp]: alloc=19408 time=0.005
-Simplifier [API.UI.Whatsapp]: alloc=26659264 time=7.369
-Demand analysis [API.UI.Whatsapp]: alloc=23416808 time=3.601
-Worker Wrapper binds [API.UI.Whatsapp]: alloc=164832 time=0.125
-Simplifier [API.UI.Whatsapp]: alloc=139820928 time=36.555
-Exitification transformation [API.UI.Whatsapp]: alloc=20336 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Whatsapp]: alloc=9871400 time=2.883
-Common sub-expression [API.UI.Whatsapp]: alloc=18936 time=0.017
+Parser [API.UI.Whatsapp]: alloc=777232 time=0.308
+Renamer/typechecker [API.UI.Whatsapp]: alloc=47085792 time=14.884
+Desugar [API.UI.Whatsapp]: alloc=736040 time=1.156
+Simplifier [API.UI.Whatsapp]: alloc=36351240 time=11.112
+Specialise [API.UI.Whatsapp]: alloc=2662752 time=1.468
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Whatsapp]: alloc=10698040 time=3.718
+Simplifier [API.UI.Whatsapp]: alloc=77759696 time=24.245
+Float inwards [API.UI.Whatsapp]: alloc=17832 time=0.005
+Called arity analysis [API.UI.Whatsapp]: alloc=19408 time=0.006
+Simplifier [API.UI.Whatsapp]: alloc=15247704 time=6.121
+Demand analysis [API.UI.Whatsapp]: alloc=23943024 time=4.857
+Worker Wrapper binds [API.UI.Whatsapp]: alloc=190744 time=0.132
+Simplifier [API.UI.Whatsapp]: alloc=27781040 time=5.906
+Exitification transformation [API.UI.Whatsapp]: alloc=20336 time=0.008
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Whatsapp]: alloc=12775280 time=4.453
+Common sub-expression [API.UI.Whatsapp]: alloc=18936 time=0.005
 Float inwards [API.UI.Whatsapp]: alloc=17832 time=0.004
-Simplifier [API.UI.Whatsapp]: alloc=31109064 time=7.118
-Demand analysis [API.UI.Whatsapp]: alloc=22991136 time=3.792
-CoreTidy [API.UI.Whatsapp]: alloc=10640752 time=2.933
-CorePrep [API.UI.Whatsapp]: alloc=18792 time=0.008
-CodeGen [API.UI.Whatsapp]: alloc=93429384 time=20.192
-systool:as: alloc=103248 time=0.188
-CorePrep [API.UI.Whatsapp]: alloc=18792 time=0.013
-CodeGen [API.UI.Whatsapp]: alloc=95170312 time=22.238
-systool:as: alloc=106128 time=0.190
+Simplifier [API.UI.Whatsapp]: alloc=60826048 time=21.919
+Demand analysis [API.UI.Whatsapp]: alloc=24207208 time=6.163
+CoreTidy [API.UI.Whatsapp]: alloc=13289928 time=4.149
+CorePrep [API.UI.Whatsapp]: alloc=18792 time=0.023
+CodeGen [API.UI.Whatsapp]: alloc=95470472 time=24.070
+systool:as: alloc=102512 time=0.192
+CorePrep [API.UI.Whatsapp]: alloc=18792 time=0.014
+CodeGen [API.UI.Whatsapp]: alloc=97378864 time=23.717
+systool:as: alloc=105384 time=0.173

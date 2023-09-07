@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Message]: alloc=4518552 time=0.929
-Renamer/typechecker [Domain.Action.UI.Message]: alloc=1360130264 time=254.233
-Desugar [Domain.Action.UI.Message]: alloc=523236464 time=80.367
-Simplifier [Domain.Action.UI.Message]: alloc=272013624 time=87.251
-Specialise [Domain.Action.UI.Message]: alloc=19042664 time=5.457
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Message]: alloc=36960120 time=12.966
-Simplifier [Domain.Action.UI.Message]: alloc=390019824 time=142.976
-Simplifier [Domain.Action.UI.Message]: alloc=313054216 time=115.740
-Simplifier [Domain.Action.UI.Message]: alloc=302225656 time=110.364
-Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.004
+Parser [Domain.Action.UI.Message]: alloc=4518552 time=1.029
+Renamer/typechecker [Domain.Action.UI.Message]: alloc=1360156480 time=257.428
+Desugar [Domain.Action.UI.Message]: alloc=523231824 time=83.069
+Simplifier [Domain.Action.UI.Message]: alloc=146909400 time=48.276
+Specialise [Domain.Action.UI.Message]: alloc=45977920 time=13.693
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Message]: alloc=59340432 time=21.847
+Simplifier [Domain.Action.UI.Message]: alloc=1053453728 time=410.324
+Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.005
 Called arity analysis [Domain.Action.UI.Message]: alloc=22080 time=0.006
-Simplifier [Domain.Action.UI.Message]: alloc=298501696 time=105.529
-Demand analysis [Domain.Action.UI.Message]: alloc=64723640 time=13.793
-Worker Wrapper binds [Domain.Action.UI.Message]: alloc=1885400 time=1.220
-Simplifier [Domain.Action.UI.Message]: alloc=314306240 time=113.921
+Simplifier [Domain.Action.UI.Message]: alloc=269509416 time=124.865
+Demand analysis [Domain.Action.UI.Message]: alloc=173213448 time=47.230
+Worker Wrapper binds [Domain.Action.UI.Message]: alloc=5732472 time=3.439
+Simplifier [Domain.Action.UI.Message]: alloc=263002288 time=119.128
 Exitification transformation [Domain.Action.UI.Message]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Message]: alloc=51115976 time=15.509
-Common sub-expression [Domain.Action.UI.Message]: alloc=21608 time=0.005
-Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.003
-Simplifier [Domain.Action.UI.Message]: alloc=167938688 time=63.283
-Demand analysis [Domain.Action.UI.Message]: alloc=56222912 time=12.331
-CoreTidy [Domain.Action.UI.Message]: alloc=23636736 time=8.582
-CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.011
-CodeGen [Domain.Action.UI.Message]: alloc=440931016 time=118.083
-systool:as: alloc=103840 time=0.201
-CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.014
-CodeGen [Domain.Action.UI.Message]: alloc=457908840 time=120.493
-systool:as: alloc=106720 time=0.242
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Message]: alloc=151368224 time=53.388
+Common sub-expression [Domain.Action.UI.Message]: alloc=21608 time=0.008
+Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.005
+Simplifier [Domain.Action.UI.Message]: alloc=286511200 time=143.434
+Demand analysis [Domain.Action.UI.Message]: alloc=135745032 time=35.071
+CoreTidy [Domain.Action.UI.Message]: alloc=36733944 time=15.177
+CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.013
+CodeGen [Domain.Action.UI.Message]: alloc=565407600 time=166.019
+systool:as: alloc=103112 time=0.216
+CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.017
+CodeGen [Domain.Action.UI.Message]: alloc=587897416 time=172.756
+systool:as: alloc=106016 time=0.234

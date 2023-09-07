@@ -1,28 +1,26 @@
-Parser [API.Dashboard.Exotel]: alloc=526432 time=0.183
-Renamer/typechecker [API.Dashboard.Exotel]: alloc=7487136 time=3.946
-Desugar [API.Dashboard.Exotel]: alloc=310184 time=0.844
-Simplifier [API.Dashboard.Exotel]: alloc=4382680 time=1.127
-Specialise [API.Dashboard.Exotel]: alloc=225880 time=0.060
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Exotel]: alloc=671240 time=0.161
-Simplifier [API.Dashboard.Exotel]: alloc=847048 time=0.202
-Simplifier [API.Dashboard.Exotel]: alloc=822840 time=0.165
-Simplifier [API.Dashboard.Exotel]: alloc=822840 time=0.155
+Parser [API.Dashboard.Exotel]: alloc=526432 time=0.209
+Renamer/typechecker [API.Dashboard.Exotel]: alloc=7486936 time=3.988
+Desugar [API.Dashboard.Exotel]: alloc=310344 time=0.864
+Simplifier [API.Dashboard.Exotel]: alloc=3521592 time=0.902
+Specialise [API.Dashboard.Exotel]: alloc=664448 time=0.150
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Exotel]: alloc=2531904 time=0.571
+Simplifier [API.Dashboard.Exotel]: alloc=916152 time=0.219
 Float inwards [API.Dashboard.Exotel]: alloc=19320 time=0.004
-Called arity analysis [API.Dashboard.Exotel]: alloc=20896 time=0.005
-Simplifier [API.Dashboard.Exotel]: alloc=943568 time=0.283
-Demand analysis [API.Dashboard.Exotel]: alloc=2034816 time=0.349
-Worker Wrapper binds [API.Dashboard.Exotel]: alloc=28016 time=0.014
-Simplifier [API.Dashboard.Exotel]: alloc=1646128 time=0.339
+Called arity analysis [API.Dashboard.Exotel]: alloc=20896 time=0.009
+Simplifier [API.Dashboard.Exotel]: alloc=939632 time=0.255
+Demand analysis [API.Dashboard.Exotel]: alloc=2030472 time=0.341
+Worker Wrapper binds [API.Dashboard.Exotel]: alloc=28016 time=0.012
+Simplifier [API.Dashboard.Exotel]: alloc=1637112 time=0.299
 Exitification transformation [API.Dashboard.Exotel]: alloc=21840 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Exotel]: alloc=676784 time=0.161
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Exotel]: alloc=670744 time=0.163
 Common sub-expression [API.Dashboard.Exotel]: alloc=20424 time=0.004
 Float inwards [API.Dashboard.Exotel]: alloc=19320 time=0.003
-Simplifier [API.Dashboard.Exotel]: alloc=2094200 time=0.411
-Demand analysis [API.Dashboard.Exotel]: alloc=2038680 time=0.334
-CoreTidy [API.Dashboard.Exotel]: alloc=544776 time=0.148
-CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.007
-CodeGen [API.Dashboard.Exotel]: alloc=7719864 time=2.204
-systool:as: alloc=103576 time=0.130
-CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.010
-CodeGen [API.Dashboard.Exotel]: alloc=7886968 time=2.069
-systool:as: alloc=106448 time=0.138
+Simplifier [API.Dashboard.Exotel]: alloc=2083184 time=0.404
+Demand analysis [API.Dashboard.Exotel]: alloc=2034336 time=0.336
+CoreTidy [API.Dashboard.Exotel]: alloc=541256 time=0.156
+CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.008
+CodeGen [API.Dashboard.Exotel]: alloc=7707816 time=2.115
+systool:as: alloc=102848 time=0.178
+CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.011
+CodeGen [API.Dashboard.Exotel]: alloc=7845496 time=2.065
+systool:as: alloc=105720 time=0.137

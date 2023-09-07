@@ -1,28 +1,26 @@
-Parser [Storage.Queries.BookingCancellationReason]: alloc=3124544 time=0.704
-Renamer/typechecker [Storage.Queries.BookingCancellationReason]: alloc=316258640 time=88.682
-Desugar [Storage.Queries.BookingCancellationReason]: alloc=7977168 time=2.611
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=242181608 time=70.648
-Specialise [Storage.Queries.BookingCancellationReason]: alloc=44703600 time=10.322
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.BookingCancellationReason]: alloc=26561440 time=8.815
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=793361184 time=240.884
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=298284584 time=87.404
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=295115328 time=87.014
+Parser [Storage.Queries.BookingCancellationReason]: alloc=3124544 time=0.772
+Renamer/typechecker [Storage.Queries.BookingCancellationReason]: alloc=316369856 time=92.842
+Desugar [Storage.Queries.BookingCancellationReason]: alloc=7973728 time=2.497
+Simplifier [Storage.Queries.BookingCancellationReason]: alloc=127671864 time=40.241
+Specialise [Storage.Queries.BookingCancellationReason]: alloc=43034632 time=10.966
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.BookingCancellationReason]: alloc=36573056 time=13.168
+Simplifier [Storage.Queries.BookingCancellationReason]: alloc=680320768 time=202.811
 Float inwards [Storage.Queries.BookingCancellationReason]: alloc=25576 time=0.005
-Called arity analysis [Storage.Queries.BookingCancellationReason]: alloc=27152 time=0.006
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=308919456 time=111.502
-Demand analysis [Storage.Queries.BookingCancellationReason]: alloc=24726760 time=8.919
-Worker Wrapper binds [Storage.Queries.BookingCancellationReason]: alloc=1515408 time=0.836
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=309273336 time=80.621
+Called arity analysis [Storage.Queries.BookingCancellationReason]: alloc=27152 time=0.007
+Simplifier [Storage.Queries.BookingCancellationReason]: alloc=168648416 time=51.570
+Demand analysis [Storage.Queries.BookingCancellationReason]: alloc=28100728 time=16.646
+Worker Wrapper binds [Storage.Queries.BookingCancellationReason]: alloc=1574344 time=0.896
+Simplifier [Storage.Queries.BookingCancellationReason]: alloc=161075024 time=56.253
 Exitification transformation [Storage.Queries.BookingCancellationReason]: alloc=28080 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.BookingCancellationReason]: alloc=24629944 time=11.647
-Common sub-expression [Storage.Queries.BookingCancellationReason]: alloc=26680 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.BookingCancellationReason]: alloc=25966136 time=11.863
+Common sub-expression [Storage.Queries.BookingCancellationReason]: alloc=26680 time=0.006
 Float inwards [Storage.Queries.BookingCancellationReason]: alloc=25576 time=0.004
-Simplifier [Storage.Queries.BookingCancellationReason]: alloc=463783256 time=136.568
-Demand analysis [Storage.Queries.BookingCancellationReason]: alloc=20173712 time=13.381
-CoreTidy [Storage.Queries.BookingCancellationReason]: alloc=31048904 time=12.314
-CorePrep [Storage.Queries.BookingCancellationReason]: alloc=26552 time=0.027
-CodeGen [Storage.Queries.BookingCancellationReason]: alloc=188565904 time=59.288
-systool:as: alloc=104896 time=0.307
+Simplifier [Storage.Queries.BookingCancellationReason]: alloc=183287080 time=58.450
+Demand analysis [Storage.Queries.BookingCancellationReason]: alloc=25338680 time=15.145
+CoreTidy [Storage.Queries.BookingCancellationReason]: alloc=32209032 time=10.618
+CorePrep [Storage.Queries.BookingCancellationReason]: alloc=26552 time=0.016
+CodeGen [Storage.Queries.BookingCancellationReason]: alloc=192472304 time=64.799
+systool:as: alloc=104136 time=0.237
 CorePrep [Storage.Queries.BookingCancellationReason]: alloc=26552 time=0.014
-CodeGen [Storage.Queries.BookingCancellationReason]: alloc=202096544 time=62.826
-systool:as: alloc=107752 time=0.209
+CodeGen [Storage.Queries.BookingCancellationReason]: alloc=205658512 time=67.237
+systool:as: alloc=107016 time=0.223

@@ -1,28 +1,26 @@
-Parser [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=4801736 time=0.850
-Renamer/typechecker [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=555024176 time=145.811
-Desugar [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=23829608 time=5.007
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=374251328 time=115.534
-Specialise [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=48699640 time=12.669
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=47548392 time=15.868
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=570996896 time=182.026
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=324217640 time=112.557
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=425397056 time=147.490
-Float inwards [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=28856 time=0.006
-Called arity analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=30432 time=0.019
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=125932096 time=35.700
-Demand analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29879624 time=11.778
-Worker Wrapper binds [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=1634200 time=1.128
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=330749808 time=121.956
+Parser [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=4801736 time=0.827
+Renamer/typechecker [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=554990480 time=151.519
+Desugar [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=23825048 time=5.008
+Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=243133800 time=76.273
+Specialise [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=65815776 time=17.344
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=64954384 time=25.391
+Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=499490720 time=183.300
+Float inwards [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=28856 time=0.012
+Called arity analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=30432 time=0.007
+Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=136503536 time=34.789
+Demand analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=34294896 time=12.409
+Worker Wrapper binds [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=1782424 time=1.284
+Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=115609504 time=42.951
 Exitification transformation [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=31376 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=30769352 time=11.010
-Common sub-expression [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29960 time=0.007
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=31490016 time=11.567
+Common sub-expression [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29960 time=0.008
 Float inwards [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=28856 time=0.005
-Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=296301272 time=86.181
-Demand analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=18630312 time=8.528
-CoreTidy [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=23347368 time=9.537
-CorePrep [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29832 time=0.028
-CodeGen [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=191858760 time=60.636
-systool:as: alloc=105648 time=0.242
+Simplifier [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=127146664 time=42.221
+Demand analysis [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=23127640 time=10.108
+CoreTidy [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=25275608 time=19.145
 CorePrep [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29832 time=0.017
-CodeGen [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=205732840 time=64.422
-systool:as: alloc=108496 time=0.274
+CodeGen [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=200168264 time=68.273
+systool:as: alloc=104904 time=0.200
+CorePrep [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=29832 time=0.018
+CodeGen [Storage.Queries.DriverOnboarding.DriverRCAssociation]: alloc=214391416 time=72.180
+systool:as: alloc=107776 time=0.252

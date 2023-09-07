@@ -1,28 +1,26 @@
-Parser [SharedLogic.GoogleTranslate]: alloc=2078816 time=0.603
-Renamer/typechecker [SharedLogic.GoogleTranslate]: alloc=415182424 time=73.067
-Desugar [SharedLogic.GoogleTranslate]: alloc=512635720 time=79.154
-Simplifier [SharedLogic.GoogleTranslate]: alloc=21481072 time=6.400
-Specialise [SharedLogic.GoogleTranslate]: alloc=975112 time=0.403
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.GoogleTranslate]: alloc=3431936 time=1.075
-Simplifier [SharedLogic.GoogleTranslate]: alloc=26705504 time=8.036
-Simplifier [SharedLogic.GoogleTranslate]: alloc=11480976 time=3.312
-Simplifier [SharedLogic.GoogleTranslate]: alloc=29828840 time=8.722
-Float inwards [SharedLogic.GoogleTranslate]: alloc=21416 time=0.005
+Parser [SharedLogic.GoogleTranslate]: alloc=2078816 time=0.613
+Renamer/typechecker [SharedLogic.GoogleTranslate]: alloc=415141192 time=78.181
+Desugar [SharedLogic.GoogleTranslate]: alloc=512665640 time=83.775
+Simplifier [SharedLogic.GoogleTranslate]: alloc=11241264 time=3.325
+Specialise [SharedLogic.GoogleTranslate]: alloc=959120 time=0.441
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.GoogleTranslate]: alloc=3822208 time=1.275
+Simplifier [SharedLogic.GoogleTranslate]: alloc=34437200 time=11.067
+Float inwards [SharedLogic.GoogleTranslate]: alloc=21416 time=0.017
 Called arity analysis [SharedLogic.GoogleTranslate]: alloc=22992 time=0.005
-Simplifier [SharedLogic.GoogleTranslate]: alloc=26111400 time=7.213
-Demand analysis [SharedLogic.GoogleTranslate]: alloc=8045200 time=1.880
-Worker Wrapper binds [SharedLogic.GoogleTranslate]: alloc=520104 time=0.213
-Simplifier [SharedLogic.GoogleTranslate]: alloc=32138744 time=9.633
+Simplifier [SharedLogic.GoogleTranslate]: alloc=14940632 time=4.143
+Demand analysis [SharedLogic.GoogleTranslate]: alloc=12610976 time=3.049
+Worker Wrapper binds [SharedLogic.GoogleTranslate]: alloc=632040 time=0.274
+Simplifier [SharedLogic.GoogleTranslate]: alloc=14051496 time=4.735
 Exitification transformation [SharedLogic.GoogleTranslate]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.GoogleTranslate]: alloc=6734384 time=2.088
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.GoogleTranslate]: alloc=11199592 time=3.337
 Common sub-expression [SharedLogic.GoogleTranslate]: alloc=22520 time=0.005
-Float inwards [SharedLogic.GoogleTranslate]: alloc=21416 time=0.004
-Simplifier [SharedLogic.GoogleTranslate]: alloc=19116232 time=5.741
-Demand analysis [SharedLogic.GoogleTranslate]: alloc=10777464 time=2.304
-CoreTidy [SharedLogic.GoogleTranslate]: alloc=2064672 time=0.952
-CorePrep [SharedLogic.GoogleTranslate]: alloc=22376 time=0.010
-CodeGen [SharedLogic.GoogleTranslate]: alloc=65875944 time=17.407
-systool:as: alloc=104000 time=0.202
-CorePrep [SharedLogic.GoogleTranslate]: alloc=22376 time=0.015
-CodeGen [SharedLogic.GoogleTranslate]: alloc=68773808 time=18.067
-systool:as: alloc=106872 time=0.194
+Float inwards [SharedLogic.GoogleTranslate]: alloc=21416 time=0.017
+Simplifier [SharedLogic.GoogleTranslate]: alloc=15718256 time=5.155
+Demand analysis [SharedLogic.GoogleTranslate]: alloc=14540608 time=3.282
+CoreTidy [SharedLogic.GoogleTranslate]: alloc=2580112 time=1.140
+CorePrep [SharedLogic.GoogleTranslate]: alloc=22376 time=0.009
+CodeGen [SharedLogic.GoogleTranslate]: alloc=82702480 time=23.735
+systool:as: alloc=103256 time=0.237
+CorePrep [SharedLogic.GoogleTranslate]: alloc=22376 time=0.020
+CodeGen [SharedLogic.GoogleTranslate]: alloc=85817112 time=25.314
+systool:as: alloc=106136 time=0.229

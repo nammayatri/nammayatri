@@ -1,28 +1,26 @@
-Parser [SharedLogic.GoogleMaps]: alloc=2031400 time=0.475
-Renamer/typechecker [SharedLogic.GoogleMaps]: alloc=33070312 time=11.170
-Desugar [SharedLogic.GoogleMaps]: alloc=4149400 time=1.979
-Simplifier [SharedLogic.GoogleMaps]: alloc=30621400 time=8.933
-Specialise [SharedLogic.GoogleMaps]: alloc=6386824 time=1.477
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.GoogleMaps]: alloc=26868824 time=8.039
-Simplifier [SharedLogic.GoogleMaps]: alloc=52535976 time=20.708
-Simplifier [SharedLogic.GoogleMaps]: alloc=43390664 time=12.354
-Simplifier [SharedLogic.GoogleMaps]: alloc=44870336 time=13.494
+Parser [SharedLogic.GoogleMaps]: alloc=2031400 time=0.529
+Renamer/typechecker [SharedLogic.GoogleMaps]: alloc=33070632 time=11.514
+Desugar [SharedLogic.GoogleMaps]: alloc=4155200 time=1.961
+Simplifier [SharedLogic.GoogleMaps]: alloc=15630224 time=4.593
+Specialise [SharedLogic.GoogleMaps]: alloc=6797184 time=1.450
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.GoogleMaps]: alloc=27952088 time=8.366
+Simplifier [SharedLogic.GoogleMaps]: alloc=129769496 time=43.709
 Float inwards [SharedLogic.GoogleMaps]: alloc=19912 time=0.005
-Called arity analysis [SharedLogic.GoogleMaps]: alloc=21488 time=0.019
-Simplifier [SharedLogic.GoogleMaps]: alloc=15037064 time=10.317
-Demand analysis [SharedLogic.GoogleMaps]: alloc=14303520 time=3.268
-Worker Wrapper binds [SharedLogic.GoogleMaps]: alloc=584000 time=0.346
-Simplifier [SharedLogic.GoogleMaps]: alloc=70758976 time=19.933
+Called arity analysis [SharedLogic.GoogleMaps]: alloc=21488 time=0.007
+Simplifier [SharedLogic.GoogleMaps]: alloc=43214200 time=14.797
+Demand analysis [SharedLogic.GoogleMaps]: alloc=57751168 time=13.529
+Worker Wrapper binds [SharedLogic.GoogleMaps]: alloc=1507320 time=0.887
+Simplifier [SharedLogic.GoogleMaps]: alloc=62685584 time=20.055
 Exitification transformation [SharedLogic.GoogleMaps]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.GoogleMaps]: alloc=13539848 time=10.787
-Common sub-expression [SharedLogic.GoogleMaps]: alloc=21016 time=0.019
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.GoogleMaps]: alloc=49584160 time=15.888
+Common sub-expression [SharedLogic.GoogleMaps]: alloc=21016 time=0.006
 Float inwards [SharedLogic.GoogleMaps]: alloc=19912 time=0.004
-Simplifier [SharedLogic.GoogleMaps]: alloc=38502896 time=10.520
-Demand analysis [SharedLogic.GoogleMaps]: alloc=17087328 time=3.687
-CoreTidy [SharedLogic.GoogleMaps]: alloc=5958296 time=2.161
-CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.009
-CodeGen [SharedLogic.GoogleMaps]: alloc=143881256 time=45.742
-systool:as: alloc=103680 time=0.217
+Simplifier [SharedLogic.GoogleMaps]: alloc=62748000 time=21.613
+Demand analysis [SharedLogic.GoogleMaps]: alloc=61248584 time=13.955
+CoreTidy [SharedLogic.GoogleMaps]: alloc=12201808 time=5.713
 CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.014
-CodeGen [SharedLogic.GoogleMaps]: alloc=148921272 time=43.232
-systool:as: alloc=106552 time=0.203
+CodeGen [SharedLogic.GoogleMaps]: alloc=364364032 time=117.303
+systool:as: alloc=102960 time=0.215
+CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.017
+CodeGen [SharedLogic.GoogleMaps]: alloc=375218896 time=112.026
+systool:as: alloc=105832 time=0.271

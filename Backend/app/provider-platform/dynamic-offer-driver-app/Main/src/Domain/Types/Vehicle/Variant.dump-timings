@@ -1,31 +1,29 @@
-Parser [Domain.Types.Vehicle.Variant]: alloc=889112 time=0.309
-Simplify [expr]: alloc=34464 time=0.019
-CorePrep [expr]: alloc=22952 time=0.015
-ByteCodeGen [Ghci1]: alloc=94056 time=0.047
-Renamer/typechecker [Domain.Types.Vehicle.Variant]: alloc=65200504 time=21.567
-Desugar [Domain.Types.Vehicle.Variant]: alloc=42674320 time=10.000
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=89151464 time=29.363
-Specialise [Domain.Types.Vehicle.Variant]: alloc=6768912 time=1.824
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Vehicle.Variant]: alloc=15686824 time=5.113
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=130204056 time=42.141
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=111160240 time=47.456
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=144427944 time=44.667
-Float inwards [Domain.Types.Vehicle.Variant]: alloc=21704 time=0.005
-Called arity analysis [Domain.Types.Vehicle.Variant]: alloc=23280 time=0.006
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=113591424 time=34.205
-Demand analysis [Domain.Types.Vehicle.Variant]: alloc=32968104 time=7.827
-Worker Wrapper binds [Domain.Types.Vehicle.Variant]: alloc=2139464 time=0.829
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=132358024 time=37.934
-Exitification transformation [Domain.Types.Vehicle.Variant]: alloc=24224 time=0.032
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Vehicle.Variant]: alloc=28069504 time=8.283
-Common sub-expression [Domain.Types.Vehicle.Variant]: alloc=22808 time=0.006
+Parser [Domain.Types.Vehicle.Variant]: alloc=889112 time=0.333
+Simplify [expr]: alloc=34464 time=0.021
+CorePrep [expr]: alloc=22952 time=0.018
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Vehicle.Variant]: alloc=65208248 time=22.351
+Desugar [Domain.Types.Vehicle.Variant]: alloc=42669680 time=10.831
+Simplifier [Domain.Types.Vehicle.Variant]: alloc=45057232 time=15.855
+Specialise [Domain.Types.Vehicle.Variant]: alloc=9241072 time=3.269
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Vehicle.Variant]: alloc=21439952 time=7.379
+Simplifier [Domain.Types.Vehicle.Variant]: alloc=200443096 time=79.490
 Float inwards [Domain.Types.Vehicle.Variant]: alloc=21704 time=0.004
-Simplifier [Domain.Types.Vehicle.Variant]: alloc=122747600 time=38.087
-Demand analysis [Domain.Types.Vehicle.Variant]: alloc=29658088 time=7.125
-CoreTidy [Domain.Types.Vehicle.Variant]: alloc=12512824 time=4.821
-CorePrep [Domain.Types.Vehicle.Variant]: alloc=22680 time=0.011
-CodeGen [Domain.Types.Vehicle.Variant]: alloc=276316472 time=94.129
-systool:as: alloc=104096 time=0.255
+Called arity analysis [Domain.Types.Vehicle.Variant]: alloc=23280 time=0.006
+Simplifier [Domain.Types.Vehicle.Variant]: alloc=53708296 time=17.529
+Demand analysis [Domain.Types.Vehicle.Variant]: alloc=29582728 time=7.944
+Worker Wrapper binds [Domain.Types.Vehicle.Variant]: alloc=1549592 time=0.793
+Simplifier [Domain.Types.Vehicle.Variant]: alloc=56554784 time=18.402
+Exitification transformation [Domain.Types.Vehicle.Variant]: alloc=24224 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Vehicle.Variant]: alloc=32351600 time=10.835
+Common sub-expression [Domain.Types.Vehicle.Variant]: alloc=22808 time=0.007
+Float inwards [Domain.Types.Vehicle.Variant]: alloc=21704 time=0.004
+Simplifier [Domain.Types.Vehicle.Variant]: alloc=62874176 time=40.616
+Demand analysis [Domain.Types.Vehicle.Variant]: alloc=26852616 time=6.421
+CoreTidy [Domain.Types.Vehicle.Variant]: alloc=13323440 time=4.762
+CorePrep [Domain.Types.Vehicle.Variant]: alloc=22680 time=0.036
+CodeGen [Domain.Types.Vehicle.Variant]: alloc=262338392 time=88.809
+systool:as: alloc=103376 time=0.252
 CorePrep [Domain.Types.Vehicle.Variant]: alloc=22680 time=0.017
-CodeGen [Domain.Types.Vehicle.Variant]: alloc=289866456 time=83.539
-systool:as: alloc=106968 time=0.246
+CodeGen [Domain.Types.Vehicle.Variant]: alloc=277392112 time=86.438
+systool:as: alloc=106248 time=0.226

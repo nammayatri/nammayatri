@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Ride.EndRide]: alloc=12721672 time=2.327
-Renamer/typechecker [Domain.Action.UI.Ride.EndRide]: alloc=2101600384 time=385.880
-Desugar [Domain.Action.UI.Ride.EndRide]: alloc=2822128864 time=415.196
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=489356168 time=151.297
-Specialise [Domain.Action.UI.Ride.EndRide]: alloc=20082352 time=12.327
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.EndRide]: alloc=57261248 time=25.266
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=424465648 time=151.051
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=191109408 time=58.584
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=355525080 time=135.000
+Parser [Domain.Action.UI.Ride.EndRide]: alloc=12721672 time=2.602
+Renamer/typechecker [Domain.Action.UI.Ride.EndRide]: alloc=2101540640 time=423.820
+Desugar [Domain.Action.UI.Ride.EndRide]: alloc=2822205104 time=480.060
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=244966296 time=81.327
+Specialise [Domain.Action.UI.Ride.EndRide]: alloc=32191224 time=13.791
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.EndRide]: alloc=81843584 time=31.787
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=778586776 time=316.691
 Float inwards [Domain.Action.UI.Ride.EndRide]: alloc=22008 time=0.005
 Called arity analysis [Domain.Action.UI.Ride.EndRide]: alloc=23584 time=0.006
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=386480104 time=120.417
-Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=129455976 time=27.743
-Worker Wrapper binds [Domain.Action.UI.Ride.EndRide]: alloc=2548112 time=1.400
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=846630336 time=283.883
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=203803184 time=88.510
+Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=241143664 time=59.111
+Worker Wrapper binds [Domain.Action.UI.Ride.EndRide]: alloc=4852992 time=2.739
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=270143768 time=90.172
 Exitification transformation [Domain.Action.UI.Ride.EndRide]: alloc=24512 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.EndRide]: alloc=102485496 time=33.133
-Common sub-expression [Domain.Action.UI.Ride.EndRide]: alloc=23112 time=0.006
-Float inwards [Domain.Action.UI.Ride.EndRide]: alloc=22008 time=0.004
-Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=346445784 time=174.295
-Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=169830136 time=35.299
-CoreTidy [Domain.Action.UI.Ride.EndRide]: alloc=65125768 time=20.318
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.EndRide]: alloc=215570296 time=100.302
+Common sub-expression [Domain.Action.UI.Ride.EndRide]: alloc=23112 time=0.008
+Float inwards [Domain.Action.UI.Ride.EndRide]: alloc=22008 time=0.005
+Simplifier [Domain.Action.UI.Ride.EndRide]: alloc=488656312 time=190.274
+Demand analysis [Domain.Action.UI.Ride.EndRide]: alloc=284091120 time=69.927
+CoreTidy [Domain.Action.UI.Ride.EndRide]: alloc=95110760 time=34.953
 CorePrep [Domain.Action.UI.Ride.EndRide]: alloc=22968 time=0.013
-CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=910433256 time=255.988
-systool:as: alloc=104168 time=0.261
-CorePrep [Domain.Action.UI.Ride.EndRide]: alloc=22968 time=0.015
-CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=943698072 time=230.487
-systool:as: alloc=107040 time=0.278
+CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=1396541464 time=479.795
+systool:as: alloc=103432 time=0.274
+CorePrep [Domain.Action.UI.Ride.EndRide]: alloc=22968 time=0.019
+CodeGen [Domain.Action.UI.Ride.EndRide]: alloc=1441119968 time=403.273
+systool:as: alloc=106304 time=0.209

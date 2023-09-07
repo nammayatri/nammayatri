@@ -1,31 +1,29 @@
-Parser [Domain.Types.Exophone]: alloc=653504 time=0.216
-Simplify [expr]: alloc=34464 time=0.043
+Parser [Domain.Types.Exophone]: alloc=653504 time=0.215
+Simplify [expr]: alloc=34464 time=0.016
 CorePrep [expr]: alloc=22952 time=0.017
-ByteCodeGen [Ghci1]: alloc=94056 time=0.075
-Renamer/typechecker [Domain.Types.Exophone]: alloc=84416240 time=29.055
-Desugar [Domain.Types.Exophone]: alloc=45118456 time=12.409
-Simplifier [Domain.Types.Exophone]: alloc=127645256 time=47.434
-Specialise [Domain.Types.Exophone]: alloc=8439320 time=4.151
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Exophone]: alloc=25818968 time=7.948
-Simplifier [Domain.Types.Exophone]: alloc=190644520 time=73.296
-Simplifier [Domain.Types.Exophone]: alloc=164958432 time=63.519
-Simplifier [Domain.Types.Exophone]: alloc=138397896 time=239.547
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Exophone]: alloc=84421872 time=30.343
+Desugar [Domain.Types.Exophone]: alloc=45123096 time=11.915
+Simplifier [Domain.Types.Exophone]: alloc=64863768 time=26.229
+Specialise [Domain.Types.Exophone]: alloc=16051904 time=5.504
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Exophone]: alloc=33784096 time=14.851
+Simplifier [Domain.Types.Exophone]: alloc=350746840 time=351.208
 Float inwards [Domain.Types.Exophone]: alloc=19624 time=0.005
 Called arity analysis [Domain.Types.Exophone]: alloc=21200 time=0.005
-Simplifier [Domain.Types.Exophone]: alloc=105446896 time=31.327
-Demand analysis [Domain.Types.Exophone]: alloc=24324808 time=5.894
-Worker Wrapper binds [Domain.Types.Exophone]: alloc=1862496 time=0.724
-Simplifier [Domain.Types.Exophone]: alloc=135328328 time=39.064
+Simplifier [Domain.Types.Exophone]: alloc=101348928 time=39.615
+Demand analysis [Domain.Types.Exophone]: alloc=49721480 time=13.166
+Worker Wrapper binds [Domain.Types.Exophone]: alloc=2051024 time=0.686
+Simplifier [Domain.Types.Exophone]: alloc=109270016 time=32.887
 Exitification transformation [Domain.Types.Exophone]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Exophone]: alloc=25327504 time=8.026
-Common sub-expression [Domain.Types.Exophone]: alloc=20728 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Exophone]: alloc=56820832 time=20.175
+Common sub-expression [Domain.Types.Exophone]: alloc=20728 time=0.007
 Float inwards [Domain.Types.Exophone]: alloc=19624 time=0.004
-Simplifier [Domain.Types.Exophone]: alloc=89664448 time=43.986
-Demand analysis [Domain.Types.Exophone]: alloc=21746064 time=5.277
-CoreTidy [Domain.Types.Exophone]: alloc=12852544 time=4.524
-CorePrep [Domain.Types.Exophone]: alloc=20584 time=0.011
-CodeGen [Domain.Types.Exophone]: alloc=175931760 time=54.925
-systool:as: alloc=103632 time=0.168
-CorePrep [Domain.Types.Exophone]: alloc=20584 time=0.015
-CodeGen [Domain.Types.Exophone]: alloc=183159096 time=58.176
-systool:as: alloc=106504 time=0.214
+Simplifier [Domain.Types.Exophone]: alloc=124629704 time=41.569
+Demand analysis [Domain.Types.Exophone]: alloc=47561000 time=12.740
+CoreTidy [Domain.Types.Exophone]: alloc=19059904 time=7.325
+CorePrep [Domain.Types.Exophone]: alloc=20584 time=0.012
+CodeGen [Domain.Types.Exophone]: alloc=264816568 time=92.761
+systool:as: alloc=102904 time=0.204
+CorePrep [Domain.Types.Exophone]: alloc=20584 time=0.014
+CodeGen [Domain.Types.Exophone]: alloc=277131528 time=89.442
+systool:as: alloc=105776 time=0.163

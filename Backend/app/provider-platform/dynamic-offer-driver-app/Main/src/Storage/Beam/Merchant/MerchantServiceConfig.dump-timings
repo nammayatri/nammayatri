@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=2896016 time=0.605
-Simplify [expr]: alloc=124064 time=0.064
-CorePrep [expr]: alloc=53504 time=0.045
-ByteCodeGen [Ghci1]: alloc=318120 time=0.113
-Simplify [expr]: alloc=47024 time=0.031
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.045
-Renamer/typechecker [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=146990352 time=46.356
-Desugar [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=21754048 time=5.995
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=181297472 time=54.624
-Specialise [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=12969896 time=3.671
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=46777032 time=14.785
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=279159416 time=87.974
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=217069872 time=81.319
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=198935080 time=74.998
+Parser [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=2896016 time=0.604
+Simplify [expr]: alloc=124144 time=0.055
+CorePrep [expr]: alloc=53544 time=0.032
+ByteCodeGen [Ghci1]: alloc=318080 time=0.093
+Simplify [expr]: alloc=47024 time=0.020
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.049
+Renamer/typechecker [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=146977008 time=47.882
+Desugar [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=21752888 time=6.452
+Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=82971336 time=26.935
+Specialise [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=25048048 time=8.424
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=60906552 time=22.487
+Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=586293152 time=225.111
 Float inwards [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=26184 time=0.005
 Called arity analysis [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27760 time=0.006
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=154441488 time=54.782
-Demand analysis [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=31632504 time=8.627
-Worker Wrapper binds [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=1437256 time=0.833
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=169274696 time=57.721
-Exitification transformation [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=28672 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27796112 time=9.008
-Common sub-expression [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27288 time=0.006
-Float inwards [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=26184 time=0.004
-Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=168040640 time=48.964
-Demand analysis [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=29322792 time=7.731
-CoreTidy [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=16937888 time=6.609
-CorePrep [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27144 time=0.040
-CodeGen [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=234240776 time=70.873
-systool:as: alloc=105040 time=0.258
-CorePrep [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27144 time=0.029
-CodeGen [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=245305760 time=73.119
-systool:as: alloc=107888 time=0.273
+Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=163725432 time=73.336
+Demand analysis [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=159043608 time=38.671
+Worker Wrapper binds [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=4221704 time=2.483
+Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=195776696 time=64.710
+Exitification transformation [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=28672 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=135615608 time=46.827
+Common sub-expression [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27288 time=0.035
+Float inwards [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=26184 time=0.005
+Simplifier [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=200526256 time=64.391
+Demand analysis [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=145782232 time=35.593
+CoreTidy [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=36268104 time=17.105
+CorePrep [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27144 time=0.016
+CodeGen [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=787453776 time=248.497
+systool:as: alloc=104280 time=0.250
+CorePrep [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=27144 time=0.018
+CodeGen [Storage.Beam.Merchant.MerchantServiceConfig]: alloc=811580016 time=245.954
+systool:as: alloc=107160 time=0.280

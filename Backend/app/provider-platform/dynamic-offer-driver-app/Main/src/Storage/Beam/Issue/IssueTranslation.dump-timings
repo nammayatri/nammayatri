@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Issue.IssueTranslation]: alloc=1304328 time=0.363
-Simplify [expr]: alloc=184296 time=0.088
-CorePrep [expr]: alloc=74104 time=0.079
-ByteCodeGen [Ghci1]: alloc=379864 time=0.099
-Simplify [expr]: alloc=47024 time=0.045
+Parser [Storage.Beam.Issue.IssueTranslation]: alloc=1304328 time=0.329
+Simplify [expr]: alloc=184136 time=0.063
+CorePrep [expr]: alloc=74024 time=0.040
+ByteCodeGen [Ghci1]: alloc=379864 time=0.101
+Simplify [expr]: alloc=47024 time=0.018
 CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.Issue.IssueTranslation]: alloc=109697568 time=35.327
-Desugar [Storage.Beam.Issue.IssueTranslation]: alloc=19402536 time=5.543
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=133150688 time=42.032
-Specialise [Storage.Beam.Issue.IssueTranslation]: alloc=11520888 time=3.135
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Issue.IssueTranslation]: alloc=41031288 time=12.728
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=218536272 time=69.518
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=167952000 time=60.608
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=154275592 time=60.802
-Float inwards [Storage.Beam.Issue.IssueTranslation]: alloc=23800 time=0.005
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.Issue.IssueTranslation]: alloc=109699856 time=35.399
+Desugar [Storage.Beam.Issue.IssueTranslation]: alloc=19410416 time=5.458
+Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=60840072 time=19.882
+Specialise [Storage.Beam.Issue.IssueTranslation]: alloc=20482720 time=6.439
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Issue.IssueTranslation]: alloc=52644600 time=18.537
+Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=474823696 time=179.705
+Float inwards [Storage.Beam.Issue.IssueTranslation]: alloc=23800 time=0.012
 Called arity analysis [Storage.Beam.Issue.IssueTranslation]: alloc=25376 time=0.006
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=119462264 time=36.244
-Demand analysis [Storage.Beam.Issue.IssueTranslation]: alloc=26146216 time=7.086
-Worker Wrapper binds [Storage.Beam.Issue.IssueTranslation]: alloc=1297016 time=0.760
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=175388664 time=66.790
-Exitification transformation [Storage.Beam.Issue.IssueTranslation]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Issue.IssueTranslation]: alloc=23082104 time=7.832
-Common sub-expression [Storage.Beam.Issue.IssueTranslation]: alloc=24904 time=0.006
+Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=134158480 time=55.314
+Demand analysis [Storage.Beam.Issue.IssueTranslation]: alloc=135322728 time=32.326
+Worker Wrapper binds [Storage.Beam.Issue.IssueTranslation]: alloc=3699704 time=1.178
+Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=164139632 time=54.741
+Exitification transformation [Storage.Beam.Issue.IssueTranslation]: alloc=26288 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Issue.IssueTranslation]: alloc=116193792 time=38.076
+Common sub-expression [Storage.Beam.Issue.IssueTranslation]: alloc=24904 time=0.007
 Float inwards [Storage.Beam.Issue.IssueTranslation]: alloc=23800 time=0.004
-Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=128209688 time=56.991
-Demand analysis [Storage.Beam.Issue.IssueTranslation]: alloc=22601944 time=6.153
-CoreTidy [Storage.Beam.Issue.IssueTranslation]: alloc=12063080 time=5.080
-CorePrep [Storage.Beam.Issue.IssueTranslation]: alloc=24760 time=0.013
-CodeGen [Storage.Beam.Issue.IssueTranslation]: alloc=181879088 time=57.716
-systool:as: alloc=104544 time=0.210
-CorePrep [Storage.Beam.Issue.IssueTranslation]: alloc=24760 time=0.015
-CodeGen [Storage.Beam.Issue.IssueTranslation]: alloc=190443584 time=58.625
-systool:as: alloc=107392 time=0.200
+Simplifier [Storage.Beam.Issue.IssueTranslation]: alloc=167117488 time=58.926
+Demand analysis [Storage.Beam.Issue.IssueTranslation]: alloc=124556904 time=29.936
+CoreTidy [Storage.Beam.Issue.IssueTranslation]: alloc=28377080 time=29.124
+CorePrep [Storage.Beam.Issue.IssueTranslation]: alloc=24760 time=0.014
+CodeGen [Storage.Beam.Issue.IssueTranslation]: alloc=664278744 time=205.981
+systool:as: alloc=103784 time=0.233
+CorePrep [Storage.Beam.Issue.IssueTranslation]: alloc=24760 time=0.016
+CodeGen [Storage.Beam.Issue.IssueTranslation]: alloc=684658752 time=209.243
+systool:as: alloc=106688 time=0.302

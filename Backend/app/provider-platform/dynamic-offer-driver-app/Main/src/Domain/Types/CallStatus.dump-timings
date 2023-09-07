@@ -1,28 +1,26 @@
-Parser [Domain.Types.CallStatus]: alloc=742864 time=0.212
-Renamer/typechecker [Domain.Types.CallStatus]: alloc=52732488 time=19.102
-Desugar [Domain.Types.CallStatus]: alloc=4423416 time=1.981
-Simplifier [Domain.Types.CallStatus]: alloc=71602016 time=23.845
-Specialise [Domain.Types.CallStatus]: alloc=4385264 time=1.279
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.CallStatus]: alloc=14002464 time=4.810
-Simplifier [Domain.Types.CallStatus]: alloc=107946448 time=40.464
-Simplifier [Domain.Types.CallStatus]: alloc=94722136 time=39.204
-Simplifier [Domain.Types.CallStatus]: alloc=83021912 time=30.073
+Parser [Domain.Types.CallStatus]: alloc=742864 time=0.246
+Renamer/typechecker [Domain.Types.CallStatus]: alloc=52731792 time=20.786
+Desugar [Domain.Types.CallStatus]: alloc=4422296 time=2.164
+Simplifier [Domain.Types.CallStatus]: alloc=35654200 time=12.782
+Specialise [Domain.Types.CallStatus]: alloc=6958040 time=2.760
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.CallStatus]: alloc=17559384 time=6.887
+Simplifier [Domain.Types.CallStatus]: alloc=170997816 time=78.866
 Float inwards [Domain.Types.CallStatus]: alloc=20216 time=0.005
-Called arity analysis [Domain.Types.CallStatus]: alloc=21792 time=0.006
-Simplifier [Domain.Types.CallStatus]: alloc=61725400 time=25.836
-Demand analysis [Domain.Types.CallStatus]: alloc=14166360 time=3.783
-Worker Wrapper binds [Domain.Types.CallStatus]: alloc=444368 time=0.305
-Simplifier [Domain.Types.CallStatus]: alloc=72808048 time=22.509
-Exitification transformation [Domain.Types.CallStatus]: alloc=22720 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.CallStatus]: alloc=13677968 time=11.070
-Common sub-expression [Domain.Types.CallStatus]: alloc=21320 time=0.019
+Called arity analysis [Domain.Types.CallStatus]: alloc=21792 time=0.005
+Simplifier [Domain.Types.CallStatus]: alloc=45108424 time=21.979
+Demand analysis [Domain.Types.CallStatus]: alloc=23643752 time=6.201
+Worker Wrapper binds [Domain.Types.CallStatus]: alloc=750216 time=0.511
+Simplifier [Domain.Types.CallStatus]: alloc=46589424 time=21.788
+Exitification transformation [Domain.Types.CallStatus]: alloc=22720 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.CallStatus]: alloc=24463664 time=8.376
+Common sub-expression [Domain.Types.CallStatus]: alloc=21320 time=0.006
 Float inwards [Domain.Types.CallStatus]: alloc=20216 time=0.004
-Simplifier [Domain.Types.CallStatus]: alloc=53899312 time=16.642
-Demand analysis [Domain.Types.CallStatus]: alloc=13093952 time=3.420
-CoreTidy [Domain.Types.CallStatus]: alloc=7455368 time=2.810
-CorePrep [Domain.Types.CallStatus]: alloc=21176 time=0.009
-CodeGen [Domain.Types.CallStatus]: alloc=105836704 time=35.779
-systool:as: alloc=103752 time=0.139
-CorePrep [Domain.Types.CallStatus]: alloc=21176 time=0.012
-CodeGen [Domain.Types.CallStatus]: alloc=109790192 time=35.274
-systool:as: alloc=106632 time=0.155
+Simplifier [Domain.Types.CallStatus]: alloc=55483824 time=26.459
+Demand analysis [Domain.Types.CallStatus]: alloc=22029776 time=6.400
+CoreTidy [Domain.Types.CallStatus]: alloc=9956736 time=3.955
+CorePrep [Domain.Types.CallStatus]: alloc=21176 time=0.011
+CodeGen [Domain.Types.CallStatus]: alloc=152365912 time=55.568
+systool:as: alloc=103016 time=0.215
+CorePrep [Domain.Types.CallStatus]: alloc=21176 time=0.015
+CodeGen [Domain.Types.CallStatus]: alloc=158407216 time=56.332
+systool:as: alloc=105912 time=0.199

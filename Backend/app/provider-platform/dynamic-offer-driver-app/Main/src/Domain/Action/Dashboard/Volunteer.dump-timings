@@ -1,28 +1,26 @@
-Parser [Domain.Action.Dashboard.Volunteer]: alloc=2435152 time=0.632
-Renamer/typechecker [Domain.Action.Dashboard.Volunteer]: alloc=253680344 time=66.411
-Desugar [Domain.Action.Dashboard.Volunteer]: alloc=1627944 time=1.385
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=296545680 time=91.222
-Specialise [Domain.Action.Dashboard.Volunteer]: alloc=7847600 time=8.247
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Volunteer]: alloc=25591928 time=13.710
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=345322488 time=111.291
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=66474648 time=23.490
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=32899184 time=11.688
+Parser [Domain.Action.Dashboard.Volunteer]: alloc=2435152 time=0.620
+Renamer/typechecker [Domain.Action.Dashboard.Volunteer]: alloc=253668336 time=69.677
+Desugar [Domain.Action.Dashboard.Volunteer]: alloc=1628224 time=1.386
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=160290408 time=50.964
+Specialise [Domain.Action.Dashboard.Volunteer]: alloc=12640200 time=7.221
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Volunteer]: alloc=31507216 time=12.873
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=353743504 time=130.280
 Float inwards [Domain.Action.Dashboard.Volunteer]: alloc=23192 time=0.005
 Called arity analysis [Domain.Action.Dashboard.Volunteer]: alloc=24768 time=0.006
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=111994104 time=46.441
-Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=53144224 time=11.066
-Worker Wrapper binds [Domain.Action.Dashboard.Volunteer]: alloc=840440 time=0.471
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=496055136 time=159.590
-Exitification transformation [Domain.Action.Dashboard.Volunteer]: alloc=25696 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Volunteer]: alloc=27448376 time=11.010
-Common sub-expression [Domain.Action.Dashboard.Volunteer]: alloc=24296 time=0.006
-Float inwards [Domain.Action.Dashboard.Volunteer]: alloc=23192 time=0.004
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=158805056 time=49.593
-Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=57802864 time=11.995
-CoreTidy [Domain.Action.Dashboard.Volunteer]: alloc=34077672 time=10.578
-CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.040
-CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=304567384 time=68.735
-systool:as: alloc=104424 time=0.234
-CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.013
-CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=313638560 time=70.142
-systool:as: alloc=107304 time=0.207
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=52602008 time=22.313
+Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=60420040 time=13.460
+Worker Wrapper binds [Domain.Action.Dashboard.Volunteer]: alloc=1004200 time=0.601
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=89868616 time=20.097
+Exitification transformation [Domain.Action.Dashboard.Volunteer]: alloc=25696 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Volunteer]: alloc=45605560 time=16.201
+Common sub-expression [Domain.Action.Dashboard.Volunteer]: alloc=24296 time=0.007
+Float inwards [Domain.Action.Dashboard.Volunteer]: alloc=23192 time=0.005
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=265925912 time=113.104
+Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=67975080 time=19.695
+CoreTidy [Domain.Action.Dashboard.Volunteer]: alloc=47472384 time=14.571
+CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.014
+CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=336676560 time=84.449
+systool:as: alloc=103688 time=0.191
+CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.015
+CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=346813600 time=84.408
+systool:as: alloc=106568 time=0.195

@@ -1,28 +1,26 @@
-Parser [Domain.Action.Internal.FeedbackForm]: alloc=2500248 time=0.625
-Renamer/typechecker [Domain.Action.Internal.FeedbackForm]: alloc=29853104 time=12.467
-Desugar [Domain.Action.Internal.FeedbackForm]: alloc=2038592 time=1.385
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=23618552 time=7.468
-Specialise [Domain.Action.Internal.FeedbackForm]: alloc=1001832 time=0.296
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Internal.FeedbackForm]: alloc=4397728 time=1.334
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=37739608 time=11.720
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=21078440 time=6.383
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=26824704 time=8.476
+Parser [Domain.Action.Internal.FeedbackForm]: alloc=2500248 time=0.642
+Renamer/typechecker [Domain.Action.Internal.FeedbackForm]: alloc=29839712 time=13.543
+Desugar [Domain.Action.Internal.FeedbackForm]: alloc=2038232 time=1.380
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=10610816 time=3.343
+Specialise [Domain.Action.Internal.FeedbackForm]: alloc=1636640 time=0.497
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Internal.FeedbackForm]: alloc=6926800 time=2.196
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=34266424 time=11.368
 Float inwards [Domain.Action.Internal.FeedbackForm]: alloc=23800 time=0.005
 Called arity analysis [Domain.Action.Internal.FeedbackForm]: alloc=25376 time=0.006
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=21054752 time=6.482
-Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=6153928 time=1.436
-Worker Wrapper binds [Domain.Action.Internal.FeedbackForm]: alloc=294744 time=0.176
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=13001544 time=4.178
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=9184448 time=2.826
+Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=6306176 time=1.476
+Worker Wrapper binds [Domain.Action.Internal.FeedbackForm]: alloc=299464 time=0.160
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=6765320 time=2.191
 Exitification transformation [Domain.Action.Internal.FeedbackForm]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Internal.FeedbackForm]: alloc=4728136 time=1.616
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Internal.FeedbackForm]: alloc=4791680 time=1.650
 Common sub-expression [Domain.Action.Internal.FeedbackForm]: alloc=24904 time=0.005
 Float inwards [Domain.Action.Internal.FeedbackForm]: alloc=23800 time=0.004
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=13756256 time=4.401
-Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=5637368 time=1.297
-CoreTidy [Domain.Action.Internal.FeedbackForm]: alloc=2134688 time=0.796
-CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.010
-CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=59252008 time=17.008
-systool:as: alloc=104552 time=0.186
-CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.015
-CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=61886792 time=17.917
-systool:as: alloc=107424 time=0.196
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=8325616 time=2.816
+Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=5651424 time=1.282
+CoreTidy [Domain.Action.Internal.FeedbackForm]: alloc=1938600 time=0.874
+CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.009
+CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=60279240 time=18.098
+systool:as: alloc=103808 time=0.218
+CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.013
+CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=62928168 time=19.443
+systool:as: alloc=106688 time=0.216

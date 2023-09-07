@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Exophone]: alloc=2736080 time=0.598
-Renamer/typechecker [Storage.Queries.Exophone]: alloc=291474336 time=79.196
-Desugar [Storage.Queries.Exophone]: alloc=9052688 time=2.772
-Simplifier [Storage.Queries.Exophone]: alloc=200332664 time=59.085
-Specialise [Storage.Queries.Exophone]: alloc=28254272 time=6.424
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Exophone]: alloc=17042472 time=5.574
-Simplifier [Storage.Queries.Exophone]: alloc=468312024 time=137.062
-Simplifier [Storage.Queries.Exophone]: alloc=248281968 time=85.232
-Simplifier [Storage.Queries.Exophone]: alloc=163622240 time=45.686
-Float inwards [Storage.Queries.Exophone]: alloc=20504 time=0.007
+Parser [Storage.Queries.Exophone]: alloc=2736080 time=0.600
+Renamer/typechecker [Storage.Queries.Exophone]: alloc=291461032 time=85.204
+Desugar [Storage.Queries.Exophone]: alloc=9050968 time=2.612
+Simplifier [Storage.Queries.Exophone]: alloc=120262840 time=36.396
+Specialise [Storage.Queries.Exophone]: alloc=28175016 time=7.983
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Exophone]: alloc=23830512 time=9.243
+Simplifier [Storage.Queries.Exophone]: alloc=399405720 time=136.311
+Float inwards [Storage.Queries.Exophone]: alloc=20504 time=0.005
 Called arity analysis [Storage.Queries.Exophone]: alloc=22080 time=0.006
-Simplifier [Storage.Queries.Exophone]: alloc=171435040 time=44.112
-Demand analysis [Storage.Queries.Exophone]: alloc=16051936 time=7.674
-Worker Wrapper binds [Storage.Queries.Exophone]: alloc=976840 time=0.588
-Simplifier [Storage.Queries.Exophone]: alloc=168353200 time=51.668
-Exitification transformation [Storage.Queries.Exophone]: alloc=23024 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Exophone]: alloc=16237992 time=6.810
-Common sub-expression [Storage.Queries.Exophone]: alloc=21608 time=0.006
+Simplifier [Storage.Queries.Exophone]: alloc=96204960 time=28.039
+Demand analysis [Storage.Queries.Exophone]: alloc=22595760 time=9.466
+Worker Wrapper binds [Storage.Queries.Exophone]: alloc=1141632 time=0.674
+Simplifier [Storage.Queries.Exophone]: alloc=89564712 time=26.110
+Exitification transformation [Storage.Queries.Exophone]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Exophone]: alloc=20282832 time=8.718
+Common sub-expression [Storage.Queries.Exophone]: alloc=21608 time=0.007
 Float inwards [Storage.Queries.Exophone]: alloc=20504 time=0.004
-Simplifier [Storage.Queries.Exophone]: alloc=251889328 time=71.059
-Demand analysis [Storage.Queries.Exophone]: alloc=13173528 time=6.838
-CoreTidy [Storage.Queries.Exophone]: alloc=16277920 time=5.874
-CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.040
-CodeGen [Storage.Queries.Exophone]: alloc=114319504 time=36.204
-systool:as: alloc=103856 time=0.256
-CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.042
-CodeGen [Storage.Queries.Exophone]: alloc=123420016 time=37.374
-systool:as: alloc=106712 time=0.209
+Simplifier [Storage.Queries.Exophone]: alloc=104825424 time=41.815
+Demand analysis [Storage.Queries.Exophone]: alloc=20265728 time=8.998
+CoreTidy [Storage.Queries.Exophone]: alloc=17429592 time=6.003
+CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.015
+CodeGen [Storage.Queries.Exophone]: alloc=138721520 time=45.452
+systool:as: alloc=103104 time=0.205
+CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.016
+CodeGen [Storage.Queries.Exophone]: alloc=148438808 time=47.446
+systool:as: alloc=105984 time=0.189

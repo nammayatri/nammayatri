@@ -1,34 +1,32 @@
-Parser [Storage.Beam.RiderDetails]: alloc=1761792 time=0.430
-Simplify [expr]: alloc=211024 time=0.085
-CorePrep [expr]: alloc=84160 time=0.071
-ByteCodeGen [Ghci1]: alloc=480568 time=0.115
-Simplify [expr]: alloc=47024 time=0.045
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.051
-Renamer/typechecker [Storage.Beam.RiderDetails]: alloc=236469176 time=61.749
-Desugar [Storage.Beam.RiderDetails]: alloc=28274856 time=7.327
-Simplifier [Storage.Beam.RiderDetails]: alloc=441512032 time=128.751
-Specialise [Storage.Beam.RiderDetails]: alloc=24883176 time=10.237
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RiderDetails]: alloc=78899384 time=25.222
-Simplifier [Storage.Beam.RiderDetails]: alloc=870363408 time=286.972
-Simplifier [Storage.Beam.RiderDetails]: alloc=793276544 time=262.975
-Simplifier [Storage.Beam.RiderDetails]: alloc=733573944 time=246.745
-Float inwards [Storage.Beam.RiderDetails]: alloc=20808 time=0.005
+Parser [Storage.Beam.RiderDetails]: alloc=1761792 time=0.409
+Simplify [expr]: alloc=211024 time=0.071
+CorePrep [expr]: alloc=84160 time=0.046
+ByteCodeGen [Ghci1]: alloc=480488 time=0.116
+Simplify [expr]: alloc=47024 time=0.026
+CorePrep [expr]: alloc=26752 time=0.019
+ByteCodeGen [Ghci1]: alloc=131880 time=0.058
+Renamer/typechecker [Storage.Beam.RiderDetails]: alloc=236505880 time=76.621
+Desugar [Storage.Beam.RiderDetails]: alloc=28346120 time=8.672
+Simplifier [Storage.Beam.RiderDetails]: alloc=139935416 time=50.151
+Specialise [Storage.Beam.RiderDetails]: alloc=62017504 time=18.785
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.RiderDetails]: alloc=106996088 time=41.951
+Simplifier [Storage.Beam.RiderDetails]: alloc=1544333808 time=647.307
+Float inwards [Storage.Beam.RiderDetails]: alloc=20808 time=0.007
 Called arity analysis [Storage.Beam.RiderDetails]: alloc=22384 time=0.006
-Simplifier [Storage.Beam.RiderDetails]: alloc=555618536 time=177.951
-Demand analysis [Storage.Beam.RiderDetails]: alloc=74039000 time=28.588
-Worker Wrapper binds [Storage.Beam.RiderDetails]: alloc=2882312 time=2.355
-Simplifier [Storage.Beam.RiderDetails]: alloc=760417240 time=250.308
-Exitification transformation [Storage.Beam.RiderDetails]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RiderDetails]: alloc=64059072 time=24.047
-Common sub-expression [Storage.Beam.RiderDetails]: alloc=21912 time=0.006
-Float inwards [Storage.Beam.RiderDetails]: alloc=20808 time=0.004
-Simplifier [Storage.Beam.RiderDetails]: alloc=552876744 time=192.325
-Demand analysis [Storage.Beam.RiderDetails]: alloc=55777704 time=24.887
-CoreTidy [Storage.Beam.RiderDetails]: alloc=90541280 time=31.891
-CorePrep [Storage.Beam.RiderDetails]: alloc=21784 time=0.041
-CodeGen [Storage.Beam.RiderDetails]: alloc=501263544 time=214.682
-systool:as: alloc=103872 time=0.248
-CorePrep [Storage.Beam.RiderDetails]: alloc=21784 time=0.043
-CodeGen [Storage.Beam.RiderDetails]: alloc=525704152 time=151.138
-systool:as: alloc=106752 time=0.275
+Simplifier [Storage.Beam.RiderDetails]: alloc=454137616 time=151.858
+Demand analysis [Storage.Beam.RiderDetails]: alloc=355169272 time=102.732
+Worker Wrapper binds [Storage.Beam.RiderDetails]: alloc=9087664 time=6.460
+Simplifier [Storage.Beam.RiderDetails]: alloc=503942768 time=214.686
+Exitification transformation [Storage.Beam.RiderDetails]: alloc=23312 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.RiderDetails]: alloc=304053568 time=167.949
+Common sub-expression [Storage.Beam.RiderDetails]: alloc=21912 time=0.007
+Float inwards [Storage.Beam.RiderDetails]: alloc=20808 time=0.008
+Simplifier [Storage.Beam.RiderDetails]: alloc=521906920 time=192.720
+Demand analysis [Storage.Beam.RiderDetails]: alloc=319829576 time=88.152
+CoreTidy [Storage.Beam.RiderDetails]: alloc=129507840 time=81.017
+CorePrep [Storage.Beam.RiderDetails]: alloc=21784 time=0.016
+CodeGen [Storage.Beam.RiderDetails]: alloc=1684318288 time=630.076
+systool:as: alloc=103144 time=0.278
+CorePrep [Storage.Beam.RiderDetails]: alloc=21784 time=0.018
+CodeGen [Storage.Beam.RiderDetails]: alloc=1738271128 time=552.016
+systool:as: alloc=106024 time=0.268

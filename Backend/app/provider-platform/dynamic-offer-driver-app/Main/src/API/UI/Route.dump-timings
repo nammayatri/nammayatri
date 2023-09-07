@@ -1,28 +1,26 @@
-Parser [API.UI.Route]: alloc=1322952 time=0.372
-Renamer/typechecker [API.UI.Route]: alloc=50912504 time=15.652
-Desugar [API.UI.Route]: alloc=862768 time=1.156
-Simplifier [API.UI.Route]: alloc=77198184 time=22.167
-Specialise [API.UI.Route]: alloc=2982504 time=1.683
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Route]: alloc=9148576 time=3.255
-Simplifier [API.UI.Route]: alloc=82461664 time=24.646
-Simplifier [API.UI.Route]: alloc=13726928 time=3.637
-Simplifier [API.UI.Route]: alloc=13726928 time=3.648
-Float inwards [API.UI.Route]: alloc=16936 time=0.004
-Called arity analysis [API.UI.Route]: alloc=18512 time=0.005
-Simplifier [API.UI.Route]: alloc=31390832 time=9.563
-Demand analysis [API.UI.Route]: alloc=26632896 time=4.554
-Worker Wrapper binds [API.UI.Route]: alloc=191368 time=0.176
-Simplifier [API.UI.Route]: alloc=149739072 time=44.178
-Exitification transformation [API.UI.Route]: alloc=19456 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Route]: alloc=11845184 time=17.986
-Common sub-expression [API.UI.Route]: alloc=18040 time=0.006
-Float inwards [API.UI.Route]: alloc=16936 time=0.004
-Simplifier [API.UI.Route]: alloc=33393992 time=7.458
-Demand analysis [API.UI.Route]: alloc=23250568 time=4.112
-CoreTidy [API.UI.Route]: alloc=10990016 time=3.249
-CorePrep [API.UI.Route]: alloc=17912 time=0.037
-CodeGen [API.UI.Route]: alloc=99035160 time=22.997
-systool:as: alloc=103064 time=0.227
-CorePrep [API.UI.Route]: alloc=17912 time=0.013
-CodeGen [API.UI.Route]: alloc=101087032 time=24.141
-systool:as: alloc=105936 time=0.186
+Parser [API.UI.Route]: alloc=1322952 time=0.358
+Renamer/typechecker [API.UI.Route]: alloc=50911496 time=16.684
+Desugar [API.UI.Route]: alloc=862728 time=1.089
+Simplifier [API.UI.Route]: alloc=37429792 time=11.317
+Specialise [API.UI.Route]: alloc=3757008 time=1.769
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Route]: alloc=11067648 time=3.474
+Simplifier [API.UI.Route]: alloc=87890064 time=27.087
+Float inwards [API.UI.Route]: alloc=16936 time=0.009
+Called arity analysis [API.UI.Route]: alloc=18512 time=0.010
+Simplifier [API.UI.Route]: alloc=17781152 time=7.207
+Demand analysis [API.UI.Route]: alloc=27158960 time=5.349
+Worker Wrapper binds [API.UI.Route]: alloc=217200 time=0.148
+Simplifier [API.UI.Route]: alloc=30380032 time=6.606
+Exitification transformation [API.UI.Route]: alloc=19456 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Route]: alloc=14737664 time=4.470
+Common sub-expression [API.UI.Route]: alloc=18040 time=0.005
+Float inwards [API.UI.Route]: alloc=16936 time=0.003
+Simplifier [API.UI.Route]: alloc=63161184 time=21.547
+Demand analysis [API.UI.Route]: alloc=24442520 time=5.970
+CoreTidy [API.UI.Route]: alloc=13640328 time=3.683
+CorePrep [API.UI.Route]: alloc=17912 time=0.011
+CodeGen [API.UI.Route]: alloc=101117848 time=24.749
+systool:as: alloc=102336 time=0.218
+CorePrep [API.UI.Route]: alloc=17912 time=0.018
+CodeGen [API.UI.Route]: alloc=103282248 time=25.501
+systool:as: alloc=105208 time=0.195

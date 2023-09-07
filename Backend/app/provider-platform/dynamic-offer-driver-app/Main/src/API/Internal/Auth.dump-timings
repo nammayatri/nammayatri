@@ -1,28 +1,26 @@
-Parser [API.Internal.Auth]: alloc=476704 time=0.218
-Renamer/typechecker [API.Internal.Auth]: alloc=8761936 time=4.555
-Desugar [API.Internal.Auth]: alloc=321904 time=0.931
-Simplifier [API.Internal.Auth]: alloc=7606208 time=1.789
-Specialise [API.Internal.Auth]: alloc=358312 time=0.139
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Internal.Auth]: alloc=1284232 time=0.307
-Simplifier [API.Internal.Auth]: alloc=1810648 time=0.397
-Simplifier [API.Internal.Auth]: alloc=1764376 time=0.348
-Simplifier [API.Internal.Auth]: alloc=1764376 time=0.396
+Parser [API.Internal.Auth]: alloc=476704 time=0.193
+Renamer/typechecker [API.Internal.Auth]: alloc=8760680 time=4.520
+Desugar [API.Internal.Auth]: alloc=322064 time=0.871
+Simplifier [API.Internal.Auth]: alloc=5801256 time=1.389
+Specialise [API.Internal.Auth]: alloc=807432 time=0.156
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Internal.Auth]: alloc=3175224 time=0.691
+Simplifier [API.Internal.Auth]: alloc=1871848 time=0.444
 Float inwards [API.Internal.Auth]: alloc=18424 time=0.004
-Called arity analysis [API.Internal.Auth]: alloc=20000 time=0.005
-Simplifier [API.Internal.Auth]: alloc=1975480 time=0.395
-Demand analysis [API.Internal.Auth]: alloc=3527184 time=0.563
-Worker Wrapper binds [API.Internal.Auth]: alloc=28808 time=0.014
-Simplifier [API.Internal.Auth]: alloc=3672088 time=0.622
+Called arity analysis [API.Internal.Auth]: alloc=20000 time=0.004
+Simplifier [API.Internal.Auth]: alloc=1961840 time=0.389
+Demand analysis [API.Internal.Auth]: alloc=3523056 time=0.598
+Worker Wrapper binds [API.Internal.Auth]: alloc=28784 time=0.014
+Simplifier [API.Internal.Auth]: alloc=3646712 time=0.614
 Exitification transformation [API.Internal.Auth]: alloc=20928 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Internal.Auth]: alloc=1306976 time=0.319
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Internal.Auth]: alloc=1307720 time=0.322
 Common sub-expression [API.Internal.Auth]: alloc=19528 time=0.004
 Float inwards [API.Internal.Auth]: alloc=18424 time=0.003
-Simplifier [API.Internal.Auth]: alloc=4558936 time=0.886
-Demand analysis [API.Internal.Auth]: alloc=3536008 time=0.600
-CoreTidy [API.Internal.Auth]: alloc=1111568 time=0.271
-CorePrep [API.Internal.Auth]: alloc=19400 time=0.008
-CodeGen [API.Internal.Auth]: alloc=13669072 time=3.341
-systool:as: alloc=103392 time=0.166
+Simplifier [API.Internal.Auth]: alloc=4533944 time=0.838
+Demand analysis [API.Internal.Auth]: alloc=3531920 time=0.569
+CoreTidy [API.Internal.Auth]: alloc=1113160 time=0.290
 CorePrep [API.Internal.Auth]: alloc=19400 time=0.009
-CodeGen [API.Internal.Auth]: alloc=13889672 time=3.464
-systool:as: alloc=106272 time=0.105
+CodeGen [API.Internal.Auth]: alloc=13715288 time=3.546
+systool:as: alloc=102656 time=0.157
+CorePrep [API.Internal.Auth]: alloc=19400 time=0.010
+CodeGen [API.Internal.Auth]: alloc=13990064 time=3.324
+systool:as: alloc=105536 time=0.116

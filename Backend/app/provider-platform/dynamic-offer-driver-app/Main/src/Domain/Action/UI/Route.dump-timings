@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Route]: alloc=844464 time=0.227
-Renamer/typechecker [Domain.Action.UI.Route]: alloc=337333440 time=55.935
-Desugar [Domain.Action.UI.Route]: alloc=540823600 time=85.106
-Simplifier [Domain.Action.UI.Route]: alloc=2942552 time=0.950
-Specialise [Domain.Action.UI.Route]: alloc=123416 time=0.104
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Route]: alloc=698640 time=0.233
-Simplifier [Domain.Action.UI.Route]: alloc=632680 time=0.262
-Simplifier [Domain.Action.UI.Route]: alloc=627096 time=0.182
-Simplifier [Domain.Action.UI.Route]: alloc=627096 time=0.174
+Parser [Domain.Action.UI.Route]: alloc=844464 time=0.291
+Renamer/typechecker [Domain.Action.UI.Route]: alloc=337348672 time=67.189
+Desugar [Domain.Action.UI.Route]: alloc=540846600 time=96.536
+Simplifier [Domain.Action.UI.Route]: alloc=1553648 time=0.661
+Specialise [Domain.Action.UI.Route]: alloc=277808 time=0.174
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Route]: alloc=875328 time=0.291
+Simplifier [Domain.Action.UI.Route]: alloc=1314136 time=0.459
 Float inwards [Domain.Action.UI.Route]: alloc=19912 time=0.004
 Called arity analysis [Domain.Action.UI.Route]: alloc=21488 time=0.005
-Simplifier [Domain.Action.UI.Route]: alloc=1006832 time=0.289
-Demand analysis [Domain.Action.UI.Route]: alloc=1549216 time=0.359
-Worker Wrapper binds [Domain.Action.UI.Route]: alloc=131960 time=0.043
-Simplifier [Domain.Action.UI.Route]: alloc=2200640 time=0.665
+Simplifier [Domain.Action.UI.Route]: alloc=1007184 time=0.317
+Demand analysis [Domain.Action.UI.Route]: alloc=1549656 time=0.458
+Worker Wrapper binds [Domain.Action.UI.Route]: alloc=131960 time=0.063
+Simplifier [Domain.Action.UI.Route]: alloc=1267176 time=0.515
 Exitification transformation [Domain.Action.UI.Route]: alloc=22432 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Route]: alloc=830128 time=0.244
-Common sub-expression [Domain.Action.UI.Route]: alloc=21016 time=0.004
-Float inwards [Domain.Action.UI.Route]: alloc=19912 time=0.003
-Simplifier [Domain.Action.UI.Route]: alloc=1605640 time=0.513
-Demand analysis [Domain.Action.UI.Route]: alloc=2474448 time=0.529
-CoreTidy [Domain.Action.UI.Route]: alloc=411192 time=0.278
-CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.010
-CodeGen [Domain.Action.UI.Route]: alloc=9652824 time=3.446
-systool:as: alloc=103720 time=0.215
-CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.015
-CodeGen [Domain.Action.UI.Route]: alloc=10287944 time=3.570
-systool:as: alloc=106592 time=0.187
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Route]: alloc=828680 time=0.317
+Common sub-expression [Domain.Action.UI.Route]: alloc=21016 time=0.005
+Float inwards [Domain.Action.UI.Route]: alloc=19912 time=0.005
+Simplifier [Domain.Action.UI.Route]: alloc=1606712 time=0.589
+Demand analysis [Domain.Action.UI.Route]: alloc=2475048 time=0.570
+CoreTidy [Domain.Action.UI.Route]: alloc=411352 time=0.251
+CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.007
+CodeGen [Domain.Action.UI.Route]: alloc=9650400 time=3.761
+systool:as: alloc=102992 time=0.184
+CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.009
+CodeGen [Domain.Action.UI.Route]: alloc=10286080 time=3.567
+systool:as: alloc=105864 time=0.128

@@ -1,28 +1,26 @@
-Parser [Domain.Action.UI.Payment]: alloc=8261632 time=1.615
-Renamer/typechecker [Domain.Action.UI.Payment]: alloc=401204032 time=91.198
-Desugar [Domain.Action.UI.Payment]: alloc=15723472 time=5.029
-Simplifier [Domain.Action.UI.Payment]: alloc=236677064 time=76.973
-Specialise [Domain.Action.UI.Payment]: alloc=11753264 time=3.847
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Payment]: alloc=30332272 time=10.018
-Simplifier [Domain.Action.UI.Payment]: alloc=452715936 time=141.955
-Simplifier [Domain.Action.UI.Payment]: alloc=127840096 time=38.477
-Simplifier [Domain.Action.UI.Payment]: alloc=260949680 time=77.755
-Float inwards [Domain.Action.UI.Payment]: alloc=20504 time=0.005
-Called arity analysis [Domain.Action.UI.Payment]: alloc=22080 time=0.006
-Simplifier [Domain.Action.UI.Payment]: alloc=279074224 time=80.205
-Demand analysis [Domain.Action.UI.Payment]: alloc=87927104 time=17.384
-Worker Wrapper binds [Domain.Action.UI.Payment]: alloc=1354560 time=0.866
-Simplifier [Domain.Action.UI.Payment]: alloc=344719088 time=99.650
-Exitification transformation [Domain.Action.UI.Payment]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Payment]: alloc=51914848 time=15.754
-Common sub-expression [Domain.Action.UI.Payment]: alloc=21608 time=0.020
+Parser [Domain.Action.UI.Payment]: alloc=8261632 time=1.523
+Renamer/typechecker [Domain.Action.UI.Payment]: alloc=401108824 time=100.143
+Desugar [Domain.Action.UI.Payment]: alloc=15722792 time=5.039
+Simplifier [Domain.Action.UI.Payment]: alloc=108476352 time=44.921
+Specialise [Domain.Action.UI.Payment]: alloc=18221144 time=4.069
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Payment]: alloc=40506040 time=12.868
+Simplifier [Domain.Action.UI.Payment]: alloc=459278680 time=144.302
 Float inwards [Domain.Action.UI.Payment]: alloc=20504 time=0.004
-Simplifier [Domain.Action.UI.Payment]: alloc=172058992 time=79.038
-Demand analysis [Domain.Action.UI.Payment]: alloc=89359240 time=16.922
-CoreTidy [Domain.Action.UI.Payment]: alloc=26301640 time=8.245
-CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.010
-CodeGen [Domain.Action.UI.Payment]: alloc=610546536 time=137.862
-systool:as: alloc=103840 time=0.190
-CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.018
-CodeGen [Domain.Action.UI.Payment]: alloc=631471648 time=141.280
-systool:as: alloc=106720 time=0.238
+Called arity analysis [Domain.Action.UI.Payment]: alloc=22080 time=0.006
+Simplifier [Domain.Action.UI.Payment]: alloc=105306176 time=29.660
+Demand analysis [Domain.Action.UI.Payment]: alloc=103806656 time=21.496
+Worker Wrapper binds [Domain.Action.UI.Payment]: alloc=1792656 time=1.124
+Simplifier [Domain.Action.UI.Payment]: alloc=95943784 time=25.965
+Exitification transformation [Domain.Action.UI.Payment]: alloc=23024 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Payment]: alloc=67130872 time=20.973
+Common sub-expression [Domain.Action.UI.Payment]: alloc=21608 time=0.006
+Float inwards [Domain.Action.UI.Payment]: alloc=20504 time=0.004
+Simplifier [Domain.Action.UI.Payment]: alloc=146877832 time=57.882
+Demand analysis [Domain.Action.UI.Payment]: alloc=103287688 time=21.694
+CoreTidy [Domain.Action.UI.Payment]: alloc=29643288 time=18.991
+CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.014
+CodeGen [Domain.Action.UI.Payment]: alloc=674187648 time=166.853
+systool:as: alloc=103112 time=0.251
+CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.017
+CodeGen [Domain.Action.UI.Payment]: alloc=696825048 time=170.953
+systool:as: alloc=105992 time=0.221

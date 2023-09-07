@@ -1,28 +1,26 @@
-Parser [Domain.Types.QuoteSpecialZone]: alloc=778056 time=0.280
-Renamer/typechecker [Domain.Types.QuoteSpecialZone]: alloc=36561768 time=11.410
-Desugar [Domain.Types.QuoteSpecialZone]: alloc=4945016 time=2.072
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=32355720 time=8.580
-Specialise [Domain.Types.QuoteSpecialZone]: alloc=1194880 time=0.274
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.QuoteSpecialZone]: alloc=6740008 time=1.769
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=15773648 time=4.143
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=25739488 time=6.583
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=5483576 time=1.500
+Parser [Domain.Types.QuoteSpecialZone]: alloc=778056 time=0.265
+Renamer/typechecker [Domain.Types.QuoteSpecialZone]: alloc=36559344 time=12.060
+Desugar [Domain.Types.QuoteSpecialZone]: alloc=4944376 time=2.173
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=15949048 time=4.668
+Specialise [Domain.Types.QuoteSpecialZone]: alloc=1468224 time=0.369
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.QuoteSpecialZone]: alloc=6934240 time=2.043
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=19479128 time=5.774
 Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.005
-Called arity analysis [Domain.Types.QuoteSpecialZone]: alloc=23584 time=0.006
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=6769144 time=1.701
-Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=5553656 time=1.200
-Worker Wrapper binds [Domain.Types.QuoteSpecialZone]: alloc=272128 time=0.141
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=8429608 time=1.985
-Exitification transformation [Domain.Types.QuoteSpecialZone]: alloc=24512 time=0.018
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.QuoteSpecialZone]: alloc=4582976 time=1.256
+Called arity analysis [Domain.Types.QuoteSpecialZone]: alloc=23584 time=0.005
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=10005328 time=2.644
+Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=7364648 time=1.675
+Worker Wrapper binds [Domain.Types.QuoteSpecialZone]: alloc=385960 time=0.175
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=10958648 time=2.763
+Exitification transformation [Domain.Types.QuoteSpecialZone]: alloc=24512 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.QuoteSpecialZone]: alloc=5909144 time=1.670
 Common sub-expression [Domain.Types.QuoteSpecialZone]: alloc=23112 time=0.005
 Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.004
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=11495808 time=3.124
-Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=5594760 time=1.279
-CoreTidy [Domain.Types.QuoteSpecialZone]: alloc=4207856 time=1.237
-CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.011
-CodeGen [Domain.Types.QuoteSpecialZone]: alloc=70245360 time=20.375
-systool:as: alloc=104120 time=0.182
-CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.017
-CodeGen [Domain.Types.QuoteSpecialZone]: alloc=72443776 time=20.903
-systool:as: alloc=106992 time=0.183
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=14768336 time=4.052
+Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=7335232 time=1.687
+CoreTidy [Domain.Types.QuoteSpecialZone]: alloc=4821544 time=1.402
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.009
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=109961856 time=33.753
+systool:as: alloc=103392 time=0.207
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.016
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=113847640 time=34.144
+systool:as: alloc=106264 time=0.261

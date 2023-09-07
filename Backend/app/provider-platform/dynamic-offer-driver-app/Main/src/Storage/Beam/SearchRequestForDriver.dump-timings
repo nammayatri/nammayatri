@@ -1,34 +1,32 @@
-Parser [Storage.Beam.SearchRequestForDriver]: alloc=3261448 time=0.644
-Simplify [expr]: alloc=246216 time=0.087
-CorePrep [expr]: alloc=96344 time=0.064
-ByteCodeGen [Ghci1]: alloc=527152 time=0.165
-Simplify [expr]: alloc=47024 time=0.021
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.055
-Renamer/typechecker [Storage.Beam.SearchRequestForDriver]: alloc=558831520 time=142.598
-Desugar [Storage.Beam.SearchRequestForDriver]: alloc=49983168 time=12.015
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=682327288 time=224.949
-Specialise [Storage.Beam.SearchRequestForDriver]: alloc=70337176 time=18.801
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequestForDriver]: alloc=171642608 time=49.759
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1281193232 time=435.791
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1191961280 time=405.770
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1010862632 time=345.879
+Parser [Storage.Beam.SearchRequestForDriver]: alloc=3261448 time=0.617
+Simplify [expr]: alloc=246296 time=0.103
+CorePrep [expr]: alloc=96464 time=0.051
+ByteCodeGen [Ghci1]: alloc=527112 time=0.159
+Simplify [expr]: alloc=47024 time=0.020
+CorePrep [expr]: alloc=26752 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.048
+Renamer/typechecker [Storage.Beam.SearchRequestForDriver]: alloc=558675056 time=147.037
+Desugar [Storage.Beam.SearchRequestForDriver]: alloc=49988768 time=12.524
+Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=339271688 time=104.523
+Specialise [Storage.Beam.SearchRequestForDriver]: alloc=219760768 time=56.509
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequestForDriver]: alloc=233042104 time=104.772
+Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=3615546216 time=1415.922
 Float inwards [Storage.Beam.SearchRequestForDriver]: alloc=23800 time=0.007
-Called arity analysis [Storage.Beam.SearchRequestForDriver]: alloc=25376 time=0.008
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=765586344 time=258.251
-Demand analysis [Storage.Beam.SearchRequestForDriver]: alloc=217596560 time=47.494
-Worker Wrapper binds [Storage.Beam.SearchRequestForDriver]: alloc=6837416 time=6.637
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1107608936 time=409.119
+Called arity analysis [Storage.Beam.SearchRequestForDriver]: alloc=25376 time=0.007
+Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1085898760 time=389.656
+Demand analysis [Storage.Beam.SearchRequestForDriver]: alloc=905900488 time=220.509
+Worker Wrapper binds [Storage.Beam.SearchRequestForDriver]: alloc=22852232 time=54.940
+Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1180616976 time=474.826
 Exitification transformation [Storage.Beam.SearchRequestForDriver]: alloc=26288 time=0.008
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequestForDriver]: alloc=186090560 time=76.776
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequestForDriver]: alloc=785334456 time=348.181
 Common sub-expression [Storage.Beam.SearchRequestForDriver]: alloc=24904 time=0.007
-Float inwards [Storage.Beam.SearchRequestForDriver]: alloc=23800 time=0.005
-Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=745349416 time=272.645
-Demand analysis [Storage.Beam.SearchRequestForDriver]: alloc=155699768 time=57.380
-CoreTidy [Storage.Beam.SearchRequestForDriver]: alloc=123335848 time=34.144
-CorePrep [Storage.Beam.SearchRequestForDriver]: alloc=24760 time=0.028
-CodeGen [Storage.Beam.SearchRequestForDriver]: alloc=1290724848 time=422.779
-systool:as: alloc=104496 time=0.272
-CorePrep [Storage.Beam.SearchRequestForDriver]: alloc=24760 time=0.022
-CodeGen [Storage.Beam.SearchRequestForDriver]: alloc=1347543496 time=388.455
-systool:as: alloc=107368 time=0.290
+Float inwards [Storage.Beam.SearchRequestForDriver]: alloc=23800 time=0.004
+Simplifier [Storage.Beam.SearchRequestForDriver]: alloc=1244024384 time=576.314
+Demand analysis [Storage.Beam.SearchRequestForDriver]: alloc=809639800 time=177.810
+CoreTidy [Storage.Beam.SearchRequestForDriver]: alloc=243017600 time=111.920
+CorePrep [Storage.Beam.SearchRequestForDriver]: alloc=24760 time=0.015
+CodeGen [Storage.Beam.SearchRequestForDriver]: alloc=3996124896 time=1327.163
+systool:as: alloc=103752 time=0.338
+CorePrep [Storage.Beam.SearchRequestForDriver]: alloc=24760 time=0.017
+CodeGen [Storage.Beam.SearchRequestForDriver]: alloc=4122514512 time=1296.231
+systool:as: alloc=106632 time=0.373

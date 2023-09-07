@@ -1,28 +1,26 @@
-Parser [SharedLogic.CallBAP]: alloc=9440456 time=1.497
-Renamer/typechecker [SharedLogic.CallBAP]: alloc=2793901408 time=501.150
-Desugar [SharedLogic.CallBAP]: alloc=522509432 time=82.277
-Simplifier [SharedLogic.CallBAP]: alloc=178890608 time=47.237
-Specialise [SharedLogic.CallBAP]: alloc=10303296 time=2.853
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.CallBAP]: alloc=34106136 time=10.124
-Simplifier [SharedLogic.CallBAP]: alloc=222845648 time=73.883
-Simplifier [SharedLogic.CallBAP]: alloc=237203680 time=82.687
-Simplifier [SharedLogic.CallBAP]: alloc=236076696 time=74.509
+Parser [SharedLogic.CallBAP]: alloc=9440456 time=1.540
+Renamer/typechecker [SharedLogic.CallBAP]: alloc=2793903616 time=571.965
+Desugar [SharedLogic.CallBAP]: alloc=522516632 time=92.740
+Simplifier [SharedLogic.CallBAP]: alloc=80899592 time=25.011
+Specialise [SharedLogic.CallBAP]: alloc=17075160 time=5.824
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.CallBAP]: alloc=56457984 time=20.507
+Simplifier [SharedLogic.CallBAP]: alloc=338816848 time=133.519
 Float inwards [SharedLogic.CallBAP]: alloc=19032 time=0.005
 Called arity analysis [SharedLogic.CallBAP]: alloc=20608 time=0.006
-Simplifier [SharedLogic.CallBAP]: alloc=187045688 time=77.002
-Demand analysis [SharedLogic.CallBAP]: alloc=63794288 time=14.614
-Worker Wrapper binds [SharedLogic.CallBAP]: alloc=3284272 time=1.510
-Simplifier [SharedLogic.CallBAP]: alloc=189357864 time=80.787
-Exitification transformation [SharedLogic.CallBAP]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.CallBAP]: alloc=51094760 time=15.826
-Common sub-expression [SharedLogic.CallBAP]: alloc=20136 time=0.005
+Simplifier [SharedLogic.CallBAP]: alloc=107346728 time=49.433
+Demand analysis [SharedLogic.CallBAP]: alloc=93249496 time=25.105
+Worker Wrapper binds [SharedLogic.CallBAP]: alloc=3955416 time=2.100
+Simplifier [SharedLogic.CallBAP]: alloc=100908744 time=35.477
+Exitification transformation [SharedLogic.CallBAP]: alloc=21520 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.CallBAP]: alloc=79988232 time=27.022
+Common sub-expression [SharedLogic.CallBAP]: alloc=20136 time=0.007
 Float inwards [SharedLogic.CallBAP]: alloc=19032 time=0.004
-Simplifier [SharedLogic.CallBAP]: alloc=125139080 time=49.873
-Demand analysis [SharedLogic.CallBAP]: alloc=50974048 time=11.277
-CoreTidy [SharedLogic.CallBAP]: alloc=14537648 time=5.262
+Simplifier [SharedLogic.CallBAP]: alloc=115505408 time=43.272
+Demand analysis [SharedLogic.CallBAP]: alloc=82943856 time=20.621
+CoreTidy [SharedLogic.CallBAP]: alloc=18339552 time=8.090
 CorePrep [SharedLogic.CallBAP]: alloc=19992 time=0.012
-CodeGen [SharedLogic.CallBAP]: alloc=275723552 time=74.734
-systool:as: alloc=103512 time=0.214
-CorePrep [SharedLogic.CallBAP]: alloc=19992 time=0.015
-CodeGen [SharedLogic.CallBAP]: alloc=291780544 time=76.775
-systool:as: alloc=106384 time=0.218
+CodeGen [SharedLogic.CallBAP]: alloc=383424664 time=112.181
+systool:as: alloc=102768 time=0.235
+CorePrep [SharedLogic.CallBAP]: alloc=19992 time=0.016
+CodeGen [SharedLogic.CallBAP]: alloc=402605256 time=116.891
+systool:as: alloc=105648 time=0.217

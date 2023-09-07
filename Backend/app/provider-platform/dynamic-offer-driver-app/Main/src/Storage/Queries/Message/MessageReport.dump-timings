@@ -1,28 +1,26 @@
-Parser [Storage.Queries.Message.MessageReport]: alloc=7876400 time=1.530
-Renamer/typechecker [Storage.Queries.Message.MessageReport]: alloc=490321488 time=140.184
-Desugar [Storage.Queries.Message.MessageReport]: alloc=34160944 time=7.024
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=911625304 time=243.921
-Specialise [Storage.Queries.Message.MessageReport]: alloc=118496536 time=26.284
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Message.MessageReport]: alloc=51349976 time=18.607
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=1983166544 time=585.645
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=1880842192 time=563.447
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=1391862240 time=394.247
+Parser [Storage.Queries.Message.MessageReport]: alloc=7876400 time=2.033
+Renamer/typechecker [Storage.Queries.Message.MessageReport]: alloc=490370376 time=149.346
+Desugar [Storage.Queries.Message.MessageReport]: alloc=34152104 time=7.582
+Simplifier [Storage.Queries.Message.MessageReport]: alloc=457726888 time=124.390
+Specialise [Storage.Queries.Message.MessageReport]: alloc=129980832 time=31.722
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Message.MessageReport]: alloc=80698952 time=33.718
+Simplifier [Storage.Queries.Message.MessageReport]: alloc=1683378040 time=574.728
 Float inwards [Storage.Queries.Message.MessageReport]: alloc=24392 time=0.005
-Called arity analysis [Storage.Queries.Message.MessageReport]: alloc=25968 time=0.006
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=963442584 time=275.655
-Demand analysis [Storage.Queries.Message.MessageReport]: alloc=68189304 time=42.986
-Worker Wrapper binds [Storage.Queries.Message.MessageReport]: alloc=2868016 time=1.921
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=1424037240 time=431.130
+Called arity analysis [Storage.Queries.Message.MessageReport]: alloc=25968 time=0.007
+Simplifier [Storage.Queries.Message.MessageReport]: alloc=604071152 time=224.662
+Demand analysis [Storage.Queries.Message.MessageReport]: alloc=94122752 time=39.321
+Worker Wrapper binds [Storage.Queries.Message.MessageReport]: alloc=3550000 time=2.785
+Simplifier [Storage.Queries.Message.MessageReport]: alloc=537372296 time=148.323
 Exitification transformation [Storage.Queries.Message.MessageReport]: alloc=26896 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Message.MessageReport]: alloc=68787112 time=58.039
-Common sub-expression [Storage.Queries.Message.MessageReport]: alloc=25496 time=0.007
-Float inwards [Storage.Queries.Message.MessageReport]: alloc=24392 time=0.004
-Simplifier [Storage.Queries.Message.MessageReport]: alloc=1445835984 time=425.872
-Demand analysis [Storage.Queries.Message.MessageReport]: alloc=63193448 time=43.114
-CoreTidy [Storage.Queries.Message.MessageReport]: alloc=91440032 time=37.589
-CorePrep [Storage.Queries.Message.MessageReport]: alloc=25352 time=0.043
-CodeGen [Storage.Queries.Message.MessageReport]: alloc=516844584 time=155.799
-systool:as: alloc=104672 time=0.278
-CorePrep [Storage.Queries.Message.MessageReport]: alloc=25352 time=0.019
-CodeGen [Storage.Queries.Message.MessageReport]: alloc=552606640 time=163.855
-systool:as: alloc=107544 time=0.278
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Message.MessageReport]: alloc=91777840 time=84.964
+Common sub-expression [Storage.Queries.Message.MessageReport]: alloc=25496 time=0.008
+Float inwards [Storage.Queries.Message.MessageReport]: alloc=24392 time=0.005
+Simplifier [Storage.Queries.Message.MessageReport]: alloc=573732904 time=187.206
+Demand analysis [Storage.Queries.Message.MessageReport]: alloc=83906824 time=54.619
+CoreTidy [Storage.Queries.Message.MessageReport]: alloc=95550448 time=43.299
+CorePrep [Storage.Queries.Message.MessageReport]: alloc=25352 time=0.042
+CodeGen [Storage.Queries.Message.MessageReport]: alloc=527162024 time=175.781
+systool:as: alloc=103936 time=0.248
+CorePrep [Storage.Queries.Message.MessageReport]: alloc=25352 time=0.016
+CodeGen [Storage.Queries.Message.MessageReport]: alloc=563200696 time=187.488
+systool:as: alloc=106808 time=0.234

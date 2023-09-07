@@ -1,28 +1,26 @@
-Parser [API.UI.Ride]: alloc=4467008 time=0.949
-Renamer/typechecker [API.UI.Ride]: alloc=351908024 time=96.660
-Desugar [API.UI.Ride]: alloc=4308256 time=2.226
-Simplifier [API.UI.Ride]: alloc=452757896 time=171.291
-Specialise [API.UI.Ride]: alloc=18993648 time=9.599
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Ride]: alloc=40769496 time=16.007
-Simplifier [API.UI.Ride]: alloc=532129560 time=189.563
-Simplifier [API.UI.Ride]: alloc=308597680 time=115.804
-Simplifier [API.UI.Ride]: alloc=296335224 time=108.873
+Parser [API.UI.Ride]: alloc=4467008 time=0.884
+Renamer/typechecker [API.UI.Ride]: alloc=351889280 time=116.948
+Desugar [API.UI.Ride]: alloc=4316656 time=2.316
+Simplifier [API.UI.Ride]: alloc=243024184 time=81.624
+Specialise [API.UI.Ride]: alloc=28823424 time=12.834
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Ride]: alloc=59286376 time=24.031
+Simplifier [API.UI.Ride]: alloc=748584832 time=323.287
 Float inwards [API.UI.Ride]: alloc=16648 time=0.004
-Called arity analysis [API.UI.Ride]: alloc=18224 time=0.007
-Simplifier [API.UI.Ride]: alloc=234191248 time=82.290
-Demand analysis [API.UI.Ride]: alloc=81841008 time=16.290
-Worker Wrapper binds [API.UI.Ride]: alloc=1572112 time=0.831
-Simplifier [API.UI.Ride]: alloc=683908232 time=266.912
+Called arity analysis [API.UI.Ride]: alloc=18224 time=0.005
+Simplifier [API.UI.Ride]: alloc=149175328 time=65.560
+Demand analysis [API.UI.Ride]: alloc=119344400 time=29.435
+Worker Wrapper binds [API.UI.Ride]: alloc=2603584 time=1.556
+Simplifier [API.UI.Ride]: alloc=194549656 time=74.147
 Exitification transformation [API.UI.Ride]: alloc=19136 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Ride]: alloc=51677160 time=16.651
-Common sub-expression [API.UI.Ride]: alloc=17752 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Ride]: alloc=100775280 time=35.712
+Common sub-expression [API.UI.Ride]: alloc=17752 time=0.007
 Float inwards [API.UI.Ride]: alloc=16648 time=0.004
-Simplifier [API.UI.Ride]: alloc=363193896 time=135.409
-Demand analysis [API.UI.Ride]: alloc=79831864 time=17.521
-CoreTidy [API.UI.Ride]: alloc=46612136 time=14.349
-CorePrep [API.UI.Ride]: alloc=17608 time=0.014
-CodeGen [API.UI.Ride]: alloc=451788680 time=114.494
-systool:as: alloc=103008 time=0.236
-CorePrep [API.UI.Ride]: alloc=17608 time=0.012
-CodeGen [API.UI.Ride]: alloc=467571376 time=119.205
-systool:as: alloc=105880 time=0.225
+Simplifier [API.UI.Ride]: alloc=384989200 time=165.723
+Demand analysis [API.UI.Ride]: alloc=120331288 time=35.584
+CoreTidy [API.UI.Ride]: alloc=66806704 time=23.218
+CorePrep [API.UI.Ride]: alloc=17608 time=0.017
+CodeGen [API.UI.Ride]: alloc=618866208 time=187.370
+systool:as: alloc=102264 time=0.251
+CorePrep [API.UI.Ride]: alloc=17608 time=0.086
+CodeGen [API.UI.Ride]: alloc=640279944 time=187.354
+systool:as: alloc=105144 time=0.220

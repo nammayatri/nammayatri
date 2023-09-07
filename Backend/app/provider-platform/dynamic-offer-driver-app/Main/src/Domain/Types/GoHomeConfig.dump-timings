@@ -1,28 +1,26 @@
-Parser [Domain.Types.GoHomeConfig]: alloc=717248 time=0.211
-Renamer/typechecker [Domain.Types.GoHomeConfig]: alloc=88036440 time=24.763
-Desugar [Domain.Types.GoHomeConfig]: alloc=5881072 time=2.262
-Simplifier [Domain.Types.GoHomeConfig]: alloc=148800704 time=51.437
-Specialise [Domain.Types.GoHomeConfig]: alloc=9123032 time=2.143
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.GoHomeConfig]: alloc=35381656 time=10.630
-Simplifier [Domain.Types.GoHomeConfig]: alloc=222915240 time=84.056
-Simplifier [Domain.Types.GoHomeConfig]: alloc=189847680 time=64.378
-Simplifier [Domain.Types.GoHomeConfig]: alloc=147549304 time=54.829
+Parser [Domain.Types.GoHomeConfig]: alloc=717248 time=0.213
+Renamer/typechecker [Domain.Types.GoHomeConfig]: alloc=88038960 time=24.426
+Desugar [Domain.Types.GoHomeConfig]: alloc=5881992 time=2.386
+Simplifier [Domain.Types.GoHomeConfig]: alloc=79199376 time=27.008
+Specialise [Domain.Types.GoHomeConfig]: alloc=20319504 time=10.182
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.GoHomeConfig]: alloc=41055824 time=14.195
+Simplifier [Domain.Types.GoHomeConfig]: alloc=497606368 time=209.326
 Float inwards [Domain.Types.GoHomeConfig]: alloc=20808 time=0.005
 Called arity analysis [Domain.Types.GoHomeConfig]: alloc=22384 time=0.006
-Simplifier [Domain.Types.GoHomeConfig]: alloc=113454056 time=37.707
-Demand analysis [Domain.Types.GoHomeConfig]: alloc=26957248 time=5.678
-Worker Wrapper binds [Domain.Types.GoHomeConfig]: alloc=870976 time=0.526
-Simplifier [Domain.Types.GoHomeConfig]: alloc=158408176 time=57.943
+Simplifier [Domain.Types.GoHomeConfig]: alloc=154063936 time=62.216
+Demand analysis [Domain.Types.GoHomeConfig]: alloc=75786880 time=27.208
+Worker Wrapper binds [Domain.Types.GoHomeConfig]: alloc=2425560 time=0.896
+Simplifier [Domain.Types.GoHomeConfig]: alloc=138873472 time=54.763
 Exitification transformation [Domain.Types.GoHomeConfig]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.GoHomeConfig]: alloc=28220208 time=7.932
-Common sub-expression [Domain.Types.GoHomeConfig]: alloc=21912 time=0.018
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.GoHomeConfig]: alloc=74697024 time=36.146
+Common sub-expression [Domain.Types.GoHomeConfig]: alloc=21912 time=0.007
 Float inwards [Domain.Types.GoHomeConfig]: alloc=20808 time=0.004
-Simplifier [Domain.Types.GoHomeConfig]: alloc=95571312 time=37.064
-Demand analysis [Domain.Types.GoHomeConfig]: alloc=25697872 time=5.414
-CoreTidy [Domain.Types.GoHomeConfig]: alloc=13628816 time=7.502
-CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.012
-CodeGen [Domain.Types.GoHomeConfig]: alloc=192224288 time=61.739
-systool:as: alloc=103872 time=0.223
+Simplifier [Domain.Types.GoHomeConfig]: alloc=173446904 time=77.819
+Demand analysis [Domain.Types.GoHomeConfig]: alloc=73244688 time=23.264
+CoreTidy [Domain.Types.GoHomeConfig]: alloc=23400992 time=6.891
+CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.044
+CodeGen [Domain.Types.GoHomeConfig]: alloc=263799400 time=93.734
+systool:as: alloc=103168 time=0.221
 CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.015
-CodeGen [Domain.Types.GoHomeConfig]: alloc=200510680 time=61.320
-systool:as: alloc=106752 time=0.217
+CodeGen [Domain.Types.GoHomeConfig]: alloc=275278808 time=91.631
+systool:as: alloc=106024 time=0.253

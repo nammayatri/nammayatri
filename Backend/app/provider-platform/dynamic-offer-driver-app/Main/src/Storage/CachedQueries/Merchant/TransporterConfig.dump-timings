@@ -1,28 +1,26 @@
-Parser [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=1712320 time=0.376
-Renamer/typechecker [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=348945880 time=59.206
-Desugar [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=230094056 time=35.163
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=10833792 time=2.495
-Specialise [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=678168 time=0.235
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=3231984 time=0.770
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=7347488 time=1.888
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=4572056 time=1.205
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=31304976 time=9.063
+Parser [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=1712320 time=0.415
+Renamer/typechecker [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=348959552 time=62.778
+Desugar [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=230142768 time=37.565
+Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=5477408 time=1.430
+Specialise [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=1063128 time=0.332
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=3926296 time=0.966
+Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=17953192 time=5.474
 Float inwards [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=27656 time=0.005
 Called arity analysis [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=29232 time=0.006
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=18077152 time=4.855
-Demand analysis [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=12556944 time=2.829
-Worker Wrapper binds [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=668152 time=0.282
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=37084240 time=10.896
-Exitification transformation [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=30176 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=11280288 time=2.988
-Common sub-expression [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=28760 time=0.019
-Float inwards [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=27656 time=0.004
-Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=22657960 time=6.321
-Demand analysis [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=21587320 time=4.138
-CoreTidy [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=2459792 time=0.942
+Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=8312064 time=2.191
+Demand analysis [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=8229096 time=1.898
+Worker Wrapper binds [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=601136 time=0.199
+Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=7930040 time=2.526
+Exitification transformation [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=30176 time=0.005
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=8094992 time=2.299
+Common sub-expression [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=28760 time=0.005
+Float inwards [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=27656 time=0.005
+Simplifier [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=9428600 time=2.840
+Demand analysis [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=10894256 time=2.203
+CoreTidy [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=1682824 time=0.695
 CorePrep [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=28648 time=0.009
-CodeGen [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=94842464 time=23.938
-systool:as: alloc=105400 time=0.231
+CodeGen [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=58078976 time=16.313
+systool:as: alloc=104648 time=0.211
 CorePrep [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=28648 time=0.016
-CodeGen [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=98222312 time=24.564
-systool:as: alloc=108256 time=0.208
+CodeGen [Storage.CachedQueries.Merchant.TransporterConfig]: alloc=60736424 time=17.215
+systool:as: alloc=107528 time=0.200

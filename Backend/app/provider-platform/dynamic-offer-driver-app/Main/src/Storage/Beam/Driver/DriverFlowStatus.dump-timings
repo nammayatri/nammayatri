@@ -1,34 +1,32 @@
-Parser [Storage.Beam.Driver.DriverFlowStatus]: alloc=1203872 time=0.400
-Simplify [expr]: alloc=97336 time=0.046
-CorePrep [expr]: alloc=43528 time=0.026
+Parser [Storage.Beam.Driver.DriverFlowStatus]: alloc=1203872 time=0.421
+Simplify [expr]: alloc=97336 time=0.061
+CorePrep [expr]: alloc=43528 time=0.027
 ByteCodeGen [Ghci1]: alloc=217456 time=0.074
-Simplify [expr]: alloc=47024 time=0.015
-CorePrep [expr]: alloc=26752 time=0.014
-ByteCodeGen [Ghci1]: alloc=131880 time=0.045
-Renamer/typechecker [Storage.Beam.Driver.DriverFlowStatus]: alloc=104104016 time=34.190
-Desugar [Storage.Beam.Driver.DriverFlowStatus]: alloc=18524408 time=5.248
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=110935064 time=35.380
-Specialise [Storage.Beam.Driver.DriverFlowStatus]: alloc=10296240 time=2.709
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Driver.DriverFlowStatus]: alloc=37386760 time=11.526
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=183272560 time=57.800
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=143096432 time=55.923
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=131946776 time=49.166
+Simplify [expr]: alloc=47024 time=0.033
+CorePrep [expr]: alloc=26752 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.044
+Renamer/typechecker [Storage.Beam.Driver.DriverFlowStatus]: alloc=104084016 time=38.769
+Desugar [Storage.Beam.Driver.DriverFlowStatus]: alloc=18514568 time=5.578
+Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=50880904 time=17.229
+Specialise [Storage.Beam.Driver.DriverFlowStatus]: alloc=17033256 time=5.852
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Driver.DriverFlowStatus]: alloc=47638336 time=17.204
+Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=398780728 time=158.078
 Float inwards [Storage.Beam.Driver.DriverFlowStatus]: alloc=24088 time=0.005
 Called arity analysis [Storage.Beam.Driver.DriverFlowStatus]: alloc=25664 time=0.006
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=101810424 time=40.186
-Demand analysis [Storage.Beam.Driver.DriverFlowStatus]: alloc=22728856 time=6.024
-Worker Wrapper binds [Storage.Beam.Driver.DriverFlowStatus]: alloc=1220176 time=0.607
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=151791464 time=55.769
+Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=107567680 time=37.802
+Demand analysis [Storage.Beam.Driver.DriverFlowStatus]: alloc=105922536 time=44.899
+Worker Wrapper binds [Storage.Beam.Driver.DriverFlowStatus]: alloc=3061984 time=1.495
+Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=132285312 time=43.450
 Exitification transformation [Storage.Beam.Driver.DriverFlowStatus]: alloc=26608 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Driver.DriverFlowStatus]: alloc=20108768 time=6.578
-Common sub-expression [Storage.Beam.Driver.DriverFlowStatus]: alloc=25192 time=0.006
-Float inwards [Storage.Beam.Driver.DriverFlowStatus]: alloc=24088 time=0.004
-Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=111090400 time=42.006
-Demand analysis [Storage.Beam.Driver.DriverFlowStatus]: alloc=19817640 time=5.256
-CoreTidy [Storage.Beam.Driver.DriverFlowStatus]: alloc=9934776 time=4.142
-CorePrep [Storage.Beam.Driver.DriverFlowStatus]: alloc=25064 time=0.038
-CodeGen [Storage.Beam.Driver.DriverFlowStatus]: alloc=164818504 time=52.994
-systool:as: alloc=104584 time=0.223
-CorePrep [Storage.Beam.Driver.DriverFlowStatus]: alloc=25064 time=0.015
-CodeGen [Storage.Beam.Driver.DriverFlowStatus]: alloc=172507320 time=53.435
-systool:as: alloc=107456 time=0.201
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Driver.DriverFlowStatus]: alloc=92497592 time=57.131
+Common sub-expression [Storage.Beam.Driver.DriverFlowStatus]: alloc=25192 time=0.007
+Float inwards [Storage.Beam.Driver.DriverFlowStatus]: alloc=24088 time=0.005
+Simplifier [Storage.Beam.Driver.DriverFlowStatus]: alloc=134276824 time=45.801
+Demand analysis [Storage.Beam.Driver.DriverFlowStatus]: alloc=96796224 time=24.487
+CoreTidy [Storage.Beam.Driver.DriverFlowStatus]: alloc=22604112 time=11.189
+CorePrep [Storage.Beam.Driver.DriverFlowStatus]: alloc=25064 time=0.014
+CodeGen [Storage.Beam.Driver.DriverFlowStatus]: alloc=529509720 time=195.962
+systool:as: alloc=103856 time=0.199
+CorePrep [Storage.Beam.Driver.DriverFlowStatus]: alloc=25064 time=0.017
+CodeGen [Storage.Beam.Driver.DriverFlowStatus]: alloc=545871568 time=180.091
+systool:as: alloc=106728 time=0.202

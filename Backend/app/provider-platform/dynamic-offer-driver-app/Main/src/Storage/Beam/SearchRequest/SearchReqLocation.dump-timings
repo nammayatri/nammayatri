@@ -1,34 +1,32 @@
-Parser [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=1786648 time=0.403
-Simplify [expr]: alloc=97256 time=0.066
-CorePrep [expr]: alloc=43488 time=0.041
-ByteCodeGen [Ghci1]: alloc=217496 time=0.078
-Simplify [expr]: alloc=47024 time=0.042
-CorePrep [expr]: alloc=26752 time=0.019
-ByteCodeGen [Ghci1]: alloc=131880 time=0.051
-Renamer/typechecker [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=258770288 time=65.291
-Desugar [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=30507800 time=8.315
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=541735056 time=154.629
-Specialise [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=24479344 time=11.386
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=82939736 time=26.714
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=731503496 time=261.289
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=635247744 time=216.284
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=584024144 time=192.656
+Parser [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=1786648 time=0.442
+Simplify [expr]: alloc=97336 time=0.054
+CorePrep [expr]: alloc=43528 time=0.031
+ByteCodeGen [Ghci1]: alloc=217456 time=0.081
+Simplify [expr]: alloc=47024 time=0.022
+CorePrep [expr]: alloc=26752 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.054
+Renamer/typechecker [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=258746768 time=78.424
+Desugar [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=30513080 time=8.781
+Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=164299776 time=56.323
+Specialise [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=72310024 time=23.190
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=119012800 time=49.990
+Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=1586220808 time=651.356
 Float inwards [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=26472 time=0.006
-Called arity analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=28048 time=0.006
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=452560776 time=148.444
-Demand analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=66235008 time=23.222
-Worker Wrapper binds [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=2543632 time=2.333
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=617873040 time=202.366
+Called arity analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=28048 time=0.007
+Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=498477296 time=203.387
+Demand analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=393462008 time=126.216
+Worker Wrapper binds [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=9792816 time=6.741
+Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=546847464 time=235.374
 Exitification transformation [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=28992 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=59751856 time=20.008
-Common sub-expression [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=27576 time=0.033
-Float inwards [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=26472 time=0.004
-Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=471039616 time=158.121
-Demand analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=58537784 time=22.131
-CoreTidy [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=85746928 time=31.442
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=341028272 time=183.198
+Common sub-expression [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=27576 time=0.011
+Float inwards [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=26472 time=0.007
+Simplifier [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=574331104 time=281.912
+Demand analysis [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=355859976 time=105.825
+CoreTidy [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=137681624 time=41.767
+CorePrep [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=27448 time=0.020
+CodeGen [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=1815940928 time=677.661
+systool:as: alloc=104384 time=0.319
 CorePrep [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=27448 time=0.017
-CodeGen [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=524339192 time=150.324
-systool:as: alloc=105104 time=0.273
-CorePrep [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=27448 time=0.018
-CodeGen [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=549966056 time=153.978
-systool:as: alloc=108000 time=0.302
+CodeGen [Storage.Beam.SearchRequest.SearchReqLocation]: alloc=1872951056 time=664.259
+systool:as: alloc=107256 time=0.264

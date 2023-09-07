@@ -1,28 +1,26 @@
-Parser [Storage.Queries.LeaderBoardConfig]: alloc=1321856 time=0.296
-Renamer/typechecker [Storage.Queries.LeaderBoardConfig]: alloc=47002784 time=14.180
-Desugar [Storage.Queries.LeaderBoardConfig]: alloc=3286512 time=1.465
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=24797568 time=7.914
-Specialise [Storage.Queries.LeaderBoardConfig]: alloc=5507704 time=1.422
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.LeaderBoardConfig]: alloc=7806696 time=2.227
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=322422008 time=86.696
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=133789032 time=38.084
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=132442584 time=38.916
+Parser [Storage.Queries.LeaderBoardConfig]: alloc=1321856 time=0.310
+Renamer/typechecker [Storage.Queries.LeaderBoardConfig]: alloc=47008344 time=15.990
+Desugar [Storage.Queries.LeaderBoardConfig]: alloc=3288112 time=1.573
+Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=16150368 time=5.507
+Specialise [Storage.Queries.LeaderBoardConfig]: alloc=5807392 time=1.692
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.LeaderBoardConfig]: alloc=8714840 time=2.684
+Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=264495416 time=74.963
 Float inwards [Storage.Queries.LeaderBoardConfig]: alloc=23192 time=0.005
-Called arity analysis [Storage.Queries.LeaderBoardConfig]: alloc=24768 time=0.006
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=69750880 time=20.426
-Demand analysis [Storage.Queries.LeaderBoardConfig]: alloc=7590192 time=5.883
-Worker Wrapper binds [Storage.Queries.LeaderBoardConfig]: alloc=368392 time=0.314
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=136524648 time=38.500
+Called arity analysis [Storage.Queries.LeaderBoardConfig]: alloc=24768 time=0.007
+Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=70918712 time=22.011
+Demand analysis [Storage.Queries.LeaderBoardConfig]: alloc=8092200 time=6.415
+Worker Wrapper binds [Storage.Queries.LeaderBoardConfig]: alloc=384456 time=0.308
+Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=69361896 time=20.683
 Exitification transformation [Storage.Queries.LeaderBoardConfig]: alloc=25696 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.LeaderBoardConfig]: alloc=7184320 time=4.186
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.LeaderBoardConfig]: alloc=7337272 time=4.449
 Common sub-expression [Storage.Queries.LeaderBoardConfig]: alloc=24296 time=0.006
-Float inwards [Storage.Queries.LeaderBoardConfig]: alloc=23192 time=0.004
-Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=143055104 time=41.531
-Demand analysis [Storage.Queries.LeaderBoardConfig]: alloc=7266656 time=6.038
-CoreTidy [Storage.Queries.LeaderBoardConfig]: alloc=13388656 time=5.516
-CorePrep [Storage.Queries.LeaderBoardConfig]: alloc=24168 time=0.041
-CodeGen [Storage.Queries.LeaderBoardConfig]: alloc=72968768 time=24.445
-systool:as: alloc=104384 time=0.240
-CorePrep [Storage.Queries.LeaderBoardConfig]: alloc=24168 time=0.016
-CodeGen [Storage.Queries.LeaderBoardConfig]: alloc=77345400 time=26.496
-systool:as: alloc=107264 time=0.194
+Float inwards [Storage.Queries.LeaderBoardConfig]: alloc=23192 time=0.005
+Simplifier [Storage.Queries.LeaderBoardConfig]: alloc=76445664 time=25.018
+Demand analysis [Storage.Queries.LeaderBoardConfig]: alloc=8220064 time=6.512
+CoreTidy [Storage.Queries.LeaderBoardConfig]: alloc=13797648 time=4.607
+CorePrep [Storage.Queries.LeaderBoardConfig]: alloc=24168 time=0.014
+CodeGen [Storage.Queries.LeaderBoardConfig]: alloc=71231704 time=24.933
+systool:as: alloc=103648 time=0.226
+CorePrep [Storage.Queries.LeaderBoardConfig]: alloc=24168 time=0.017
+CodeGen [Storage.Queries.LeaderBoardConfig]: alloc=75614424 time=26.545
+systool:as: alloc=106528 time=0.210

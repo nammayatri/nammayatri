@@ -1,28 +1,26 @@
-Parser [SharedLogic.DriverPool]: alloc=22702624 time=3.993
-Renamer/typechecker [SharedLogic.DriverPool]: alloc=8932421112 time=1510.283
-Desugar [SharedLogic.DriverPool]: alloc=8847617216 time=1345.045
-Simplifier [SharedLogic.DriverPool]: alloc=244227752 time=66.026
-Specialise [SharedLogic.DriverPool]: alloc=12810776 time=3.916
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverPool]: alloc=56162448 time=15.659
-Simplifier [SharedLogic.DriverPool]: alloc=302102920 time=101.512
-Simplifier [SharedLogic.DriverPool]: alloc=556796376 time=199.010
-Simplifier [SharedLogic.DriverPool]: alloc=657510728 time=256.507
+Parser [SharedLogic.DriverPool]: alloc=22702624 time=4.186
+Renamer/typechecker [SharedLogic.DriverPool]: alloc=8932740408 time=1807.442
+Desugar [SharedLogic.DriverPool]: alloc=8848051096 time=1580.589
+Simplifier [SharedLogic.DriverPool]: alloc=109794840 time=34.736
+Specialise [SharedLogic.DriverPool]: alloc=18494200 time=6.790
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverPool]: alloc=71846344 time=32.833
+Simplifier [SharedLogic.DriverPool]: alloc=827604072 time=372.634
 Float inwards [SharedLogic.DriverPool]: alloc=19912 time=0.005
 Called arity analysis [SharedLogic.DriverPool]: alloc=21488 time=0.006
-Simplifier [SharedLogic.DriverPool]: alloc=467601256 time=155.740
-Demand analysis [SharedLogic.DriverPool]: alloc=198667472 time=44.216
-Worker Wrapper binds [SharedLogic.DriverPool]: alloc=10495336 time=4.305
-Simplifier [SharedLogic.DriverPool]: alloc=695126904 time=237.323
-Exitification transformation [SharedLogic.DriverPool]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverPool]: alloc=173820968 time=51.186
-Common sub-expression [SharedLogic.DriverPool]: alloc=21016 time=0.008
+Simplifier [SharedLogic.DriverPool]: alloc=231865336 time=85.298
+Demand analysis [SharedLogic.DriverPool]: alloc=227265888 time=68.438
+Worker Wrapper binds [SharedLogic.DriverPool]: alloc=10603440 time=3.869
+Simplifier [SharedLogic.DriverPool]: alloc=261261008 time=122.776
+Exitification transformation [SharedLogic.DriverPool]: alloc=22432 time=0.006
+Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverPool]: alloc=224046568 time=93.296
+Common sub-expression [SharedLogic.DriverPool]: alloc=21016 time=0.007
 Float inwards [SharedLogic.DriverPool]: alloc=19912 time=0.004
-Simplifier [SharedLogic.DriverPool]: alloc=316345744 time=120.343
-Demand analysis [SharedLogic.DriverPool]: alloc=207415768 time=43.012
-CoreTidy [SharedLogic.DriverPool]: alloc=33484360 time=15.958
-CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.012
-CodeGen [SharedLogic.DriverPool]: alloc=1092559488 time=302.550
-systool:as: alloc=103688 time=0.211
-CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.013
-CodeGen [SharedLogic.DriverPool]: alloc=1141565216 time=297.379
-systool:as: alloc=106560 time=0.284
+Simplifier [SharedLogic.DriverPool]: alloc=282852984 time=143.731
+Demand analysis [SharedLogic.DriverPool]: alloc=260170008 time=76.962
+CoreTidy [SharedLogic.DriverPool]: alloc=41754600 time=24.817
+CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.015
+CodeGen [SharedLogic.DriverPool]: alloc=1307038920 time=459.594
+systool:as: alloc=102960 time=0.306
+CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.019
+CodeGen [SharedLogic.DriverPool]: alloc=1362463640 time=3072.211
+systool:as: alloc=105832 time=0.259
