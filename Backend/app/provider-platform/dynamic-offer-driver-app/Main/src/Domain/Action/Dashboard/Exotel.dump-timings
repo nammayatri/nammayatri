@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Exotel]: alloc=856464 time=0.294
-Renamer/typechecker [Domain.Action.Dashboard.Exotel]: alloc=25492560 time=10.736
-Desugar [Domain.Action.Dashboard.Exotel]: alloc=433056 time=0.912
-Simplifier [Domain.Action.Dashboard.Exotel]: alloc=9222304 time=2.941
-Specialise [Domain.Action.Dashboard.Exotel]: alloc=983160 time=0.196
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Exotel]: alloc=4559216 time=1.240
-Simplifier [Domain.Action.Dashboard.Exotel]: alloc=59975072 time=18.794
-Float inwards [Domain.Action.Dashboard.Exotel]: alloc=22296 time=0.005
-Called arity analysis [Domain.Action.Dashboard.Exotel]: alloc=23872 time=0.007
-Simplifier [Domain.Action.Dashboard.Exotel]: alloc=21751536 time=6.155
-Demand analysis [Domain.Action.Dashboard.Exotel]: alloc=32270480 time=7.400
-Worker Wrapper binds [Domain.Action.Dashboard.Exotel]: alloc=648176 time=0.299
-Simplifier [Domain.Action.Dashboard.Exotel]: alloc=27867416 time=8.792
-Exitification transformation [Domain.Action.Dashboard.Exotel]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Exotel]: alloc=28932560 time=8.250
-Common sub-expression [Domain.Action.Dashboard.Exotel]: alloc=23400 time=0.007
-Float inwards [Domain.Action.Dashboard.Exotel]: alloc=22296 time=0.004
-Simplifier [Domain.Action.Dashboard.Exotel]: alloc=32871792 time=9.776
-Demand analysis [Domain.Action.Dashboard.Exotel]: alloc=45368296 time=9.047
-CoreTidy [Domain.Action.Dashboard.Exotel]: alloc=4996696 time=2.307
-CorePrep [Domain.Action.Dashboard.Exotel]: alloc=23272 time=0.011
-CodeGen [Domain.Action.Dashboard.Exotel]: alloc=190652640 time=50.267
-systool:as: alloc=103512 time=0.235
-CorePrep [Domain.Action.Dashboard.Exotel]: alloc=23272 time=0.015
-CodeGen [Domain.Action.Dashboard.Exotel]: alloc=195729968 time=51.199
-systool:as: alloc=106384 time=0.213
+Parser [Domain.Action.Dashboard.Exotel]: alloc=856464 time=0.207
+Renamer/typechecker [Domain.Action.Dashboard.Exotel]: alloc=25292416 time=9.966
+Desugar [Domain.Action.Dashboard.Exotel]: alloc=433200 time=0.915
+Simplifier [Domain.Action.Dashboard.Exotel]: alloc=1362056 time=0.403
+CoreTidy [Domain.Action.Dashboard.Exotel]: alloc=209624 time=0.091
+CorePrep [Domain.Action.Dashboard.Exotel]: alloc=23272 time=0.007
+CodeGen [Domain.Action.Dashboard.Exotel]: alloc=16338144 time=4.840
+systool:as: alloc=103520 time=0.162
+CorePrep [Domain.Action.Dashboard.Exotel]: alloc=23272 time=0.010
+CodeGen [Domain.Action.Dashboard.Exotel]: alloc=17984776 time=5.359
+systool:as: alloc=106392 time=0.109

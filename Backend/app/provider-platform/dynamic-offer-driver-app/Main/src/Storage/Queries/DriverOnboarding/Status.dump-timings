@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverOnboarding.Status]: alloc=5503240 time=1.280
-Renamer/typechecker [Storage.Queries.DriverOnboarding.Status]: alloc=205619576 time=60.243
-Desugar [Storage.Queries.DriverOnboarding.Status]: alloc=110584304 time=21.634
-Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=223592192 time=55.689
-Specialise [Storage.Queries.DriverOnboarding.Status]: alloc=47110248 time=11.474
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.Status]: alloc=31981048 time=12.325
-Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=739068688 time=273.876
-Float inwards [Storage.Queries.DriverOnboarding.Status]: alloc=24984 time=0.008
-Called arity analysis [Storage.Queries.DriverOnboarding.Status]: alloc=26560 time=0.007
-Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=119490536 time=39.044
-Demand analysis [Storage.Queries.DriverOnboarding.Status]: alloc=54882072 time=16.836
-Worker Wrapper binds [Storage.Queries.DriverOnboarding.Status]: alloc=1969296 time=1.320
-Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=111662032 time=40.800
-Exitification transformation [Storage.Queries.DriverOnboarding.Status]: alloc=27488 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.Status]: alloc=46902720 time=18.582
-Common sub-expression [Storage.Queries.DriverOnboarding.Status]: alloc=26088 time=0.033
-Float inwards [Storage.Queries.DriverOnboarding.Status]: alloc=24984 time=0.004
-Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=163206352 time=74.170
-Demand analysis [Storage.Queries.DriverOnboarding.Status]: alloc=55211072 time=17.192
-CoreTidy [Storage.Queries.DriverOnboarding.Status]: alloc=28042880 time=11.999
-CorePrep [Storage.Queries.DriverOnboarding.Status]: alloc=25944 time=0.014
-CodeGen [Storage.Queries.DriverOnboarding.Status]: alloc=331406264 time=107.676
-systool:as: alloc=104104 time=0.272
-CorePrep [Storage.Queries.DriverOnboarding.Status]: alloc=25944 time=0.021
-CodeGen [Storage.Queries.DriverOnboarding.Status]: alloc=352814104 time=111.418
-systool:as: alloc=106976 time=0.288
+Parser [Storage.Queries.DriverOnboarding.Status]: alloc=5498312 time=1.214
+Renamer/typechecker [Storage.Queries.DriverOnboarding.Status]: alloc=182739384 time=51.887
+Desugar [Storage.Queries.DriverOnboarding.Status]: alloc=108917696 time=19.839
+Simplifier [Storage.Queries.DriverOnboarding.Status]: alloc=35494664 time=9.642
+CoreTidy [Storage.Queries.DriverOnboarding.Status]: alloc=12576128 time=3.357
+CorePrep [Storage.Queries.DriverOnboarding.Status]: alloc=25944 time=0.016
+CodeGen [Storage.Queries.DriverOnboarding.Status]: alloc=203724664 time=60.415
+systool:as: alloc=104136 time=0.208
+CorePrep [Storage.Queries.DriverOnboarding.Status]: alloc=25944 time=0.015
+CodeGen [Storage.Queries.DriverOnboarding.Status]: alloc=225811536 time=57.497
+systool:as: alloc=106984 time=0.202

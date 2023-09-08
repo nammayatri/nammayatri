@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=15421024 time=2.837
-Renamer/typechecker [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=541698744 time=158.093
-Desugar [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=22615768 time=7.464
-Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=235696432 time=79.256
-Specialise [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=95658448 time=22.706
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=103776184 time=38.237
-Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=1399441888 time=581.471
-Float inwards [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32424 time=0.007
-Called arity analysis [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=34000 time=0.006
-Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=349652480 time=134.281
-Demand analysis [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=274586904 time=61.160
-Worker Wrapper binds [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=6056288 time=3.598
-Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=324499208 time=145.399
-Exitification transformation [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=34944 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=206314864 time=90.181
-Common sub-expression [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33528 time=0.007
-Float inwards [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32424 time=0.005
-Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=401043648 time=165.425
-Demand analysis [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=261083896 time=62.426
-CoreTidy [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=79821192 time=30.289
-CorePrep [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33416 time=0.017
-CodeGen [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=1625696056 time=470.623
-systool:as: alloc=105632 time=0.205
-CorePrep [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33416 time=0.019
-CodeGen [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=1678576736 time=451.884
-systool:as: alloc=108512 time=0.221
+Parser [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=15417232 time=2.686
+Renamer/typechecker [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=523346992 time=152.088
+Desugar [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=22358184 time=7.287
+Simplifier [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=106708912 time=32.981
+CoreTidy [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=18672448 time=6.234
+CorePrep [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33416 time=0.012
+CodeGen [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=604904832 time=186.422
+systool:as: alloc=105640 time=0.251
+CorePrep [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33416 time=0.018
+CodeGen [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate]: alloc=654650192 time=185.692
+systool:as: alloc=108520 time=0.226

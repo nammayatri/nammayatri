@@ -1,26 +1,11 @@
-Parser [Lib.DriverScore]: alloc=6999784 time=1.336
-Renamer/typechecker [Lib.DriverScore]: alloc=1161884944 time=228.824
-Desugar [Lib.DriverScore]: alloc=2067855152 time=329.316
-Simplifier [Lib.DriverScore]: alloc=28300608 time=8.470
-Specialise [Lib.DriverScore]: alloc=8007208 time=2.164
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.DriverScore]: alloc=20731032 time=6.574
-Simplifier [Lib.DriverScore]: alloc=95716144 time=31.225
-Float inwards [Lib.DriverScore]: alloc=17832 time=0.005
-Called arity analysis [Lib.DriverScore]: alloc=19408 time=0.006
-Simplifier [Lib.DriverScore]: alloc=39776128 time=12.199
-Demand analysis [Lib.DriverScore]: alloc=40202208 time=10.900
-Worker Wrapper binds [Lib.DriverScore]: alloc=1265880 time=0.631
-Simplifier [Lib.DriverScore]: alloc=39364880 time=13.179
-Exitification transformation [Lib.DriverScore]: alloc=20336 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.DriverScore]: alloc=38141264 time=12.858
-Common sub-expression [Lib.DriverScore]: alloc=18936 time=0.006
-Float inwards [Lib.DriverScore]: alloc=17832 time=0.004
-Simplifier [Lib.DriverScore]: alloc=46505992 time=15.658
-Demand analysis [Lib.DriverScore]: alloc=45705216 time=11.469
-CoreTidy [Lib.DriverScore]: alloc=7845008 time=3.300
-CorePrep [Lib.DriverScore]: alloc=18792 time=0.012
-CodeGen [Lib.DriverScore]: alloc=297566920 time=85.208
-systool:as: alloc=102512 time=0.257
-CorePrep [Lib.DriverScore]: alloc=18792 time=0.016
-CodeGen [Lib.DriverScore]: alloc=311422512 time=88.077
-systool:as: alloc=105360 time=0.220
+Parser [Lib.DriverScore]: alloc=6999784 time=1.257
+Renamer/typechecker [Lib.DriverScore]: alloc=803154272 time=150.949
+Desugar [Lib.DriverScore]: alloc=2030883800 time=317.993
+Simplifier [Lib.DriverScore]: alloc=25100664 time=5.801
+CoreTidy [Lib.DriverScore]: alloc=1706760 time=0.640
+CorePrep [Lib.DriverScore]: alloc=18792 time=0.008
+CodeGen [Lib.DriverScore]: alloc=161888808 time=40.901
+systool:as: alloc=102520 time=0.193
+CorePrep [Lib.DriverScore]: alloc=18792 time=0.015
+CodeGen [Lib.DriverScore]: alloc=177968536 time=44.047
+systool:as: alloc=105368 time=0.186

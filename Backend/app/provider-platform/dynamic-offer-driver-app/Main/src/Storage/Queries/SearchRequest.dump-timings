@@ -1,26 +1,11 @@
-Parser [Storage.Queries.SearchRequest]: alloc=2628776 time=0.651
-Renamer/typechecker [Storage.Queries.SearchRequest]: alloc=277766184 time=86.839
-Desugar [Storage.Queries.SearchRequest]: alloc=6990520 time=2.265
-Simplifier [Storage.Queries.SearchRequest]: alloc=204667256 time=60.889
-Specialise [Storage.Queries.SearchRequest]: alloc=42917360 time=12.163
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.SearchRequest]: alloc=40343944 time=16.120
-Simplifier [Storage.Queries.SearchRequest]: alloc=476152864 time=186.862
-Float inwards [Storage.Queries.SearchRequest]: alloc=22008 time=0.006
-Called arity analysis [Storage.Queries.SearchRequest]: alloc=23584 time=0.006
-Simplifier [Storage.Queries.SearchRequest]: alloc=87889472 time=24.900
-Demand analysis [Storage.Queries.SearchRequest]: alloc=44545776 time=11.527
-Worker Wrapper binds [Storage.Queries.SearchRequest]: alloc=1852088 time=1.102
-Simplifier [Storage.Queries.SearchRequest]: alloc=80523016 time=27.027
-Exitification transformation [Storage.Queries.SearchRequest]: alloc=24512 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.SearchRequest]: alloc=42794736 time=14.692
-Common sub-expression [Storage.Queries.SearchRequest]: alloc=23112 time=0.007
-Float inwards [Storage.Queries.SearchRequest]: alloc=22008 time=0.004
-Simplifier [Storage.Queries.SearchRequest]: alloc=131688280 time=41.399
-Demand analysis [Storage.Queries.SearchRequest]: alloc=52460808 time=13.976
-CoreTidy [Storage.Queries.SearchRequest]: alloc=23869864 time=9.306
-CorePrep [Storage.Queries.SearchRequest]: alloc=22968 time=0.020
-CodeGen [Storage.Queries.SearchRequest]: alloc=267370104 time=82.284
-systool:as: alloc=103408 time=0.260
-CorePrep [Storage.Queries.SearchRequest]: alloc=22968 time=0.017
-CodeGen [Storage.Queries.SearchRequest]: alloc=284236208 time=87.911
-systool:as: alloc=106280 time=0.257
+Parser [Storage.Queries.SearchRequest]: alloc=2628232 time=0.536
+Renamer/typechecker [Storage.Queries.SearchRequest]: alloc=271819120 time=92.682
+Desugar [Storage.Queries.SearchRequest]: alloc=6941240 time=2.324
+Simplifier [Storage.Queries.SearchRequest]: alloc=64305056 time=18.932
+CoreTidy [Storage.Queries.SearchRequest]: alloc=22702336 time=6.603
+CorePrep [Storage.Queries.SearchRequest]: alloc=22968 time=0.011
+CodeGen [Storage.Queries.SearchRequest]: alloc=369989336 time=107.795
+systool:as: alloc=103416 time=0.214
+CorePrep [Storage.Queries.SearchRequest]: alloc=22968 time=0.014
+CodeGen [Storage.Queries.SearchRequest]: alloc=421000608 time=104.937
+systool:as: alloc=106288 time=0.195

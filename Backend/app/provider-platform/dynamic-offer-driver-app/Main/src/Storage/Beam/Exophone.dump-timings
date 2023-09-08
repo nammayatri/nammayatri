@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Exophone]: alloc=1481152 time=0.406
-Simplify [expr]: alloc=309152 time=0.079
-CorePrep [expr]: alloc=119168 time=0.052
-ByteCodeGen [Ghci1]: alloc=674184 time=0.154
-Simplify [expr]: alloc=47024 time=0.022
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.054
-Renamer/typechecker [Storage.Beam.Exophone]: alloc=172651960 time=59.116
-Desugar [Storage.Beam.Exophone]: alloc=23709512 time=7.113
-Simplifier [Storage.Beam.Exophone]: alloc=117198872 time=43.005
-Specialise [Storage.Beam.Exophone]: alloc=35429792 time=10.070
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Exophone]: alloc=76298448 time=27.978
-Simplifier [Storage.Beam.Exophone]: alloc=893523576 time=377.691
-Float inwards [Storage.Beam.Exophone]: alloc=19624 time=0.005
-Called arity analysis [Storage.Beam.Exophone]: alloc=21200 time=0.006
-Simplifier [Storage.Beam.Exophone]: alloc=260578000 time=103.307
-Demand analysis [Storage.Beam.Exophone]: alloc=247789648 time=68.921
-Worker Wrapper binds [Storage.Beam.Exophone]: alloc=6170520 time=2.931
-Simplifier [Storage.Beam.Exophone]: alloc=306122120 time=134.648
-Exitification transformation [Storage.Beam.Exophone]: alloc=22128 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Exophone]: alloc=207113248 time=104.353
-Common sub-expression [Storage.Beam.Exophone]: alloc=20728 time=0.007
-Float inwards [Storage.Beam.Exophone]: alloc=19624 time=0.004
-Simplifier [Storage.Beam.Exophone]: alloc=315811872 time=151.323
-Demand analysis [Storage.Beam.Exophone]: alloc=227969792 time=65.093
-CoreTidy [Storage.Beam.Exophone]: alloc=60658496 time=912.731
-CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.013
-CodeGen [Storage.Beam.Exophone]: alloc=1171481784 time=359.161
-systool:as: alloc=102904 time=0.247
-CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.029
-CodeGen [Storage.Beam.Exophone]: alloc=1207308728 time=362.710
-systool:as: alloc=105776 time=0.302
+Parser [Storage.Beam.Exophone]: alloc=1480072 time=0.365
+Simplify [expr]: alloc=183440 time=0.041
+CorePrep [expr]: alloc=81504 time=0.029
+ByteCodeGen [Ghci1]: alloc=462728 time=0.102
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.Exophone]: alloc=170190240 time=49.992
+Desugar [Storage.Beam.Exophone]: alloc=23678568 time=6.578
+Simplifier [Storage.Beam.Exophone]: alloc=35523088 time=9.898
+CoreTidy [Storage.Beam.Exophone]: alloc=8184576 time=2.560
+CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.010
+CodeGen [Storage.Beam.Exophone]: alloc=257575032 time=74.132
+systool:as: alloc=102904 time=0.194
+CorePrep [Storage.Beam.Exophone]: alloc=20584 time=0.016
+CodeGen [Storage.Beam.Exophone]: alloc=281810432 time=81.186
+systool:as: alloc=105800 time=0.198

@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Driver]: alloc=46921176 time=7.518
-Renamer/typechecker [Domain.Action.UI.Driver]: alloc=15955720096 time=3338.695
-Desugar [Domain.Action.UI.Driver]: alloc=11171512264 time=1885.278
-Simplifier [Domain.Action.UI.Driver]: alloc=1923722504 time=711.298
-Specialise [Domain.Action.UI.Driver]: alloc=1971471520 time=501.404
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Driver]: alloc=670424312 time=312.792
-Simplifier [Domain.Action.UI.Driver]: alloc=11317110472 time=5087.133
-Float inwards [Domain.Action.UI.Driver]: alloc=20216 time=0.007
-Called arity analysis [Domain.Action.UI.Driver]: alloc=21792 time=0.005
-Simplifier [Domain.Action.UI.Driver]: alloc=3387311024 time=4759.161
-Demand analysis [Domain.Action.UI.Driver]: alloc=1929180936 time=448.048
-Worker Wrapper binds [Domain.Action.UI.Driver]: alloc=62118136 time=33.871
-Simplifier [Domain.Action.UI.Driver]: alloc=3114441608 time=1418.832
-Exitification transformation [Domain.Action.UI.Driver]: alloc=22720 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Driver]: alloc=1836433600 time=838.825
-Common sub-expression [Domain.Action.UI.Driver]: alloc=21320 time=0.007
-Float inwards [Domain.Action.UI.Driver]: alloc=20216 time=0.004
-Simplifier [Domain.Action.UI.Driver]: alloc=3275580944 time=1566.876
-Demand analysis [Domain.Action.UI.Driver]: alloc=1563588600 time=357.446
-CoreTidy [Domain.Action.UI.Driver]: alloc=424747344 time=244.797
-CorePrep [Domain.Action.UI.Driver]: alloc=21176 time=0.017
-CodeGen [Domain.Action.UI.Driver]: alloc=6588360792 time=2138.337
-systool:as: alloc=103048 time=0.482
-CorePrep [Domain.Action.UI.Driver]: alloc=21176 time=0.046
-CodeGen [Domain.Action.UI.Driver]: alloc=6859045256 time=2129.187
-systool:as: alloc=105920 time=0.470
+Parser [Domain.Action.UI.Driver]: alloc=46909768 time=6.826
+Renamer/typechecker [Domain.Action.UI.Driver]: alloc=12243811848 time=2397.323
+Desugar [Domain.Action.UI.Driver]: alloc=10966626040 time=1792.134
+Simplifier [Domain.Action.UI.Driver]: alloc=890707024 time=344.001
+CoreTidy [Domain.Action.UI.Driver]: alloc=163041680 time=67.366
+CorePrep [Domain.Action.UI.Driver]: alloc=21176 time=0.016
+CodeGen [Domain.Action.UI.Driver]: alloc=4556555824 time=1351.957
+systool:as: alloc=103056 time=0.408
+CorePrep [Domain.Action.UI.Driver]: alloc=21176 time=0.016
+CodeGen [Domain.Action.UI.Driver]: alloc=4916824680 time=1413.617
+systool:as: alloc=105928 time=0.418

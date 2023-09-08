@@ -1,31 +1,16 @@
-systool:linker: alloc=51112 time=0.163
-systool:linker: alloc=38496 time=0.098
-systool:linker: alloc=43816 time=0.136
-systool:linker: alloc=43856 time=0.117
-systool:linker: alloc=43848 time=0.160
-Parser [Domain.Types.BapMetadata]: alloc=346736 time=0.131
-Renamer/typechecker [Domain.Types.BapMetadata]: alloc=976689936 time=650.021
-Desugar [Domain.Types.BapMetadata]: alloc=13884432 time=7.030
-Simplifier [Domain.Types.BapMetadata]: alloc=75697792 time=28.724
-Specialise [Domain.Types.BapMetadata]: alloc=10247832 time=3.359
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.BapMetadata]: alloc=14081776 time=5.559
-Simplifier [Domain.Types.BapMetadata]: alloc=145693232 time=67.071
-Float inwards [Domain.Types.BapMetadata]: alloc=20504 time=0.005
-Called arity analysis [Domain.Types.BapMetadata]: alloc=22080 time=0.006
-Simplifier [Domain.Types.BapMetadata]: alloc=37686736 time=12.530
-Demand analysis [Domain.Types.BapMetadata]: alloc=36481944 time=19.938
-Worker Wrapper binds [Domain.Types.BapMetadata]: alloc=638072 time=0.258
-Simplifier [Domain.Types.BapMetadata]: alloc=38856392 time=13.122
-Exitification transformation [Domain.Types.BapMetadata]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.BapMetadata]: alloc=21346152 time=7.736
-Common sub-expression [Domain.Types.BapMetadata]: alloc=21608 time=0.005
-Float inwards [Domain.Types.BapMetadata]: alloc=20504 time=0.004
-Simplifier [Domain.Types.BapMetadata]: alloc=45705968 time=17.308
-Demand analysis [Domain.Types.BapMetadata]: alloc=18977600 time=5.601
-CoreTidy [Domain.Types.BapMetadata]: alloc=7414512 time=3.230
-CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.008
-CodeGen [Domain.Types.BapMetadata]: alloc=98793536 time=38.405
-systool:as: alloc=105248 time=0.146
-CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.014
-CodeGen [Domain.Types.BapMetadata]: alloc=102558760 time=34.426
-systool:as: alloc=107664 time=0.196
+systool:linker: alloc=51112 time=0.164
+systool:linker: alloc=38496 time=0.099
+systool:linker: alloc=43816 time=0.112
+systool:linker: alloc=43856 time=0.114
+systool:linker: alloc=43848 time=0.117
+Parser [Domain.Types.BapMetadata]: alloc=344592 time=0.110
+Renamer/typechecker [Domain.Types.BapMetadata]: alloc=955631608 time=586.175
+Desugar [Domain.Types.BapMetadata]: alloc=1575736 time=1.253
+Simplifier [Domain.Types.BapMetadata]: alloc=8695040 time=2.322
+CoreTidy [Domain.Types.BapMetadata]: alloc=2369272 time=0.707
+CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.006
+CodeGen [Domain.Types.BapMetadata]: alloc=69004624 time=24.456
+systool:as: alloc=105248 time=0.096
+CorePrep [Domain.Types.BapMetadata]: alloc=21496 time=0.013
+CodeGen [Domain.Types.BapMetadata]: alloc=71091848 time=21.010
+systool:as: alloc=107664 time=0.158

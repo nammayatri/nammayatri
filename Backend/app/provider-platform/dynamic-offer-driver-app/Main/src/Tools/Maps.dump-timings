@@ -1,26 +1,11 @@
-Parser [Tools.Maps]: alloc=2899736 time=0.672
-Renamer/typechecker [Tools.Maps]: alloc=1227752536 time=247.799
-Desugar [Tools.Maps]: alloc=754914592 time=138.271
-Simplifier [Tools.Maps]: alloc=13188288 time=4.345
-Specialise [Tools.Maps]: alloc=2200608 time=0.719
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Maps]: alloc=9530880 time=2.936
-Simplifier [Tools.Maps]: alloc=40526672 time=13.765
-Float inwards [Tools.Maps]: alloc=16328 time=0.005
-Called arity analysis [Tools.Maps]: alloc=17904 time=0.006
-Simplifier [Tools.Maps]: alloc=18816800 time=7.280
-Demand analysis [Tools.Maps]: alloc=20562464 time=4.602
-Worker Wrapper binds [Tools.Maps]: alloc=935640 time=0.430
-Simplifier [Tools.Maps]: alloc=14176984 time=4.282
-Exitification transformation [Tools.Maps]: alloc=18848 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Maps]: alloc=13021144 time=3.760
-Common sub-expression [Tools.Maps]: alloc=17432 time=0.005
-Float inwards [Tools.Maps]: alloc=16328 time=0.004
-Simplifier [Tools.Maps]: alloc=21673568 time=6.448
-Demand analysis [Tools.Maps]: alloc=19929624 time=4.327
-CoreTidy [Tools.Maps]: alloc=4639368 time=2.226
+Parser [Tools.Maps]: alloc=2899736 time=0.632
+Renamer/typechecker [Tools.Maps]: alloc=1095626472 time=190.833
+Desugar [Tools.Maps]: alloc=741480432 time=121.702
+Simplifier [Tools.Maps]: alloc=12619760 time=3.354
+CoreTidy [Tools.Maps]: alloc=1393296 time=0.509
 CorePrep [Tools.Maps]: alloc=17320 time=0.009
-CodeGen [Tools.Maps]: alloc=103627816 time=32.841
-systool:as: alloc=102192 time=0.215
-CorePrep [Tools.Maps]: alloc=17320 time=0.016
-CodeGen [Tools.Maps]: alloc=109116520 time=35.587
-systool:as: alloc=105072 time=0.215
+CodeGen [Tools.Maps]: alloc=63232408 time=17.515
+systool:as: alloc=102200 time=0.167
+CorePrep [Tools.Maps]: alloc=17320 time=0.013
+CodeGen [Tools.Maps]: alloc=70212024 time=19.297
+systool:as: alloc=105080 time=0.175

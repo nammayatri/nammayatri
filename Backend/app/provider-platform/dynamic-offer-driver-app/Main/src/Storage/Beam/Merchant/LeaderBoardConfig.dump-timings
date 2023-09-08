@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1625464 time=0.450
-Simplify [expr]: alloc=210784 time=0.135
-CorePrep [expr]: alloc=83960 time=0.044
-ByteCodeGen [Ghci1]: alloc=480528 time=0.159
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.064
-Renamer/typechecker [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=173605000 time=52.391
-Desugar [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=23710096 time=7.189
-Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=118815400 time=36.386
-Specialise [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=37081432 time=12.292
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=77627832 time=28.446
-Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=906611224 time=338.207
-Float inwards [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=24984 time=0.005
-Called arity analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=26560 time=0.006
-Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=262530896 time=103.724
-Demand analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=242264920 time=61.957
-Worker Wrapper binds [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=6063072 time=3.847
-Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=304314408 time=124.438
-Exitification transformation [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=27488 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=203151472 time=69.518
-Common sub-expression [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=26088 time=0.007
-Float inwards [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=24984 time=0.005
-Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=315480368 time=146.882
-Demand analysis [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=222696440 time=53.731
-CoreTidy [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=60624784 time=27.286
-CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.017
-CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1140053456 time=390.160
-systool:as: alloc=104040 time=0.275
-CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.019
-CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1176915400 time=363.354
-systool:as: alloc=106912 time=0.300
+Parser [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=1625464 time=0.415
+Simplify [expr]: alloc=136112 time=0.034
+CorePrep [expr]: alloc=62392 time=0.032
+ByteCodeGen [Ghci1]: alloc=357552 time=0.096
+Simplify [expr]: alloc=46992 time=0.016
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.042
+Renamer/typechecker [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=171333520 time=50.145
+Desugar [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=23724896 time=7.019
+Simplifier [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=35594904 time=10.105
+CoreTidy [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=8231840 time=2.532
+CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.010
+CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=256507728 time=79.079
+systool:as: alloc=104040 time=0.195
+CorePrep [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=25944 time=0.015
+CodeGen [Storage.Beam.Merchant.LeaderBoardConfig]: alloc=280766016 time=80.591
+systool:as: alloc=106912 time=0.168

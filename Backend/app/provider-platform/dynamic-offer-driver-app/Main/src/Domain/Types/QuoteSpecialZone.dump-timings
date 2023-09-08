@@ -1,26 +1,11 @@
-Parser [Domain.Types.QuoteSpecialZone]: alloc=778056 time=0.265
-Renamer/typechecker [Domain.Types.QuoteSpecialZone]: alloc=36559344 time=12.060
-Desugar [Domain.Types.QuoteSpecialZone]: alloc=4944376 time=2.173
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=15949048 time=4.668
-Specialise [Domain.Types.QuoteSpecialZone]: alloc=1468224 time=0.369
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.QuoteSpecialZone]: alloc=6934240 time=2.043
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=19479128 time=5.774
-Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.005
-Called arity analysis [Domain.Types.QuoteSpecialZone]: alloc=23584 time=0.005
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=10005328 time=2.644
-Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=7364648 time=1.675
-Worker Wrapper binds [Domain.Types.QuoteSpecialZone]: alloc=385960 time=0.175
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=10958648 time=2.763
-Exitification transformation [Domain.Types.QuoteSpecialZone]: alloc=24512 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.QuoteSpecialZone]: alloc=5909144 time=1.670
-Common sub-expression [Domain.Types.QuoteSpecialZone]: alloc=23112 time=0.005
-Float inwards [Domain.Types.QuoteSpecialZone]: alloc=22008 time=0.004
-Simplifier [Domain.Types.QuoteSpecialZone]: alloc=14768336 time=4.052
-Demand analysis [Domain.Types.QuoteSpecialZone]: alloc=7335232 time=1.687
-CoreTidy [Domain.Types.QuoteSpecialZone]: alloc=4821544 time=1.402
-CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.009
-CodeGen [Domain.Types.QuoteSpecialZone]: alloc=109961856 time=33.753
-systool:as: alloc=103392 time=0.207
-CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.016
-CodeGen [Domain.Types.QuoteSpecialZone]: alloc=113847640 time=34.144
-systool:as: alloc=106264 time=0.261
+Parser [Domain.Types.QuoteSpecialZone]: alloc=775864 time=0.202
+Renamer/typechecker [Domain.Types.QuoteSpecialZone]: alloc=36530344 time=11.370
+Desugar [Domain.Types.QuoteSpecialZone]: alloc=4941728 time=2.167
+Simplifier [Domain.Types.QuoteSpecialZone]: alloc=12905880 time=3.334
+CoreTidy [Domain.Types.QuoteSpecialZone]: alloc=2772128 time=0.768
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.008
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=66737000 time=17.535
+systool:as: alloc=103392 time=0.200
+CorePrep [Domain.Types.QuoteSpecialZone]: alloc=22968 time=0.013
+CodeGen [Domain.Types.QuoteSpecialZone]: alloc=71198936 time=19.199
+systool:as: alloc=106264 time=0.160

@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Volunteer]: alloc=2435152 time=0.620
-Renamer/typechecker [Domain.Action.Dashboard.Volunteer]: alloc=253668336 time=69.677
-Desugar [Domain.Action.Dashboard.Volunteer]: alloc=1628224 time=1.386
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=160290408 time=50.964
-Specialise [Domain.Action.Dashboard.Volunteer]: alloc=12640200 time=7.221
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Volunteer]: alloc=31507216 time=12.873
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=353743504 time=130.280
-Float inwards [Domain.Action.Dashboard.Volunteer]: alloc=23192 time=0.005
-Called arity analysis [Domain.Action.Dashboard.Volunteer]: alloc=24768 time=0.006
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=52602008 time=22.313
-Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=60420040 time=13.460
-Worker Wrapper binds [Domain.Action.Dashboard.Volunteer]: alloc=1004200 time=0.601
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=89868616 time=20.097
-Exitification transformation [Domain.Action.Dashboard.Volunteer]: alloc=25696 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Volunteer]: alloc=45605560 time=16.201
-Common sub-expression [Domain.Action.Dashboard.Volunteer]: alloc=24296 time=0.007
-Float inwards [Domain.Action.Dashboard.Volunteer]: alloc=23192 time=0.005
-Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=265925912 time=113.104
-Demand analysis [Domain.Action.Dashboard.Volunteer]: alloc=67975080 time=19.695
-CoreTidy [Domain.Action.Dashboard.Volunteer]: alloc=47472384 time=14.571
-CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.014
-CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=336676560 time=84.449
-systool:as: alloc=103688 time=0.191
-CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.015
-CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=346813600 time=84.408
-systool:as: alloc=106568 time=0.195
+Parser [Domain.Action.Dashboard.Volunteer]: alloc=2433480 time=0.605
+Renamer/typechecker [Domain.Action.Dashboard.Volunteer]: alloc=253100040 time=65.095
+Desugar [Domain.Action.Dashboard.Volunteer]: alloc=1633504 time=1.319
+Simplifier [Domain.Action.Dashboard.Volunteer]: alloc=52644480 time=20.923
+CoreTidy [Domain.Action.Dashboard.Volunteer]: alloc=34944864 time=9.187
+CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.013
+CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=96384904 time=32.127
+systool:as: alloc=103696 time=0.243
+CorePrep [Domain.Action.Dashboard.Volunteer]: alloc=24168 time=0.017
+CodeGen [Domain.Action.Dashboard.Volunteer]: alloc=104100736 time=31.937
+systool:as: alloc=106576 time=0.208

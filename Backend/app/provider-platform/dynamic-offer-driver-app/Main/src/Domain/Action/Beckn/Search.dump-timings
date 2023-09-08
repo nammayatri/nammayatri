@@ -1,26 +1,11 @@
-Parser [Domain.Action.Beckn.Search]: alloc=13030488 time=2.342
-Renamer/typechecker [Domain.Action.Beckn.Search]: alloc=1401506056 time=333.705
-Desugar [Domain.Action.Beckn.Search]: alloc=808400400 time=130.287
-Simplifier [Domain.Action.Beckn.Search]: alloc=193538840 time=65.217
-Specialise [Domain.Action.Beckn.Search]: alloc=28720176 time=11.525
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Search]: alloc=67572936 time=28.202
-Simplifier [Domain.Action.Beckn.Search]: alloc=598993352 time=242.129
-Float inwards [Domain.Action.Beckn.Search]: alloc=21096 time=0.005
-Called arity analysis [Domain.Action.Beckn.Search]: alloc=22672 time=0.006
-Simplifier [Domain.Action.Beckn.Search]: alloc=130208928 time=52.949
-Demand analysis [Domain.Action.Beckn.Search]: alloc=130447336 time=31.104
-Worker Wrapper binds [Domain.Action.Beckn.Search]: alloc=2526224 time=1.579
-Simplifier [Domain.Action.Beckn.Search]: alloc=160981192 time=56.227
-Exitification transformation [Domain.Action.Beckn.Search]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Search]: alloc=105630368 time=36.344
-Common sub-expression [Domain.Action.Beckn.Search]: alloc=22200 time=0.007
-Float inwards [Domain.Action.Beckn.Search]: alloc=21096 time=0.004
-Simplifier [Domain.Action.Beckn.Search]: alloc=303353536 time=149.625
-Demand analysis [Domain.Action.Beckn.Search]: alloc=139826840 time=38.336
-CoreTidy [Domain.Action.Beckn.Search]: alloc=48662064 time=17.245
+Parser [Domain.Action.Beckn.Search]: alloc=13023936 time=2.426
+Renamer/typechecker [Domain.Action.Beckn.Search]: alloc=1274311616 time=273.498
+Desugar [Domain.Action.Beckn.Search]: alloc=794087712 time=138.197
+Simplifier [Domain.Action.Beckn.Search]: alloc=134360128 time=52.381
+CoreTidy [Domain.Action.Beckn.Search]: alloc=38119744 time=12.043
+CorePrep [Domain.Action.Beckn.Search]: alloc=22088 time=0.038
+CodeGen [Domain.Action.Beckn.Search]: alloc=346970448 time=119.343
+systool:as: alloc=103248 time=0.240
 CorePrep [Domain.Action.Beckn.Search]: alloc=22088 time=0.017
-CodeGen [Domain.Action.Beckn.Search]: alloc=765046440 time=212.921
-systool:as: alloc=103240 time=0.229
-CorePrep [Domain.Action.Beckn.Search]: alloc=22088 time=0.018
-CodeGen [Domain.Action.Beckn.Search]: alloc=789654744 time=212.728
-systool:as: alloc=106120 time=0.193
+CodeGen [Domain.Action.Beckn.Search]: alloc=371708832 time=105.440
+systool:as: alloc=106152 time=0.229

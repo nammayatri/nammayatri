@@ -1,29 +1,14 @@
-Parser [API.Dashboard.Subscription]: alloc=2302144 time=0.525
+Parser [API.Dashboard.Subscription]: alloc=2297224 time=0.506
 Simplify [expr]: alloc=19176 time=0.015
-CorePrep [expr]: alloc=16448 time=0.011
+CorePrep [expr]: alloc=16424 time=0.012
 ByteCodeGen [Ghci1]: alloc=39272 time=0.035
-Renamer/typechecker [API.Dashboard.Subscription]: alloc=19654448 time=10.096
-Desugar [API.Dashboard.Subscription]: alloc=887952 time=1.035
-Simplifier [API.Dashboard.Subscription]: alloc=9948568 time=2.740
-Specialise [API.Dashboard.Subscription]: alloc=4049592 time=0.852
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Subscription]: alloc=6071152 time=1.753
-Simplifier [API.Dashboard.Subscription]: alloc=52922360 time=16.654
-Float inwards [API.Dashboard.Subscription]: alloc=21096 time=0.005
-Called arity analysis [API.Dashboard.Subscription]: alloc=22672 time=0.005
-Simplifier [API.Dashboard.Subscription]: alloc=17755864 time=5.243
-Demand analysis [API.Dashboard.Subscription]: alloc=19208096 time=4.236
-Worker Wrapper binds [API.Dashboard.Subscription]: alloc=398600 time=0.234
-Simplifier [API.Dashboard.Subscription]: alloc=20866256 time=6.598
-Exitification transformation [API.Dashboard.Subscription]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Subscription]: alloc=17809152 time=5.204
-Common sub-expression [API.Dashboard.Subscription]: alloc=22200 time=0.007
-Float inwards [API.Dashboard.Subscription]: alloc=21096 time=0.005
-Simplifier [API.Dashboard.Subscription]: alloc=25477320 time=7.728
-Demand analysis [API.Dashboard.Subscription]: alloc=23912560 time=4.939
-CoreTidy [API.Dashboard.Subscription]: alloc=4856648 time=1.856
-CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.012
-CodeGen [API.Dashboard.Subscription]: alloc=125480224 time=36.014
-systool:as: alloc=103232 time=0.182
-CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.018
-CodeGen [API.Dashboard.Subscription]: alloc=129667320 time=36.713
-systool:as: alloc=106088 time=0.182
+Renamer/typechecker [API.Dashboard.Subscription]: alloc=19640696 time=9.907
+Desugar [API.Dashboard.Subscription]: alloc=886096 time=1.064
+Simplifier [API.Dashboard.Subscription]: alloc=3480144 time=0.978
+CoreTidy [API.Dashboard.Subscription]: alloc=579640 time=0.203
+CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.007
+CodeGen [API.Dashboard.Subscription]: alloc=31979248 time=10.018
+systool:as: alloc=103216 time=0.189
+CorePrep [API.Dashboard.Subscription]: alloc=22088 time=0.011
+CodeGen [API.Dashboard.Subscription]: alloc=34861584 time=10.831
+systool:as: alloc=106096 time=0.166

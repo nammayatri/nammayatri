@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.Track]: alloc=767432 time=0.243
-Renamer/typechecker [Beckn.ACL.Track]: alloc=68386240 time=20.700
-Desugar [Beckn.ACL.Track]: alloc=5392224 time=1.920
-Simplifier [Beckn.ACL.Track]: alloc=5373000 time=1.797
-Specialise [Beckn.ACL.Track]: alloc=417000 time=0.128
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Track]: alloc=1545520 time=0.484
-Simplifier [Beckn.ACL.Track]: alloc=7966472 time=2.810
-Float inwards [Beckn.ACL.Track]: alloc=17832 time=0.004
-Called arity analysis [Beckn.ACL.Track]: alloc=19408 time=0.005
-Simplifier [Beckn.ACL.Track]: alloc=2695104 time=0.851
-Demand analysis [Beckn.ACL.Track]: alloc=3674064 time=1.035
-Worker Wrapper binds [Beckn.ACL.Track]: alloc=127664 time=0.071
-Simplifier [Beckn.ACL.Track]: alloc=2878600 time=0.970
-Exitification transformation [Beckn.ACL.Track]: alloc=20336 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Track]: alloc=2621400 time=0.815
-Common sub-expression [Beckn.ACL.Track]: alloc=18936 time=0.006
-Float inwards [Beckn.ACL.Track]: alloc=17832 time=0.003
-Simplifier [Beckn.ACL.Track]: alloc=3247560 time=1.074
-Demand analysis [Beckn.ACL.Track]: alloc=3073152 time=0.705
-CoreTidy [Beckn.ACL.Track]: alloc=968776 time=0.359
-CorePrep [Beckn.ACL.Track]: alloc=18792 time=0.008
-CodeGen [Beckn.ACL.Track]: alloc=22924848 time=7.358
-systool:as: alloc=102520 time=0.176
-CorePrep [Beckn.ACL.Track]: alloc=18792 time=0.009
-CodeGen [Beckn.ACL.Track]: alloc=23785192 time=7.211
-systool:as: alloc=105416 time=0.186
+Parser [Beckn.ACL.Track]: alloc=767432 time=0.221
+Renamer/typechecker [Beckn.ACL.Track]: alloc=61234464 time=16.882
+Desugar [Beckn.ACL.Track]: alloc=5309248 time=1.829
+Simplifier [Beckn.ACL.Track]: alloc=1676992 time=0.543
+CoreTidy [Beckn.ACL.Track]: alloc=198976 time=0.096
+CorePrep [Beckn.ACL.Track]: alloc=18792 time=0.007
+CodeGen [Beckn.ACL.Track]: alloc=14104592 time=3.729
+systool:as: alloc=102528 time=0.173
+CorePrep [Beckn.ACL.Track]: alloc=18792 time=0.010
+CodeGen [Beckn.ACL.Track]: alloc=15618336 time=4.084
+systool:as: alloc=105400 time=0.141

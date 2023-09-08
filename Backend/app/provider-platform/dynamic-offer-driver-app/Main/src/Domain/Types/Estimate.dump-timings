@@ -1,26 +1,11 @@
-Parser [Domain.Types.Estimate]: alloc=2207296 time=0.503
-Renamer/typechecker [Domain.Types.Estimate]: alloc=100175216 time=34.235
-Desugar [Domain.Types.Estimate]: alloc=49418528 time=12.557
-Simplifier [Domain.Types.Estimate]: alloc=53462080 time=18.410
-Specialise [Domain.Types.Estimate]: alloc=12086048 time=3.750
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Estimate]: alloc=32312880 time=11.523
-Simplifier [Domain.Types.Estimate]: alloc=296557480 time=109.575
-Float inwards [Domain.Types.Estimate]: alloc=19624 time=0.005
-Called arity analysis [Domain.Types.Estimate]: alloc=21200 time=0.006
-Simplifier [Domain.Types.Estimate]: alloc=78745600 time=48.501
-Demand analysis [Domain.Types.Estimate]: alloc=43016936 time=11.571
-Worker Wrapper binds [Domain.Types.Estimate]: alloc=2151848 time=1.234
-Simplifier [Domain.Types.Estimate]: alloc=98169752 time=32.141
-Exitification transformation [Domain.Types.Estimate]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Estimate]: alloc=50343688 time=17.618
-Common sub-expression [Domain.Types.Estimate]: alloc=20728 time=0.007
-Float inwards [Domain.Types.Estimate]: alloc=19624 time=0.004
-Simplifier [Domain.Types.Estimate]: alloc=104943920 time=53.609
-Demand analysis [Domain.Types.Estimate]: alloc=42528960 time=11.706
-CoreTidy [Domain.Types.Estimate]: alloc=20601656 time=9.342
-CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.028
-CodeGen [Domain.Types.Estimate]: alloc=320953112 time=107.345
-systool:as: alloc=102904 time=0.246
-CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.017
-CodeGen [Domain.Types.Estimate]: alloc=333711480 time=106.915
-systool:as: alloc=105800 time=0.303
+Parser [Domain.Types.Estimate]: alloc=2198560 time=0.443
+Renamer/typechecker [Domain.Types.Estimate]: alloc=100023344 time=35.132
+Desugar [Domain.Types.Estimate]: alloc=49395608 time=11.978
+Simplifier [Domain.Types.Estimate]: alloc=32574112 time=9.077
+CoreTidy [Domain.Types.Estimate]: alloc=6476152 time=2.048
+CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.013
+CodeGen [Domain.Types.Estimate]: alloc=188623320 time=61.856
+systool:as: alloc=102936 time=0.187
+CorePrep [Domain.Types.Estimate]: alloc=20584 time=0.018
+CodeGen [Domain.Types.Estimate]: alloc=201292128 time=60.403
+systool:as: alloc=105784 time=0.163

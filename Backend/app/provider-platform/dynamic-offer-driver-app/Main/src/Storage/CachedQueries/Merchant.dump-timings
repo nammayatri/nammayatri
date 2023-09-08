@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Merchant]: alloc=2708192 time=0.565
-Renamer/typechecker [Storage.CachedQueries.Merchant]: alloc=639691416 time=127.543
-Desugar [Storage.CachedQueries.Merchant]: alloc=701386064 time=130.538
-Simplifier [Storage.CachedQueries.Merchant]: alloc=14073560 time=3.750
-Specialise [Storage.CachedQueries.Merchant]: alloc=2634144 time=0.887
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant]: alloc=11927864 time=3.282
-Simplifier [Storage.CachedQueries.Merchant]: alloc=54367824 time=18.120
-Float inwards [Storage.CachedQueries.Merchant]: alloc=22296 time=0.005
-Called arity analysis [Storage.CachedQueries.Merchant]: alloc=23872 time=0.006
-Simplifier [Storage.CachedQueries.Merchant]: alloc=27735912 time=8.115
-Demand analysis [Storage.CachedQueries.Merchant]: alloc=26523920 time=6.414
-Worker Wrapper binds [Storage.CachedQueries.Merchant]: alloc=1702784 time=0.734
-Simplifier [Storage.CachedQueries.Merchant]: alloc=24885368 time=8.650
-Exitification transformation [Storage.CachedQueries.Merchant]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant]: alloc=25534512 time=8.597
-Common sub-expression [Storage.CachedQueries.Merchant]: alloc=23400 time=0.008
-Float inwards [Storage.CachedQueries.Merchant]: alloc=22296 time=0.004
-Simplifier [Storage.CachedQueries.Merchant]: alloc=28052232 time=10.540
-Demand analysis [Storage.CachedQueries.Merchant]: alloc=33109680 time=7.488
-CoreTidy [Storage.CachedQueries.Merchant]: alloc=4859144 time=2.749
+Parser [Storage.CachedQueries.Merchant]: alloc=2707648 time=0.508
+Renamer/typechecker [Storage.CachedQueries.Merchant]: alloc=356090792 time=61.720
+Desugar [Storage.CachedQueries.Merchant]: alloc=688743680 time=111.515
+Simplifier [Storage.CachedQueries.Merchant]: alloc=20957408 time=4.262
+CoreTidy [Storage.CachedQueries.Merchant]: alloc=1464424 time=0.436
+CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.007
+CodeGen [Storage.CachedQueries.Merchant]: alloc=74165744 time=19.146
+systool:as: alloc=103504 time=0.201
 CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.014
-CodeGen [Storage.CachedQueries.Merchant]: alloc=160651408 time=50.439
-systool:as: alloc=103496 time=0.242
-CorePrep [Storage.CachedQueries.Merchant]: alloc=23272 time=0.018
-CodeGen [Storage.CachedQueries.Merchant]: alloc=167183880 time=49.063
-systool:as: alloc=106368 time=0.198
+CodeGen [Storage.CachedQueries.Merchant]: alloc=80742480 time=20.663
+systool:as: alloc=106376 time=0.193

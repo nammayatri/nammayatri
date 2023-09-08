@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.OrgAdmin]: alloc=2066080 time=0.538
-Renamer/typechecker [Domain.Action.UI.OrgAdmin]: alloc=602708160 time=147.416
-Desugar [Domain.Action.UI.OrgAdmin]: alloc=107776088 time=20.582
-Simplifier [Domain.Action.UI.OrgAdmin]: alloc=117313384 time=39.368
-Specialise [Domain.Action.UI.OrgAdmin]: alloc=26874640 time=8.985
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.OrgAdmin]: alloc=50972968 time=17.605
-Simplifier [Domain.Action.UI.OrgAdmin]: alloc=574841864 time=243.675
-Float inwards [Domain.Action.UI.OrgAdmin]: alloc=20808 time=0.005
-Called arity analysis [Domain.Action.UI.OrgAdmin]: alloc=22384 time=0.006
-Simplifier [Domain.Action.UI.OrgAdmin]: alloc=168704664 time=73.713
-Demand analysis [Domain.Action.UI.OrgAdmin]: alloc=75363824 time=20.648
-Worker Wrapper binds [Domain.Action.UI.OrgAdmin]: alloc=2733656 time=1.836
-Simplifier [Domain.Action.UI.OrgAdmin]: alloc=162301632 time=65.597
-Exitification transformation [Domain.Action.UI.OrgAdmin]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.OrgAdmin]: alloc=82634184 time=30.882
-Common sub-expression [Domain.Action.UI.OrgAdmin]: alloc=21912 time=0.010
-Float inwards [Domain.Action.UI.OrgAdmin]: alloc=20808 time=0.006
-Simplifier [Domain.Action.UI.OrgAdmin]: alloc=179353304 time=70.747
-Demand analysis [Domain.Action.UI.OrgAdmin]: alloc=66717712 time=21.425
-CoreTidy [Domain.Action.UI.OrgAdmin]: alloc=23309672 time=8.178
-CorePrep [Domain.Action.UI.OrgAdmin]: alloc=21784 time=0.015
-CodeGen [Domain.Action.UI.OrgAdmin]: alloc=291765944 time=94.963
-systool:as: alloc=103168 time=0.223
+Parser [Domain.Action.UI.OrgAdmin]: alloc=2066080 time=0.478
+Renamer/typechecker [Domain.Action.UI.OrgAdmin]: alloc=495685128 time=111.287
+Desugar [Domain.Action.UI.OrgAdmin]: alloc=105923312 time=20.313
+Simplifier [Domain.Action.UI.OrgAdmin]: alloc=39098976 time=11.067
+CoreTidy [Domain.Action.UI.OrgAdmin]: alloc=9082184 time=2.911
+CorePrep [Domain.Action.UI.OrgAdmin]: alloc=21784 time=0.010
+CodeGen [Domain.Action.UI.OrgAdmin]: alloc=281968296 time=88.229
+systool:as: alloc=103176 time=0.188
 CorePrep [Domain.Action.UI.OrgAdmin]: alloc=21784 time=0.016
-CodeGen [Domain.Action.UI.OrgAdmin]: alloc=304676632 time=97.050
-systool:as: alloc=106048 time=0.214
+CodeGen [Domain.Action.UI.OrgAdmin]: alloc=304664808 time=88.388
+systool:as: alloc=106056 time=0.171

@@ -1,29 +1,14 @@
-Parser [Domain.Types.LeaderBoardConfig]: alloc=696672 time=0.213
-Simplify [expr]: alloc=34464 time=0.021
-CorePrep [expr]: alloc=22952 time=0.017
-ByteCodeGen [Ghci1]: alloc=94056 time=0.051
-Renamer/typechecker [Domain.Types.LeaderBoardConfig]: alloc=93347968 time=28.477
-Desugar [Domain.Types.LeaderBoardConfig]: alloc=44953872 time=10.957
-Simplifier [Domain.Types.LeaderBoardConfig]: alloc=63569176 time=23.341
-Specialise [Domain.Types.LeaderBoardConfig]: alloc=18414776 time=6.458
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.LeaderBoardConfig]: alloc=32807392 time=20.845
-Simplifier [Domain.Types.LeaderBoardConfig]: alloc=368435624 time=154.961
-Float inwards [Domain.Types.LeaderBoardConfig]: alloc=22296 time=0.005
-Called arity analysis [Domain.Types.LeaderBoardConfig]: alloc=23872 time=0.006
-Simplifier [Domain.Types.LeaderBoardConfig]: alloc=107046008 time=48.564
-Demand analysis [Domain.Types.LeaderBoardConfig]: alloc=51666440 time=13.793
-Worker Wrapper binds [Domain.Types.LeaderBoardConfig]: alloc=2019736 time=1.273
-Simplifier [Domain.Types.LeaderBoardConfig]: alloc=112962256 time=47.204
-Exitification transformation [Domain.Types.LeaderBoardConfig]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.LeaderBoardConfig]: alloc=56893000 time=20.558
-Common sub-expression [Domain.Types.LeaderBoardConfig]: alloc=23400 time=0.007
-Float inwards [Domain.Types.LeaderBoardConfig]: alloc=22296 time=0.004
-Simplifier [Domain.Types.LeaderBoardConfig]: alloc=129343088 time=56.803
-Demand analysis [Domain.Types.LeaderBoardConfig]: alloc=48154096 time=19.472
-CoreTidy [Domain.Types.LeaderBoardConfig]: alloc=19906232 time=6.538
-CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.016
-CodeGen [Domain.Types.LeaderBoardConfig]: alloc=221681120 time=84.334
-systool:as: alloc=103456 time=0.204
-CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.015
-CodeGen [Domain.Types.LeaderBoardConfig]: alloc=231789008 time=78.235
-systool:as: alloc=106328 time=0.184
+Parser [Domain.Types.LeaderBoardConfig]: alloc=691240 time=0.231
+Simplify [expr]: alloc=34912 time=0.021
+CorePrep [expr]: alloc=22880 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.050
+Renamer/typechecker [Domain.Types.LeaderBoardConfig]: alloc=93186840 time=30.791
+Desugar [Domain.Types.LeaderBoardConfig]: alloc=44958680 time=12.233
+Simplifier [Domain.Types.LeaderBoardConfig]: alloc=29364440 time=8.916
+CoreTidy [Domain.Types.LeaderBoardConfig]: alloc=7363464 time=2.003
+CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.008
+CodeGen [Domain.Types.LeaderBoardConfig]: alloc=207322920 time=67.676
+systool:as: alloc=103456 time=0.168
+CorePrep [Domain.Types.LeaderBoardConfig]: alloc=23272 time=0.014
+CodeGen [Domain.Types.LeaderBoardConfig]: alloc=222066712 time=68.316
+systool:as: alloc=106352 time=0.200

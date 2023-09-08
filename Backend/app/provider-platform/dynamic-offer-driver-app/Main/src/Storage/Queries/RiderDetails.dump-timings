@@ -1,26 +1,11 @@
-Parser [Storage.Queries.RiderDetails]: alloc=2799480 time=0.568
-Renamer/typechecker [Storage.Queries.RiderDetails]: alloc=328675896 time=101.657
-Desugar [Storage.Queries.RiderDetails]: alloc=26270408 time=6.940
-Simplifier [Storage.Queries.RiderDetails]: alloc=156964664 time=50.129
-Specialise [Storage.Queries.RiderDetails]: alloc=57213720 time=15.536
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.RiderDetails]: alloc=47021440 time=19.870
-Simplifier [Storage.Queries.RiderDetails]: alloc=560680424 time=227.518
-Float inwards [Storage.Queries.RiderDetails]: alloc=21704 time=0.005
-Called arity analysis [Storage.Queries.RiderDetails]: alloc=23280 time=0.006
-Simplifier [Storage.Queries.RiderDetails]: alloc=98648896 time=34.764
-Demand analysis [Storage.Queries.RiderDetails]: alloc=42241736 time=12.648
-Worker Wrapper binds [Storage.Queries.RiderDetails]: alloc=1910616 time=1.342
-Simplifier [Storage.Queries.RiderDetails]: alloc=84491152 time=31.439
-Exitification transformation [Storage.Queries.RiderDetails]: alloc=24224 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.RiderDetails]: alloc=40137968 time=14.777
-Common sub-expression [Storage.Queries.RiderDetails]: alloc=22808 time=0.009
-Float inwards [Storage.Queries.RiderDetails]: alloc=21704 time=0.004
-Simplifier [Storage.Queries.RiderDetails]: alloc=112270216 time=57.457
-Demand analysis [Storage.Queries.RiderDetails]: alloc=34200568 time=10.339
-CoreTidy [Storage.Queries.RiderDetails]: alloc=19502144 time=9.031
-CorePrep [Storage.Queries.RiderDetails]: alloc=22680 time=0.017
-CodeGen [Storage.Queries.RiderDetails]: alloc=214950128 time=70.900
-systool:as: alloc=103352 time=0.263
+Parser [Storage.Queries.RiderDetails]: alloc=2796152 time=0.595
+Renamer/typechecker [Storage.Queries.RiderDetails]: alloc=322293792 time=89.235
+Desugar [Storage.Queries.RiderDetails]: alloc=25950128 time=6.626
+Simplifier [Storage.Queries.RiderDetails]: alloc=87908768 time=25.473
+CoreTidy [Storage.Queries.RiderDetails]: alloc=20641296 time=5.966
+CorePrep [Storage.Queries.RiderDetails]: alloc=22680 time=0.010
+CodeGen [Storage.Queries.RiderDetails]: alloc=330817464 time=95.021
+systool:as: alloc=103360 time=0.207
 CorePrep [Storage.Queries.RiderDetails]: alloc=22680 time=0.016
-CodeGen [Storage.Queries.RiderDetails]: alloc=231242352 time=75.567
-systool:as: alloc=106224 time=0.275
+CodeGen [Storage.Queries.RiderDetails]: alloc=378117872 time=93.909
+systool:as: alloc=106232 time=0.227

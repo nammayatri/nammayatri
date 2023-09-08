@@ -1,26 +1,11 @@
-Parser [Storage.Queries.CallStatus]: alloc=2217288 time=0.612
-Renamer/typechecker [Storage.Queries.CallStatus]: alloc=197039392 time=57.785
-Desugar [Storage.Queries.CallStatus]: alloc=8461744 time=2.438
-Simplifier [Storage.Queries.CallStatus]: alloc=85860696 time=26.403
-Specialise [Storage.Queries.CallStatus]: alloc=20812672 time=5.534
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.CallStatus]: alloc=19093176 time=6.927
-Simplifier [Storage.Queries.CallStatus]: alloc=301274784 time=89.395
-Float inwards [Storage.Queries.CallStatus]: alloc=21096 time=0.005
-Called arity analysis [Storage.Queries.CallStatus]: alloc=22672 time=0.006
-Simplifier [Storage.Queries.CallStatus]: alloc=86822928 time=26.000
-Demand analysis [Storage.Queries.CallStatus]: alloc=15945080 time=5.340
-Worker Wrapper binds [Storage.Queries.CallStatus]: alloc=1039632 time=0.486
-Simplifier [Storage.Queries.CallStatus]: alloc=84891080 time=20.371
-Exitification transformation [Storage.Queries.CallStatus]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.CallStatus]: alloc=14987272 time=6.773
-Common sub-expression [Storage.Queries.CallStatus]: alloc=22200 time=0.032
-Float inwards [Storage.Queries.CallStatus]: alloc=21096 time=0.004
-Simplifier [Storage.Queries.CallStatus]: alloc=90695096 time=28.857
-Demand analysis [Storage.Queries.CallStatus]: alloc=13709680 time=7.546
-CoreTidy [Storage.Queries.CallStatus]: alloc=16948608 time=5.715
-CorePrep [Storage.Queries.CallStatus]: alloc=22088 time=0.023
-CodeGen [Storage.Queries.CallStatus]: alloc=103321688 time=36.165
-systool:as: alloc=103224 time=0.220
-CorePrep [Storage.Queries.CallStatus]: alloc=22088 time=0.014
-CodeGen [Storage.Queries.CallStatus]: alloc=110187400 time=36.985
-systool:as: alloc=106104 time=0.224
+Parser [Storage.Queries.CallStatus]: alloc=2215112 time=0.480
+Renamer/typechecker [Storage.Queries.CallStatus]: alloc=193277176 time=57.334
+Desugar [Storage.Queries.CallStatus]: alloc=8430592 time=2.578
+Simplifier [Storage.Queries.CallStatus]: alloc=41636600 time=12.264
+CoreTidy [Storage.Queries.CallStatus]: alloc=8702392 time=2.800
+CorePrep [Storage.Queries.CallStatus]: alloc=22088 time=0.007
+CodeGen [Storage.Queries.CallStatus]: alloc=151924360 time=43.401
+systool:as: alloc=103232 time=0.171
+CorePrep [Storage.Queries.CallStatus]: alloc=22088 time=0.016
+CodeGen [Storage.Queries.CallStatus]: alloc=174471176 time=46.820
+systool:as: alloc=106112 time=0.174

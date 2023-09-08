@@ -1,26 +1,11 @@
-Parser [Tools.Payment]: alloc=1227216 time=0.325
-Renamer/typechecker [Tools.Payment]: alloc=777306440 time=133.107
-Desugar [Tools.Payment]: alloc=972434120 time=153.951
-Simplifier [Tools.Payment]: alloc=8379448 time=3.684
-Specialise [Tools.Payment]: alloc=888216 time=0.279
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Payment]: alloc=3423552 time=0.927
-Simplifier [Tools.Payment]: alloc=21298336 time=6.663
-Float inwards [Tools.Payment]: alloc=17240 time=0.004
-Called arity analysis [Tools.Payment]: alloc=18816 time=0.005
-Simplifier [Tools.Payment]: alloc=10862584 time=2.723
-Demand analysis [Tools.Payment]: alloc=12415776 time=2.585
-Worker Wrapper binds [Tools.Payment]: alloc=435088 time=0.156
-Simplifier [Tools.Payment]: alloc=8845864 time=2.743
-Exitification transformation [Tools.Payment]: alloc=19744 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Payment]: alloc=8252712 time=2.300
-Common sub-expression [Tools.Payment]: alloc=18344 time=0.004
-Float inwards [Tools.Payment]: alloc=17240 time=0.003
-Simplifier [Tools.Payment]: alloc=11975456 time=3.440
-Demand analysis [Tools.Payment]: alloc=11701776 time=2.405
-CoreTidy [Tools.Payment]: alloc=1985992 time=0.997
-CorePrep [Tools.Payment]: alloc=18200 time=0.008
-CodeGen [Tools.Payment]: alloc=59759856 time=17.996
-systool:as: alloc=102376 time=0.191
-CorePrep [Tools.Payment]: alloc=18200 time=0.015
-CodeGen [Tools.Payment]: alloc=62676512 time=18.739
-systool:as: alloc=105248 time=0.186
+Parser [Tools.Payment]: alloc=1227216 time=0.272
+Renamer/typechecker [Tools.Payment]: alloc=693385160 time=127.116
+Desugar [Tools.Payment]: alloc=954858968 time=165.544
+Simplifier [Tools.Payment]: alloc=5894720 time=1.716
+CoreTidy [Tools.Payment]: alloc=628952 time=0.224
+CorePrep [Tools.Payment]: alloc=18200 time=0.011
+CodeGen [Tools.Payment]: alloc=27970560 time=9.234
+systool:as: alloc=102384 time=0.197
+CorePrep [Tools.Payment]: alloc=18200 time=0.014
+CodeGen [Tools.Payment]: alloc=31144368 time=8.918
+systool:as: alloc=105256 time=0.188

@@ -1,32 +1,17 @@
-Parser [Storage.Beam.CallStatus]: alloc=1475856 time=0.437
-Simplify [expr]: alloc=183976 time=0.080
-CorePrep [expr]: alloc=73944 time=0.067
-ByteCodeGen [Ghci1]: alloc=379864 time=0.101
-Simplify [expr]: alloc=47024 time=0.018
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.068
-Renamer/typechecker [Storage.Beam.CallStatus]: alloc=175144912 time=53.635
-Desugar [Storage.Beam.CallStatus]: alloc=23743528 time=6.792
-Simplifier [Storage.Beam.CallStatus]: alloc=120092216 time=38.549
-Specialise [Storage.Beam.CallStatus]: alloc=39739008 time=20.380
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.CallStatus]: alloc=79803008 time=27.550
-Simplifier [Storage.Beam.CallStatus]: alloc=919260680 time=370.763
-Float inwards [Storage.Beam.CallStatus]: alloc=20216 time=0.005
-Called arity analysis [Storage.Beam.CallStatus]: alloc=21792 time=0.006
-Simplifier [Storage.Beam.CallStatus]: alloc=264471568 time=101.785
-Demand analysis [Storage.Beam.CallStatus]: alloc=239511648 time=73.970
-Worker Wrapper binds [Storage.Beam.CallStatus]: alloc=5952168 time=2.137
-Simplifier [Storage.Beam.CallStatus]: alloc=303422808 time=130.076
-Exitification transformation [Storage.Beam.CallStatus]: alloc=22720 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.CallStatus]: alloc=201613176 time=98.210
-Common sub-expression [Storage.Beam.CallStatus]: alloc=21320 time=0.033
-Float inwards [Storage.Beam.CallStatus]: alloc=20216 time=0.004
-Simplifier [Storage.Beam.CallStatus]: alloc=316408280 time=157.722
-Demand analysis [Storage.Beam.CallStatus]: alloc=219705160 time=59.492
-CoreTidy [Storage.Beam.CallStatus]: alloc=60043120 time=33.703
-CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.017
-CodeGen [Storage.Beam.CallStatus]: alloc=1128688080 time=378.053
-systool:as: alloc=103024 time=0.265
-CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.018
-CodeGen [Storage.Beam.CallStatus]: alloc=1163841800 time=365.717
-systool:as: alloc=105896 time=0.262
+Parser [Storage.Beam.CallStatus]: alloc=1474768 time=0.409
+Simplify [expr]: alloc=109424 time=0.031
+CorePrep [expr]: alloc=51184 time=0.024
+ByteCodeGen [Ghci1]: alloc=276472 time=0.079
+Simplify [expr]: alloc=46992 time=0.023
+CorePrep [expr]: alloc=26608 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.055
+Renamer/typechecker [Storage.Beam.CallStatus]: alloc=172803424 time=57.869
+Desugar [Storage.Beam.CallStatus]: alloc=23724800 time=6.810
+Simplifier [Storage.Beam.CallStatus]: alloc=35959840 time=10.679
+CoreTidy [Storage.Beam.CallStatus]: alloc=8351104 time=2.821
+CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.009
+CodeGen [Storage.Beam.CallStatus]: alloc=257850904 time=81.178
+systool:as: alloc=103024 time=0.273
+CorePrep [Storage.Beam.CallStatus]: alloc=21176 time=0.019
+CodeGen [Storage.Beam.CallStatus]: alloc=282002192 time=83.513
+systool:as: alloc=105896 time=0.245

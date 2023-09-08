@@ -1,26 +1,11 @@
-Parser [Storage.Queries.MediaFile]: alloc=1303392 time=0.331
-Renamer/typechecker [Storage.Queries.MediaFile]: alloc=122169160 time=38.277
-Desugar [Storage.Queries.MediaFile]: alloc=5334472 time=2.076
-Simplifier [Storage.Queries.MediaFile]: alloc=32982160 time=11.477
-Specialise [Storage.Queries.MediaFile]: alloc=7567760 time=2.539
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.MediaFile]: alloc=10361224 time=3.971
-Simplifier [Storage.Queries.MediaFile]: alloc=147260528 time=49.923
-Float inwards [Storage.Queries.MediaFile]: alloc=20808 time=0.005
-Called arity analysis [Storage.Queries.MediaFile]: alloc=22384 time=0.006
-Simplifier [Storage.Queries.MediaFile]: alloc=30727952 time=10.334
-Demand analysis [Storage.Queries.MediaFile]: alloc=8346320 time=3.119
-Worker Wrapper binds [Storage.Queries.MediaFile]: alloc=513952 time=0.311
-Simplifier [Storage.Queries.MediaFile]: alloc=28869104 time=9.697
-Exitification transformation [Storage.Queries.MediaFile]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.MediaFile]: alloc=8081520 time=3.178
-Common sub-expression [Storage.Queries.MediaFile]: alloc=21912 time=0.006
-Float inwards [Storage.Queries.MediaFile]: alloc=20808 time=0.004
-Simplifier [Storage.Queries.MediaFile]: alloc=34582904 time=11.959
-Demand analysis [Storage.Queries.MediaFile]: alloc=7501848 time=3.092
-CoreTidy [Storage.Queries.MediaFile]: alloc=6502096 time=3.008
-CorePrep [Storage.Queries.MediaFile]: alloc=21784 time=0.016
-CodeGen [Storage.Queries.MediaFile]: alloc=61930928 time=22.292
-systool:as: alloc=103160 time=0.191
-CorePrep [Storage.Queries.MediaFile]: alloc=21784 time=0.016
-CodeGen [Storage.Queries.MediaFile]: alloc=66607232 time=23.271
-systool:as: alloc=106040 time=0.209
+Parser [Storage.Queries.MediaFile]: alloc=1302856 time=0.311
+Renamer/typechecker [Storage.Queries.MediaFile]: alloc=120619464 time=34.075
+Desugar [Storage.Queries.MediaFile]: alloc=5308712 time=1.827
+Simplifier [Storage.Queries.MediaFile]: alloc=20328336 time=5.040
+CoreTidy [Storage.Queries.MediaFile]: alloc=3434096 time=0.878
+CorePrep [Storage.Queries.MediaFile]: alloc=21784 time=0.006
+CodeGen [Storage.Queries.MediaFile]: alloc=80190976 time=20.489
+systool:as: alloc=103168 time=0.173
+CorePrep [Storage.Queries.MediaFile]: alloc=21784 time=0.018
+CodeGen [Storage.Queries.MediaFile]: alloc=92161832 time=22.888
+systool:as: alloc=106048 time=0.172

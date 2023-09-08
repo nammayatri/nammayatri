@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.KioskLocation]: alloc=1142072 time=0.408
-Renamer/typechecker [Domain.Action.UI.KioskLocation]: alloc=375464008 time=75.613
-Desugar [Domain.Action.UI.KioskLocation]: alloc=148508672 time=24.695
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=12880680 time=3.336
-Specialise [Domain.Action.UI.KioskLocation]: alloc=2622352 time=0.511
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.KioskLocation]: alloc=9087480 time=2.149
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=30056176 time=6.250
-Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.005
-Called arity analysis [Domain.Action.UI.KioskLocation]: alloc=23872 time=0.005
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=10484896 time=2.079
-Demand analysis [Domain.Action.UI.KioskLocation]: alloc=16344352 time=2.421
-Worker Wrapper binds [Domain.Action.UI.KioskLocation]: alloc=163152 time=0.080
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=13967864 time=2.334
-Exitification transformation [Domain.Action.UI.KioskLocation]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.KioskLocation]: alloc=7047624 time=1.624
-Common sub-expression [Domain.Action.UI.KioskLocation]: alloc=23400 time=0.004
-Float inwards [Domain.Action.UI.KioskLocation]: alloc=22296 time=0.004
-Simplifier [Domain.Action.UI.KioskLocation]: alloc=18254624 time=3.255
-Demand analysis [Domain.Action.UI.KioskLocation]: alloc=15915800 time=2.259
-CoreTidy [Domain.Action.UI.KioskLocation]: alloc=4855264 time=1.055
-CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.008
-CodeGen [Domain.Action.UI.KioskLocation]: alloc=82107280 time=19.101
-systool:as: alloc=103480 time=0.196
-CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.017
-CodeGen [Domain.Action.UI.KioskLocation]: alloc=83928744 time=20.038
-systool:as: alloc=106352 time=0.179
+Parser [Domain.Action.UI.KioskLocation]: alloc=1142072 time=0.304
+Renamer/typechecker [Domain.Action.UI.KioskLocation]: alloc=324066048 time=59.956
+Desugar [Domain.Action.UI.KioskLocation]: alloc=145790040 time=23.538
+Simplifier [Domain.Action.UI.KioskLocation]: alloc=3200440 time=0.826
+CoreTidy [Domain.Action.UI.KioskLocation]: alloc=472024 time=0.186
+CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.014
+CodeGen [Domain.Action.UI.KioskLocation]: alloc=22794816 time=6.707
+systool:as: alloc=103488 time=0.191
+CorePrep [Domain.Action.UI.KioskLocation]: alloc=23272 time=0.015
+CodeGen [Domain.Action.UI.KioskLocation]: alloc=25177496 time=7.258
+systool:as: alloc=106360 time=0.149

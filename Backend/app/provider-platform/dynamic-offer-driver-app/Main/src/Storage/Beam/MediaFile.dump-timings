@@ -1,32 +1,17 @@
-Parser [Storage.Beam.MediaFile]: alloc=1204672 time=0.369
-Simplify [expr]: alloc=97256 time=0.051
-CorePrep [expr]: alloc=43488 time=0.055
-ByteCodeGen [Ghci1]: alloc=217496 time=0.076
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.MediaFile]: alloc=110609160 time=39.717
-Desugar [Storage.Beam.MediaFile]: alloc=19389968 time=6.183
-Simplifier [Storage.Beam.MediaFile]: alloc=61041952 time=20.880
-Specialise [Storage.Beam.MediaFile]: alloc=19527312 time=6.594
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.MediaFile]: alloc=52803744 time=19.575
-Simplifier [Storage.Beam.MediaFile]: alloc=473397672 time=202.865
-Float inwards [Storage.Beam.MediaFile]: alloc=19912 time=0.005
-Called arity analysis [Storage.Beam.MediaFile]: alloc=21488 time=0.006
-Simplifier [Storage.Beam.MediaFile]: alloc=132292840 time=46.016
-Demand analysis [Storage.Beam.MediaFile]: alloc=129609104 time=33.215
-Worker Wrapper binds [Storage.Beam.MediaFile]: alloc=3566944 time=2.224
-Simplifier [Storage.Beam.MediaFile]: alloc=160749256 time=76.566
-Exitification transformation [Storage.Beam.MediaFile]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.MediaFile]: alloc=111539984 time=38.180
-Common sub-expression [Storage.Beam.MediaFile]: alloc=21016 time=0.007
-Float inwards [Storage.Beam.MediaFile]: alloc=19912 time=0.004
-Simplifier [Storage.Beam.MediaFile]: alloc=163881808 time=85.015
-Demand analysis [Storage.Beam.MediaFile]: alloc=119184792 time=29.968
-CoreTidy [Storage.Beam.MediaFile]: alloc=27413232 time=13.999
-CorePrep [Storage.Beam.MediaFile]: alloc=20888 time=0.015
-CodeGen [Storage.Beam.MediaFile]: alloc=635737560 time=220.629
-systool:as: alloc=102968 time=0.221
-CorePrep [Storage.Beam.MediaFile]: alloc=20888 time=0.017
-CodeGen [Storage.Beam.MediaFile]: alloc=655722480 time=202.609
-systool:as: alloc=105840 time=0.273
+Parser [Storage.Beam.MediaFile]: alloc=1203048 time=0.393
+Simplify [expr]: alloc=72480 time=0.024
+CorePrep [expr]: alloc=36304 time=0.019
+ByteCodeGen [Ghci1]: alloc=183200 time=0.066
+Simplify [expr]: alloc=46992 time=0.016
+CorePrep [expr]: alloc=26608 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.MediaFile]: alloc=108734168 time=35.303
+Desugar [Storage.Beam.MediaFile]: alloc=19383656 time=5.674
+Simplifier [Storage.Beam.MediaFile]: alloc=21463296 time=6.359
+CoreTidy [Storage.Beam.MediaFile]: alloc=4222248 time=1.249
+CorePrep [Storage.Beam.MediaFile]: alloc=20888 time=0.008
+CodeGen [Storage.Beam.MediaFile]: alloc=151107800 time=44.000
+systool:as: alloc=102968 time=0.166
+CorePrep [Storage.Beam.MediaFile]: alloc=20888 time=0.013
+CodeGen [Storage.Beam.MediaFile]: alloc=165267432 time=48.107
+systool:as: alloc=105864 time=0.191

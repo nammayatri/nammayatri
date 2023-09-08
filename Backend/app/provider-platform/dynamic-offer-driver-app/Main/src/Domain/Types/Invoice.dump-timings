@@ -1,29 +1,14 @@
-Parser [Domain.Types.Invoice]: alloc=978672 time=0.334
-Simplify [expr]: alloc=34464 time=0.030
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.073
-Renamer/typechecker [Domain.Types.Invoice]: alloc=108716112 time=35.592
-Desugar [Domain.Types.Invoice]: alloc=45269872 time=11.074
-Simplifier [Domain.Types.Invoice]: alloc=84965816 time=29.262
-Specialise [Domain.Types.Invoice]: alloc=21825000 time=7.230
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Invoice]: alloc=40456152 time=15.080
-Simplifier [Domain.Types.Invoice]: alloc=498136984 time=200.138
-Float inwards [Domain.Types.Invoice]: alloc=19320 time=0.004
-Called arity analysis [Domain.Types.Invoice]: alloc=20896 time=0.006
-Simplifier [Domain.Types.Invoice]: alloc=132396848 time=44.177
-Demand analysis [Domain.Types.Invoice]: alloc=69094656 time=18.292
-Worker Wrapper binds [Domain.Types.Invoice]: alloc=2653768 time=1.513
-Simplifier [Domain.Types.Invoice]: alloc=138046024 time=63.671
-Exitification transformation [Domain.Types.Invoice]: alloc=21840 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Invoice]: alloc=75366232 time=26.084
-Common sub-expression [Domain.Types.Invoice]: alloc=20424 time=0.006
-Float inwards [Domain.Types.Invoice]: alloc=19320 time=0.004
-Simplifier [Domain.Types.Invoice]: alloc=153906112 time=76.133
-Demand analysis [Domain.Types.Invoice]: alloc=61020800 time=16.201
-CoreTidy [Domain.Types.Invoice]: alloc=24405096 time=10.009
+Parser [Domain.Types.Invoice]: alloc=974872 time=0.261
+Simplify [expr]: alloc=34912 time=0.017
+CorePrep [expr]: alloc=22880 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.047
+Renamer/typechecker [Domain.Types.Invoice]: alloc=108558656 time=39.579
+Desugar [Domain.Types.Invoice]: alloc=45274032 time=12.605
+Simplifier [Domain.Types.Invoice]: alloc=64469280 time=19.095
+CoreTidy [Domain.Types.Invoice]: alloc=8508768 time=2.617
+CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.009
+CodeGen [Domain.Types.Invoice]: alloc=273733456 time=88.945
+systool:as: alloc=102848 time=0.178
 CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.014
-CodeGen [Domain.Types.Invoice]: alloc=365625304 time=113.440
-systool:as: alloc=102872 time=0.247
-CorePrep [Domain.Types.Invoice]: alloc=20296 time=0.019
-CodeGen [Domain.Types.Invoice]: alloc=382678880 time=131.258
-systool:as: alloc=105720 time=0.237
+CodeGen [Domain.Types.Invoice]: alloc=294778592 time=93.698
+systool:as: alloc=105720 time=0.173

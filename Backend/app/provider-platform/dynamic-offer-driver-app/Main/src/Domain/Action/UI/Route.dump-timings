@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Route]: alloc=844464 time=0.291
-Renamer/typechecker [Domain.Action.UI.Route]: alloc=337348672 time=67.189
-Desugar [Domain.Action.UI.Route]: alloc=540846600 time=96.536
-Simplifier [Domain.Action.UI.Route]: alloc=1553648 time=0.661
-Specialise [Domain.Action.UI.Route]: alloc=277808 time=0.174
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Route]: alloc=875328 time=0.291
-Simplifier [Domain.Action.UI.Route]: alloc=1314136 time=0.459
-Float inwards [Domain.Action.UI.Route]: alloc=19912 time=0.004
-Called arity analysis [Domain.Action.UI.Route]: alloc=21488 time=0.005
-Simplifier [Domain.Action.UI.Route]: alloc=1007184 time=0.317
-Demand analysis [Domain.Action.UI.Route]: alloc=1549656 time=0.458
-Worker Wrapper binds [Domain.Action.UI.Route]: alloc=131960 time=0.063
-Simplifier [Domain.Action.UI.Route]: alloc=1267176 time=0.515
-Exitification transformation [Domain.Action.UI.Route]: alloc=22432 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Route]: alloc=828680 time=0.317
-Common sub-expression [Domain.Action.UI.Route]: alloc=21016 time=0.005
-Float inwards [Domain.Action.UI.Route]: alloc=19912 time=0.005
-Simplifier [Domain.Action.UI.Route]: alloc=1606712 time=0.589
-Demand analysis [Domain.Action.UI.Route]: alloc=2475048 time=0.570
-CoreTidy [Domain.Action.UI.Route]: alloc=411352 time=0.251
-CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.007
-CodeGen [Domain.Action.UI.Route]: alloc=9650400 time=3.761
-systool:as: alloc=102992 time=0.184
-CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.009
-CodeGen [Domain.Action.UI.Route]: alloc=10286080 time=3.567
-systool:as: alloc=105864 time=0.128
+Parser [Domain.Action.UI.Route]: alloc=844464 time=0.228
+Renamer/typechecker [Domain.Action.UI.Route]: alloc=310609656 time=53.808
+Desugar [Domain.Action.UI.Route]: alloc=531173608 time=88.209
+Simplifier [Domain.Action.UI.Route]: alloc=2568512 time=0.862
+CoreTidy [Domain.Action.UI.Route]: alloc=250352 time=0.104
+CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.008
+CodeGen [Domain.Action.UI.Route]: alloc=7747392 time=2.611
+systool:as: alloc=103000 time=0.169
+CorePrep [Domain.Action.UI.Route]: alloc=20888 time=0.011
+CodeGen [Domain.Action.UI.Route]: alloc=8425576 time=2.771
+systool:as: alloc=105872 time=0.106

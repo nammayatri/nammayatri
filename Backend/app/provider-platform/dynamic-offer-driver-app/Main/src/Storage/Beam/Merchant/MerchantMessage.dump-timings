@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Merchant.MerchantMessage]: alloc=1357256 time=0.342
-Simplify [expr]: alloc=124064 time=0.067
-CorePrep [expr]: alloc=53504 time=0.033
-ByteCodeGen [Ghci1]: alloc=318080 time=0.098
-Simplify [expr]: alloc=47024 time=0.020
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.052
-Renamer/typechecker [Storage.Beam.Merchant.MerchantMessage]: alloc=125784848 time=42.149
-Desugar [Storage.Beam.Merchant.MerchantMessage]: alloc=20491664 time=6.269
-Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=74075784 time=24.295
-Specialise [Storage.Beam.Merchant.MerchantMessage]: alloc=23715432 time=7.873
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.MerchantMessage]: alloc=59079704 time=21.787
-Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=577916640 time=218.700
-Float inwards [Storage.Beam.Merchant.MerchantMessage]: alloc=24392 time=0.005
-Called arity analysis [Storage.Beam.Merchant.MerchantMessage]: alloc=25968 time=0.006
-Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=162037800 time=71.937
-Demand analysis [Storage.Beam.Merchant.MerchantMessage]: alloc=158178000 time=39.722
-Worker Wrapper binds [Storage.Beam.Merchant.MerchantMessage]: alloc=4166680 time=2.477
-Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=194235664 time=78.463
-Exitification transformation [Storage.Beam.Merchant.MerchantMessage]: alloc=26896 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.MerchantMessage]: alloc=134284384 time=45.565
-Common sub-expression [Storage.Beam.Merchant.MerchantMessage]: alloc=25496 time=0.008
-Float inwards [Storage.Beam.Merchant.MerchantMessage]: alloc=24392 time=0.004
-Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=198103624 time=62.824
-Demand analysis [Storage.Beam.Merchant.MerchantMessage]: alloc=144926096 time=35.648
-CoreTidy [Storage.Beam.Merchant.MerchantMessage]: alloc=34900840 time=16.836
-CorePrep [Storage.Beam.Merchant.MerchantMessage]: alloc=25352 time=0.015
-CodeGen [Storage.Beam.Merchant.MerchantMessage]: alloc=767458392 time=244.869
-systool:as: alloc=103920 time=0.278
-CorePrep [Storage.Beam.Merchant.MerchantMessage]: alloc=25352 time=0.022
-CodeGen [Storage.Beam.Merchant.MerchantMessage]: alloc=791397968 time=244.266
-systool:as: alloc=106792 time=0.261
+Parser [Storage.Beam.Merchant.MerchantMessage]: alloc=1356160 time=0.362
+Simplify [expr]: alloc=99168 time=0.030
+CorePrep [expr]: alloc=47512 time=0.021
+ByteCodeGen [Ghci1]: alloc=264376 time=0.077
+Simplify [expr]: alloc=46992 time=0.017
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.Merchant.MerchantMessage]: alloc=123843696 time=38.535
+Desugar [Storage.Beam.Merchant.MerchantMessage]: alloc=20447632 time=5.975
+Simplifier [Storage.Beam.Merchant.MerchantMessage]: alloc=24676392 time=7.698
+CoreTidy [Storage.Beam.Merchant.MerchantMessage]: alloc=5157776 time=1.762
+CorePrep [Storage.Beam.Merchant.MerchantMessage]: alloc=25352 time=0.009
+CodeGen [Storage.Beam.Merchant.MerchantMessage]: alloc=176358304 time=51.786
+systool:as: alloc=103920 time=0.167
+CorePrep [Storage.Beam.Merchant.MerchantMessage]: alloc=25352 time=0.016
+CodeGen [Storage.Beam.Merchant.MerchantMessage]: alloc=192896352 time=56.259
+systool:as: alloc=106792 time=0.182

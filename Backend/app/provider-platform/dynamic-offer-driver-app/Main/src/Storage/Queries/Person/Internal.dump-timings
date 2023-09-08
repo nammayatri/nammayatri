@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Person.Internal]: alloc=713360 time=0.267
-Renamer/typechecker [Storage.Queries.Person.Internal]: alloc=97893784 time=28.268
-Desugar [Storage.Queries.Person.Internal]: alloc=910432 time=1.065
-Simplifier [Storage.Queries.Person.Internal]: alloc=115888224 time=31.208
-Specialise [Storage.Queries.Person.Internal]: alloc=56003016 time=11.368
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.Internal]: alloc=23190824 time=8.028
-Simplifier [Storage.Queries.Person.Internal]: alloc=354165880 time=113.659
-Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.005
-Called arity analysis [Storage.Queries.Person.Internal]: alloc=24176 time=0.006
-Simplifier [Storage.Queries.Person.Internal]: alloc=63474504 time=16.369
-Demand analysis [Storage.Queries.Person.Internal]: alloc=18582912 time=5.107
-Worker Wrapper binds [Storage.Queries.Person.Internal]: alloc=728224 time=0.545
-Simplifier [Storage.Queries.Person.Internal]: alloc=53050840 time=16.289
-Exitification transformation [Storage.Queries.Person.Internal]: alloc=25104 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.Internal]: alloc=16014552 time=5.228
-Common sub-expression [Storage.Queries.Person.Internal]: alloc=23704 time=0.006
-Float inwards [Storage.Queries.Person.Internal]: alloc=22600 time=0.005
-Simplifier [Storage.Queries.Person.Internal]: alloc=80501320 time=26.944
-Demand analysis [Storage.Queries.Person.Internal]: alloc=20757040 time=6.643
-CoreTidy [Storage.Queries.Person.Internal]: alloc=21642848 time=7.360
-CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.015
-CodeGen [Storage.Queries.Person.Internal]: alloc=171172176 time=58.974
-systool:as: alloc=103568 time=0.218
-CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.014
-CodeGen [Storage.Queries.Person.Internal]: alloc=181680296 time=61.240
-systool:as: alloc=106440 time=0.236
+Parser [Storage.Queries.Person.Internal]: alloc=712808 time=0.207
+Renamer/typechecker [Storage.Queries.Person.Internal]: alloc=97465304 time=26.822
+Desugar [Storage.Queries.Person.Internal]: alloc=905384 time=1.092
+Simplifier [Storage.Queries.Person.Internal]: alloc=22607032 time=5.202
+CoreTidy [Storage.Queries.Person.Internal]: alloc=9428792 time=2.248
+CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.009
+CodeGen [Storage.Queries.Person.Internal]: alloc=111260112 time=27.216
+systool:as: alloc=103576 time=0.174
+CorePrep [Storage.Queries.Person.Internal]: alloc=23560 time=0.020
+CodeGen [Storage.Queries.Person.Internal]: alloc=127195552 time=29.698
+systool:as: alloc=106448 time=0.183

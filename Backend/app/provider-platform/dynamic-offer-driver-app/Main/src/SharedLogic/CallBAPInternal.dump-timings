@@ -1,26 +1,11 @@
-Parser [SharedLogic.CallBAPInternal]: alloc=1284624 time=0.274
-Renamer/typechecker [SharedLogic.CallBAPInternal]: alloc=82769456 time=29.902
-Desugar [SharedLogic.CallBAPInternal]: alloc=3349696 time=1.812
-Simplifier [SharedLogic.CallBAPInternal]: alloc=34813904 time=12.676
-Specialise [SharedLogic.CallBAPInternal]: alloc=11823112 time=3.864
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.CallBAPInternal]: alloc=17272240 time=6.615
-Simplifier [SharedLogic.CallBAPInternal]: alloc=225065936 time=97.810
-Float inwards [SharedLogic.CallBAPInternal]: alloc=21416 time=0.005
-Called arity analysis [SharedLogic.CallBAPInternal]: alloc=22992 time=0.006
-Simplifier [SharedLogic.CallBAPInternal]: alloc=59223984 time=21.824
-Demand analysis [SharedLogic.CallBAPInternal]: alloc=33364736 time=10.316
-Worker Wrapper binds [SharedLogic.CallBAPInternal]: alloc=944672 time=0.807
-Simplifier [SharedLogic.CallBAPInternal]: alloc=60246296 time=22.609
-Exitification transformation [SharedLogic.CallBAPInternal]: alloc=23904 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.CallBAPInternal]: alloc=32329296 time=13.268
-Common sub-expression [SharedLogic.CallBAPInternal]: alloc=22520 time=0.006
-Float inwards [SharedLogic.CallBAPInternal]: alloc=21416 time=0.006
-Simplifier [SharedLogic.CallBAPInternal]: alloc=67967616 time=43.751
-Demand analysis [SharedLogic.CallBAPInternal]: alloc=28924128 time=8.402
-CoreTidy [SharedLogic.CallBAPInternal]: alloc=11489496 time=5.225
-CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.010
-CodeGen [SharedLogic.CallBAPInternal]: alloc=144180720 time=58.315
-systool:as: alloc=103256 time=0.202
-CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.013
-CodeGen [SharedLogic.CallBAPInternal]: alloc=149700776 time=51.162
-systool:as: alloc=106136 time=0.191
+Parser [SharedLogic.CallBAPInternal]: alloc=1281360 time=0.313
+Renamer/typechecker [SharedLogic.CallBAPInternal]: alloc=81064760 time=28.708
+Desugar [SharedLogic.CallBAPInternal]: alloc=3355528 time=1.773
+Simplifier [SharedLogic.CallBAPInternal]: alloc=15730504 time=4.318
+CoreTidy [SharedLogic.CallBAPInternal]: alloc=3341032 time=1.011
+CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.009
+CodeGen [SharedLogic.CallBAPInternal]: alloc=101666744 time=30.955
+systool:as: alloc=103264 time=0.165
+CorePrep [SharedLogic.CallBAPInternal]: alloc=22376 time=0.016
+CodeGen [SharedLogic.CallBAPInternal]: alloc=108716128 time=32.878
+systool:as: alloc=106168 time=0.150

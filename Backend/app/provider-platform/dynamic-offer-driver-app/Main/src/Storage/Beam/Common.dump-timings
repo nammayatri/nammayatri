@@ -1,26 +1,11 @@
-Parser [Storage.Beam.Common]: alloc=2451792 time=0.577
-Renamer/typechecker [Storage.Beam.Common]: alloc=325468320 time=92.438
-Desugar [Storage.Beam.Common]: alloc=13511496 time=4.527
-Simplifier [Storage.Beam.Common]: alloc=289647032 time=93.060
-Specialise [Storage.Beam.Common]: alloc=591930888 time=99.850
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Common]: alloc=162760288 time=58.462
-Simplifier [Storage.Beam.Common]: alloc=2472270672 time=733.373
-Float inwards [Storage.Beam.Common]: alloc=19032 time=0.004
-Called arity analysis [Storage.Beam.Common]: alloc=20608 time=0.005
-Simplifier [Storage.Beam.Common]: alloc=1067260520 time=319.032
-Demand analysis [Storage.Beam.Common]: alloc=79130520 time=48.310
-Worker Wrapper binds [Storage.Beam.Common]: alloc=3862744 time=4.247
-Simplifier [Storage.Beam.Common]: alloc=850641576 time=244.417
-Exitification transformation [Storage.Beam.Common]: alloc=21520 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Common]: alloc=70087688 time=23.033
-Common sub-expression [Storage.Beam.Common]: alloc=20136 time=0.006
-Float inwards [Storage.Beam.Common]: alloc=19032 time=0.004
-Simplifier [Storage.Beam.Common]: alloc=887639896 time=274.426
-Demand analysis [Storage.Beam.Common]: alloc=71794048 time=78.098
-CoreTidy [Storage.Beam.Common]: alloc=566375560 time=206.200
-CorePrep [Storage.Beam.Common]: alloc=19992 time=0.016
-CodeGen [Storage.Beam.Common]: alloc=956173520 time=742.534
-systool:as: alloc=102776 time=0.270
-CorePrep [Storage.Beam.Common]: alloc=19992 time=0.018
-CodeGen [Storage.Beam.Common]: alloc=999278352 time=350.885
-systool:as: alloc=105656 time=0.286
+Parser [Storage.Beam.Common]: alloc=2450168 time=0.451
+Renamer/typechecker [Storage.Beam.Common]: alloc=324524584 time=94.766
+Desugar [Storage.Beam.Common]: alloc=13199648 time=4.142
+Simplifier [Storage.Beam.Common]: alloc=134304488 time=49.950
+CoreTidy [Storage.Beam.Common]: alloc=44471632 time=14.362
+CorePrep [Storage.Beam.Common]: alloc=19992 time=0.012
+CodeGen [Storage.Beam.Common]: alloc=843358344 time=265.410
+systool:as: alloc=102784 time=0.217
+CorePrep [Storage.Beam.Common]: alloc=19992 time=0.015
+CodeGen [Storage.Beam.Common]: alloc=907384112 time=268.025
+systool:as: alloc=105664 time=0.207

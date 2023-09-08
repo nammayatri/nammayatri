@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Geometry]: alloc=1402816 time=0.409
-Renamer/typechecker [Storage.Queries.Geometry]: alloc=19260432 time=8.423
-Desugar [Storage.Queries.Geometry]: alloc=3630192 time=1.555
-Simplifier [Storage.Queries.Geometry]: alloc=7262792 time=2.602
-Specialise [Storage.Queries.Geometry]: alloc=2468472 time=0.743
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Geometry]: alloc=4048392 time=1.350
-Simplifier [Storage.Queries.Geometry]: alloc=54566648 time=17.232
-Float inwards [Storage.Queries.Geometry]: alloc=20504 time=0.005
-Called arity analysis [Storage.Queries.Geometry]: alloc=22080 time=0.005
-Simplifier [Storage.Queries.Geometry]: alloc=11219832 time=3.633
-Demand analysis [Storage.Queries.Geometry]: alloc=4230984 time=1.335
-Worker Wrapper binds [Storage.Queries.Geometry]: alloc=348208 time=0.186
-Simplifier [Storage.Queries.Geometry]: alloc=11688576 time=3.607
-Exitification transformation [Storage.Queries.Geometry]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Geometry]: alloc=4902184 time=1.698
-Common sub-expression [Storage.Queries.Geometry]: alloc=21608 time=0.005
-Float inwards [Storage.Queries.Geometry]: alloc=20504 time=0.003
-Simplifier [Storage.Queries.Geometry]: alloc=14177112 time=4.668
-Demand analysis [Storage.Queries.Geometry]: alloc=4956008 time=1.524
-CoreTidy [Storage.Queries.Geometry]: alloc=2966336 time=1.185
-CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.009
-CodeGen [Storage.Queries.Geometry]: alloc=47528360 time=15.005
-systool:as: alloc=103104 time=0.219
-CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.017
-CodeGen [Storage.Queries.Geometry]: alloc=50551416 time=16.151
-systool:as: alloc=105984 time=0.209
+Parser [Storage.Queries.Geometry]: alloc=1402264 time=0.377
+Renamer/typechecker [Storage.Queries.Geometry]: alloc=16601808 time=6.880
+Desugar [Storage.Queries.Geometry]: alloc=3617136 time=1.536
+Simplifier [Storage.Queries.Geometry]: alloc=3960584 time=1.219
+CoreTidy [Storage.Queries.Geometry]: alloc=342928 time=0.138
+CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.007
+CodeGen [Storage.Queries.Geometry]: alloc=24164768 time=6.544
+systool:as: alloc=103112 time=0.159
+CorePrep [Storage.Queries.Geometry]: alloc=21496 time=0.012
+CodeGen [Storage.Queries.Geometry]: alloc=26973648 time=6.924
+systool:as: alloc=105992 time=0.129

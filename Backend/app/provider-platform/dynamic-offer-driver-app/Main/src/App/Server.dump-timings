@@ -1,26 +1,11 @@
-Parser [App.Server]: alloc=745104 time=0.268
-Renamer/typechecker [App.Server]: alloc=786055160 time=243.757
-Desugar [App.Server]: alloc=2949648 time=1.571
-Simplifier [App.Server]: alloc=484095464 time=176.221
-Specialise [App.Server]: alloc=3830974224 time=679.474
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [App.Server]: alloc=322906240 time=155.205
-Simplifier [App.Server]: alloc=5334638816 time=2376.458
-Float inwards [App.Server]: alloc=16328 time=0.006
-Called arity analysis [App.Server]: alloc=17904 time=0.006
-Simplifier [App.Server]: alloc=5418810976 time=1751.507
-Demand analysis [App.Server]: alloc=1434775664 time=330.293
-Worker Wrapper binds [App.Server]: alloc=34694136 time=14.406
-Simplifier [App.Server]: alloc=1600043032 time=786.675
-Exitification transformation [App.Server]: alloc=18848 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [App.Server]: alloc=676898048 time=342.971
-Common sub-expression [App.Server]: alloc=17432 time=0.006
-Float inwards [App.Server]: alloc=16328 time=0.004
-Simplifier [App.Server]: alloc=1828383000 time=1061.657
-Demand analysis [App.Server]: alloc=1338276080 time=295.812
-CoreTidy [App.Server]: alloc=428181704 time=206.464
-CorePrep [App.Server]: alloc=17320 time=0.018
-CodeGen [App.Server]: alloc=3718668560 time=1496.488
-systool:as: alloc=102184 time=0.258
-CorePrep [App.Server]: alloc=17320 time=0.016
-CodeGen [App.Server]: alloc=3901262496 time=1511.596
-systool:as: alloc=105064 time=0.398
+Parser [App.Server]: alloc=744560 time=0.241
+Renamer/typechecker [App.Server]: alloc=780399944 time=244.754
+Desugar [App.Server]: alloc=2949480 time=1.754
+Simplifier [App.Server]: alloc=347550560 time=114.961
+CoreTidy [App.Server]: alloc=80561208 time=31.900
+CorePrep [App.Server]: alloc=17320 time=0.013
+CodeGen [App.Server]: alloc=1385088880 time=453.214
+systool:as: alloc=102192 time=0.287
+CorePrep [App.Server]: alloc=17320 time=0.017
+CodeGen [App.Server]: alloc=1493421288 time=465.226
+systool:as: alloc=105072 time=0.272

@@ -1,26 +1,11 @@
-Parser [API.Beckn.Cancel]: alloc=1358752 time=0.445
-Renamer/typechecker [API.Beckn.Cancel]: alloc=199117016 time=50.349
-Desugar [API.Beckn.Cancel]: alloc=1047120 time=1.226
-Simplifier [API.Beckn.Cancel]: alloc=126220624 time=39.982
-Specialise [API.Beckn.Cancel]: alloc=9849272 time=5.779
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Cancel]: alloc=25730968 time=10.254
-Simplifier [API.Beckn.Cancel]: alloc=307457264 time=102.262
-Float inwards [API.Beckn.Cancel]: alloc=18120 time=0.005
-Called arity analysis [API.Beckn.Cancel]: alloc=19696 time=0.006
-Simplifier [API.Beckn.Cancel]: alloc=56176840 time=27.262
-Demand analysis [API.Beckn.Cancel]: alloc=69905472 time=17.388
-Worker Wrapper binds [API.Beckn.Cancel]: alloc=1029696 time=0.559
-Simplifier [API.Beckn.Cancel]: alloc=93965392 time=23.559
-Exitification transformation [API.Beckn.Cancel]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Cancel]: alloc=55343152 time=18.374
-Common sub-expression [API.Beckn.Cancel]: alloc=19224 time=0.007
-Float inwards [API.Beckn.Cancel]: alloc=18120 time=0.004
-Simplifier [API.Beckn.Cancel]: alloc=241173784 time=87.317
-Demand analysis [API.Beckn.Cancel]: alloc=83095360 time=22.781
-CoreTidy [API.Beckn.Cancel]: alloc=45403368 time=13.023
-CorePrep [API.Beckn.Cancel]: alloc=19112 time=0.015
-CodeGen [API.Beckn.Cancel]: alloc=346844184 time=90.451
-systool:as: alloc=102584 time=0.205
-CorePrep [API.Beckn.Cancel]: alloc=19112 time=0.016
-CodeGen [API.Beckn.Cancel]: alloc=356819352 time=91.041
-systool:as: alloc=105464 time=0.202
+Parser [API.Beckn.Cancel]: alloc=1358752 time=0.314
+Renamer/typechecker [API.Beckn.Cancel]: alloc=198651688 time=57.938
+Desugar [API.Beckn.Cancel]: alloc=1026624 time=1.226
+Simplifier [API.Beckn.Cancel]: alloc=41603640 time=17.533
+CoreTidy [API.Beckn.Cancel]: alloc=27732608 time=15.222
+CorePrep [API.Beckn.Cancel]: alloc=19112 time=0.013
+CodeGen [API.Beckn.Cancel]: alloc=63675976 time=21.620
+systool:as: alloc=102592 time=0.199
+CorePrep [API.Beckn.Cancel]: alloc=19112 time=0.014
+CodeGen [API.Beckn.Cancel]: alloc=68777808 time=22.115
+systool:as: alloc=105472 time=0.163

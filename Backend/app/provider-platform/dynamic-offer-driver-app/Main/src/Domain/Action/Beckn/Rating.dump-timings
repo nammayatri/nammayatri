@@ -1,26 +1,11 @@
-Parser [Domain.Action.Beckn.Rating]: alloc=2630232 time=0.689
-Renamer/typechecker [Domain.Action.Beckn.Rating]: alloc=183495648 time=56.846
-Desugar [Domain.Action.Beckn.Rating]: alloc=20290256 time=6.330
-Simplifier [Domain.Action.Beckn.Rating]: alloc=68250304 time=20.934
-Specialise [Domain.Action.Beckn.Rating]: alloc=11184672 time=3.291
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Rating]: alloc=53618584 time=17.361
-Simplifier [Domain.Action.Beckn.Rating]: alloc=286483176 time=90.107
-Float inwards [Domain.Action.Beckn.Rating]: alloc=21096 time=0.005
-Called arity analysis [Domain.Action.Beckn.Rating]: alloc=22672 time=0.006
-Simplifier [Domain.Action.Beckn.Rating]: alloc=75636328 time=23.205
-Demand analysis [Domain.Action.Beckn.Rating]: alloc=107202920 time=23.948
-Worker Wrapper binds [Domain.Action.Beckn.Rating]: alloc=2255608 time=1.246
-Simplifier [Domain.Action.Beckn.Rating]: alloc=88763832 time=26.554
-Exitification transformation [Domain.Action.Beckn.Rating]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Rating]: alloc=61771784 time=20.698
-Common sub-expression [Domain.Action.Beckn.Rating]: alloc=22200 time=0.008
-Float inwards [Domain.Action.Beckn.Rating]: alloc=21096 time=0.004
-Simplifier [Domain.Action.Beckn.Rating]: alloc=116106832 time=41.761
-Demand analysis [Domain.Action.Beckn.Rating]: alloc=79995560 time=15.760
-CoreTidy [Domain.Action.Beckn.Rating]: alloc=15906288 time=5.662
+Parser [Domain.Action.Beckn.Rating]: alloc=2628592 time=0.629
+Renamer/typechecker [Domain.Action.Beckn.Rating]: alloc=171495392 time=46.321
+Desugar [Domain.Action.Beckn.Rating]: alloc=19975456 time=5.985
+Simplifier [Domain.Action.Beckn.Rating]: alloc=18510520 time=6.645
+CoreTidy [Domain.Action.Beckn.Rating]: alloc=8064968 time=2.099
 CorePrep [Domain.Action.Beckn.Rating]: alloc=22088 time=0.011
-CodeGen [Domain.Action.Beckn.Rating]: alloc=460595688 time=120.493
-systool:as: alloc=103240 time=0.206
+CodeGen [Domain.Action.Beckn.Rating]: alloc=99667760 time=29.463
+systool:as: alloc=103272 time=0.211
 CorePrep [Domain.Action.Beckn.Rating]: alloc=22088 time=0.017
-CodeGen [Domain.Action.Beckn.Rating]: alloc=473585784 time=122.527
-systool:as: alloc=106120 time=0.205
+CodeGen [Domain.Action.Beckn.Rating]: alloc=108337608 time=30.633
+systool:as: alloc=106128 time=0.172

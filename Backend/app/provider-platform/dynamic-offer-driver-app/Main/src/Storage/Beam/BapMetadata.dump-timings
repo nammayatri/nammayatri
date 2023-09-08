@@ -1,32 +1,17 @@
-Parser [Storage.Beam.BapMetadata]: alloc=1161368 time=0.358
-Simplify [expr]: alloc=102368 time=0.053
-CorePrep [expr]: alloc=43488 time=0.027
-ByteCodeGen [Ghci1]: alloc=217456 time=0.077
-Simplify [expr]: alloc=47024 time=0.016
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.072
-Renamer/typechecker [Storage.Beam.BapMetadata]: alloc=155004344 time=59.033
-Desugar [Storage.Beam.BapMetadata]: alloc=22010064 time=6.305
-Simplifier [Storage.Beam.BapMetadata]: alloc=59426544 time=18.922
-Specialise [Storage.Beam.BapMetadata]: alloc=18509456 time=5.673
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BapMetadata]: alloc=46133240 time=15.954
-Simplifier [Storage.Beam.BapMetadata]: alloc=374669136 time=134.813
-Float inwards [Storage.Beam.BapMetadata]: alloc=20504 time=0.006
-Called arity analysis [Storage.Beam.BapMetadata]: alloc=22080 time=0.006
-Simplifier [Storage.Beam.BapMetadata]: alloc=104798352 time=38.586
-Demand analysis [Storage.Beam.BapMetadata]: alloc=105093288 time=48.139
-Worker Wrapper binds [Storage.Beam.BapMetadata]: alloc=3036360 time=1.602
-Simplifier [Storage.Beam.BapMetadata]: alloc=129280904 time=41.308
-Exitification transformation [Storage.Beam.BapMetadata]: alloc=23024 time=0.018
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BapMetadata]: alloc=91513520 time=30.830
-Common sub-expression [Storage.Beam.BapMetadata]: alloc=21608 time=0.007
-Float inwards [Storage.Beam.BapMetadata]: alloc=20504 time=0.004
-Simplifier [Storage.Beam.BapMetadata]: alloc=131728944 time=48.278
-Demand analysis [Storage.Beam.BapMetadata]: alloc=96091032 time=24.099
-CoreTidy [Storage.Beam.BapMetadata]: alloc=21778864 time=10.930
-CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.040
-CodeGen [Storage.Beam.BapMetadata]: alloc=525812160 time=179.373
-systool:as: alloc=103088 time=0.192
-CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.014
-CodeGen [Storage.Beam.BapMetadata]: alloc=542028080 time=168.970
-systool:as: alloc=105968 time=0.220
+Parser [Storage.Beam.BapMetadata]: alloc=1160280 time=0.298
+Simplify [expr]: alloc=72552 time=0.027
+CorePrep [expr]: alloc=36304 time=0.023
+ByteCodeGen [Ghci1]: alloc=183200 time=0.074
+Simplify [expr]: alloc=46992 time=0.021
+CorePrep [expr]: alloc=26608 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.056
+Renamer/typechecker [Storage.Beam.BapMetadata]: alloc=156308992 time=57.873
+Desugar [Storage.Beam.BapMetadata]: alloc=18274592 time=5.145
+Simplifier [Storage.Beam.BapMetadata]: alloc=17450360 time=5.431
+CoreTidy [Storage.Beam.BapMetadata]: alloc=3220824 time=1.122
+CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.009
+CodeGen [Storage.Beam.BapMetadata]: alloc=122559680 time=36.781
+systool:as: alloc=103112 time=0.188
+CorePrep [Storage.Beam.BapMetadata]: alloc=21496 time=0.015
+CodeGen [Storage.Beam.BapMetadata]: alloc=133355848 time=39.070
+systool:as: alloc=105968 time=0.161

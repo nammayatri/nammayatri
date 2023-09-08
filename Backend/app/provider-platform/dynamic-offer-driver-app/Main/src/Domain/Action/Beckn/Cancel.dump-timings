@@ -1,26 +1,11 @@
-Parser [Domain.Action.Beckn.Cancel]: alloc=4675400 time=0.815
-Renamer/typechecker [Domain.Action.Beckn.Cancel]: alloc=1358176360 time=253.136
-Desugar [Domain.Action.Beckn.Cancel]: alloc=763556104 time=122.868
-Simplifier [Domain.Action.Beckn.Cancel]: alloc=24723904 time=7.258
-Specialise [Domain.Action.Beckn.Cancel]: alloc=5627216 time=1.407
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Cancel]: alloc=21540160 time=6.179
-Simplifier [Domain.Action.Beckn.Cancel]: alloc=118272624 time=38.320
-Float inwards [Domain.Action.Beckn.Cancel]: alloc=21096 time=0.005
-Called arity analysis [Domain.Action.Beckn.Cancel]: alloc=22672 time=0.006
-Simplifier [Domain.Action.Beckn.Cancel]: alloc=50554976 time=15.565
-Demand analysis [Domain.Action.Beckn.Cancel]: alloc=56083928 time=13.542
-Worker Wrapper binds [Domain.Action.Beckn.Cancel]: alloc=1746640 time=1.037
-Simplifier [Domain.Action.Beckn.Cancel]: alloc=50498392 time=16.798
-Exitification transformation [Domain.Action.Beckn.Cancel]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Cancel]: alloc=50053216 time=16.174
-Common sub-expression [Domain.Action.Beckn.Cancel]: alloc=22200 time=0.007
-Float inwards [Domain.Action.Beckn.Cancel]: alloc=21096 time=0.005
-Simplifier [Domain.Action.Beckn.Cancel]: alloc=64823448 time=21.389
-Demand analysis [Domain.Action.Beckn.Cancel]: alloc=68575408 time=15.547
-CoreTidy [Domain.Action.Beckn.Cancel]: alloc=10424432 time=4.820
+Parser [Domain.Action.Beckn.Cancel]: alloc=4675400 time=0.947
+Renamer/typechecker [Domain.Action.Beckn.Cancel]: alloc=1049944440 time=206.601
+Desugar [Domain.Action.Beckn.Cancel]: alloc=749881720 time=129.577
+Simplifier [Domain.Action.Beckn.Cancel]: alloc=18247888 time=4.915
+CoreTidy [Domain.Action.Beckn.Cancel]: alloc=1994704 time=0.766
 CorePrep [Domain.Action.Beckn.Cancel]: alloc=22088 time=0.009
-CodeGen [Domain.Action.Beckn.Cancel]: alloc=344661880 time=95.387
-systool:as: alloc=103240 time=0.196
-CorePrep [Domain.Action.Beckn.Cancel]: alloc=22088 time=0.019
-CodeGen [Domain.Action.Beckn.Cancel]: alloc=358729728 time=96.187
-systool:as: alloc=106120 time=0.190
+CodeGen [Domain.Action.Beckn.Cancel]: alloc=145533248 time=39.442
+systool:as: alloc=103248 time=0.206
+CorePrep [Domain.Action.Beckn.Cancel]: alloc=22088 time=0.016
+CodeGen [Domain.Action.Beckn.Cancel]: alloc=159557088 time=40.000
+systool:as: alloc=106128 time=0.184

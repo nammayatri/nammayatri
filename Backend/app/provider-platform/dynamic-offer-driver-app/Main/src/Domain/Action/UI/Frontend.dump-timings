@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Frontend]: alloc=1360344 time=0.425
-Renamer/typechecker [Domain.Action.UI.Frontend]: alloc=258968296 time=63.188
-Desugar [Domain.Action.UI.Frontend]: alloc=369853592 time=66.316
-Simplifier [Domain.Action.UI.Frontend]: alloc=27802648 time=11.029
-Specialise [Domain.Action.UI.Frontend]: alloc=6570008 time=2.698
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Frontend]: alloc=14704664 time=5.689
-Simplifier [Domain.Action.UI.Frontend]: alloc=238195080 time=102.282
-Float inwards [Domain.Action.UI.Frontend]: alloc=20808 time=0.005
-Called arity analysis [Domain.Action.UI.Frontend]: alloc=22384 time=0.006
-Simplifier [Domain.Action.UI.Frontend]: alloc=52788936 time=22.287
-Demand analysis [Domain.Action.UI.Frontend]: alloc=28149648 time=18.076
-Worker Wrapper binds [Domain.Action.UI.Frontend]: alloc=1257336 time=0.673
-Simplifier [Domain.Action.UI.Frontend]: alloc=56092632 time=20.204
-Exitification transformation [Domain.Action.UI.Frontend]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Frontend]: alloc=31250048 time=11.370
-Common sub-expression [Domain.Action.UI.Frontend]: alloc=21912 time=0.006
-Float inwards [Domain.Action.UI.Frontend]: alloc=20808 time=0.004
-Simplifier [Domain.Action.UI.Frontend]: alloc=56474192 time=24.945
-Demand analysis [Domain.Action.UI.Frontend]: alloc=21727552 time=7.442
-CoreTidy [Domain.Action.UI.Frontend]: alloc=6723544 time=3.629
-CorePrep [Domain.Action.UI.Frontend]: alloc=21784 time=0.010
-CodeGen [Domain.Action.UI.Frontend]: alloc=88887912 time=34.442
-systool:as: alloc=103168 time=0.257
+Parser [Domain.Action.UI.Frontend]: alloc=1359264 time=0.313
+Renamer/typechecker [Domain.Action.UI.Frontend]: alloc=207308176 time=47.568
+Desugar [Domain.Action.UI.Frontend]: alloc=363165640 time=63.618
+Simplifier [Domain.Action.UI.Frontend]: alloc=10384928 time=3.067
+CoreTidy [Domain.Action.UI.Frontend]: alloc=1747568 time=0.620
+CorePrep [Domain.Action.UI.Frontend]: alloc=21784 time=0.011
+CodeGen [Domain.Action.UI.Frontend]: alloc=73098520 time=22.281
+systool:as: alloc=103176 time=0.192
 CorePrep [Domain.Action.UI.Frontend]: alloc=21784 time=0.014
-CodeGen [Domain.Action.UI.Frontend]: alloc=92936984 time=32.343
-systool:as: alloc=106048 time=0.242
+CodeGen [Domain.Action.UI.Frontend]: alloc=79083928 time=23.492
+systool:as: alloc=106080 time=0.192

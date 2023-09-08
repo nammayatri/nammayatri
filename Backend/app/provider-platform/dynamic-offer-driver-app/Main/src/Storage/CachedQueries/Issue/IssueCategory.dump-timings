@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Issue.IssueCategory]: alloc=2949648 time=0.558
-Renamer/typechecker [Storage.CachedQueries.Issue.IssueCategory]: alloc=1021815800 time=184.478
-Desugar [Storage.CachedQueries.Issue.IssueCategory]: alloc=696927712 time=110.299
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=15149360 time=3.284
-Specialise [Storage.CachedQueries.Issue.IssueCategory]: alloc=4296520 time=1.161
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=17748728 time=4.694
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=633590632 time=234.033
-Float inwards [Storage.CachedQueries.Issue.IssueCategory]: alloc=25576 time=0.005
-Called arity analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=27152 time=0.006
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=110327656 time=63.115
-Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=95807416 time=23.636
-Worker Wrapper binds [Storage.CachedQueries.Issue.IssueCategory]: alloc=4624928 time=1.918
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=134062720 time=42.903
-Exitification transformation [Storage.CachedQueries.Issue.IssueCategory]: alloc=28080 time=0.010
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Issue.IssueCategory]: alloc=91498520 time=27.064
-Common sub-expression [Storage.CachedQueries.Issue.IssueCategory]: alloc=26680 time=0.007
-Float inwards [Storage.CachedQueries.Issue.IssueCategory]: alloc=25576 time=0.005
-Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=115462632 time=39.402
-Demand analysis [Storage.CachedQueries.Issue.IssueCategory]: alloc=78354456 time=17.962
-CoreTidy [Storage.CachedQueries.Issue.IssueCategory]: alloc=13307368 time=6.474
-CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.025
-CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=379800968 time=106.813
-systool:as: alloc=104192 time=0.263
-CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.029
-CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=397551424 time=113.247
-systool:as: alloc=107096 time=0.275
+Parser [Storage.CachedQueries.Issue.IssueCategory]: alloc=2944056 time=0.513
+Renamer/typechecker [Storage.CachedQueries.Issue.IssueCategory]: alloc=685999608 time=130.668
+Desugar [Storage.CachedQueries.Issue.IssueCategory]: alloc=684342088 time=116.735
+Simplifier [Storage.CachedQueries.Issue.IssueCategory]: alloc=29412632 time=6.281
+CoreTidy [Storage.CachedQueries.Issue.IssueCategory]: alloc=2046896 time=0.585
+CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.008
+CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=88408400 time=25.435
+systool:as: alloc=104200 time=0.158
+CorePrep [Storage.CachedQueries.Issue.IssueCategory]: alloc=26552 time=0.014
+CodeGen [Storage.CachedQueries.Issue.IssueCategory]: alloc=96807592 time=26.588
+systool:as: alloc=107080 time=0.220

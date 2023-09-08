@@ -1,26 +1,11 @@
-Parser [API.UI.Performance]: alloc=505104 time=0.200
-Renamer/typechecker [API.UI.Performance]: alloc=22609912 time=10.183
-Desugar [API.UI.Performance]: alloc=338296 time=0.886
-Simplifier [API.UI.Performance]: alloc=9893032 time=2.206
-Specialise [API.UI.Performance]: alloc=2912144 time=0.598
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Performance]: alloc=9049320 time=1.901
-Simplifier [API.UI.Performance]: alloc=11491536 time=2.255
-Float inwards [API.UI.Performance]: alloc=18712 time=0.004
-Called arity analysis [API.UI.Performance]: alloc=20288 time=0.005
-Simplifier [API.UI.Performance]: alloc=2802600 time=0.664
-Demand analysis [API.UI.Performance]: alloc=5253576 time=0.778
-Worker Wrapper binds [API.UI.Performance]: alloc=37928 time=0.020
-Simplifier [API.UI.Performance]: alloc=4568344 time=0.717
-Exitification transformation [API.UI.Performance]: alloc=21232 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Performance]: alloc=2028512 time=0.448
-Common sub-expression [API.UI.Performance]: alloc=19816 time=0.004
-Float inwards [API.UI.Performance]: alloc=18712 time=0.003
-Simplifier [API.UI.Performance]: alloc=6066728 time=1.010
-Demand analysis [API.UI.Performance]: alloc=5265392 time=0.781
-CoreTidy [API.UI.Performance]: alloc=1712816 time=0.402
+Parser [API.UI.Performance]: alloc=505104 time=0.150
+Renamer/typechecker [API.UI.Performance]: alloc=22441432 time=9.367
+Desugar [API.UI.Performance]: alloc=338600 time=0.894
+Simplifier [API.UI.Performance]: alloc=1738344 time=0.434
+CoreTidy [API.UI.Performance]: alloc=330464 time=0.130
+CorePrep [API.UI.Performance]: alloc=19704 time=0.007
+CodeGen [API.UI.Performance]: alloc=10796976 time=3.317
+systool:as: alloc=102704 time=0.182
 CorePrep [API.UI.Performance]: alloc=19704 time=0.010
-CodeGen [API.UI.Performance]: alloc=19903616 time=4.902
-systool:as: alloc=102696 time=0.189
-CorePrep [API.UI.Performance]: alloc=19704 time=0.011
-CodeGen [API.UI.Performance]: alloc=20216904 time=4.571
-systool:as: alloc=105576 time=0.123
+CodeGen [API.UI.Performance]: alloc=11711800 time=3.573
+systool:as: alloc=105584 time=0.148

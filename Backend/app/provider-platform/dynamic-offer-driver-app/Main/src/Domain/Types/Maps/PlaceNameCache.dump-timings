@@ -1,26 +1,11 @@
-Parser [Domain.Types.Maps.PlaceNameCache]: alloc=1492984 time=0.348
-Renamer/typechecker [Domain.Types.Maps.PlaceNameCache]: alloc=171680344 time=54.016
-Desugar [Domain.Types.Maps.PlaceNameCache]: alloc=46663584 time=14.043
-Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=101022760 time=39.752
-Specialise [Domain.Types.Maps.PlaceNameCache]: alloc=29128336 time=11.450
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Maps.PlaceNameCache]: alloc=51944544 time=22.794
-Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=978792200 time=606.980
-Float inwards [Domain.Types.Maps.PlaceNameCache]: alloc=22888 time=0.005
-Called arity analysis [Domain.Types.Maps.PlaceNameCache]: alloc=24464 time=0.006
-Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=255473144 time=106.839
-Demand analysis [Domain.Types.Maps.PlaceNameCache]: alloc=167080024 time=46.428
-Worker Wrapper binds [Domain.Types.Maps.PlaceNameCache]: alloc=6165968 time=3.479
-Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=270726352 time=106.324
-Exitification transformation [Domain.Types.Maps.PlaceNameCache]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Maps.PlaceNameCache]: alloc=158329640 time=87.269
-Common sub-expression [Domain.Types.Maps.PlaceNameCache]: alloc=23992 time=0.007
-Float inwards [Domain.Types.Maps.PlaceNameCache]: alloc=22888 time=0.004
-Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=266705360 time=93.771
-Demand analysis [Domain.Types.Maps.PlaceNameCache]: alloc=110559728 time=48.096
-CoreTidy [Domain.Types.Maps.PlaceNameCache]: alloc=29717560 time=9.509
-CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.013
-CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=379101264 time=131.133
-systool:as: alloc=103592 time=0.199
-CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.028
-CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=396018136 time=127.833
-systool:as: alloc=106480 time=0.205
+Parser [Domain.Types.Maps.PlaceNameCache]: alloc=1488672 time=0.341
+Renamer/typechecker [Domain.Types.Maps.PlaceNameCache]: alloc=179453992 time=53.668
+Desugar [Domain.Types.Maps.PlaceNameCache]: alloc=46656488 time=11.360
+Simplifier [Domain.Types.Maps.PlaceNameCache]: alloc=37761744 time=12.890
+CoreTidy [Domain.Types.Maps.PlaceNameCache]: alloc=9553800 time=2.427
+CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.010
+CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=292760560 time=91.849
+systool:as: alloc=103600 time=0.206
+CorePrep [Domain.Types.Maps.PlaceNameCache]: alloc=23880 time=0.017
+CodeGen [Domain.Types.Maps.PlaceNameCache]: alloc=314934688 time=94.716
+systool:as: alloc=106480 time=0.167

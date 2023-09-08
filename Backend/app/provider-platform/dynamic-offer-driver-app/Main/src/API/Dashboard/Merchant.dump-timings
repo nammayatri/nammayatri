@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Merchant]: alloc=4014640 time=0.626
-Renamer/typechecker [API.Dashboard.Merchant]: alloc=26750568 time=8.488
-Desugar [API.Dashboard.Merchant]: alloc=756224 time=0.943
-Simplifier [API.Dashboard.Merchant]: alloc=11301624 time=2.610
-Specialise [API.Dashboard.Merchant]: alloc=998368 time=0.233
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Merchant]: alloc=3994688 time=1.027
-Simplifier [API.Dashboard.Merchant]: alloc=8545744 time=1.868
-Float inwards [API.Dashboard.Merchant]: alloc=19912 time=0.004
-Called arity analysis [API.Dashboard.Merchant]: alloc=21488 time=0.004
-Simplifier [API.Dashboard.Merchant]: alloc=5286792 time=1.075
-Demand analysis [API.Dashboard.Merchant]: alloc=3403816 time=0.708
-Worker Wrapper binds [API.Dashboard.Merchant]: alloc=64584 time=0.031
-Simplifier [API.Dashboard.Merchant]: alloc=8032288 time=1.640
-Exitification transformation [API.Dashboard.Merchant]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Merchant]: alloc=1895328 time=0.503
-Common sub-expression [API.Dashboard.Merchant]: alloc=21016 time=0.005
-Float inwards [API.Dashboard.Merchant]: alloc=19912 time=0.004
-Simplifier [API.Dashboard.Merchant]: alloc=9950552 time=2.214
-Demand analysis [API.Dashboard.Merchant]: alloc=3215192 time=0.715
-CoreTidy [API.Dashboard.Merchant]: alloc=1844936 time=0.706
-CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.010
-CodeGen [API.Dashboard.Merchant]: alloc=29807032 time=10.155
-systool:as: alloc=102992 time=0.152
-CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.012
-CodeGen [API.Dashboard.Merchant]: alloc=31514400 time=10.568
-systool:as: alloc=105840 time=0.125
+Parser [API.Dashboard.Merchant]: alloc=4014640 time=0.617
+Renamer/typechecker [API.Dashboard.Merchant]: alloc=26777512 time=7.488
+Desugar [API.Dashboard.Merchant]: alloc=755680 time=0.962
+Simplifier [API.Dashboard.Merchant]: alloc=10212792 time=2.039
+CoreTidy [API.Dashboard.Merchant]: alloc=1119704 time=0.319
+CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.007
+CodeGen [API.Dashboard.Merchant]: alloc=27366976 time=8.464
+systool:as: alloc=102976 time=0.181
+CorePrep [API.Dashboard.Merchant]: alloc=20888 time=0.011
+CodeGen [API.Dashboard.Merchant]: alloc=29945640 time=9.266
+systool:as: alloc=105848 time=0.169

@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Message]: alloc=1893072 time=0.335
-Renamer/typechecker [API.Dashboard.Message]: alloc=16084040 time=5.997
-Desugar [API.Dashboard.Message]: alloc=515448 time=0.945
-Simplifier [API.Dashboard.Message]: alloc=7942104 time=1.960
-Specialise [API.Dashboard.Message]: alloc=807896 time=0.157
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Message]: alloc=3083744 time=0.720
-Simplifier [API.Dashboard.Message]: alloc=4695192 time=1.116
-Float inwards [API.Dashboard.Message]: alloc=19624 time=0.005
-Called arity analysis [API.Dashboard.Message]: alloc=21200 time=0.005
-Simplifier [API.Dashboard.Message]: alloc=2749920 time=0.602
-Demand analysis [API.Dashboard.Message]: alloc=2437408 time=0.525
-Worker Wrapper binds [API.Dashboard.Message]: alloc=46016 time=0.021
-Simplifier [API.Dashboard.Message]: alloc=4490792 time=0.958
-Exitification transformation [API.Dashboard.Message]: alloc=22128 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Message]: alloc=1186936 time=0.330
-Common sub-expression [API.Dashboard.Message]: alloc=20728 time=0.004
-Float inwards [API.Dashboard.Message]: alloc=19624 time=0.004
-Simplifier [API.Dashboard.Message]: alloc=5413200 time=1.248
-Demand analysis [API.Dashboard.Message]: alloc=2458488 time=0.505
-CoreTidy [API.Dashboard.Message]: alloc=1095912 time=0.394
+Parser [API.Dashboard.Message]: alloc=1893072 time=0.287
+Renamer/typechecker [API.Dashboard.Message]: alloc=16092992 time=5.999
+Desugar [API.Dashboard.Message]: alloc=515240 time=0.880
+Simplifier [API.Dashboard.Message]: alloc=4613072 time=0.957
+CoreTidy [API.Dashboard.Message]: alloc=498320 time=0.149
+CorePrep [API.Dashboard.Message]: alloc=20584 time=0.007
+CodeGen [API.Dashboard.Message]: alloc=14640952 time=4.609
+systool:as: alloc=102912 time=0.206
 CorePrep [API.Dashboard.Message]: alloc=20584 time=0.010
-CodeGen [API.Dashboard.Message]: alloc=19253672 time=6.759
-systool:as: alloc=102904 time=0.173
-CorePrep [API.Dashboard.Message]: alloc=20584 time=0.012
-CodeGen [API.Dashboard.Message]: alloc=20137104 time=6.566
-systool:as: alloc=105776 time=0.130
+CodeGen [API.Dashboard.Message]: alloc=15955648 time=5.150
+systool:as: alloc=105784 time=0.152

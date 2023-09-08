@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Issue.IssueOption]: alloc=1099776 time=0.376
-Simplify [expr]: alloc=184136 time=0.074
-CorePrep [expr]: alloc=74104 time=0.053
-ByteCodeGen [Ghci1]: alloc=379864 time=0.117
-Simplify [expr]: alloc=47024 time=0.017
-CorePrep [expr]: alloc=26752 time=0.040
-ByteCodeGen [Ghci1]: alloc=131880 time=0.059
-Renamer/typechecker [Storage.Beam.Issue.IssueOption]: alloc=90888936 time=31.156
-Desugar [Storage.Beam.Issue.IssueOption]: alloc=18345480 time=5.420
-Simplifier [Storage.Beam.Issue.IssueOption]: alloc=48624792 time=16.530
-Specialise [Storage.Beam.Issue.IssueOption]: alloc=15592048 time=5.127
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Issue.IssueOption]: alloc=46184792 time=16.123
-Simplifier [Storage.Beam.Issue.IssueOption]: alloc=384274304 time=133.960
-Float inwards [Storage.Beam.Issue.IssueOption]: alloc=22296 time=0.005
-Called arity analysis [Storage.Beam.Issue.IssueOption]: alloc=23872 time=0.006
-Simplifier [Storage.Beam.Issue.IssueOption]: alloc=108781576 time=37.132
-Demand analysis [Storage.Beam.Issue.IssueOption]: alloc=111527920 time=28.090
-Worker Wrapper binds [Storage.Beam.Issue.IssueOption]: alloc=3186504 time=1.945
-Simplifier [Storage.Beam.Issue.IssueOption]: alloc=135263832 time=70.228
-Exitification transformation [Storage.Beam.Issue.IssueOption]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Issue.IssueOption]: alloc=97027200 time=32.189
-Common sub-expression [Storage.Beam.Issue.IssueOption]: alloc=23400 time=0.007
-Float inwards [Storage.Beam.Issue.IssueOption]: alloc=22296 time=0.004
-Simplifier [Storage.Beam.Issue.IssueOption]: alloc=137702680 time=47.964
-Demand analysis [Storage.Beam.Issue.IssueOption]: alloc=102258056 time=24.559
-CoreTidy [Storage.Beam.Issue.IssueOption]: alloc=22854096 time=11.540
-CorePrep [Storage.Beam.Issue.IssueOption]: alloc=23272 time=0.013
-CodeGen [Storage.Beam.Issue.IssueOption]: alloc=556340264 time=175.155
-systool:as: alloc=103488 time=0.248
-CorePrep [Storage.Beam.Issue.IssueOption]: alloc=23272 time=0.019
-CodeGen [Storage.Beam.Issue.IssueOption]: alloc=573533480 time=176.216
-systool:as: alloc=106360 time=0.224
+Parser [Storage.Beam.Issue.IssueOption]: alloc=1098688 time=0.341
+Simplify [expr]: alloc=109424 time=0.030
+CorePrep [expr]: alloc=51184 time=0.023
+ByteCodeGen [Ghci1]: alloc=276472 time=0.081
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.Issue.IssueOption]: alloc=88933152 time=30.022
+Desugar [Storage.Beam.Issue.IssueOption]: alloc=18329272 time=5.522
+Simplifier [Storage.Beam.Issue.IssueOption]: alloc=17542376 time=5.088
+CoreTidy [Storage.Beam.Issue.IssueOption]: alloc=3228328 time=1.024
+CorePrep [Storage.Beam.Issue.IssueOption]: alloc=23272 time=0.008
+CodeGen [Storage.Beam.Issue.IssueOption]: alloc=124767096 time=37.078
+systool:as: alloc=103488 time=0.160
+CorePrep [Storage.Beam.Issue.IssueOption]: alloc=23272 time=0.014
+CodeGen [Storage.Beam.Issue.IssueOption]: alloc=136438072 time=39.845
+systool:as: alloc=106360 time=0.145

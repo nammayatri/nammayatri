@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Exotel]: alloc=526432 time=0.209
-Renamer/typechecker [API.Dashboard.Exotel]: alloc=7486936 time=3.988
-Desugar [API.Dashboard.Exotel]: alloc=310344 time=0.864
-Simplifier [API.Dashboard.Exotel]: alloc=3521592 time=0.902
-Specialise [API.Dashboard.Exotel]: alloc=664448 time=0.150
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Exotel]: alloc=2531904 time=0.571
-Simplifier [API.Dashboard.Exotel]: alloc=916152 time=0.219
-Float inwards [API.Dashboard.Exotel]: alloc=19320 time=0.004
-Called arity analysis [API.Dashboard.Exotel]: alloc=20896 time=0.009
-Simplifier [API.Dashboard.Exotel]: alloc=939632 time=0.255
-Demand analysis [API.Dashboard.Exotel]: alloc=2030472 time=0.341
-Worker Wrapper binds [API.Dashboard.Exotel]: alloc=28016 time=0.012
-Simplifier [API.Dashboard.Exotel]: alloc=1637112 time=0.299
-Exitification transformation [API.Dashboard.Exotel]: alloc=21840 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Exotel]: alloc=670744 time=0.163
-Common sub-expression [API.Dashboard.Exotel]: alloc=20424 time=0.004
-Float inwards [API.Dashboard.Exotel]: alloc=19320 time=0.003
-Simplifier [API.Dashboard.Exotel]: alloc=2083184 time=0.404
-Demand analysis [API.Dashboard.Exotel]: alloc=2034336 time=0.336
-CoreTidy [API.Dashboard.Exotel]: alloc=541256 time=0.156
-CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.008
-CodeGen [API.Dashboard.Exotel]: alloc=7707816 time=2.115
-systool:as: alloc=102848 time=0.178
-CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.011
-CodeGen [API.Dashboard.Exotel]: alloc=7845496 time=2.065
-systool:as: alloc=105720 time=0.137
+Parser [API.Dashboard.Exotel]: alloc=526432 time=0.146
+Renamer/typechecker [API.Dashboard.Exotel]: alloc=7491312 time=3.622
+Desugar [API.Dashboard.Exotel]: alloc=310136 time=0.868
+Simplifier [API.Dashboard.Exotel]: alloc=677984 time=0.259
+CoreTidy [API.Dashboard.Exotel]: alloc=126136 time=0.065
+CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.006
+CodeGen [API.Dashboard.Exotel]: alloc=3990272 time=1.398
+systool:as: alloc=102856 time=0.156
+CorePrep [API.Dashboard.Exotel]: alloc=20296 time=0.009
+CodeGen [API.Dashboard.Exotel]: alloc=4303688 time=1.435
+systool:as: alloc=105728 time=0.145

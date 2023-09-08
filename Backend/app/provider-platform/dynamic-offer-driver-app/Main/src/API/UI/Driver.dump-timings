@@ -1,26 +1,11 @@
-Parser [API.UI.Driver]: alloc=7743120 time=1.185
-Renamer/typechecker [API.UI.Driver]: alloc=430828712 time=98.117
-Desugar [API.UI.Driver]: alloc=2014480 time=1.435
-Simplifier [API.UI.Driver]: alloc=165463960 time=54.484
-Specialise [API.UI.Driver]: alloc=15155808 time=8.710
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Driver]: alloc=30051848 time=13.138
-Simplifier [API.UI.Driver]: alloc=329040592 time=108.459
-Float inwards [API.UI.Driver]: alloc=17240 time=0.005
-Called arity analysis [API.UI.Driver]: alloc=18816 time=0.006
-Simplifier [API.UI.Driver]: alloc=59081672 time=28.826
-Demand analysis [API.UI.Driver]: alloc=54535472 time=14.891
-Worker Wrapper binds [API.UI.Driver]: alloc=871872 time=0.478
-Simplifier [API.UI.Driver]: alloc=95880024 time=21.949
-Exitification transformation [API.UI.Driver]: alloc=19744 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Driver]: alloc=40690352 time=14.561
-Common sub-expression [API.UI.Driver]: alloc=18344 time=0.008
-Float inwards [API.UI.Driver]: alloc=17240 time=0.004
-Simplifier [API.UI.Driver]: alloc=270864352 time=100.000
-Demand analysis [API.UI.Driver]: alloc=61442064 time=21.623
-CoreTidy [API.UI.Driver]: alloc=48774936 time=15.278
-CorePrep [API.UI.Driver]: alloc=18200 time=0.027
-CodeGen [API.UI.Driver]: alloc=269039824 time=90.453
-systool:as: alloc=102392 time=0.208
-CorePrep [API.UI.Driver]: alloc=18200 time=0.016
-CodeGen [API.UI.Driver]: alloc=277181624 time=74.852
-systool:as: alloc=105264 time=0.190
+Parser [API.UI.Driver]: alloc=7742576 time=1.179
+Renamer/typechecker [API.UI.Driver]: alloc=428499360 time=111.673
+Desugar [API.UI.Driver]: alloc=2029496 time=1.435
+Simplifier [API.UI.Driver]: alloc=67870784 time=28.294
+CoreTidy [API.UI.Driver]: alloc=37640368 time=11.443
+CorePrep [API.UI.Driver]: alloc=18200 time=0.014
+CodeGen [API.UI.Driver]: alloc=92575896 time=32.486
+systool:as: alloc=102400 time=0.215
+CorePrep [API.UI.Driver]: alloc=18200 time=0.014
+CodeGen [API.UI.Driver]: alloc=99349448 time=31.967
+systool:as: alloc=105296 time=0.203

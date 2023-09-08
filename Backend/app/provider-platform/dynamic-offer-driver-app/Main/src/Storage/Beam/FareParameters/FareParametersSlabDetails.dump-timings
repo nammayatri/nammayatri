@@ -1,32 +1,17 @@
-Parser [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=1457576 time=0.422
-Simplify [expr]: alloc=97256 time=0.076
-CorePrep [expr]: alloc=43488 time=0.029
-ByteCodeGen [Ghci1]: alloc=217456 time=0.077
-Simplify [expr]: alloc=47024 time=0.022
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.054
-Renamer/typechecker [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=113346936 time=40.030
-Desugar [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=19541816 time=5.875
-Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=67523704 time=22.815
-Specialise [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=27096144 time=8.293
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=60946280 time=21.570
-Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=679687208 time=258.477
-Float inwards [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=29160 time=0.009
-Called arity analysis [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30736 time=0.007
-Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=172106352 time=52.624
-Demand analysis [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=154324544 time=38.915
-Worker Wrapper binds [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=4323960 time=2.681
-Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=203388600 time=84.793
-Exitification transformation [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=31664 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=136085128 time=46.672
-Common sub-expression [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30264 time=0.008
-Float inwards [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=29160 time=0.005
-Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=204547224 time=74.918
-Demand analysis [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=134728640 time=33.851
-CoreTidy [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=32655888 time=37.819
-CorePrep [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30120 time=0.017
-CodeGen [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=744470728 time=237.218
-systool:as: alloc=104928 time=0.220
-CorePrep [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30120 time=0.018
-CodeGen [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=769254648 time=242.068
-systool:as: alloc=107800 time=0.229
+Parser [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=1455896 time=0.389
+Simplify [expr]: alloc=72480 time=0.027
+CorePrep [expr]: alloc=36304 time=0.020
+ByteCodeGen [Ghci1]: alloc=183200 time=0.064
+Simplify [expr]: alloc=46992 time=0.017
+CorePrep [expr]: alloc=26608 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.047
+Renamer/typechecker [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=111442136 time=35.920
+Desugar [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=19531472 time=5.710
+Simplifier [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=22404064 time=6.349
+CoreTidy [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=4541216 time=1.394
+CorePrep [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30120 time=0.009
+CodeGen [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=161686240 time=46.588
+systool:as: alloc=104928 time=0.177
+CorePrep [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=30120 time=0.014
+CodeGen [Storage.Beam.FareParameters.FareParametersSlabDetails]: alloc=176492536 time=50.736
+systool:as: alloc=107824 time=0.185

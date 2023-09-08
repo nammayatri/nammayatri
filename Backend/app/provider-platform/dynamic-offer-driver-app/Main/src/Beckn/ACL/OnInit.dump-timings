@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.OnInit]: alloc=3941096 time=0.834
-Renamer/typechecker [Beckn.ACL.OnInit]: alloc=581022776 time=121.327
-Desugar [Beckn.ACL.OnInit]: alloc=24322744 time=5.746
-Simplifier [Beckn.ACL.OnInit]: alloc=24285912 time=6.289
-Specialise [Beckn.ACL.OnInit]: alloc=2890624 time=0.755
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.OnInit]: alloc=11292664 time=3.096
-Simplifier [Beckn.ACL.OnInit]: alloc=88252424 time=27.546
-Float inwards [Beckn.ACL.OnInit]: alloc=18120 time=0.005
-Called arity analysis [Beckn.ACL.OnInit]: alloc=19696 time=0.006
-Simplifier [Beckn.ACL.OnInit]: alloc=31185312 time=8.842
-Demand analysis [Beckn.ACL.OnInit]: alloc=46267000 time=9.846
-Worker Wrapper binds [Beckn.ACL.OnInit]: alloc=967888 time=0.441
-Simplifier [Beckn.ACL.OnInit]: alloc=39941224 time=12.935
-Exitification transformation [Beckn.ACL.OnInit]: alloc=20640 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.OnInit]: alloc=35662400 time=10.754
-Common sub-expression [Beckn.ACL.OnInit]: alloc=19224 time=0.006
-Float inwards [Beckn.ACL.OnInit]: alloc=18120 time=0.004
-Simplifier [Beckn.ACL.OnInit]: alloc=41278192 time=12.665
-Demand analysis [Beckn.ACL.OnInit]: alloc=42789456 time=8.873
-CoreTidy [Beckn.ACL.OnInit]: alloc=8195776 time=3.015
-CorePrep [Beckn.ACL.OnInit]: alloc=19112 time=0.008
-CodeGen [Beckn.ACL.OnInit]: alloc=250212504 time=69.731
-systool:as: alloc=102584 time=0.186
-CorePrep [Beckn.ACL.OnInit]: alloc=19112 time=0.022
-CodeGen [Beckn.ACL.OnInit]: alloc=258003456 time=71.846
-systool:as: alloc=105464 time=0.237
+Parser [Beckn.ACL.OnInit]: alloc=3940552 time=0.727
+Renamer/typechecker [Beckn.ACL.OnInit]: alloc=562481960 time=112.637
+Desugar [Beckn.ACL.OnInit]: alloc=23893592 time=5.449
+Simplifier [Beckn.ACL.OnInit]: alloc=5454776 time=1.210
+CoreTidy [Beckn.ACL.OnInit]: alloc=869184 time=0.268
+CorePrep [Beckn.ACL.OnInit]: alloc=19112 time=0.010
+CodeGen [Beckn.ACL.OnInit]: alloc=71266744 time=19.632
+systool:as: alloc=102592 time=0.160
+CorePrep [Beckn.ACL.OnInit]: alloc=19112 time=0.013
+CodeGen [Beckn.ACL.OnInit]: alloc=78636552 time=20.981
+systool:as: alloc=105472 time=0.157

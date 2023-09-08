@@ -1,32 +1,17 @@
-Parser [Storage.Beam.PlanTranslation]: alloc=1216160 time=0.325
-Simplify [expr]: alloc=183976 time=0.066
-CorePrep [expr]: alloc=73944 time=0.066
-ByteCodeGen [Ghci1]: alloc=379904 time=0.120
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.014
-ByteCodeGen [Ghci1]: alloc=131880 time=0.058
-Renamer/typechecker [Storage.Beam.PlanTranslation]: alloc=109756832 time=36.729
-Desugar [Storage.Beam.PlanTranslation]: alloc=19412496 time=5.810
-Simplifier [Storage.Beam.PlanTranslation]: alloc=61032864 time=20.112
-Specialise [Storage.Beam.PlanTranslation]: alloc=20402272 time=6.778
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.PlanTranslation]: alloc=53187416 time=19.147
-Simplifier [Storage.Beam.PlanTranslation]: alloc=475070712 time=182.654
-Float inwards [Storage.Beam.PlanTranslation]: alloc=21704 time=0.005
-Called arity analysis [Storage.Beam.PlanTranslation]: alloc=23280 time=0.006
-Simplifier [Storage.Beam.PlanTranslation]: alloc=134847376 time=56.010
-Demand analysis [Storage.Beam.PlanTranslation]: alloc=135560016 time=32.766
-Worker Wrapper binds [Storage.Beam.PlanTranslation]: alloc=3702072 time=2.050
-Simplifier [Storage.Beam.PlanTranslation]: alloc=164393960 time=62.379
-Exitification transformation [Storage.Beam.PlanTranslation]: alloc=24224 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.PlanTranslation]: alloc=116635152 time=38.886
-Common sub-expression [Storage.Beam.PlanTranslation]: alloc=22808 time=0.007
-Float inwards [Storage.Beam.PlanTranslation]: alloc=21704 time=0.004
-Simplifier [Storage.Beam.PlanTranslation]: alloc=167958008 time=82.827
-Demand analysis [Storage.Beam.PlanTranslation]: alloc=124775528 time=29.760
-CoreTidy [Storage.Beam.PlanTranslation]: alloc=28849848 time=13.858
-CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.041
-CodeGen [Storage.Beam.PlanTranslation]: alloc=667060040 time=210.791
-systool:as: alloc=103336 time=0.252
-CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.016
-CodeGen [Storage.Beam.PlanTranslation]: alloc=687095448 time=210.221
-systool:as: alloc=106208 time=0.270
+Parser [Storage.Beam.PlanTranslation]: alloc=1215064 time=0.356
+Simplify [expr]: alloc=109424 time=0.030
+CorePrep [expr]: alloc=51184 time=0.050
+ByteCodeGen [Ghci1]: alloc=276472 time=0.085
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.017
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.PlanTranslation]: alloc=107699480 time=35.672
+Desugar [Storage.Beam.PlanTranslation]: alloc=19391792 time=5.525
+Simplifier [Storage.Beam.PlanTranslation]: alloc=21250888 time=6.333
+CoreTidy [Storage.Beam.PlanTranslation]: alloc=4168416 time=1.412
+CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.010
+CodeGen [Storage.Beam.PlanTranslation]: alloc=152453576 time=45.156
+systool:as: alloc=103336 time=0.154
+CorePrep [Storage.Beam.PlanTranslation]: alloc=22680 time=0.014
+CodeGen [Storage.Beam.PlanTranslation]: alloc=166727168 time=48.226
+systool:as: alloc=106208 time=0.155

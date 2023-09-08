@@ -1,26 +1,11 @@
-Parser [Domain.Types.PlanTranslation]: alloc=426152 time=0.178
-Renamer/typechecker [Domain.Types.PlanTranslation]: alloc=39262672 time=14.267
-Desugar [Domain.Types.PlanTranslation]: alloc=1999200 time=1.406
-Simplifier [Domain.Types.PlanTranslation]: alloc=29524160 time=10.496
-Specialise [Domain.Types.PlanTranslation]: alloc=7492448 time=2.630
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.PlanTranslation]: alloc=17051032 time=6.355
-Simplifier [Domain.Types.PlanTranslation]: alloc=184205664 time=70.166
-Float inwards [Domain.Types.PlanTranslation]: alloc=21704 time=0.005
-Called arity analysis [Domain.Types.PlanTranslation]: alloc=23280 time=0.006
-Simplifier [Domain.Types.PlanTranslation]: alloc=48496840 time=17.977
-Demand analysis [Domain.Types.PlanTranslation]: alloc=24845664 time=7.080
-Worker Wrapper binds [Domain.Types.PlanTranslation]: alloc=772432 time=0.600
-Simplifier [Domain.Types.PlanTranslation]: alloc=48261120 time=16.893
-Exitification transformation [Domain.Types.PlanTranslation]: alloc=24224 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.PlanTranslation]: alloc=25769808 time=9.484
-Common sub-expression [Domain.Types.PlanTranslation]: alloc=22808 time=0.005
-Float inwards [Domain.Types.PlanTranslation]: alloc=21704 time=0.004
-Simplifier [Domain.Types.PlanTranslation]: alloc=57266536 time=39.098
-Demand analysis [Domain.Types.PlanTranslation]: alloc=23003608 time=6.503
-CoreTidy [Domain.Types.PlanTranslation]: alloc=9027384 time=3.761
-CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.010
-CodeGen [Domain.Types.PlanTranslation]: alloc=119920056 time=40.244
-systool:as: alloc=103336 time=0.207
-CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.017
-CodeGen [Domain.Types.PlanTranslation]: alloc=125003456 time=41.145
-systool:as: alloc=106208 time=0.166
+Parser [Domain.Types.PlanTranslation]: alloc=426152 time=0.127
+Renamer/typechecker [Domain.Types.PlanTranslation]: alloc=39249200 time=13.384
+Desugar [Domain.Types.PlanTranslation]: alloc=1991880 time=1.437
+Simplifier [Domain.Types.PlanTranslation]: alloc=12600296 time=3.512
+CoreTidy [Domain.Types.PlanTranslation]: alloc=2899936 time=0.807
+CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.008
+CodeGen [Domain.Types.PlanTranslation]: alloc=99212264 time=29.605
+systool:as: alloc=103336 time=0.174
+CorePrep [Domain.Types.PlanTranslation]: alloc=22680 time=0.013
+CodeGen [Domain.Types.PlanTranslation]: alloc=106809432 time=32.525
+systool:as: alloc=106208 time=0.180

@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.OnSearch]: alloc=7552216 time=1.780
-Renamer/typechecker [Beckn.ACL.OnSearch]: alloc=1175112400 time=228.257
-Desugar [Beckn.ACL.OnSearch]: alloc=52792528 time=11.015
-Simplifier [Beckn.ACL.OnSearch]: alloc=20829624 time=6.319
-Specialise [Beckn.ACL.OnSearch]: alloc=2165952 time=0.514
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.OnSearch]: alloc=9308248 time=2.794
-Simplifier [Beckn.ACL.OnSearch]: alloc=147313888 time=46.826
-Float inwards [Beckn.ACL.OnSearch]: alloc=18712 time=0.005
-Called arity analysis [Beckn.ACL.OnSearch]: alloc=20288 time=0.006
-Simplifier [Beckn.ACL.OnSearch]: alloc=51915136 time=15.601
-Demand analysis [Beckn.ACL.OnSearch]: alloc=77671496 time=17.423
-Worker Wrapper binds [Beckn.ACL.OnSearch]: alloc=1739672 time=1.066
-Simplifier [Beckn.ACL.OnSearch]: alloc=70645240 time=22.193
-Exitification transformation [Beckn.ACL.OnSearch]: alloc=21232 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.OnSearch]: alloc=62367808 time=19.658
-Common sub-expression [Beckn.ACL.OnSearch]: alloc=19816 time=0.012
-Float inwards [Beckn.ACL.OnSearch]: alloc=18712 time=0.005
-Simplifier [Beckn.ACL.OnSearch]: alloc=73815456 time=26.094
-Demand analysis [Beckn.ACL.OnSearch]: alloc=71327088 time=16.030
-CoreTidy [Beckn.ACL.OnSearch]: alloc=13140536 time=14.423
-CorePrep [Beckn.ACL.OnSearch]: alloc=19704 time=0.014
-CodeGen [Beckn.ACL.OnSearch]: alloc=418563480 time=123.338
-systool:as: alloc=102704 time=0.226
-CorePrep [Beckn.ACL.OnSearch]: alloc=19704 time=0.021
-CodeGen [Beckn.ACL.OnSearch]: alloc=431756904 time=128.471
-systool:as: alloc=105584 time=0.202
+Parser [Beckn.ACL.OnSearch]: alloc=7543512 time=1.437
+Renamer/typechecker [Beckn.ACL.OnSearch]: alloc=1073830824 time=208.467
+Desugar [Beckn.ACL.OnSearch]: alloc=51860056 time=10.851
+Simplifier [Beckn.ACL.OnSearch]: alloc=13832552 time=3.562
+CoreTidy [Beckn.ACL.OnSearch]: alloc=1351616 time=0.501
+CorePrep [Beckn.ACL.OnSearch]: alloc=19704 time=0.008
+CodeGen [Beckn.ACL.OnSearch]: alloc=105307720 time=29.660
+systool:as: alloc=102712 time=0.193
+CorePrep [Beckn.ACL.OnSearch]: alloc=19704 time=0.017
+CodeGen [Beckn.ACL.OnSearch]: alloc=115745200 time=32.064
+systool:as: alloc=105592 time=0.170

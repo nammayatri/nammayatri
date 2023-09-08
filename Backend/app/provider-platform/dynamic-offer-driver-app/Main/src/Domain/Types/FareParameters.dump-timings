@@ -1,29 +1,14 @@
-Parser [Domain.Types.FareParameters]: alloc=1426392 time=0.378
-Simplify [expr]: alloc=34464 time=0.016
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.049
-Renamer/typechecker [Domain.Types.FareParameters]: alloc=113388696 time=45.949
-Desugar [Domain.Types.FareParameters]: alloc=48405624 time=12.474
-Simplifier [Domain.Types.FareParameters]: alloc=72366088 time=31.669
-Specialise [Domain.Types.FareParameters]: alloc=10740488 time=6.392
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FareParameters]: alloc=27922808 time=14.455
-Simplifier [Domain.Types.FareParameters]: alloc=180390528 time=113.141
-Float inwards [Domain.Types.FareParameters]: alloc=21416 time=0.007
-Called arity analysis [Domain.Types.FareParameters]: alloc=22992 time=0.008
-Simplifier [Domain.Types.FareParameters]: alloc=50564808 time=35.528
-Demand analysis [Domain.Types.FareParameters]: alloc=28139104 time=7.416
-Worker Wrapper binds [Domain.Types.FareParameters]: alloc=1718472 time=0.874
-Simplifier [Domain.Types.FareParameters]: alloc=67464480 time=24.929
-Exitification transformation [Domain.Types.FareParameters]: alloc=23904 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FareParameters]: alloc=30226208 time=18.141
-Common sub-expression [Domain.Types.FareParameters]: alloc=22520 time=0.007
-Float inwards [Domain.Types.FareParameters]: alloc=21416 time=0.004
-Simplifier [Domain.Types.FareParameters]: alloc=69183904 time=23.575
-Demand analysis [Domain.Types.FareParameters]: alloc=27401632 time=13.946
-CoreTidy [Domain.Types.FareParameters]: alloc=15628176 time=6.531
+Parser [Domain.Types.FareParameters]: alloc=1412728 time=0.341
+Simplify [expr]: alloc=34912 time=0.019
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.046
+Renamer/typechecker [Domain.Types.FareParameters]: alloc=112577496 time=44.356
+Desugar [Domain.Types.FareParameters]: alloc=48265960 time=11.423
+Simplifier [Domain.Types.FareParameters]: alloc=32337560 time=8.800
+CoreTidy [Domain.Types.FareParameters]: alloc=6302784 time=1.861
+CorePrep [Domain.Types.FareParameters]: alloc=22376 time=0.009
+CodeGen [Domain.Types.FareParameters]: alloc=221907360 time=70.750
+systool:as: alloc=103288 time=0.188
 CorePrep [Domain.Types.FareParameters]: alloc=22376 time=0.013
-CodeGen [Domain.Types.FareParameters]: alloc=344763064 time=122.625
-systool:as: alloc=103256 time=0.187
-CorePrep [Domain.Types.FareParameters]: alloc=22376 time=0.019
-CodeGen [Domain.Types.FareParameters]: alloc=358751952 time=118.814
-systool:as: alloc=106136 time=0.217
+CodeGen [Domain.Types.FareParameters]: alloc=237542424 time=69.939
+systool:as: alloc=106144 time=0.161

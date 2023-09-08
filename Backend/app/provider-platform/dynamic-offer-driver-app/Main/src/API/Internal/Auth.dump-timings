@@ -1,26 +1,11 @@
-Parser [API.Internal.Auth]: alloc=476704 time=0.193
-Renamer/typechecker [API.Internal.Auth]: alloc=8760680 time=4.520
-Desugar [API.Internal.Auth]: alloc=322064 time=0.871
-Simplifier [API.Internal.Auth]: alloc=5801256 time=1.389
-Specialise [API.Internal.Auth]: alloc=807432 time=0.156
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Internal.Auth]: alloc=3175224 time=0.691
-Simplifier [API.Internal.Auth]: alloc=1871848 time=0.444
-Float inwards [API.Internal.Auth]: alloc=18424 time=0.004
-Called arity analysis [API.Internal.Auth]: alloc=20000 time=0.004
-Simplifier [API.Internal.Auth]: alloc=1961840 time=0.389
-Demand analysis [API.Internal.Auth]: alloc=3523056 time=0.598
-Worker Wrapper binds [API.Internal.Auth]: alloc=28784 time=0.014
-Simplifier [API.Internal.Auth]: alloc=3646712 time=0.614
-Exitification transformation [API.Internal.Auth]: alloc=20928 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Internal.Auth]: alloc=1307720 time=0.322
-Common sub-expression [API.Internal.Auth]: alloc=19528 time=0.004
-Float inwards [API.Internal.Auth]: alloc=18424 time=0.003
-Simplifier [API.Internal.Auth]: alloc=4533944 time=0.838
-Demand analysis [API.Internal.Auth]: alloc=3531920 time=0.569
-CoreTidy [API.Internal.Auth]: alloc=1113160 time=0.290
-CorePrep [API.Internal.Auth]: alloc=19400 time=0.009
-CodeGen [API.Internal.Auth]: alloc=13715288 time=3.546
-systool:as: alloc=102656 time=0.157
-CorePrep [API.Internal.Auth]: alloc=19400 time=0.010
-CodeGen [API.Internal.Auth]: alloc=13990064 time=3.324
-systool:as: alloc=105536 time=0.116
+Parser [API.Internal.Auth]: alloc=476704 time=0.139
+Renamer/typechecker [API.Internal.Auth]: alloc=8756552 time=4.173
+Desugar [API.Internal.Auth]: alloc=321792 time=0.874
+Simplifier [API.Internal.Auth]: alloc=1831608 time=0.468
+CoreTidy [API.Internal.Auth]: alloc=200856 time=0.090
+CorePrep [API.Internal.Auth]: alloc=19400 time=0.006
+CodeGen [API.Internal.Auth]: alloc=5000936 time=1.726
+systool:as: alloc=102664 time=0.167
+CorePrep [API.Internal.Auth]: alloc=19400 time=0.011
+CodeGen [API.Internal.Auth]: alloc=5360752 time=1.813
+systool:as: alloc=105544 time=0.132

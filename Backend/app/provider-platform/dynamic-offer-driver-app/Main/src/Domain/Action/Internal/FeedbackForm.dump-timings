@@ -1,26 +1,11 @@
-Parser [Domain.Action.Internal.FeedbackForm]: alloc=2500248 time=0.642
-Renamer/typechecker [Domain.Action.Internal.FeedbackForm]: alloc=29839712 time=13.543
-Desugar [Domain.Action.Internal.FeedbackForm]: alloc=2038232 time=1.380
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=10610816 time=3.343
-Specialise [Domain.Action.Internal.FeedbackForm]: alloc=1636640 time=0.497
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Internal.FeedbackForm]: alloc=6926800 time=2.196
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=34266424 time=11.368
-Float inwards [Domain.Action.Internal.FeedbackForm]: alloc=23800 time=0.005
-Called arity analysis [Domain.Action.Internal.FeedbackForm]: alloc=25376 time=0.006
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=9184448 time=2.826
-Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=6306176 time=1.476
-Worker Wrapper binds [Domain.Action.Internal.FeedbackForm]: alloc=299464 time=0.160
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=6765320 time=2.191
-Exitification transformation [Domain.Action.Internal.FeedbackForm]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Internal.FeedbackForm]: alloc=4791680 time=1.650
-Common sub-expression [Domain.Action.Internal.FeedbackForm]: alloc=24904 time=0.005
-Float inwards [Domain.Action.Internal.FeedbackForm]: alloc=23800 time=0.004
-Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=8325616 time=2.816
-Demand analysis [Domain.Action.Internal.FeedbackForm]: alloc=5651424 time=1.282
-CoreTidy [Domain.Action.Internal.FeedbackForm]: alloc=1938600 time=0.874
-CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.009
-CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=60279240 time=18.098
-systool:as: alloc=103808 time=0.218
+Parser [Domain.Action.Internal.FeedbackForm]: alloc=2496968 time=0.545
+Renamer/typechecker [Domain.Action.Internal.FeedbackForm]: alloc=25978184 time=10.423
+Desugar [Domain.Action.Internal.FeedbackForm]: alloc=2030152 time=1.356
+Simplifier [Domain.Action.Internal.FeedbackForm]: alloc=3664664 time=1.050
+CoreTidy [Domain.Action.Internal.FeedbackForm]: alloc=400976 time=0.166
+CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.007
+CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=35543920 time=10.184
+systool:as: alloc=103840 time=0.189
 CorePrep [Domain.Action.Internal.FeedbackForm]: alloc=24760 time=0.013
-CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=62928168 time=19.443
-systool:as: alloc=106688 time=0.216
+CodeGen [Domain.Action.Internal.FeedbackForm]: alloc=39005880 time=11.302
+systool:as: alloc=106696 time=0.180

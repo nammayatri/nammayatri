@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Merchant]: alloc=2626592 time=0.563
-Simplify [expr]: alloc=308672 time=0.089
-CorePrep [expr]: alloc=118928 time=0.058
-ByteCodeGen [Ghci1]: alloc=674144 time=0.152
-Simplify [expr]: alloc=47024 time=0.024
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.056
-Renamer/typechecker [Storage.Beam.Merchant]: alloc=466347512 time=130.335
-Desugar [Storage.Beam.Merchant]: alloc=45389584 time=12.381
-Simplifier [Storage.Beam.Merchant]: alloc=289182160 time=94.312
-Specialise [Storage.Beam.Merchant]: alloc=171161632 time=48.901
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant]: alloc=202065184 time=83.621
-Simplifier [Storage.Beam.Merchant]: alloc=2771403808 time=1161.047
-Float inwards [Storage.Beam.Merchant]: alloc=19624 time=0.005
-Called arity analysis [Storage.Beam.Merchant]: alloc=21200 time=0.005
-Simplifier [Storage.Beam.Merchant]: alloc=846706968 time=307.894
-Demand analysis [Storage.Beam.Merchant]: alloc=755131640 time=205.394
-Worker Wrapper binds [Storage.Beam.Merchant]: alloc=18836048 time=11.944
-Simplifier [Storage.Beam.Merchant]: alloc=940181944 time=420.382
-Exitification transformation [Storage.Beam.Merchant]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant]: alloc=642438384 time=289.708
-Common sub-expression [Storage.Beam.Merchant]: alloc=20728 time=0.007
-Float inwards [Storage.Beam.Merchant]: alloc=19624 time=0.008
-Simplifier [Storage.Beam.Merchant]: alloc=972814136 time=448.502
-Demand analysis [Storage.Beam.Merchant]: alloc=676451808 time=205.552
-CoreTidy [Storage.Beam.Merchant]: alloc=197446472 time=76.074
+Parser [Storage.Beam.Merchant]: alloc=2624416 time=0.607
+Simplify [expr]: alloc=183440 time=0.042
+CorePrep [expr]: alloc=81504 time=0.030
+ByteCodeGen [Ghci1]: alloc=462728 time=0.103
+Simplify [expr]: alloc=46992 time=0.019
+CorePrep [expr]: alloc=26608 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.049
+Renamer/typechecker [Storage.Beam.Merchant]: alloc=462809768 time=124.458
+Desugar [Storage.Beam.Merchant]: alloc=45356736 time=11.476
+Simplifier [Storage.Beam.Merchant]: alloc=113257096 time=33.464
+CoreTidy [Storage.Beam.Merchant]: alloc=32336192 time=10.167
+CorePrep [Storage.Beam.Merchant]: alloc=20584 time=0.012
+CodeGen [Storage.Beam.Merchant]: alloc=760118944 time=230.616
+systool:as: alloc=102904 time=0.203
 CorePrep [Storage.Beam.Merchant]: alloc=20584 time=0.016
-CodeGen [Storage.Beam.Merchant]: alloc=3464771112 time=1229.678
-systool:as: alloc=102904 time=0.328
-CorePrep [Storage.Beam.Merchant]: alloc=20584 time=0.020
-CodeGen [Storage.Beam.Merchant]: alloc=3574268832 time=1176.501
-systool:as: alloc=105776 time=0.308
+CodeGen [Storage.Beam.Merchant]: alloc=827253680 time=225.440
+systool:as: alloc=105776 time=0.203

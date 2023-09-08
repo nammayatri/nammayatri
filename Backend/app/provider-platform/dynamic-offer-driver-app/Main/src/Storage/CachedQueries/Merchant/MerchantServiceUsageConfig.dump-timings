@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=1505032 time=0.411
-Renamer/typechecker [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=336260208 time=62.025
-Desugar [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=229456816 time=38.686
-Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=5298456 time=1.452
-Specialise [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=951008 time=0.326
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=3717128 time=0.928
-Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=17538016 time=5.460
-Float inwards [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=30344 time=0.005
-Called arity analysis [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31920 time=0.006
-Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=8227208 time=2.286
-Demand analysis [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=8129088 time=1.868
-Worker Wrapper binds [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=602144 time=0.230
-Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=7865192 time=2.515
-Exitification transformation [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=32848 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=8075536 time=2.323
-Common sub-expression [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31448 time=0.006
-Float inwards [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=30344 time=0.005
-Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=9326320 time=2.915
-Demand analysis [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=10790024 time=2.313
-CoreTidy [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=1609320 time=0.720
-CorePrep [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31320 time=0.038
-CodeGen [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=57693664 time=17.155
-systool:as: alloc=105192 time=0.191
-CorePrep [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31320 time=0.017
-CodeGen [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=60060408 time=16.828
-systool:as: alloc=108096 time=0.196
+Parser [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=1505032 time=0.387
+Renamer/typechecker [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=223690944 time=40.696
+Desugar [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=225311640 time=37.201
+Simplifier [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=9691768 time=1.968
+CoreTidy [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=765448 time=0.329
+CorePrep [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31320 time=0.010
+CodeGen [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=29994976 time=8.090
+systool:as: alloc=105200 time=0.204
+CorePrep [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=31320 time=0.013
+CodeGen [Storage.CachedQueries.Merchant.MerchantServiceUsageConfig]: alloc=32858448 time=8.499
+systool:as: alloc=108080 time=0.147

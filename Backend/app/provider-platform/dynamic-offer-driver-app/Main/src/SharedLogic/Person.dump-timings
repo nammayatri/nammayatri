@@ -1,26 +1,11 @@
-Parser [SharedLogic.Person]: alloc=432424 time=0.174
-Renamer/typechecker [SharedLogic.Person]: alloc=8021480 time=4.723
-Desugar [SharedLogic.Person]: alloc=328120 time=0.870
-Simplifier [SharedLogic.Person]: alloc=4882672 time=1.530
-Specialise [SharedLogic.Person]: alloc=583208 time=0.159
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Person]: alloc=2392048 time=0.647
-Simplifier [SharedLogic.Person]: alloc=10367248 time=3.051
-Float inwards [SharedLogic.Person]: alloc=18712 time=0.004
-Called arity analysis [SharedLogic.Person]: alloc=20288 time=0.005
-Simplifier [SharedLogic.Person]: alloc=2531848 time=0.948
-Demand analysis [SharedLogic.Person]: alloc=2564032 time=0.475
-Worker Wrapper binds [SharedLogic.Person]: alloc=95432 time=0.052
-Simplifier [SharedLogic.Person]: alloc=1546368 time=0.453
-Exitification transformation [SharedLogic.Person]: alloc=21232 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Person]: alloc=1364720 time=0.417
-Common sub-expression [SharedLogic.Person]: alloc=19816 time=0.006
-Float inwards [SharedLogic.Person]: alloc=18712 time=0.004
-Simplifier [SharedLogic.Person]: alloc=2105792 time=0.705
-Demand analysis [SharedLogic.Person]: alloc=2490784 time=0.463
-CoreTidy [SharedLogic.Person]: alloc=454824 time=0.209
-CorePrep [SharedLogic.Person]: alloc=19704 time=0.008
-CodeGen [SharedLogic.Person]: alloc=24849848 time=6.622
-systool:as: alloc=102712 time=0.182
-CorePrep [SharedLogic.Person]: alloc=19704 time=0.012
-CodeGen [SharedLogic.Person]: alloc=25543408 time=6.782
-systool:as: alloc=105592 time=0.164
+Parser [SharedLogic.Person]: alloc=432424 time=0.127
+Renamer/typechecker [SharedLogic.Person]: alloc=8025496 time=4.346
+Desugar [SharedLogic.Person]: alloc=327704 time=0.846
+Simplifier [SharedLogic.Person]: alloc=863480 time=0.299
+CoreTidy [SharedLogic.Person]: alloc=149280 time=0.069
+CorePrep [SharedLogic.Person]: alloc=19704 time=0.007
+CodeGen [SharedLogic.Person]: alloc=8070184 time=2.746
+systool:as: alloc=102744 time=0.177
+CorePrep [SharedLogic.Person]: alloc=19704 time=0.010
+CodeGen [SharedLogic.Person]: alloc=8642264 time=2.753
+systool:as: alloc=105600 time=0.139

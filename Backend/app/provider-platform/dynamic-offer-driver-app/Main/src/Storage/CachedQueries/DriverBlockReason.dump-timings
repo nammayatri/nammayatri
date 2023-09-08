@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.DriverBlockReason]: alloc=1018904 time=0.256
-Renamer/typechecker [Storage.CachedQueries.DriverBlockReason]: alloc=229025584 time=41.471
-Desugar [Storage.CachedQueries.DriverBlockReason]: alloc=202992136 time=35.112
-Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=3576408 time=0.985
-Specialise [Storage.CachedQueries.DriverBlockReason]: alloc=1224992 time=0.398
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.DriverBlockReason]: alloc=6367616 time=1.919
-Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=93093536 time=33.717
-Float inwards [Storage.CachedQueries.DriverBlockReason]: alloc=24984 time=0.005
-Called arity analysis [Storage.CachedQueries.DriverBlockReason]: alloc=26560 time=0.006
-Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=22194272 time=6.991
-Demand analysis [Storage.CachedQueries.DriverBlockReason]: alloc=19609040 time=4.744
-Worker Wrapper binds [Storage.CachedQueries.DriverBlockReason]: alloc=885512 time=0.365
-Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=25645640 time=8.323
-Exitification transformation [Storage.CachedQueries.DriverBlockReason]: alloc=27488 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.DriverBlockReason]: alloc=17522912 time=5.614
-Common sub-expression [Storage.CachedQueries.DriverBlockReason]: alloc=26088 time=0.006
-Float inwards [Storage.CachedQueries.DriverBlockReason]: alloc=24984 time=0.004
-Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=22623120 time=7.585
-Demand analysis [Storage.CachedQueries.DriverBlockReason]: alloc=12050280 time=2.827
-CoreTidy [Storage.CachedQueries.DriverBlockReason]: alloc=2784720 time=1.208
-CorePrep [Storage.CachedQueries.DriverBlockReason]: alloc=25944 time=0.010
-CodeGen [Storage.CachedQueries.DriverBlockReason]: alloc=67606896 time=19.582
-systool:as: alloc=104040 time=0.209
-CorePrep [Storage.CachedQueries.DriverBlockReason]: alloc=25944 time=0.030
-CodeGen [Storage.CachedQueries.DriverBlockReason]: alloc=71072888 time=20.970
-systool:as: alloc=106912 time=0.193
+Parser [Storage.CachedQueries.DriverBlockReason]: alloc=1017256 time=0.280
+Renamer/typechecker [Storage.CachedQueries.DriverBlockReason]: alloc=154612480 time=28.504
+Desugar [Storage.CachedQueries.DriverBlockReason]: alloc=199326184 time=33.189
+Simplifier [Storage.CachedQueries.DriverBlockReason]: alloc=4768440 time=1.087
+CoreTidy [Storage.CachedQueries.DriverBlockReason]: alloc=492472 time=0.162
+CorePrep [Storage.CachedQueries.DriverBlockReason]: alloc=25944 time=0.009
+CodeGen [Storage.CachedQueries.DriverBlockReason]: alloc=20519904 time=5.862
+systool:as: alloc=104064 time=0.168
+CorePrep [Storage.CachedQueries.DriverBlockReason]: alloc=25944 time=0.011
+CodeGen [Storage.CachedQueries.DriverBlockReason]: alloc=22456768 time=6.031
+systool:as: alloc=106912 time=0.116

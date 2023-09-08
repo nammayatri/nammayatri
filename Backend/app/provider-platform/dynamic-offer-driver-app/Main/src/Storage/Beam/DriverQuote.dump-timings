@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverQuote]: alloc=2390080 time=0.629
-Simplify [expr]: alloc=308512 time=0.093
-CorePrep [expr]: alloc=118928 time=0.064
-ByteCodeGen [Ghci1]: alloc=674184 time=0.148
-Simplify [expr]: alloc=47024 time=0.034
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.053
-Renamer/typechecker [Storage.Beam.DriverQuote]: alloc=412226736 time=112.674
-Desugar [Storage.Beam.DriverQuote]: alloc=38974768 time=10.091
-Simplifier [Storage.Beam.DriverQuote]: alloc=234042248 time=72.439
-Specialise [Storage.Beam.DriverQuote]: alloc=124038360 time=34.224
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverQuote]: alloc=163071528 time=63.379
-Simplifier [Storage.Beam.DriverQuote]: alloc=2114032104 time=873.887
-Float inwards [Storage.Beam.DriverQuote]: alloc=20504 time=0.009
-Called arity analysis [Storage.Beam.DriverQuote]: alloc=22080 time=0.005
-Simplifier [Storage.Beam.DriverQuote]: alloc=646590576 time=241.480
-Demand analysis [Storage.Beam.DriverQuote]: alloc=598824160 time=137.763
-Worker Wrapper binds [Storage.Beam.DriverQuote]: alloc=14994248 time=10.738
-Simplifier [Storage.Beam.DriverQuote]: alloc=725345896 time=321.852
-Exitification transformation [Storage.Beam.DriverQuote]: alloc=23024 time=0.011
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverQuote]: alloc=499687440 time=202.114
-Common sub-expression [Storage.Beam.DriverQuote]: alloc=21608 time=0.007
-Float inwards [Storage.Beam.DriverQuote]: alloc=20504 time=0.004
-Simplifier [Storage.Beam.DriverQuote]: alloc=751225296 time=357.951
-Demand analysis [Storage.Beam.DriverQuote]: alloc=542634160 time=121.589
-CoreTidy [Storage.Beam.DriverQuote]: alloc=148900544 time=71.823
-CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.013
-CodeGen [Storage.Beam.DriverQuote]: alloc=2786261320 time=956.708
-systool:as: alloc=103088 time=0.368
-CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.022
-CodeGen [Storage.Beam.DriverQuote]: alloc=2873903480 time=886.244
-systool:as: alloc=105968 time=0.295
+Parser [Storage.Beam.DriverQuote]: alloc=2388992 time=0.441
+Simplify [expr]: alloc=183440 time=0.040
+CorePrep [expr]: alloc=81504 time=0.033
+ByteCodeGen [Ghci1]: alloc=462728 time=0.109
+Simplify [expr]: alloc=46992 time=0.021
+CorePrep [expr]: alloc=26608 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.052
+Renamer/typechecker [Storage.Beam.DriverQuote]: alloc=407503552 time=110.620
+Desugar [Storage.Beam.DriverQuote]: alloc=38954272 time=10.134
+Simplifier [Storage.Beam.DriverQuote]: alloc=89492248 time=26.062
+CoreTidy [Storage.Beam.DriverQuote]: alloc=25238424 time=8.681
+CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.011
+CodeGen [Storage.Beam.DriverQuote]: alloc=616375032 time=181.037
+systool:as: alloc=103096 time=0.212
+CorePrep [Storage.Beam.DriverQuote]: alloc=21496 time=0.018
+CodeGen [Storage.Beam.DriverQuote]: alloc=671844168 time=184.953
+systool:as: alloc=105976 time=0.202

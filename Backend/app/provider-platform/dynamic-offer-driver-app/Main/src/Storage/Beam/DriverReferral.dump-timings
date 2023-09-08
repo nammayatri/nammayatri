@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverReferral]: alloc=1146872 time=0.355
-Simplify [expr]: alloc=183976 time=0.054
-CorePrep [expr]: alloc=73944 time=0.039
-ByteCodeGen [Ghci1]: alloc=379864 time=0.099
-Simplify [expr]: alloc=47024 time=0.015
-CorePrep [expr]: alloc=26752 time=0.014
-ByteCodeGen [Ghci1]: alloc=131880 time=0.048
-Renamer/typechecker [Storage.Beam.DriverReferral]: alloc=92444864 time=31.172
-Desugar [Storage.Beam.DriverReferral]: alloc=18392720 time=5.312
-Simplifier [Storage.Beam.DriverReferral]: alloc=48965152 time=16.323
-Specialise [Storage.Beam.DriverReferral]: alloc=15860416 time=5.190
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverReferral]: alloc=46737464 time=16.537
-Simplifier [Storage.Beam.DriverReferral]: alloc=386574856 time=159.524
-Float inwards [Storage.Beam.DriverReferral]: alloc=21416 time=0.005
-Called arity analysis [Storage.Beam.DriverReferral]: alloc=22992 time=0.006
-Simplifier [Storage.Beam.DriverReferral]: alloc=109277584 time=35.919
-Demand analysis [Storage.Beam.DriverReferral]: alloc=111745888 time=28.083
-Worker Wrapper binds [Storage.Beam.DriverReferral]: alloc=3188800 time=1.874
-Simplifier [Storage.Beam.DriverReferral]: alloc=135642624 time=45.884
-Exitification transformation [Storage.Beam.DriverReferral]: alloc=23904 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverReferral]: alloc=96818472 time=54.294
-Common sub-expression [Storage.Beam.DriverReferral]: alloc=22520 time=0.007
-Float inwards [Storage.Beam.DriverReferral]: alloc=21416 time=0.030
-Simplifier [Storage.Beam.DriverReferral]: alloc=137794400 time=47.241
-Demand analysis [Storage.Beam.DriverReferral]: alloc=102518104 time=24.899
-CoreTidy [Storage.Beam.DriverReferral]: alloc=23114024 time=11.180
-CorePrep [Storage.Beam.DriverReferral]: alloc=22376 time=0.041
-CodeGen [Storage.Beam.DriverReferral]: alloc=557809496 time=198.717
-systool:as: alloc=103264 time=0.264
-CorePrep [Storage.Beam.DriverReferral]: alloc=22376 time=0.043
-CodeGen [Storage.Beam.DriverReferral]: alloc=575252568 time=182.821
-systool:as: alloc=106144 time=0.232
+Parser [Storage.Beam.DriverReferral]: alloc=1145776 time=0.303
+Simplify [expr]: alloc=109424 time=0.031
+CorePrep [expr]: alloc=51184 time=0.024
+ByteCodeGen [Ghci1]: alloc=276472 time=0.080
+Simplify [expr]: alloc=46992 time=0.015
+CorePrep [expr]: alloc=26608 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.039
+Renamer/typechecker [Storage.Beam.DriverReferral]: alloc=90464376 time=30.750
+Desugar [Storage.Beam.DriverReferral]: alloc=18375680 time=5.371
+Simplifier [Storage.Beam.DriverReferral]: alloc=17830968 time=4.939
+CoreTidy [Storage.Beam.DriverReferral]: alloc=3286520 time=1.018
+CorePrep [Storage.Beam.DriverReferral]: alloc=22376 time=0.008
+CodeGen [Storage.Beam.DriverReferral]: alloc=126256488 time=37.234
+systool:as: alloc=103264 time=0.158
+CorePrep [Storage.Beam.DriverReferral]: alloc=22376 time=0.013
+CodeGen [Storage.Beam.DriverReferral]: alloc=138112112 time=40.773
+systool:as: alloc=106144 time=0.167

@@ -1,26 +1,11 @@
-Parser [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=1516264 time=0.346
-Renamer/typechecker [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=135469240 time=49.233
-Desugar [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=6491536 time=2.648
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=127176840 time=44.897
-Specialise [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=38852168 time=12.817
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=57176112 time=22.738
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=836619160 time=359.567
-Float inwards [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=35112 time=0.006
-Called arity analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36688 time=0.007
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=219286528 time=86.392
-Demand analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=104867168 time=41.360
-Worker Wrapper binds [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=3443744 time=1.786
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=216405688 time=86.440
-Exitification transformation [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=37616 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=115060896 time=56.367
-Common sub-expression [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36216 time=0.007
-Float inwards [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=35112 time=0.005
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=239925528 time=99.941
-Demand analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=86874056 time=33.511
-CoreTidy [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=32749656 time=10.046
-CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36088 time=0.013
-CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=475015272 time=171.935
-systool:as: alloc=106240 time=0.222
-CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36088 time=0.018
-CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=495519912 time=164.623
-systool:as: alloc=109120 time=0.201
+Parser [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=1510760 time=0.312
+Renamer/typechecker [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=135375624 time=44.463
+Desugar [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=6489264 time=2.444
+Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=48051448 time=12.652
+CoreTidy [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=11401720 time=3.635
+CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36088 time=0.010
+CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=374193136 time=119.678
+systool:as: alloc=106248 time=0.164
+CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=36088 time=0.016
+CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab]: alloc=403207680 time=121.759
+systool:as: alloc=109128 time=0.181

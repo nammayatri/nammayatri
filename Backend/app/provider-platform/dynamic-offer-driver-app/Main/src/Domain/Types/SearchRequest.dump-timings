@@ -1,26 +1,11 @@
-Parser [Domain.Types.SearchRequest]: alloc=988096 time=0.332
-Renamer/typechecker [Domain.Types.SearchRequest]: alloc=67954368 time=21.004
-Desugar [Domain.Types.SearchRequest]: alloc=7895840 time=2.812
-Simplifier [Domain.Types.SearchRequest]: alloc=56784584 time=18.499
-Specialise [Domain.Types.SearchRequest]: alloc=5745224 time=1.910
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequest]: alloc=18418784 time=6.058
-Simplifier [Domain.Types.SearchRequest]: alloc=70892328 time=20.578
-Float inwards [Domain.Types.SearchRequest]: alloc=21096 time=0.005
-Called arity analysis [Domain.Types.SearchRequest]: alloc=22672 time=0.006
-Simplifier [Domain.Types.SearchRequest]: alloc=24299016 time=6.572
-Demand analysis [Domain.Types.SearchRequest]: alloc=17113088 time=3.607
-Worker Wrapper binds [Domain.Types.SearchRequest]: alloc=732680 time=0.355
-Simplifier [Domain.Types.SearchRequest]: alloc=27902008 time=11.762
-Exitification transformation [Domain.Types.SearchRequest]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequest]: alloc=13815424 time=4.164
-Common sub-expression [Domain.Types.SearchRequest]: alloc=22200 time=0.006
-Float inwards [Domain.Types.SearchRequest]: alloc=21096 time=0.004
-Simplifier [Domain.Types.SearchRequest]: alloc=35749840 time=9.890
-Demand analysis [Domain.Types.SearchRequest]: alloc=17358016 time=3.919
-CoreTidy [Domain.Types.SearchRequest]: alloc=11231672 time=3.375
-CorePrep [Domain.Types.SearchRequest]: alloc=22088 time=0.009
-CodeGen [Domain.Types.SearchRequest]: alloc=231104560 time=67.938
-systool:as: alloc=103208 time=0.270
-CorePrep [Domain.Types.SearchRequest]: alloc=22088 time=0.021
-CodeGen [Domain.Types.SearchRequest]: alloc=240862168 time=70.381
-systool:as: alloc=106088 time=0.267
+Parser [Domain.Types.SearchRequest]: alloc=988096 time=0.246
+Renamer/typechecker [Domain.Types.SearchRequest]: alloc=67870232 time=21.339
+Desugar [Domain.Types.SearchRequest]: alloc=7866728 time=2.789
+Simplifier [Domain.Types.SearchRequest]: alloc=28391192 time=6.873
+CoreTidy [Domain.Types.SearchRequest]: alloc=7151800 time=1.911
+CorePrep [Domain.Types.SearchRequest]: alloc=22088 time=0.010
+CodeGen [Domain.Types.SearchRequest]: alloc=169305784 time=46.538
+systool:as: alloc=103240 time=0.182
+CorePrep [Domain.Types.SearchRequest]: alloc=22088 time=0.017
+CodeGen [Domain.Types.SearchRequest]: alloc=180512488 time=49.483
+systool:as: alloc=106096 time=0.187

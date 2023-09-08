@@ -1,26 +1,11 @@
-Parser [API.UI.Call]: alloc=2829392 time=0.579
-Renamer/typechecker [API.UI.Call]: alloc=113587768 time=29.668
-Desugar [API.UI.Call]: alloc=961144 time=1.102
-Simplifier [API.UI.Call]: alloc=74951064 time=22.109
-Specialise [API.UI.Call]: alloc=5039424 time=2.879
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Call]: alloc=14297072 time=5.250
-Simplifier [API.UI.Call]: alloc=134967056 time=41.945
-Float inwards [API.UI.Call]: alloc=16648 time=0.005
-Called arity analysis [API.UI.Call]: alloc=18224 time=0.005
-Simplifier [API.UI.Call]: alloc=22351760 time=10.885
-Demand analysis [API.UI.Call]: alloc=26352688 time=6.327
-Worker Wrapper binds [API.UI.Call]: alloc=319808 time=0.193
-Simplifier [API.UI.Call]: alloc=41276896 time=8.836
-Exitification transformation [API.UI.Call]: alloc=19136 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Call]: alloc=16555408 time=5.538
-Common sub-expression [API.UI.Call]: alloc=17752 time=0.005
-Float inwards [API.UI.Call]: alloc=16648 time=0.004
-Simplifier [API.UI.Call]: alloc=108922704 time=37.744
-Demand analysis [API.UI.Call]: alloc=27790704 time=8.020
-CoreTidy [API.UI.Call]: alloc=14386656 time=4.020
-CorePrep [API.UI.Call]: alloc=17608 time=0.012
-CodeGen [API.UI.Call]: alloc=103850352 time=25.366
-systool:as: alloc=102264 time=0.188
-CorePrep [API.UI.Call]: alloc=17608 time=0.016
-CodeGen [API.UI.Call]: alloc=106207408 time=26.293
-systool:as: alloc=105144 time=0.187
+Parser [API.UI.Call]: alloc=2827192 time=0.480
+Renamer/typechecker [API.UI.Call]: alloc=113443208 time=28.200
+Desugar [API.UI.Call]: alloc=960528 time=1.148
+Simplifier [API.UI.Call]: alloc=46289576 time=14.516
+CoreTidy [API.UI.Call]: alloc=14498088 time=3.310
+CorePrep [API.UI.Call]: alloc=17608 time=0.009
+CodeGen [API.UI.Call]: alloc=35131816 time=12.633
+systool:as: alloc=102272 time=0.225
+CorePrep [API.UI.Call]: alloc=17608 time=0.015
+CodeGen [API.UI.Call]: alloc=37668320 time=12.564
+systool:as: alloc=105152 time=0.180

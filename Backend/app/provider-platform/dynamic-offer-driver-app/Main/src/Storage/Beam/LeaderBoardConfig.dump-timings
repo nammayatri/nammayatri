@@ -1,32 +1,17 @@
-Parser [Storage.Beam.LeaderBoardConfig]: alloc=1603680 time=0.483
-Simplify [expr]: alloc=184216 time=0.065
-CorePrep [expr]: alloc=74144 time=0.039
-ByteCodeGen [Ghci1]: alloc=379904 time=0.165
-Simplify [expr]: alloc=47024 time=0.031
-CorePrep [expr]: alloc=26752 time=0.029
-ByteCodeGen [Ghci1]: alloc=131880 time=0.053
-Renamer/typechecker [Storage.Beam.LeaderBoardConfig]: alloc=173202136 time=54.008
-Desugar [Storage.Beam.LeaderBoardConfig]: alloc=23671200 time=6.679
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=118682368 time=34.837
-Specialise [Storage.Beam.LeaderBoardConfig]: alloc=36995752 time=11.960
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.LeaderBoardConfig]: alloc=77427808 time=28.139
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=897930768 time=335.089
-Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.005
-Called arity analysis [Storage.Beam.LeaderBoardConfig]: alloc=23872 time=0.006
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=259382304 time=101.272
-Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=237584704 time=60.439
-Worker Wrapper binds [Storage.Beam.LeaderBoardConfig]: alloc=5962816 time=3.703
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=300974024 time=116.425
-Exitification transformation [Storage.Beam.LeaderBoardConfig]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.LeaderBoardConfig]: alloc=199268480 time=66.384
-Common sub-expression [Storage.Beam.LeaderBoardConfig]: alloc=23400 time=0.007
-Float inwards [Storage.Beam.LeaderBoardConfig]: alloc=22296 time=0.005
-Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=310988832 time=145.812
-Demand analysis [Storage.Beam.LeaderBoardConfig]: alloc=218638600 time=53.257
-CoreTidy [Storage.Beam.LeaderBoardConfig]: alloc=60008752 time=45.023
+Parser [Storage.Beam.LeaderBoardConfig]: alloc=1602576 time=0.382
+Simplify [expr]: alloc=109424 time=0.030
+CorePrep [expr]: alloc=51184 time=0.024
+ByteCodeGen [Ghci1]: alloc=276472 time=0.079
+Simplify [expr]: alloc=46992 time=0.017
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.043
+Renamer/typechecker [Storage.Beam.LeaderBoardConfig]: alloc=170949064 time=49.828
+Desugar [Storage.Beam.LeaderBoardConfig]: alloc=23673096 time=6.555
+Simplifier [Storage.Beam.LeaderBoardConfig]: alloc=35491720 time=9.834
+CoreTidy [Storage.Beam.LeaderBoardConfig]: alloc=8197496 time=2.537
+CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.009
+CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=254943672 time=72.990
+systool:as: alloc=103456 time=0.189
 CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.016
-CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=1120196976 time=350.696
-systool:as: alloc=103456 time=0.260
-CorePrep [Storage.Beam.LeaderBoardConfig]: alloc=23272 time=0.018
-CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=1154304120 time=352.669
-systool:as: alloc=106328 time=0.294
+CodeGen [Storage.Beam.LeaderBoardConfig]: alloc=278789816 time=78.635
+systool:as: alloc=106328 time=0.170

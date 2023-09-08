@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Whatsapp]: alloc=1095160 time=0.392
-Renamer/typechecker [Domain.Action.UI.Whatsapp]: alloc=266026112 time=59.251
-Desugar [Domain.Action.UI.Whatsapp]: alloc=640726128 time=104.885
-Simplifier [Domain.Action.UI.Whatsapp]: alloc=21849512 time=8.838
-Specialise [Domain.Action.UI.Whatsapp]: alloc=4151120 time=1.603
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Whatsapp]: alloc=10814360 time=3.970
-Simplifier [Domain.Action.UI.Whatsapp]: alloc=123228032 time=44.298
-Float inwards [Domain.Action.UI.Whatsapp]: alloc=20808 time=0.004
-Called arity analysis [Domain.Action.UI.Whatsapp]: alloc=22384 time=0.006
-Simplifier [Domain.Action.UI.Whatsapp]: alloc=31438536 time=10.807
-Demand analysis [Domain.Action.UI.Whatsapp]: alloc=18157008 time=4.776
-Worker Wrapper binds [Domain.Action.UI.Whatsapp]: alloc=651280 time=0.427
-Simplifier [Domain.Action.UI.Whatsapp]: alloc=31877520 time=11.224
-Exitification transformation [Domain.Action.UI.Whatsapp]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Whatsapp]: alloc=17271456 time=5.928
-Common sub-expression [Domain.Action.UI.Whatsapp]: alloc=21912 time=0.005
-Float inwards [Domain.Action.UI.Whatsapp]: alloc=20808 time=0.004
-Simplifier [Domain.Action.UI.Whatsapp]: alloc=36213736 time=14.085
-Demand analysis [Domain.Action.UI.Whatsapp]: alloc=16193784 time=4.574
-CoreTidy [Domain.Action.UI.Whatsapp]: alloc=5482736 time=2.728
-CorePrep [Domain.Action.UI.Whatsapp]: alloc=21784 time=0.008
-CodeGen [Domain.Action.UI.Whatsapp]: alloc=103076248 time=34.393
-systool:as: alloc=103168 time=0.197
-CorePrep [Domain.Action.UI.Whatsapp]: alloc=21784 time=0.025
-CodeGen [Domain.Action.UI.Whatsapp]: alloc=108026120 time=36.321
-systool:as: alloc=106048 time=0.190
+Parser [Domain.Action.UI.Whatsapp]: alloc=1094616 time=0.263
+Renamer/typechecker [Domain.Action.UI.Whatsapp]: alloc=240591352 time=51.777
+Desugar [Domain.Action.UI.Whatsapp]: alloc=628916416 time=107.090
+Simplifier [Domain.Action.UI.Whatsapp]: alloc=9015408 time=2.782
+CoreTidy [Domain.Action.UI.Whatsapp]: alloc=1196856 time=0.460
+CorePrep [Domain.Action.UI.Whatsapp]: alloc=21784 time=0.010
+CodeGen [Domain.Action.UI.Whatsapp]: alloc=60430944 time=18.781
+systool:as: alloc=103176 time=0.190
+CorePrep [Domain.Action.UI.Whatsapp]: alloc=21784 time=0.013
+CodeGen [Domain.Action.UI.Whatsapp]: alloc=65786632 time=19.246
+systool:as: alloc=106056 time=0.199

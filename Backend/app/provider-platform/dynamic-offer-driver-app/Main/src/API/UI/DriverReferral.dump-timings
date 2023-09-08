@@ -1,26 +1,11 @@
-Parser [API.UI.DriverReferral]: alloc=614872 time=0.199
-Renamer/typechecker [API.UI.DriverReferral]: alloc=30717104 time=11.947
-Desugar [API.UI.DriverReferral]: alloc=652752 time=1.010
-Simplifier [API.UI.DriverReferral]: alloc=10187832 time=2.234
-Specialise [API.UI.DriverReferral]: alloc=2826712 time=0.563
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.DriverReferral]: alloc=8859032 time=1.816
-Simplifier [API.UI.DriverReferral]: alloc=16604736 time=2.764
-Float inwards [API.UI.DriverReferral]: alloc=19624 time=0.004
-Called arity analysis [API.UI.DriverReferral]: alloc=21200 time=0.006
-Simplifier [API.UI.DriverReferral]: alloc=9582528 time=1.510
-Demand analysis [API.UI.DriverReferral]: alloc=19493208 time=2.665
-Worker Wrapper binds [API.UI.DriverReferral]: alloc=69400 time=0.051
-Simplifier [API.UI.DriverReferral]: alloc=17066312 time=2.393
-Exitification transformation [API.UI.DriverReferral]: alloc=22128 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.DriverReferral]: alloc=7458080 time=1.588
-Common sub-expression [API.UI.DriverReferral]: alloc=20728 time=0.005
-Float inwards [API.UI.DriverReferral]: alloc=19624 time=0.004
-Simplifier [API.UI.DriverReferral]: alloc=22849312 time=4.033
-Demand analysis [API.UI.DriverReferral]: alloc=19564968 time=2.760
-CoreTidy [API.UI.DriverReferral]: alloc=6527968 time=1.343
+Parser [API.UI.DriverReferral]: alloc=614872 time=0.164
+Renamer/typechecker [API.UI.DriverReferral]: alloc=30537200 time=10.920
+Desugar [API.UI.DriverReferral]: alloc=651688 time=0.967
+Simplifier [API.UI.DriverReferral]: alloc=2064248 time=0.523
+CoreTidy [API.UI.DriverReferral]: alloc=381928 time=0.135
+CorePrep [API.UI.DriverReferral]: alloc=20584 time=0.007
+CodeGen [API.UI.DriverReferral]: alloc=10870048 time=3.731
+systool:as: alloc=102888 time=0.200
 CorePrep [API.UI.DriverReferral]: alloc=20584 time=0.010
-CodeGen [API.UI.DriverReferral]: alloc=73536368 time=15.754
-systool:as: alloc=102880 time=0.179
-CorePrep [API.UI.DriverReferral]: alloc=20584 time=0.015
-CodeGen [API.UI.DriverReferral]: alloc=74553656 time=16.074
-systool:as: alloc=105752 time=0.155
+CodeGen [API.UI.DriverReferral]: alloc=11741600 time=3.535
+systool:as: alloc=105760 time=0.164

@@ -1,26 +1,11 @@
-Parser [API.UI.Vehicle]: alloc=1583712 time=0.442
-Renamer/typechecker [API.UI.Vehicle]: alloc=19811696 time=9.078
-Desugar [API.UI.Vehicle]: alloc=723288 time=1.055
-Simplifier [API.UI.Vehicle]: alloc=8048376 time=2.320
-Specialise [API.UI.Vehicle]: alloc=1287632 time=0.385
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Vehicle]: alloc=4397256 time=1.050
-Simplifier [API.UI.Vehicle]: alloc=9215864 time=2.041
-Float inwards [API.UI.Vehicle]: alloc=17528 time=0.004
-Called arity analysis [API.UI.Vehicle]: alloc=19104 time=0.005
-Simplifier [API.UI.Vehicle]: alloc=4990752 time=0.964
-Demand analysis [API.UI.Vehicle]: alloc=7826720 time=1.143
-Worker Wrapper binds [API.UI.Vehicle]: alloc=56896 time=0.033
-Simplifier [API.UI.Vehicle]: alloc=8206208 time=1.415
-Exitification transformation [API.UI.Vehicle]: alloc=20048 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Vehicle]: alloc=2928136 time=0.694
-Common sub-expression [API.UI.Vehicle]: alloc=18632 time=0.004
-Float inwards [API.UI.Vehicle]: alloc=17528 time=0.003
-Simplifier [API.UI.Vehicle]: alloc=10319088 time=1.995
-Demand analysis [API.UI.Vehicle]: alloc=7882232 time=1.264
-CoreTidy [API.UI.Vehicle]: alloc=2642120 time=0.755
-CorePrep [API.UI.Vehicle]: alloc=18504 time=0.009
-CodeGen [API.UI.Vehicle]: alloc=30633800 time=8.033
-systool:as: alloc=102456 time=0.213
-CorePrep [API.UI.Vehicle]: alloc=18504 time=0.016
-CodeGen [API.UI.Vehicle]: alloc=31219216 time=8.651
-systool:as: alloc=105328 time=0.182
+Parser [API.UI.Vehicle]: alloc=1583712 time=0.328
+Renamer/typechecker [API.UI.Vehicle]: alloc=19801264 time=8.185
+Desugar [API.UI.Vehicle]: alloc=722840 time=1.018
+Simplifier [API.UI.Vehicle]: alloc=4414312 time=1.063
+CoreTidy [API.UI.Vehicle]: alloc=518080 time=0.187
+CorePrep [API.UI.Vehicle]: alloc=18504 time=0.007
+CodeGen [API.UI.Vehicle]: alloc=9316720 time=3.029
+systool:as: alloc=102464 time=0.186
+CorePrep [API.UI.Vehicle]: alloc=18504 time=0.034
+CodeGen [API.UI.Vehicle]: alloc=9920256 time=3.518
+systool:as: alloc=105336 time=0.166

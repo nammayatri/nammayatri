@@ -1,32 +1,17 @@
-Parser [SharedLogic.Allocator]: alloc=2027544 time=0.455
-Simplify [expr]: alloc=190104 time=0.137
-CorePrep [expr]: alloc=36072 time=0.026
-ByteCodeGen [Ghci1]: alloc=143216 time=0.068
-Simplify [expr]: alloc=44952 time=0.053
-CorePrep [expr]: alloc=25128 time=0.015
-ByteCodeGen [Ghci1]: alloc=97376 time=0.039
-Renamer/typechecker [SharedLogic.Allocator]: alloc=733151096 time=287.417
-Desugar [SharedLogic.Allocator]: alloc=6330960 time=2.670
-Simplifier [SharedLogic.Allocator]: alloc=111554000 time=37.409
-Specialise [SharedLogic.Allocator]: alloc=26582312 time=8.905
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator]: alloc=49251648 time=18.116
-Simplifier [SharedLogic.Allocator]: alloc=671586944 time=265.617
-Float inwards [SharedLogic.Allocator]: alloc=19624 time=0.005
-Called arity analysis [SharedLogic.Allocator]: alloc=21200 time=0.010
-Simplifier [SharedLogic.Allocator]: alloc=162294392 time=50.842
-Demand analysis [SharedLogic.Allocator]: alloc=91467840 time=24.021
-Worker Wrapper binds [SharedLogic.Allocator]: alloc=3180112 time=1.905
-Simplifier [SharedLogic.Allocator]: alloc=173625592 time=68.009
-Exitification transformation [SharedLogic.Allocator]: alloc=22128 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator]: alloc=95801624 time=29.131
-Common sub-expression [SharedLogic.Allocator]: alloc=20728 time=0.007
-Float inwards [SharedLogic.Allocator]: alloc=19624 time=0.004
-Simplifier [SharedLogic.Allocator]: alloc=192360128 time=67.830
-Demand analysis [SharedLogic.Allocator]: alloc=82137112 time=21.827
-CoreTidy [SharedLogic.Allocator]: alloc=33307840 time=13.310
+Parser [SharedLogic.Allocator]: alloc=2018112 time=0.419
+Simplify [expr]: alloc=55416 time=0.035
+CorePrep [expr]: alloc=28920 time=0.018
+ByteCodeGen [Ghci1]: alloc=108968 time=0.062
+Simplify [expr]: alloc=44920 time=0.027
+CorePrep [expr]: alloc=25008 time=0.014
+ByteCodeGen [Ghci1]: alloc=97376 time=0.041
+Renamer/typechecker [SharedLogic.Allocator]: alloc=715846160 time=285.316
+Desugar [SharedLogic.Allocator]: alloc=6121472 time=2.433
+Simplifier [SharedLogic.Allocator]: alloc=81541744 time=25.049
+CoreTidy [SharedLogic.Allocator]: alloc=9519216 time=3.501
+CorePrep [SharedLogic.Allocator]: alloc=20584 time=0.010
+CodeGen [SharedLogic.Allocator]: alloc=319128288 time=105.020
+systool:as: alloc=102904 time=0.207
 CorePrep [SharedLogic.Allocator]: alloc=20584 time=0.015
-CodeGen [SharedLogic.Allocator]: alloc=531577256 time=167.753
-systool:as: alloc=102896 time=0.225
-CorePrep [SharedLogic.Allocator]: alloc=20584 time=0.016
-CodeGen [SharedLogic.Allocator]: alloc=553151080 time=172.748
-systool:as: alloc=105792 time=0.264
+CodeGen [SharedLogic.Allocator]: alloc=342976608 time=107.769
+systool:as: alloc=105776 time=0.191

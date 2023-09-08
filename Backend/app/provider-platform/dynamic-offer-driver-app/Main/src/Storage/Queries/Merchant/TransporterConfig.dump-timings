@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Merchant.TransporterConfig]: alloc=4259400 time=0.834
-Renamer/typechecker [Storage.Queries.Merchant.TransporterConfig]: alloc=427847184 time=131.537
-Desugar [Storage.Queries.Merchant.TransporterConfig]: alloc=8238496 time=2.728
-Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=335823696 time=105.800
-Specialise [Storage.Queries.Merchant.TransporterConfig]: alloc=198610496 time=60.317
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.TransporterConfig]: alloc=86781160 time=36.468
-Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=763602072 time=303.882
-Float inwards [Storage.Queries.Merchant.TransporterConfig]: alloc=25864 time=0.007
-Called arity analysis [Storage.Queries.Merchant.TransporterConfig]: alloc=27440 time=0.006
-Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=173114664 time=50.582
-Demand analysis [Storage.Queries.Merchant.TransporterConfig]: alloc=64718072 time=17.808
-Worker Wrapper binds [Storage.Queries.Merchant.TransporterConfig]: alloc=2513616 time=1.772
-Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=125973280 time=47.722
-Exitification transformation [Storage.Queries.Merchant.TransporterConfig]: alloc=28384 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.TransporterConfig]: alloc=56692048 time=29.956
-Common sub-expression [Storage.Queries.Merchant.TransporterConfig]: alloc=26968 time=0.007
-Float inwards [Storage.Queries.Merchant.TransporterConfig]: alloc=25864 time=0.005
-Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=145587536 time=48.713
-Demand analysis [Storage.Queries.Merchant.TransporterConfig]: alloc=45872160 time=12.740
-CoreTidy [Storage.Queries.Merchant.TransporterConfig]: alloc=37966408 time=14.465
-CorePrep [Storage.Queries.Merchant.TransporterConfig]: alloc=26856 time=0.017
-CodeGen [Storage.Queries.Merchant.TransporterConfig]: alloc=318360968 time=104.533
-systool:as: alloc=104248 time=0.255
-CorePrep [Storage.Queries.Merchant.TransporterConfig]: alloc=26856 time=0.018
-CodeGen [Storage.Queries.Merchant.TransporterConfig]: alloc=339175552 time=107.159
-systool:as: alloc=107128 time=0.230
+Parser [Storage.Queries.Merchant.TransporterConfig]: alloc=4258864 time=0.772
+Renamer/typechecker [Storage.Queries.Merchant.TransporterConfig]: alloc=425603696 time=125.564
+Desugar [Storage.Queries.Merchant.TransporterConfig]: alloc=8210944 time=2.589
+Simplifier [Storage.Queries.Merchant.TransporterConfig]: alloc=177721288 time=54.029
+CoreTidy [Storage.Queries.Merchant.TransporterConfig]: alloc=54575232 time=18.010
+CorePrep [Storage.Queries.Merchant.TransporterConfig]: alloc=26856 time=0.013
+CodeGen [Storage.Queries.Merchant.TransporterConfig]: alloc=604107928 time=180.666
+systool:as: alloc=104256 time=0.222
+CorePrep [Storage.Queries.Merchant.TransporterConfig]: alloc=26856 time=0.016
+CodeGen [Storage.Queries.Merchant.TransporterConfig]: alloc=689521944 time=168.880
+systool:as: alloc=107136 time=0.220

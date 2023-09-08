@@ -1,26 +1,11 @@
-Parser [Environment]: alloc=6832960 time=1.556
-Renamer/typechecker [Environment]: alloc=822214728 time=226.309
-Desugar [Environment]: alloc=242783888 time=55.444
-Simplifier [Environment]: alloc=284155984 time=97.215
-Specialise [Environment]: alloc=55252496 time=13.827
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Environment]: alloc=148282856 time=53.096
-Simplifier [Environment]: alloc=765833624 time=302.786
-Float inwards [Environment]: alloc=16648 time=0.005
-Called arity analysis [Environment]: alloc=18224 time=0.006
-Simplifier [Environment]: alloc=254921080 time=97.818
-Demand analysis [Environment]: alloc=353165040 time=72.092
-Worker Wrapper binds [Environment]: alloc=3644904 time=3.455
-Simplifier [Environment]: alloc=407075840 time=130.651
-Exitification transformation [Environment]: alloc=19136 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Environment]: alloc=173129480 time=2340.328
-Common sub-expression [Environment]: alloc=17752 time=0.007
-Float inwards [Environment]: alloc=16648 time=0.004
-Simplifier [Environment]: alloc=483536000 time=135.607
-Demand analysis [Environment]: alloc=320970760 time=51.576
-CoreTidy [Environment]: alloc=186287128 time=48.608
-CorePrep [Environment]: alloc=17608 time=0.027
-CodeGen [Environment]: alloc=1388049576 time=397.243
-systool:as: alloc=102224 time=0.313
-CorePrep [Environment]: alloc=17608 time=0.028
-CodeGen [Environment]: alloc=1413378792 time=355.362
-systool:as: alloc=105104 time=0.295
+Parser [Environment]: alloc=6806176 time=1.027
+Renamer/typechecker [Environment]: alloc=784668176 time=197.320
+Desugar [Environment]: alloc=239819992 time=45.582
+Simplifier [Environment]: alloc=721538328 time=216.526
+CoreTidy [Environment]: alloc=126232360 time=37.893
+CorePrep [Environment]: alloc=17608 time=0.026
+CodeGen [Environment]: alloc=1228072400 time=340.320
+systool:as: alloc=102232 time=0.265
+CorePrep [Environment]: alloc=17608 time=0.016
+CodeGen [Environment]: alloc=1261427312 time=333.979
+systool:as: alloc=105112 time=0.231

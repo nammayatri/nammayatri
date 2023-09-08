@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Issue.IssueTranslation]: alloc=844184 time=0.221
-Renamer/typechecker [Storage.Queries.Issue.IssueTranslation]: alloc=5319248 time=2.169
-Desugar [Storage.Queries.Issue.IssueTranslation]: alloc=1791344 time=1.263
-Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=393176 time=0.206
-Specialise [Storage.Queries.Issue.IssueTranslation]: alloc=64152 time=0.033
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Issue.IssueTranslation]: alloc=246808 time=0.106
-Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=575080 time=0.209
-Float inwards [Storage.Queries.Issue.IssueTranslation]: alloc=24680 time=0.004
-Called arity analysis [Storage.Queries.Issue.IssueTranslation]: alloc=26256 time=0.005
-Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=366464 time=0.123
-Demand analysis [Storage.Queries.Issue.IssueTranslation]: alloc=277168 time=0.107
-Worker Wrapper binds [Storage.Queries.Issue.IssueTranslation]: alloc=97192 time=0.030
-Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=1068688 time=0.284
-Exitification transformation [Storage.Queries.Issue.IssueTranslation]: alloc=27200 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Issue.IssueTranslation]: alloc=306880 time=0.109
-Common sub-expression [Storage.Queries.Issue.IssueTranslation]: alloc=25784 time=0.005
-Float inwards [Storage.Queries.Issue.IssueTranslation]: alloc=24680 time=0.004
-Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=789440 time=0.247
-Demand analysis [Storage.Queries.Issue.IssueTranslation]: alloc=331216 time=0.094
-CoreTidy [Storage.Queries.Issue.IssueTranslation]: alloc=274056 time=0.126
-CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.009
-CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3427064 time=1.414
-systool:as: alloc=103984 time=0.160
-CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.014
-CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3476328 time=1.369
-systool:as: alloc=106856 time=0.135
+Parser [Storage.Queries.Issue.IssueTranslation]: alloc=844184 time=0.214
+Renamer/typechecker [Storage.Queries.Issue.IssueTranslation]: alloc=5090088 time=1.939
+Desugar [Storage.Queries.Issue.IssueTranslation]: alloc=1781616 time=1.220
+Simplifier [Storage.Queries.Issue.IssueTranslation]: alloc=901296 time=0.357
+CoreTidy [Storage.Queries.Issue.IssueTranslation]: alloc=114280 time=0.069
+CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.007
+CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3158408 time=1.246
+systool:as: alloc=103992 time=0.145
+CorePrep [Storage.Queries.Issue.IssueTranslation]: alloc=25656 time=0.011
+CodeGen [Storage.Queries.Issue.IssueTranslation]: alloc=3318624 time=1.173
+systool:as: alloc=106864 time=0.120

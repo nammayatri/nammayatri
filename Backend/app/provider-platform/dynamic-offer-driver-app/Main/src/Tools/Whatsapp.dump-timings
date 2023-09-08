@@ -1,26 +1,11 @@
-Parser [Tools.Whatsapp]: alloc=1295360 time=0.423
-Renamer/typechecker [Tools.Whatsapp]: alloc=229186208 time=45.817
-Desugar [Tools.Whatsapp]: alloc=782194304 time=120.780
-Simplifier [Tools.Whatsapp]: alloc=3940560 time=1.368
-Specialise [Tools.Whatsapp]: alloc=1000696 time=0.240
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Whatsapp]: alloc=3271256 time=0.854
-Simplifier [Tools.Whatsapp]: alloc=23102624 time=7.273
-Float inwards [Tools.Whatsapp]: alloc=17528 time=0.004
-Called arity analysis [Tools.Whatsapp]: alloc=19104 time=0.005
-Simplifier [Tools.Whatsapp]: alloc=10819904 time=2.860
-Demand analysis [Tools.Whatsapp]: alloc=11434240 time=2.549
-Worker Wrapper binds [Tools.Whatsapp]: alloc=424664 time=0.174
-Simplifier [Tools.Whatsapp]: alloc=9796288 time=3.065
-Exitification transformation [Tools.Whatsapp]: alloc=20048 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Whatsapp]: alloc=9931800 time=2.775
-Common sub-expression [Tools.Whatsapp]: alloc=18632 time=0.004
-Float inwards [Tools.Whatsapp]: alloc=17528 time=0.003
-Simplifier [Tools.Whatsapp]: alloc=13009656 time=3.557
-Demand analysis [Tools.Whatsapp]: alloc=13642832 time=2.731
-CoreTidy [Tools.Whatsapp]: alloc=1981096 time=0.873
-CorePrep [Tools.Whatsapp]: alloc=18504 time=0.010
-CodeGen [Tools.Whatsapp]: alloc=71078528 time=19.970
-systool:as: alloc=102440 time=0.176
-CorePrep [Tools.Whatsapp]: alloc=18504 time=0.014
-CodeGen [Tools.Whatsapp]: alloc=74293768 time=20.843
-systool:as: alloc=105312 time=0.168
+Parser [Tools.Whatsapp]: alloc=1295360 time=0.282
+Renamer/typechecker [Tools.Whatsapp]: alloc=174611400 time=33.266
+Desugar [Tools.Whatsapp]: alloc=767761536 time=126.688
+Simplifier [Tools.Whatsapp]: alloc=4188168 time=1.102
+CoreTidy [Tools.Whatsapp]: alloc=384456 time=0.143
+CorePrep [Tools.Whatsapp]: alloc=18504 time=0.013
+CodeGen [Tools.Whatsapp]: alloc=30438736 time=7.724
+systool:as: alloc=102448 time=0.166
+CorePrep [Tools.Whatsapp]: alloc=18504 time=0.013
+CodeGen [Tools.Whatsapp]: alloc=33889496 time=8.245
+systool:as: alloc=105344 time=0.175

@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.BapMetadata]: alloc=1219136 time=0.313
-Renamer/typechecker [Storage.CachedQueries.BapMetadata]: alloc=327197776 time=59.234
-Desugar [Storage.CachedQueries.BapMetadata]: alloc=230664304 time=36.742
-Simplifier [Storage.CachedQueries.BapMetadata]: alloc=5711352 time=1.595
-Specialise [Storage.CachedQueries.BapMetadata]: alloc=952240 time=0.284
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.BapMetadata]: alloc=4105848 time=0.986
-Simplifier [Storage.CachedQueries.BapMetadata]: alloc=20773192 time=6.255
-Float inwards [Storage.CachedQueries.BapMetadata]: alloc=23192 time=0.005
-Called arity analysis [Storage.CachedQueries.BapMetadata]: alloc=24768 time=0.006
-Simplifier [Storage.CachedQueries.BapMetadata]: alloc=10587776 time=2.593
-Demand analysis [Storage.CachedQueries.BapMetadata]: alloc=9439608 time=2.071
-Worker Wrapper binds [Storage.CachedQueries.BapMetadata]: alloc=692792 time=0.224
-Simplifier [Storage.CachedQueries.BapMetadata]: alloc=9149656 time=2.907
-Exitification transformation [Storage.CachedQueries.BapMetadata]: alloc=25696 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.BapMetadata]: alloc=8781168 time=2.571
-Common sub-expression [Storage.CachedQueries.BapMetadata]: alloc=24296 time=0.005
-Float inwards [Storage.CachedQueries.BapMetadata]: alloc=23192 time=0.004
-Simplifier [Storage.CachedQueries.BapMetadata]: alloc=10690024 time=3.187
-Demand analysis [Storage.CachedQueries.BapMetadata]: alloc=11758328 time=2.391
-CoreTidy [Storage.CachedQueries.BapMetadata]: alloc=1981960 time=0.887
-CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.011
-CodeGen [Storage.CachedQueries.BapMetadata]: alloc=61305320 time=17.898
-systool:as: alloc=103672 time=0.188
-CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.015
-CodeGen [Storage.CachedQueries.BapMetadata]: alloc=63872680 time=18.242
-systool:as: alloc=106552 time=0.174
+Parser [Storage.CachedQueries.BapMetadata]: alloc=1216944 time=0.290
+Renamer/typechecker [Storage.CachedQueries.BapMetadata]: alloc=222074440 time=42.208
+Desugar [Storage.CachedQueries.BapMetadata]: alloc=226497880 time=37.515
+Simplifier [Storage.CachedQueries.BapMetadata]: alloc=6653640 time=1.375
+CoreTidy [Storage.CachedQueries.BapMetadata]: alloc=692152 time=0.229
+CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.009
+CodeGen [Storage.CachedQueries.BapMetadata]: alloc=29018856 time=7.978
+systool:as: alloc=103672 time=0.240
+CorePrep [Storage.CachedQueries.BapMetadata]: alloc=24168 time=0.013
+CodeGen [Storage.CachedQueries.BapMetadata]: alloc=31477608 time=8.627
+systool:as: alloc=106552 time=0.137

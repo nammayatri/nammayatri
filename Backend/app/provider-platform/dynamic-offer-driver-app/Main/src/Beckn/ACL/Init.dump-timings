@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.Init]: alloc=2316448 time=0.731
-Renamer/typechecker [Beckn.ACL.Init]: alloc=148187120 time=43.439
-Desugar [Beckn.ACL.Init]: alloc=100799896 time=18.187
-Simplifier [Beckn.ACL.Init]: alloc=14651016 time=4.492
-Specialise [Beckn.ACL.Init]: alloc=1648312 time=0.345
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Init]: alloc=6091656 time=1.725
-Simplifier [Beckn.ACL.Init]: alloc=38168360 time=11.521
-Float inwards [Beckn.ACL.Init]: alloc=17528 time=0.005
-Called arity analysis [Beckn.ACL.Init]: alloc=19104 time=0.005
-Simplifier [Beckn.ACL.Init]: alloc=13627816 time=3.757
-Demand analysis [Beckn.ACL.Init]: alloc=16820256 time=3.693
-Worker Wrapper binds [Beckn.ACL.Init]: alloc=484144 time=0.230
-Simplifier [Beckn.ACL.Init]: alloc=15488048 time=4.843
-Exitification transformation [Beckn.ACL.Init]: alloc=20048 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Init]: alloc=13613264 time=3.893
-Common sub-expression [Beckn.ACL.Init]: alloc=18632 time=0.005
-Float inwards [Beckn.ACL.Init]: alloc=17528 time=0.004
-Simplifier [Beckn.ACL.Init]: alloc=16670864 time=4.877
-Demand analysis [Beckn.ACL.Init]: alloc=15524600 time=3.274
-CoreTidy [Beckn.ACL.Init]: alloc=3514312 time=1.278
+Parser [Beckn.ACL.Init]: alloc=2315896 time=0.469
+Renamer/typechecker [Beckn.ACL.Init]: alloc=138016160 time=36.263
+Desugar [Beckn.ACL.Init]: alloc=99134248 time=17.395
+Simplifier [Beckn.ACL.Init]: alloc=4708744 time=1.227
+CoreTidy [Beckn.ACL.Init]: alloc=538512 time=0.214
 CorePrep [Beckn.ACL.Init]: alloc=18504 time=0.008
-CodeGen [Beckn.ACL.Init]: alloc=108346768 time=30.814
-systool:as: alloc=102464 time=0.213
-CorePrep [Beckn.ACL.Init]: alloc=18504 time=0.013
-CodeGen [Beckn.ACL.Init]: alloc=112474912 time=32.463
-systool:as: alloc=105336 time=0.182
+CodeGen [Beckn.ACL.Init]: alloc=50677336 time=12.836
+systool:as: alloc=102472 time=0.166
+CorePrep [Beckn.ACL.Init]: alloc=18504 time=0.012
+CodeGen [Beckn.ACL.Init]: alloc=56313904 time=13.788
+systool:as: alloc=105344 time=0.143

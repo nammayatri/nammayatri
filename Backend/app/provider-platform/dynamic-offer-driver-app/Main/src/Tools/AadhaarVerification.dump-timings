@@ -1,26 +1,11 @@
-Parser [Tools.AadhaarVerification]: alloc=1353008 time=0.419
-Renamer/typechecker [Tools.AadhaarVerification]: alloc=329465080 time=65.934
-Desugar [Tools.AadhaarVerification]: alloc=512418248 time=90.257
-Simplifier [Tools.AadhaarVerification]: alloc=7414328 time=3.101
-Specialise [Tools.AadhaarVerification]: alloc=954008 time=0.289
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.AadhaarVerification]: alloc=3412064 time=0.988
-Simplifier [Tools.AadhaarVerification]: alloc=23805000 time=8.095
-Float inwards [Tools.AadhaarVerification]: alloc=20808 time=0.005
-Called arity analysis [Tools.AadhaarVerification]: alloc=22384 time=0.007
-Simplifier [Tools.AadhaarVerification]: alloc=11534528 time=3.842
-Demand analysis [Tools.AadhaarVerification]: alloc=12434552 time=3.327
-Worker Wrapper binds [Tools.AadhaarVerification]: alloc=363904 time=0.235
-Simplifier [Tools.AadhaarVerification]: alloc=10237776 time=3.678
-Exitification transformation [Tools.AadhaarVerification]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.AadhaarVerification]: alloc=10011528 time=3.269
-Common sub-expression [Tools.AadhaarVerification]: alloc=21912 time=0.006
-Float inwards [Tools.AadhaarVerification]: alloc=20808 time=0.005
-Simplifier [Tools.AadhaarVerification]: alloc=13620368 time=4.972
-Demand analysis [Tools.AadhaarVerification]: alloc=14761032 time=5.828
-CoreTidy [Tools.AadhaarVerification]: alloc=2017336 time=0.915
-CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.011
-CodeGen [Tools.AadhaarVerification]: alloc=69370640 time=21.518
-systool:as: alloc=103104 time=0.225
-CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.018
-CodeGen [Tools.AadhaarVerification]: alloc=72479752 time=22.906
-systool:as: alloc=105984 time=0.207
+Parser [Tools.AadhaarVerification]: alloc=1353008 time=0.308
+Renamer/typechecker [Tools.AadhaarVerification]: alloc=281689192 time=49.977
+Desugar [Tools.AadhaarVerification]: alloc=503303784 time=82.372
+Simplifier [Tools.AadhaarVerification]: alloc=5095336 time=1.313
+CoreTidy [Tools.AadhaarVerification]: alloc=509520 time=0.180
+CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.007
+CodeGen [Tools.AadhaarVerification]: alloc=27762280 time=7.341
+systool:as: alloc=103112 time=0.167
+CorePrep [Tools.AadhaarVerification]: alloc=21784 time=0.012
+CodeGen [Tools.AadhaarVerification]: alloc=30921472 time=8.351
+systool:as: alloc=106016 time=0.145

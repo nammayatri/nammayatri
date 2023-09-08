@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Message]: alloc=8802144 time=1.704
-Renamer/typechecker [Domain.Action.Dashboard.Message]: alloc=576416424 time=144.783
-Desugar [Domain.Action.Dashboard.Message]: alloc=205420664 time=35.774
-Simplifier [Domain.Action.Dashboard.Message]: alloc=84098504 time=27.874
-Specialise [Domain.Action.Dashboard.Message]: alloc=12679760 time=4.140
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Message]: alloc=50504672 time=17.366
-Simplifier [Domain.Action.Dashboard.Message]: alloc=425080680 time=174.199
-Float inwards [Domain.Action.Dashboard.Message]: alloc=22600 time=0.005
-Called arity analysis [Domain.Action.Dashboard.Message]: alloc=24176 time=0.006
-Simplifier [Domain.Action.Dashboard.Message]: alloc=122897032 time=51.960
-Demand analysis [Domain.Action.Dashboard.Message]: alloc=143330400 time=32.122
-Worker Wrapper binds [Domain.Action.Dashboard.Message]: alloc=3011408 time=1.855
-Simplifier [Domain.Action.Dashboard.Message]: alloc=144881416 time=57.601
-Exitification transformation [Domain.Action.Dashboard.Message]: alloc=25104 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Message]: alloc=129402760 time=38.737
-Common sub-expression [Domain.Action.Dashboard.Message]: alloc=23704 time=0.007
-Float inwards [Domain.Action.Dashboard.Message]: alloc=22600 time=0.004
-Simplifier [Domain.Action.Dashboard.Message]: alloc=205897224 time=88.119
-Demand analysis [Domain.Action.Dashboard.Message]: alloc=164332872 time=35.777
-CoreTidy [Domain.Action.Dashboard.Message]: alloc=37094824 time=14.414
-CorePrep [Domain.Action.Dashboard.Message]: alloc=23560 time=0.014
-CodeGen [Domain.Action.Dashboard.Message]: alloc=935705800 time=277.808
-systool:as: alloc=103568 time=0.238
-CorePrep [Domain.Action.Dashboard.Message]: alloc=23560 time=0.017
-CodeGen [Domain.Action.Dashboard.Message]: alloc=968205776 time=268.114
-systool:as: alloc=106440 time=0.247
+Parser [Domain.Action.Dashboard.Message]: alloc=8786776 time=1.748
+Renamer/typechecker [Domain.Action.Dashboard.Message]: alloc=504108792 time=118.488
+Desugar [Domain.Action.Dashboard.Message]: alloc=201689744 time=32.422
+Simplifier [Domain.Action.Dashboard.Message]: alloc=22694744 time=7.190
+CoreTidy [Domain.Action.Dashboard.Message]: alloc=8552600 time=2.126
+CorePrep [Domain.Action.Dashboard.Message]: alloc=23560 time=0.011
+CodeGen [Domain.Action.Dashboard.Message]: alloc=162568920 time=47.465
+systool:as: alloc=103576 time=0.199
+CorePrep [Domain.Action.Dashboard.Message]: alloc=23560 time=0.015
+CodeGen [Domain.Action.Dashboard.Message]: alloc=176652904 time=50.659
+systool:as: alloc=106448 time=0.211

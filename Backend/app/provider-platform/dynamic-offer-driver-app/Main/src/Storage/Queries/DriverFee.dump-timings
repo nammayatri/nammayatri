@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverFee]: alloc=6765784 time=1.183
-Renamer/typechecker [Storage.Queries.DriverFee]: alloc=985970648 time=279.153
-Desugar [Storage.Queries.DriverFee]: alloc=25596664 time=5.621
-Simplifier [Storage.Queries.DriverFee]: alloc=592278496 time=189.166
-Specialise [Storage.Queries.DriverFee]: alloc=232210560 time=96.199
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverFee]: alloc=119456424 time=47.053
-Simplifier [Storage.Queries.DriverFee]: alloc=1026382104 time=394.744
-Float inwards [Storage.Queries.DriverFee]: alloc=20808 time=0.006
-Called arity analysis [Storage.Queries.DriverFee]: alloc=22384 time=0.007
-Simplifier [Storage.Queries.DriverFee]: alloc=231265816 time=67.259
-Demand analysis [Storage.Queries.DriverFee]: alloc=92526080 time=24.818
-Worker Wrapper binds [Storage.Queries.DriverFee]: alloc=3913456 time=2.522
-Simplifier [Storage.Queries.DriverFee]: alloc=160198736 time=63.574
-Exitification transformation [Storage.Queries.DriverFee]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverFee]: alloc=85364768 time=28.155
-Common sub-expression [Storage.Queries.DriverFee]: alloc=21912 time=0.007
-Float inwards [Storage.Queries.DriverFee]: alloc=20808 time=0.004
-Simplifier [Storage.Queries.DriverFee]: alloc=196585824 time=86.375
-Demand analysis [Storage.Queries.DriverFee]: alloc=66222944 time=19.499
-CoreTidy [Storage.Queries.DriverFee]: alloc=47508376 time=19.388
-CorePrep [Storage.Queries.DriverFee]: alloc=21784 time=0.041
-CodeGen [Storage.Queries.DriverFee]: alloc=489378920 time=155.016
-systool:as: alloc=103160 time=0.243
+Parser [Storage.Queries.DriverFee]: alloc=6758056 time=1.181
+Renamer/typechecker [Storage.Queries.DriverFee]: alloc=976771480 time=271.076
+Desugar [Storage.Queries.DriverFee]: alloc=25514888 time=5.995
+Simplifier [Storage.Queries.DriverFee]: alloc=314973312 time=127.924
+CoreTidy [Storage.Queries.DriverFee]: alloc=79957240 time=27.352
+CorePrep [Storage.Queries.DriverFee]: alloc=21784 time=0.013
+CodeGen [Storage.Queries.DriverFee]: alloc=1130357144 time=325.756
+systool:as: alloc=103160 time=0.255
 CorePrep [Storage.Queries.DriverFee]: alloc=21784 time=0.017
-CodeGen [Storage.Queries.DriverFee]: alloc=521248112 time=167.308
-systool:as: alloc=106040 time=0.291
+CodeGen [Storage.Queries.DriverFee]: alloc=1295087712 time=319.803
+systool:as: alloc=106040 time=0.245

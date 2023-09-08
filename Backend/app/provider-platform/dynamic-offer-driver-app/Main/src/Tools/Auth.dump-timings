@@ -1,26 +1,11 @@
-Parser [Tools.Auth]: alloc=4019128 time=0.967
-Renamer/typechecker [Tools.Auth]: alloc=856645376 time=162.950
-Desugar [Tools.Auth]: alloc=556415392 time=89.547
-Simplifier [Tools.Auth]: alloc=13460464 time=4.247
-Specialise [Tools.Auth]: alloc=3469336 time=0.984
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Auth]: alloc=14079200 time=4.333
-Simplifier [Tools.Auth]: alloc=131993024 time=47.289
-Float inwards [Tools.Auth]: alloc=16328 time=0.005
-Called arity analysis [Tools.Auth]: alloc=17904 time=0.006
-Simplifier [Tools.Auth]: alloc=40491768 time=13.403
-Demand analysis [Tools.Auth]: alloc=32764832 time=8.206
-Worker Wrapper binds [Tools.Auth]: alloc=1323280 time=0.737
-Simplifier [Tools.Auth]: alloc=43727432 time=15.554
-Exitification transformation [Tools.Auth]: alloc=18848 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Auth]: alloc=31750536 time=11.168
-Common sub-expression [Tools.Auth]: alloc=17432 time=0.031
-Float inwards [Tools.Auth]: alloc=16328 time=0.003
-Simplifier [Tools.Auth]: alloc=47666064 time=18.058
-Demand analysis [Tools.Auth]: alloc=32340752 time=20.730
-CoreTidy [Tools.Auth]: alloc=8208696 time=3.265
+Parser [Tools.Auth]: alloc=4008200 time=1.021
+Renamer/typechecker [Tools.Auth]: alloc=684616888 time=122.354
+Desugar [Tools.Auth]: alloc=546382600 time=89.418
+Simplifier [Tools.Auth]: alloc=13199128 time=3.512
+CoreTidy [Tools.Auth]: alloc=1483000 time=0.498
 CorePrep [Tools.Auth]: alloc=17320 time=0.008
-CodeGen [Tools.Auth]: alloc=185724480 time=56.243
-systool:as: alloc=102192 time=0.225
-CorePrep [Tools.Auth]: alloc=17320 time=0.012
-CodeGen [Tools.Auth]: alloc=193838928 time=59.970
-systool:as: alloc=105072 time=0.229
+CodeGen [Tools.Auth]: alloc=81757416 time=22.234
+systool:as: alloc=102200 time=0.188
+CorePrep [Tools.Auth]: alloc=17320 time=0.014
+CodeGen [Tools.Auth]: alloc=90159248 time=24.556
+systool:as: alloc=105080 time=0.178

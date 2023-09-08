@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Vehicle.Internal]: alloc=649240 time=0.218
-Renamer/typechecker [Storage.Queries.Vehicle.Internal]: alloc=67380376 time=20.462
-Desugar [Storage.Queries.Vehicle.Internal]: alloc=785592 time=1.038
-Simplifier [Storage.Queries.Vehicle.Internal]: alloc=42803176 time=12.115
-Specialise [Storage.Queries.Vehicle.Internal]: alloc=2537672 time=0.765
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Vehicle.Internal]: alloc=5475104 time=1.680
-Simplifier [Storage.Queries.Vehicle.Internal]: alloc=16958200 time=4.934
-Float inwards [Storage.Queries.Vehicle.Internal]: alloc=22888 time=0.005
-Called arity analysis [Storage.Queries.Vehicle.Internal]: alloc=24464 time=0.006
-Simplifier [Storage.Queries.Vehicle.Internal]: alloc=8187960 time=2.000
-Demand analysis [Storage.Queries.Vehicle.Internal]: alloc=3276464 time=0.822
-Worker Wrapper binds [Storage.Queries.Vehicle.Internal]: alloc=193072 time=0.078
-Simplifier [Storage.Queries.Vehicle.Internal]: alloc=6898880 time=1.878
-Exitification transformation [Storage.Queries.Vehicle.Internal]: alloc=25408 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Vehicle.Internal]: alloc=2325144 time=0.614
-Common sub-expression [Storage.Queries.Vehicle.Internal]: alloc=23992 time=0.005
-Float inwards [Storage.Queries.Vehicle.Internal]: alloc=22888 time=0.004
-Simplifier [Storage.Queries.Vehicle.Internal]: alloc=8266880 time=2.482
-Demand analysis [Storage.Queries.Vehicle.Internal]: alloc=2876384 time=0.776
-CoreTidy [Storage.Queries.Vehicle.Internal]: alloc=4072640 time=1.207
+Parser [Storage.Queries.Vehicle.Internal]: alloc=649240 time=0.178
+Renamer/typechecker [Storage.Queries.Vehicle.Internal]: alloc=66882504 time=20.913
+Desugar [Storage.Queries.Vehicle.Internal]: alloc=782776 time=1.046
+Simplifier [Storage.Queries.Vehicle.Internal]: alloc=11660512 time=2.886
+CoreTidy [Storage.Queries.Vehicle.Internal]: alloc=4248016 time=0.974
 CorePrep [Storage.Queries.Vehicle.Internal]: alloc=23880 time=0.010
-CodeGen [Storage.Queries.Vehicle.Internal]: alloc=31319824 time=11.387
-systool:as: alloc=103632 time=0.180
-CorePrep [Storage.Queries.Vehicle.Internal]: alloc=23880 time=0.022
-CodeGen [Storage.Queries.Vehicle.Internal]: alloc=33153184 time=12.326
-systool:as: alloc=106512 time=0.209
+CodeGen [Storage.Queries.Vehicle.Internal]: alloc=56947016 time=14.520
+systool:as: alloc=103640 time=0.162
+CorePrep [Storage.Queries.Vehicle.Internal]: alloc=23880 time=0.015
+CodeGen [Storage.Queries.Vehicle.Internal]: alloc=65315672 time=15.990
+systool:as: alloc=106520 time=0.149

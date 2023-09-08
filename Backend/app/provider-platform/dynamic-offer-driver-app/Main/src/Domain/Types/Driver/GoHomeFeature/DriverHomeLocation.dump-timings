@@ -1,26 +1,11 @@
-Parser [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=910552 time=0.230
-Renamer/typechecker [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=71114616 time=22.450
-Desugar [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=6086304 time=2.381
-Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=41767640 time=14.116
-Specialise [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=12147872 time=3.865
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=21697312 time=7.989
-Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=253479792 time=92.853
-Float inwards [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=28856 time=0.005
-Called arity analysis [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=30432 time=0.006
-Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=72645104 time=26.073
-Demand analysis [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=36786272 time=10.285
-Worker Wrapper binds [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=936792 time=0.826
-Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=72291688 time=24.975
-Exitification transformation [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=31376 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=36053704 time=13.634
-Common sub-expression [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29960 time=0.007
-Float inwards [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=28856 time=0.005
-Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=87771128 time=63.968
-Demand analysis [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=33635504 time=8.884
-CoreTidy [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=14281208 time=5.373
-CorePrep [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.025
-CodeGen [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=142230848 time=47.951
-systool:as: alloc=104904 time=0.226
-CorePrep [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.017
-CodeGen [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=147137176 time=48.369
-systool:as: alloc=107776 time=0.252
+Parser [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=908880 time=0.229
+Renamer/typechecker [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=71113656 time=23.997
+Desugar [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=6085336 time=2.313
+Simplifier [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=26799152 time=8.961
+CoreTidy [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=6350584 time=1.546
+CorePrep [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.008
+CodeGen [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=163796272 time=52.163
+systool:as: alloc=104904 time=0.173
+CorePrep [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=29832 time=0.015
+CodeGen [Domain.Types.Driver.GoHomeFeature.DriverHomeLocation]: alloc=174182968 time=54.755
+systool:as: alloc=107776 time=0.169

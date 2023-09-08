@@ -1,26 +1,11 @@
 Parser [SharedLogic.DriverMode]: alloc=363736 time=0.129
-Renamer/typechecker [SharedLogic.DriverMode]: alloc=3888928 time=1.424
-Desugar [SharedLogic.DriverMode]: alloc=634592 time=0.981
-Simplifier [SharedLogic.DriverMode]: alloc=247904 time=0.146
-Specialise [SharedLogic.DriverMode]: alloc=39792 time=0.019
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverMode]: alloc=104032 time=0.048
-Simplifier [SharedLogic.DriverMode]: alloc=134432 time=0.062
-Float inwards [SharedLogic.DriverMode]: alloc=19912 time=0.004
-Called arity analysis [SharedLogic.DriverMode]: alloc=21488 time=0.005
-Simplifier [SharedLogic.DriverMode]: alloc=161144 time=0.057
-Demand analysis [SharedLogic.DriverMode]: alloc=90088 time=0.041
-Worker Wrapper binds [SharedLogic.DriverMode]: alloc=27256 time=0.011
-Simplifier [SharedLogic.DriverMode]: alloc=192344 time=0.065
-Exitification transformation [SharedLogic.DriverMode]: alloc=22432 time=0.003
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverMode]: alloc=104128 time=0.042
-Common sub-expression [SharedLogic.DriverMode]: alloc=21016 time=0.003
-Float inwards [SharedLogic.DriverMode]: alloc=19912 time=0.004
-Simplifier [SharedLogic.DriverMode]: alloc=246288 time=0.137
-Demand analysis [SharedLogic.DriverMode]: alloc=90008 time=0.041
-CoreTidy [SharedLogic.DriverMode]: alloc=86384 time=0.054
+Renamer/typechecker [SharedLogic.DriverMode]: alloc=3908064 time=1.312
+Desugar [SharedLogic.DriverMode]: alloc=643248 time=0.963
+Simplifier [SharedLogic.DriverMode]: alloc=227256 time=0.132
+CoreTidy [SharedLogic.DriverMode]: alloc=62384 time=0.042
 CorePrep [SharedLogic.DriverMode]: alloc=20888 time=0.006
-CodeGen [SharedLogic.DriverMode]: alloc=2132432 time=0.827
-systool:as: alloc=102960 time=0.131
-CorePrep [SharedLogic.DriverMode]: alloc=20888 time=0.009
-CodeGen [SharedLogic.DriverMode]: alloc=2184112 time=0.755
-systool:as: alloc=105832 time=0.116
+CodeGen [SharedLogic.DriverMode]: alloc=1818608 time=0.680
+systool:as: alloc=102968 time=0.156
+CorePrep [SharedLogic.DriverMode]: alloc=20888 time=0.012
+CodeGen [SharedLogic.DriverMode]: alloc=1897512 time=0.640
+systool:as: alloc=105840 time=0.114

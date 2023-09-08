@@ -1,26 +1,11 @@
-Parser [API.UI.OnMessage]: alloc=724040 time=0.237
-Renamer/typechecker [API.UI.OnMessage]: alloc=87273880 time=26.724
-Desugar [API.UI.OnMessage]: alloc=690072 time=1.081
-Simplifier [API.UI.OnMessage]: alloc=64553584 time=20.198
-Specialise [API.UI.OnMessage]: alloc=4927696 time=2.983
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.OnMessage]: alloc=14822152 time=5.539
-Simplifier [API.UI.OnMessage]: alloc=127994800 time=41.213
-Float inwards [API.UI.OnMessage]: alloc=18120 time=0.004
-Called arity analysis [API.UI.OnMessage]: alloc=19696 time=0.006
-Simplifier [API.UI.OnMessage]: alloc=18790320 time=9.814
-Demand analysis [API.UI.OnMessage]: alloc=25628272 time=5.851
-Worker Wrapper binds [API.UI.OnMessage]: alloc=307168 time=0.208
-Simplifier [API.UI.OnMessage]: alloc=38022824 time=8.090
-Exitification transformation [API.UI.OnMessage]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.OnMessage]: alloc=17067888 time=5.562
-Common sub-expression [API.UI.OnMessage]: alloc=19224 time=0.005
-Float inwards [API.UI.OnMessage]: alloc=18120 time=0.004
-Simplifier [API.UI.OnMessage]: alloc=108707056 time=37.603
-Demand analysis [API.UI.OnMessage]: alloc=28845256 time=8.267
-CoreTidy [API.UI.OnMessage]: alloc=19637016 time=5.985
-CorePrep [API.UI.OnMessage]: alloc=19112 time=0.015
-CodeGen [API.UI.OnMessage]: alloc=113425504 time=27.749
-systool:as: alloc=102576 time=0.207
-CorePrep [API.UI.OnMessage]: alloc=19112 time=0.017
-CodeGen [API.UI.OnMessage]: alloc=116174392 time=28.978
-systool:as: alloc=105480 time=0.184
+Parser [API.UI.OnMessage]: alloc=724040 time=0.190
+Renamer/typechecker [API.UI.OnMessage]: alloc=87286072 time=22.063
+Desugar [API.UI.OnMessage]: alloc=689424 time=1.056
+Simplifier [API.UI.OnMessage]: alloc=20384328 time=7.608
+CoreTidy [API.UI.OnMessage]: alloc=13834144 time=3.143
+CorePrep [API.UI.OnMessage]: alloc=19112 time=0.009
+CodeGen [API.UI.OnMessage]: alloc=28180968 time=10.509
+systool:as: alloc=102584 time=0.213
+CorePrep [API.UI.OnMessage]: alloc=19112 time=0.013
+CodeGen [API.UI.OnMessage]: alloc=30301792 time=10.428
+systool:as: alloc=105464 time=0.168

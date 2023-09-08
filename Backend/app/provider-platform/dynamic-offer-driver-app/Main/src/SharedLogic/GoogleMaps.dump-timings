@@ -1,26 +1,11 @@
-Parser [SharedLogic.GoogleMaps]: alloc=2031400 time=0.529
-Renamer/typechecker [SharedLogic.GoogleMaps]: alloc=33070632 time=11.514
-Desugar [SharedLogic.GoogleMaps]: alloc=4155200 time=1.961
-Simplifier [SharedLogic.GoogleMaps]: alloc=15630224 time=4.593
-Specialise [SharedLogic.GoogleMaps]: alloc=6797184 time=1.450
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.GoogleMaps]: alloc=27952088 time=8.366
-Simplifier [SharedLogic.GoogleMaps]: alloc=129769496 time=43.709
-Float inwards [SharedLogic.GoogleMaps]: alloc=19912 time=0.005
-Called arity analysis [SharedLogic.GoogleMaps]: alloc=21488 time=0.007
-Simplifier [SharedLogic.GoogleMaps]: alloc=43214200 time=14.797
-Demand analysis [SharedLogic.GoogleMaps]: alloc=57751168 time=13.529
-Worker Wrapper binds [SharedLogic.GoogleMaps]: alloc=1507320 time=0.887
-Simplifier [SharedLogic.GoogleMaps]: alloc=62685584 time=20.055
-Exitification transformation [SharedLogic.GoogleMaps]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.GoogleMaps]: alloc=49584160 time=15.888
-Common sub-expression [SharedLogic.GoogleMaps]: alloc=21016 time=0.006
-Float inwards [SharedLogic.GoogleMaps]: alloc=19912 time=0.004
-Simplifier [SharedLogic.GoogleMaps]: alloc=62748000 time=21.613
-Demand analysis [SharedLogic.GoogleMaps]: alloc=61248584 time=13.955
-CoreTidy [SharedLogic.GoogleMaps]: alloc=12201808 time=5.713
-CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.014
-CodeGen [SharedLogic.GoogleMaps]: alloc=364364032 time=117.303
-systool:as: alloc=102960 time=0.215
-CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.017
-CodeGen [SharedLogic.GoogleMaps]: alloc=375218896 time=112.026
-systool:as: alloc=105832 time=0.271
+Parser [SharedLogic.GoogleMaps]: alloc=2028680 time=0.453
+Renamer/typechecker [SharedLogic.GoogleMaps]: alloc=33877504 time=11.072
+Desugar [SharedLogic.GoogleMaps]: alloc=4128544 time=1.921
+Simplifier [SharedLogic.GoogleMaps]: alloc=10444480 time=2.787
+CoreTidy [SharedLogic.GoogleMaps]: alloc=2017392 time=0.590
+CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.007
+CodeGen [SharedLogic.GoogleMaps]: alloc=71011736 time=19.650
+systool:as: alloc=102960 time=0.158
+CorePrep [SharedLogic.GoogleMaps]: alloc=20888 time=0.013
+CodeGen [SharedLogic.GoogleMaps]: alloc=76657992 time=21.009
+systool:as: alloc=105832 time=0.156

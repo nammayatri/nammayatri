@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=2740664 time=0.734
-Renamer/typechecker [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=237630408 time=59.107
-Desugar [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=61205864 time=12.840
-Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=50206112 time=16.275
-Specialise [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=6267168 time=2.567
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=18151552 time=6.376
-Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=223770168 time=84.531
-Float inwards [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=26776 time=0.006
-Called arity analysis [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=28352 time=0.007
-Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=52690080 time=16.357
-Demand analysis [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=63119856 time=12.753
-Worker Wrapper binds [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=869656 time=0.546
-Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=58884312 time=18.706
-Exitification transformation [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=29280 time=0.011
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=40459776 time=13.771
-Common sub-expression [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=27880 time=0.007
-Float inwards [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=26776 time=0.005
-Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=97428048 time=35.175
-Demand analysis [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=65550128 time=14.997
-CoreTidy [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=19403248 time=6.655
-CorePrep [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=27736 time=0.014
-CodeGen [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=377854248 time=95.621
-systool:as: alloc=104472 time=0.197
-CorePrep [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=27736 time=0.018
-CodeGen [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=388157472 time=100.282
-systool:as: alloc=107344 time=0.191
+Parser [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=2740664 time=0.533
+Renamer/typechecker [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=221051640 time=51.793
+Desugar [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=60092600 time=12.506
+Simplifier [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=15901600 time=5.329
+CoreTidy [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=7631440 time=2.027
+CorePrep [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=27736 time=0.012
+CodeGen [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=77938024 time=23.391
+systool:as: alloc=104480 time=0.207
+CorePrep [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=27736 time=0.016
+CodeGen [Domain.Action.UI.DriverOnboarding.IdfyWebhook]: alloc=84487072 time=24.332
+systool:as: alloc=107352 time=0.201

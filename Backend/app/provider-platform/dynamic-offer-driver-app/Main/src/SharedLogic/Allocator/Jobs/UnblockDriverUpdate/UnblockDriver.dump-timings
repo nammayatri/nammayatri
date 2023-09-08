@@ -1,26 +1,11 @@
-Parser [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=761584 time=0.291
-Renamer/typechecker [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=310365336 time=62.081
-Desugar [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=494178608 time=86.785
-Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=4505576 time=1.587
-Specialise [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=409000 time=0.188
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=1581232 time=0.396
-Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=12457968 time=4.139
-Float inwards [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=31240 time=0.005
-Called arity analysis [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=32816 time=0.007
-Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=5213944 time=1.462
-Demand analysis [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=6706128 time=1.563
-Worker Wrapper binds [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=454352 time=0.149
-Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=6346232 time=1.923
-Exitification transformation [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=33760 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=6589696 time=1.860
-Common sub-expression [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=32344 time=0.006
-Float inwards [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=31240 time=0.009
-Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=7186824 time=2.227
-Demand analysis [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=9540616 time=1.963
-CoreTidy [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=1207320 time=0.490
+Parser [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=761584 time=0.227
+Renamer/typechecker [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=256421744 time=51.673
+Desugar [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=485369968 time=85.599
+Simplifier [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=2775528 time=0.838
+CoreTidy [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=268824 time=0.131
 CorePrep [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=32216 time=0.010
-CodeGen [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=42146336 time=11.741
-systool:as: alloc=105464 time=0.225
-CorePrep [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=32216 time=0.015
-CodeGen [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=43730424 time=12.453
-systool:as: alloc=108360 time=0.236
+CodeGen [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=11532464 time=4.043
+systool:as: alloc=105472 time=0.194
+CorePrep [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=32216 time=0.012
+CodeGen [SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver]: alloc=12667880 time=3.467
+systool:as: alloc=108344 time=0.139

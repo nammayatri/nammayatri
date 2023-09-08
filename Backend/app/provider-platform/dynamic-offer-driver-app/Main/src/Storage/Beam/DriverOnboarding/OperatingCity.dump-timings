@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=1317768 time=0.400
-Simplify [expr]: alloc=246216 time=0.076
-CorePrep [expr]: alloc=96344 time=0.048
-ByteCodeGen [Ghci1]: alloc=527152 time=0.125
-Simplify [expr]: alloc=47024 time=0.022
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.049
-Renamer/typechecker [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=137321680 time=44.892
-Desugar [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=21556072 time=6.460
-Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=87357784 time=28.372
-Specialise [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=26673176 time=9.680
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=64027632 time=31.451
-Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=664735600 time=274.312
-Float inwards [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=26184 time=0.005
-Called arity analysis [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27760 time=0.007
-Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=194204560 time=80.930
-Demand analysis [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=190794328 time=52.144
-Worker Wrapper binds [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=4868296 time=2.464
-Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=230973608 time=95.607
-Exitification transformation [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=28672 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=161028120 time=77.469
-Common sub-expression [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27288 time=0.009
-Float inwards [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=26184 time=0.005
-Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=238156040 time=112.429
-Demand analysis [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=175459808 time=54.692
-CoreTidy [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=43275920 time=14.395
-CorePrep [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27144 time=0.017
-CodeGen [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=917789064 time=332.320
-systool:as: alloc=104320 time=0.233
-CorePrep [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27144 time=0.032
-CodeGen [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=945583736 time=323.449
-systool:as: alloc=107200 time=0.244
+Parser [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=1316680 time=0.392
+Simplify [expr]: alloc=146432 time=0.035
+CorePrep [expr]: alloc=66344 time=0.026
+ByteCodeGen [Ghci1]: alloc=369552 time=0.103
+Simplify [expr]: alloc=46992 time=0.022
+CorePrep [expr]: alloc=26608 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.044
+Renamer/typechecker [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=135040288 time=41.086
+Desugar [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=21506088 time=5.891
+Simplifier [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27843712 time=7.419
+CoreTidy [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=6101320 time=1.833
+CorePrep [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27144 time=0.009
+CodeGen [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=202555240 time=57.723
+systool:as: alloc=104320 time=0.172
+CorePrep [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=27144 time=0.016
+CodeGen [Storage.Beam.DriverOnboarding.OperatingCity]: alloc=221723488 time=62.205
+systool:as: alloc=107200 time=0.161

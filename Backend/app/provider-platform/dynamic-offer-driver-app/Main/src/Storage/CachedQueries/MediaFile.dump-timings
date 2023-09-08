@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.MediaFile]: alloc=2199200 time=0.540
-Renamer/typechecker [Storage.CachedQueries.MediaFile]: alloc=862749816 time=152.186
-Desugar [Storage.CachedQueries.MediaFile]: alloc=457131512 time=73.604
-Simplifier [Storage.CachedQueries.MediaFile]: alloc=10991472 time=2.745
-Specialise [Storage.CachedQueries.MediaFile]: alloc=2823816 time=0.851
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.MediaFile]: alloc=12680320 time=3.411
-Simplifier [Storage.CachedQueries.MediaFile]: alloc=200115424 time=73.727
-Float inwards [Storage.CachedQueries.MediaFile]: alloc=22600 time=0.005
-Called arity analysis [Storage.CachedQueries.MediaFile]: alloc=24176 time=0.006
-Simplifier [Storage.CachedQueries.MediaFile]: alloc=50419904 time=16.571
-Demand analysis [Storage.CachedQueries.MediaFile]: alloc=47122952 time=11.421
-Worker Wrapper binds [Storage.CachedQueries.MediaFile]: alloc=2417808 time=1.086
-Simplifier [Storage.CachedQueries.MediaFile]: alloc=58583720 time=19.485
-Exitification transformation [Storage.CachedQueries.MediaFile]: alloc=25104 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.MediaFile]: alloc=44001104 time=14.244
-Common sub-expression [Storage.CachedQueries.MediaFile]: alloc=23704 time=0.033
-Float inwards [Storage.CachedQueries.MediaFile]: alloc=22600 time=0.004
-Simplifier [Storage.CachedQueries.MediaFile]: alloc=52276104 time=18.863
-Demand analysis [Storage.CachedQueries.MediaFile]: alloc=39687496 time=9.287
-CoreTidy [Storage.CachedQueries.MediaFile]: alloc=6910080 time=3.314
+Parser [Storage.CachedQueries.MediaFile]: alloc=2194752 time=0.484
+Renamer/typechecker [Storage.CachedQueries.MediaFile]: alloc=574828752 time=96.804
+Desugar [Storage.CachedQueries.MediaFile]: alloc=448876600 time=70.496
+Simplifier [Storage.CachedQueries.MediaFile]: alloc=22538528 time=4.418
+CoreTidy [Storage.CachedQueries.MediaFile]: alloc=1523416 time=0.485
 CorePrep [Storage.CachedQueries.MediaFile]: alloc=23560 time=0.010
-CodeGen [Storage.CachedQueries.MediaFile]: alloc=201305656 time=59.182
-systool:as: alloc=103552 time=0.248
-CorePrep [Storage.CachedQueries.MediaFile]: alloc=23560 time=0.018
-CodeGen [Storage.CachedQueries.MediaFile]: alloc=210317864 time=60.778
-systool:as: alloc=106448 time=0.360
+CodeGen [Storage.CachedQueries.MediaFile]: alloc=64827696 time=17.408
+systool:as: alloc=103560 time=0.172
+CorePrep [Storage.CachedQueries.MediaFile]: alloc=23560 time=0.015
+CodeGen [Storage.CachedQueries.MediaFile]: alloc=70714320 time=17.666
+systool:as: alloc=106432 time=0.172

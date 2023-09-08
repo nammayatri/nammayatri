@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Driver]: alloc=6060104 time=1.218
-Renamer/typechecker [API.Dashboard.Driver]: alloc=43459752 time=12.665
-Desugar [API.Dashboard.Driver]: alloc=1055824 time=1.045
-Simplifier [API.Dashboard.Driver]: alloc=17258024 time=4.019
-Specialise [API.Dashboard.Driver]: alloc=1259976 time=0.311
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Driver]: alloc=5614760 time=1.555
-Simplifier [API.Dashboard.Driver]: alloc=12394176 time=2.836
-Float inwards [API.Dashboard.Driver]: alloc=19320 time=0.005
-Called arity analysis [API.Dashboard.Driver]: alloc=20896 time=0.005
-Simplifier [API.Dashboard.Driver]: alloc=8241824 time=1.707
-Demand analysis [API.Dashboard.Driver]: alloc=4642536 time=1.064
-Worker Wrapper binds [API.Dashboard.Driver]: alloc=90912 time=0.053
-Simplifier [API.Dashboard.Driver]: alloc=11424560 time=2.387
-Exitification transformation [API.Dashboard.Driver]: alloc=21840 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Driver]: alloc=2797712 time=0.830
-Common sub-expression [API.Dashboard.Driver]: alloc=20424 time=0.005
-Float inwards [API.Dashboard.Driver]: alloc=19320 time=0.004
-Simplifier [API.Dashboard.Driver]: alloc=15355704 time=3.324
-Demand analysis [API.Dashboard.Driver]: alloc=4331264 time=0.962
-CoreTidy [API.Dashboard.Driver]: alloc=2865872 time=0.998
+Parser [API.Dashboard.Driver]: alloc=6059544 time=0.994
+Renamer/typechecker [API.Dashboard.Driver]: alloc=43544312 time=12.176
+Desugar [API.Dashboard.Driver]: alloc=1056904 time=1.049
+Simplifier [API.Dashboard.Driver]: alloc=14367296 time=2.956
+CoreTidy [API.Dashboard.Driver]: alloc=1951072 time=0.629
+CorePrep [API.Dashboard.Driver]: alloc=20296 time=0.010
+CodeGen [API.Dashboard.Driver]: alloc=41387040 time=12.841
+systool:as: alloc=102856 time=0.165
 CorePrep [API.Dashboard.Driver]: alloc=20296 time=0.012
-CodeGen [API.Dashboard.Driver]: alloc=45710688 time=15.775
-systool:as: alloc=102848 time=0.184
-CorePrep [API.Dashboard.Driver]: alloc=20296 time=0.013
-CodeGen [API.Dashboard.Driver]: alloc=48408600 time=16.725
-systool:as: alloc=105720 time=0.184
+CodeGen [API.Dashboard.Driver]: alloc=45282008 time=13.852
+systool:as: alloc=105728 time=0.147

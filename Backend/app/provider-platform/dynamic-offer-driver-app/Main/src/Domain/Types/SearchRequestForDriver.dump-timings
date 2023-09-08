@@ -1,32 +1,17 @@
-Parser [Domain.Types.SearchRequestForDriver]: alloc=3505936 time=0.715
-Simplify [expr]: alloc=34464 time=0.046
-CorePrep [expr]: alloc=22952 time=0.017
-ByteCodeGen [Ghci1]: alloc=94056 time=0.047
-Simplify [expr]: alloc=34464 time=0.018
-CorePrep [expr]: alloc=22952 time=0.015
-ByteCodeGen [Ghci1]: alloc=94056 time=0.042
-Renamer/typechecker [Domain.Types.SearchRequestForDriver]: alloc=372113048 time=110.620
-Desugar [Domain.Types.SearchRequestForDriver]: alloc=107749944 time=24.627
-Simplifier [Domain.Types.SearchRequestForDriver]: alloc=331916136 time=108.548
-Specialise [Domain.Types.SearchRequestForDriver]: alloc=79254640 time=23.449
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchRequestForDriver]: alloc=134420376 time=47.386
-Simplifier [Domain.Types.SearchRequestForDriver]: alloc=1400284456 time=578.384
-Float inwards [Domain.Types.SearchRequestForDriver]: alloc=23800 time=0.005
-Called arity analysis [Domain.Types.SearchRequestForDriver]: alloc=25376 time=0.006
-Simplifier [Domain.Types.SearchRequestForDriver]: alloc=429208536 time=156.758
-Demand analysis [Domain.Types.SearchRequestForDriver]: alloc=222596592 time=50.964
-Worker Wrapper binds [Domain.Types.SearchRequestForDriver]: alloc=8007168 time=4.171
-Simplifier [Domain.Types.SearchRequestForDriver]: alloc=426322088 time=184.844
-Exitification transformation [Domain.Types.SearchRequestForDriver]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchRequestForDriver]: alloc=221922544 time=85.310
-Common sub-expression [Domain.Types.SearchRequestForDriver]: alloc=24904 time=0.006
-Float inwards [Domain.Types.SearchRequestForDriver]: alloc=23800 time=0.004
-Simplifier [Domain.Types.SearchRequestForDriver]: alloc=496642344 time=228.023
-Demand analysis [Domain.Types.SearchRequestForDriver]: alloc=200498416 time=45.723
-CoreTidy [Domain.Types.SearchRequestForDriver]: alloc=85829360 time=28.623
-CorePrep [Domain.Types.SearchRequestForDriver]: alloc=24760 time=0.015
-CodeGen [Domain.Types.SearchRequestForDriver]: alloc=1101372448 time=331.806
-systool:as: alloc=103752 time=0.278
-CorePrep [Domain.Types.SearchRequestForDriver]: alloc=24760 time=0.021
-CodeGen [Domain.Types.SearchRequestForDriver]: alloc=1148092960 time=337.993
-systool:as: alloc=106632 time=0.269
+Parser [Domain.Types.SearchRequestForDriver]: alloc=3495520 time=0.585
+Simplify [expr]: alloc=34912 time=0.022
+CorePrep [expr]: alloc=22880 time=0.018
+ByteCodeGen [Ghci1]: alloc=94056 time=0.053
+Simplify [expr]: alloc=34912 time=0.016
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.041
+Renamer/typechecker [Domain.Types.SearchRequestForDriver]: alloc=371754432 time=132.419
+Desugar [Domain.Types.SearchRequestForDriver]: alloc=107766632 time=30.035
+Simplifier [Domain.Types.SearchRequestForDriver]: alloc=271256368 time=99.031
+CoreTidy [Domain.Types.SearchRequestForDriver]: alloc=43864024 time=17.278
+CorePrep [Domain.Types.SearchRequestForDriver]: alloc=24760 time=0.011
+CodeGen [Domain.Types.SearchRequestForDriver]: alloc=973983176 time=545.321
+systool:as: alloc=103760 time=0.217
+CorePrep [Domain.Types.SearchRequestForDriver]: alloc=24760 time=0.018
+CodeGen [Domain.Types.SearchRequestForDriver]: alloc=1038699360 time=288.606
+systool:as: alloc=106640 time=0.217

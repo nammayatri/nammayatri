@@ -1,32 +1,17 @@
-Parser [Storage.Beam.QuoteSpecialZone]: alloc=1809112 time=0.505
-Simplify [expr]: alloc=184136 time=0.070
-CorePrep [expr]: alloc=74024 time=0.045
-ByteCodeGen [Ghci1]: alloc=379864 time=0.128
-Simplify [expr]: alloc=47024 time=0.018
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.053
-Renamer/typechecker [Storage.Beam.QuoteSpecialZone]: alloc=236788656 time=70.302
-Desugar [Storage.Beam.QuoteSpecialZone]: alloc=28168832 time=7.999
-Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=135343688 time=43.127
-Specialise [Storage.Beam.QuoteSpecialZone]: alloc=59480800 time=17.143
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.QuoteSpecialZone]: alloc=104124208 time=38.849
-Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=1436365616 time=534.682
-Float inwards [Storage.Beam.QuoteSpecialZone]: alloc=22008 time=0.005
-Called arity analysis [Storage.Beam.QuoteSpecialZone]: alloc=23584 time=0.006
-Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=428429704 time=152.961
-Demand analysis [Storage.Beam.QuoteSpecialZone]: alloc=338269072 time=90.771
-Worker Wrapper binds [Storage.Beam.QuoteSpecialZone]: alloc=8470936 time=5.453
-Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=473747176 time=176.435
-Exitification transformation [Storage.Beam.QuoteSpecialZone]: alloc=24512 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.QuoteSpecialZone]: alloc=283831024 time=97.984
-Common sub-expression [Storage.Beam.QuoteSpecialZone]: alloc=23112 time=0.007
-Float inwards [Storage.Beam.QuoteSpecialZone]: alloc=22008 time=0.004
-Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=491544200 time=215.197
-Demand analysis [Storage.Beam.QuoteSpecialZone]: alloc=308837064 time=84.958
-CoreTidy [Storage.Beam.QuoteSpecialZone]: alloc=126219232 time=78.753
-CorePrep [Storage.Beam.QuoteSpecialZone]: alloc=22968 time=0.016
-CodeGen [Storage.Beam.QuoteSpecialZone]: alloc=1618376376 time=495.799
-systool:as: alloc=103392 time=0.312
-CorePrep [Storage.Beam.QuoteSpecialZone]: alloc=22968 time=0.030
-CodeGen [Storage.Beam.QuoteSpecialZone]: alloc=1669633496 time=496.246
-systool:as: alloc=106264 time=0.298
+Parser [Storage.Beam.QuoteSpecialZone]: alloc=1808016 time=0.387
+Simplify [expr]: alloc=109424 time=0.032
+CorePrep [expr]: alloc=51184 time=0.025
+ByteCodeGen [Ghci1]: alloc=276472 time=0.080
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.045
+Renamer/typechecker [Storage.Beam.QuoteSpecialZone]: alloc=234324736 time=64.941
+Desugar [Storage.Beam.QuoteSpecialZone]: alloc=28164920 time=7.485
+Simplifier [Storage.Beam.QuoteSpecialZone]: alloc=50895576 time=13.830
+CoreTidy [Storage.Beam.QuoteSpecialZone]: alloc=12851768 time=3.778
+CorePrep [Storage.Beam.QuoteSpecialZone]: alloc=22968 time=0.010
+CodeGen [Storage.Beam.QuoteSpecialZone]: alloc=360958368 time=100.909
+systool:as: alloc=103392 time=0.186
+CorePrep [Storage.Beam.QuoteSpecialZone]: alloc=22968 time=0.015
+CodeGen [Storage.Beam.QuoteSpecialZone]: alloc=394736560 time=108.973
+systool:as: alloc=106288 time=0.192

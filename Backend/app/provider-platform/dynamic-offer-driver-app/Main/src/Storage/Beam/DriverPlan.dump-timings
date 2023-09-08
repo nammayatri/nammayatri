@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverPlan]: alloc=1603320 time=0.356
-Simplify [expr]: alloc=97256 time=0.050
-CorePrep [expr]: alloc=43488 time=0.028
-ByteCodeGen [Ghci1]: alloc=217456 time=0.074
-Simplify [expr]: alloc=47024 time=0.020
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.049
-Renamer/typechecker [Storage.Beam.DriverPlan]: alloc=157967144 time=47.081
-Desugar [Storage.Beam.DriverPlan]: alloc=22659784 time=6.432
-Simplifier [Storage.Beam.DriverPlan]: alloc=107088680 time=32.422
-Specialise [Storage.Beam.DriverPlan]: alloc=36958120 time=11.612
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverPlan]: alloc=76592880 time=27.488
-Simplifier [Storage.Beam.DriverPlan]: alloc=918257248 time=358.818
-Float inwards [Storage.Beam.DriverPlan]: alloc=20216 time=0.005
-Called arity analysis [Storage.Beam.DriverPlan]: alloc=21792 time=0.006
-Simplifier [Storage.Beam.DriverPlan]: alloc=246198704 time=79.982
-Demand analysis [Storage.Beam.DriverPlan]: alloc=218361808 time=56.550
-Worker Wrapper binds [Storage.Beam.DriverPlan]: alloc=5621728 time=3.472
-Simplifier [Storage.Beam.DriverPlan]: alloc=285185040 time=111.889
-Exitification transformation [Storage.Beam.DriverPlan]: alloc=22720 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverPlan]: alloc=185993656 time=63.738
-Common sub-expression [Storage.Beam.DriverPlan]: alloc=21320 time=0.006
-Float inwards [Storage.Beam.DriverPlan]: alloc=20216 time=0.004
-Simplifier [Storage.Beam.DriverPlan]: alloc=291888456 time=136.336
-Demand analysis [Storage.Beam.DriverPlan]: alloc=196046336 time=49.193
-CoreTidy [Storage.Beam.DriverPlan]: alloc=52517496 time=39.505
+Parser [Storage.Beam.DriverPlan]: alloc=1602232 time=0.446
+Simplify [expr]: alloc=72480 time=0.043
+CorePrep [expr]: alloc=36304 time=0.019
+ByteCodeGen [Ghci1]: alloc=183200 time=0.067
+Simplify [expr]: alloc=46992 time=0.047
+CorePrep [expr]: alloc=26608 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.059
+Renamer/typechecker [Storage.Beam.DriverPlan]: alloc=155859312 time=49.264
+Desugar [Storage.Beam.DriverPlan]: alloc=22646784 time=6.375
+Simplifier [Storage.Beam.DriverPlan]: alloc=32545656 time=9.791
+CoreTidy [Storage.Beam.DriverPlan]: alloc=7357344 time=2.276
+CorePrep [Storage.Beam.DriverPlan]: alloc=21176 time=0.010
+CodeGen [Storage.Beam.DriverPlan]: alloc=233317680 time=68.997
+systool:as: alloc=103048 time=0.198
 CorePrep [Storage.Beam.DriverPlan]: alloc=21176 time=0.015
-CodeGen [Storage.Beam.DriverPlan]: alloc=1035228376 time=359.690
-systool:as: alloc=103024 time=0.249
-CorePrep [Storage.Beam.DriverPlan]: alloc=21176 time=0.029
-CodeGen [Storage.Beam.DriverPlan]: alloc=1068665384 time=336.074
-systool:as: alloc=105896 time=0.265
+CodeGen [Storage.Beam.DriverPlan]: alloc=255100200 time=73.503
+systool:as: alloc=105896 time=0.173

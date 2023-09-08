@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Issue.IssueOption]: alloc=2808168 time=0.604
-Renamer/typechecker [Storage.Queries.Issue.IssueOption]: alloc=185671192 time=51.685
-Desugar [Storage.Queries.Issue.IssueOption]: alloc=20632936 time=5.219
-Simplifier [Storage.Queries.Issue.IssueOption]: alloc=30475984 time=10.612
-Specialise [Storage.Queries.Issue.IssueOption]: alloc=8257192 time=2.537
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Issue.IssueOption]: alloc=14756656 time=4.750
-Simplifier [Storage.Queries.Issue.IssueOption]: alloc=220258064 time=71.689
-Float inwards [Storage.Queries.Issue.IssueOption]: alloc=23192 time=0.005
-Called arity analysis [Storage.Queries.Issue.IssueOption]: alloc=24768 time=0.006
-Simplifier [Storage.Queries.Issue.IssueOption]: alloc=46680616 time=15.190
-Demand analysis [Storage.Queries.Issue.IssueOption]: alloc=12497504 time=4.665
-Worker Wrapper binds [Storage.Queries.Issue.IssueOption]: alloc=823592 time=0.508
-Simplifier [Storage.Queries.Issue.IssueOption]: alloc=41240920 time=13.458
-Exitification transformation [Storage.Queries.Issue.IssueOption]: alloc=25696 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Issue.IssueOption]: alloc=11660744 time=4.784
-Common sub-expression [Storage.Queries.Issue.IssueOption]: alloc=24296 time=0.009
-Float inwards [Storage.Queries.Issue.IssueOption]: alloc=23192 time=0.005
-Simplifier [Storage.Queries.Issue.IssueOption]: alloc=53194960 time=16.316
-Demand analysis [Storage.Queries.Issue.IssueOption]: alloc=12954408 time=5.545
-CoreTidy [Storage.Queries.Issue.IssueOption]: alloc=10194176 time=5.447
+Parser [Storage.Queries.Issue.IssueOption]: alloc=2806512 time=0.536
+Renamer/typechecker [Storage.Queries.Issue.IssueOption]: alloc=163468304 time=49.749
+Desugar [Storage.Queries.Issue.IssueOption]: alloc=20334704 time=5.332
+Simplifier [Storage.Queries.Issue.IssueOption]: alloc=19588424 time=6.736
+CoreTidy [Storage.Queries.Issue.IssueOption]: alloc=2521168 time=0.776
+CorePrep [Storage.Queries.Issue.IssueOption]: alloc=24168 time=0.008
+CodeGen [Storage.Queries.Issue.IssueOption]: alloc=94444536 time=28.505
+systool:as: alloc=103680 time=0.170
 CorePrep [Storage.Queries.Issue.IssueOption]: alloc=24168 time=0.015
-CodeGen [Storage.Queries.Issue.IssueOption]: alloc=106022288 time=35.533
-systool:as: alloc=103672 time=0.210
-CorePrep [Storage.Queries.Issue.IssueOption]: alloc=24168 time=0.017
-CodeGen [Storage.Queries.Issue.IssueOption]: alloc=113808640 time=37.535
-systool:as: alloc=106552 time=0.209
+CodeGen [Storage.Queries.Issue.IssueOption]: alloc=107475216 time=29.245
+systool:as: alloc=106560 time=0.166

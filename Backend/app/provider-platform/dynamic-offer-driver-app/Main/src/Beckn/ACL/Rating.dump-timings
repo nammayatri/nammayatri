@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.Rating]: alloc=905648 time=0.277
-Renamer/typechecker [Beckn.ACL.Rating]: alloc=107972952 time=29.382
-Desugar [Beckn.ACL.Rating]: alloc=6646600 time=2.899
-Simplifier [Beckn.ACL.Rating]: alloc=7125264 time=2.310
-Specialise [Beckn.ACL.Rating]: alloc=724832 time=0.170
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Rating]: alloc=2655304 time=0.804
-Simplifier [Beckn.ACL.Rating]: alloc=13965624 time=4.432
-Float inwards [Beckn.ACL.Rating]: alloc=18120 time=0.004
-Called arity analysis [Beckn.ACL.Rating]: alloc=19696 time=0.005
-Simplifier [Beckn.ACL.Rating]: alloc=4969264 time=1.462
-Demand analysis [Beckn.ACL.Rating]: alloc=6062000 time=1.376
-Worker Wrapper binds [Beckn.ACL.Rating]: alloc=207000 time=0.100
-Simplifier [Beckn.ACL.Rating]: alloc=5401984 time=1.667
-Exitification transformation [Beckn.ACL.Rating]: alloc=20640 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Rating]: alloc=4867448 time=1.426
-Common sub-expression [Beckn.ACL.Rating]: alloc=19224 time=0.004
-Float inwards [Beckn.ACL.Rating]: alloc=18120 time=0.003
-Simplifier [Beckn.ACL.Rating]: alloc=5953160 time=1.779
-Demand analysis [Beckn.ACL.Rating]: alloc=5596648 time=1.183
-CoreTidy [Beckn.ACL.Rating]: alloc=1213568 time=0.458
+Parser [Beckn.ACL.Rating]: alloc=905648 time=0.212
+Renamer/typechecker [Beckn.ACL.Rating]: alloc=98622992 time=25.594
+Desugar [Beckn.ACL.Rating]: alloc=6541368 time=2.159
+Simplifier [Beckn.ACL.Rating]: alloc=2493840 time=0.756
+CoreTidy [Beckn.ACL.Rating]: alloc=272968 time=0.113
+CorePrep [Beckn.ACL.Rating]: alloc=19112 time=0.008
+CodeGen [Beckn.ACL.Rating]: alloc=23783456 time=6.132
+systool:as: alloc=102592 time=0.188
 CorePrep [Beckn.ACL.Rating]: alloc=19112 time=0.010
-CodeGen [Beckn.ACL.Rating]: alloc=39834440 time=12.279
-systool:as: alloc=102584 time=0.185
-CorePrep [Beckn.ACL.Rating]: alloc=19112 time=0.018
-CodeGen [Beckn.ACL.Rating]: alloc=41397536 time=12.955
-systool:as: alloc=105464 time=0.203
+CodeGen [Beckn.ACL.Rating]: alloc=26477176 time=6.545
+systool:as: alloc=105472 time=0.177

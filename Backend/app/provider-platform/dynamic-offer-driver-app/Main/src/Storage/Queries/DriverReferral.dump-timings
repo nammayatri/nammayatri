@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverReferral]: alloc=1068752 time=0.349
-Renamer/typechecker [Storage.Queries.DriverReferral]: alloc=83113552 time=32.239
-Desugar [Storage.Queries.DriverReferral]: alloc=4889392 time=2.230
-Simplifier [Storage.Queries.DriverReferral]: alloc=19026928 time=7.119
-Specialise [Storage.Queries.DriverReferral]: alloc=5384968 time=1.903
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverReferral]: alloc=7245864 time=2.700
-Simplifier [Storage.Queries.DriverReferral]: alloc=107149904 time=38.247
-Float inwards [Storage.Queries.DriverReferral]: alloc=22296 time=0.006
-Called arity analysis [Storage.Queries.DriverReferral]: alloc=23872 time=0.007
-Simplifier [Storage.Queries.DriverReferral]: alloc=21154312 time=7.916
-Demand analysis [Storage.Queries.DriverReferral]: alloc=6128488 time=2.473
-Worker Wrapper binds [Storage.Queries.DriverReferral]: alloc=397392 time=0.301
-Simplifier [Storage.Queries.DriverReferral]: alloc=19906176 time=7.083
-Exitification transformation [Storage.Queries.DriverReferral]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverReferral]: alloc=6044920 time=2.679
-Common sub-expression [Storage.Queries.DriverReferral]: alloc=23400 time=0.007
-Float inwards [Storage.Queries.DriverReferral]: alloc=22296 time=0.004
-Simplifier [Storage.Queries.DriverReferral]: alloc=24830272 time=9.703
-Demand analysis [Storage.Queries.DriverReferral]: alloc=5800088 time=2.565
-CoreTidy [Storage.Queries.DriverReferral]: alloc=4682624 time=2.550
-CorePrep [Storage.Queries.DriverReferral]: alloc=23272 time=0.015
-CodeGen [Storage.Queries.DriverReferral]: alloc=47677152 time=17.341
-systool:as: alloc=103472 time=0.236
-CorePrep [Storage.Queries.DriverReferral]: alloc=23272 time=0.019
-CodeGen [Storage.Queries.DriverReferral]: alloc=51280080 time=18.636
-systool:as: alloc=106344 time=0.191
+Parser [Storage.Queries.DriverReferral]: alloc=1101032 time=0.464
+Renamer/typechecker [Storage.Queries.DriverReferral]: alloc=81845728 time=24.961
+Desugar [Storage.Queries.DriverReferral]: alloc=4833552 time=1.753
+Simplifier [Storage.Queries.DriverReferral]: alloc=12266408 time=3.542
+CoreTidy [Storage.Queries.DriverReferral]: alloc=1873248 time=0.511
+CorePrep [Storage.Queries.DriverReferral]: alloc=23272 time=0.007
+CodeGen [Storage.Queries.DriverReferral]: alloc=49029904 time=13.163
+systool:as: alloc=103472 time=0.170
+CorePrep [Storage.Queries.DriverReferral]: alloc=23272 time=0.012
+CodeGen [Storage.Queries.DriverReferral]: alloc=56448216 time=14.778
+systool:as: alloc=106344 time=0.150

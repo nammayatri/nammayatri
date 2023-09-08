@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Payment]: alloc=8261632 time=1.523
-Renamer/typechecker [Domain.Action.UI.Payment]: alloc=401108824 time=100.143
-Desugar [Domain.Action.UI.Payment]: alloc=15722792 time=5.039
-Simplifier [Domain.Action.UI.Payment]: alloc=108476352 time=44.921
-Specialise [Domain.Action.UI.Payment]: alloc=18221144 time=4.069
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Payment]: alloc=40506040 time=12.868
-Simplifier [Domain.Action.UI.Payment]: alloc=459278680 time=144.302
-Float inwards [Domain.Action.UI.Payment]: alloc=20504 time=0.004
-Called arity analysis [Domain.Action.UI.Payment]: alloc=22080 time=0.006
-Simplifier [Domain.Action.UI.Payment]: alloc=105306176 time=29.660
-Demand analysis [Domain.Action.UI.Payment]: alloc=103806656 time=21.496
-Worker Wrapper binds [Domain.Action.UI.Payment]: alloc=1792656 time=1.124
-Simplifier [Domain.Action.UI.Payment]: alloc=95943784 time=25.965
-Exitification transformation [Domain.Action.UI.Payment]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Payment]: alloc=67130872 time=20.973
-Common sub-expression [Domain.Action.UI.Payment]: alloc=21608 time=0.006
-Float inwards [Domain.Action.UI.Payment]: alloc=20504 time=0.004
-Simplifier [Domain.Action.UI.Payment]: alloc=146877832 time=57.882
-Demand analysis [Domain.Action.UI.Payment]: alloc=103287688 time=21.694
-CoreTidy [Domain.Action.UI.Payment]: alloc=29643288 time=18.991
-CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.014
-CodeGen [Domain.Action.UI.Payment]: alloc=674187648 time=166.853
-systool:as: alloc=103112 time=0.251
-CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.017
-CodeGen [Domain.Action.UI.Payment]: alloc=696825048 time=170.953
-systool:as: alloc=105992 time=0.221
+Parser [Domain.Action.UI.Payment]: alloc=8261088 time=1.671
+Renamer/typechecker [Domain.Action.UI.Payment]: alloc=383602064 time=108.502
+Desugar [Domain.Action.UI.Payment]: alloc=15481520 time=5.267
+Simplifier [Domain.Action.UI.Payment]: alloc=30361216 time=9.475
+CoreTidy [Domain.Action.UI.Payment]: alloc=9621752 time=3.404
+CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.011
+CodeGen [Domain.Action.UI.Payment]: alloc=215353304 time=64.537
+systool:as: alloc=103144 time=0.253
+CorePrep [Domain.Action.UI.Payment]: alloc=21496 time=0.016
+CodeGen [Domain.Action.UI.Payment]: alloc=234519312 time=68.508
+systool:as: alloc=106000 time=0.205

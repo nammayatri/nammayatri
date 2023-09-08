@@ -1,26 +1,11 @@
-Parser [Domain.Types.Feedback.Feedback]: alloc=645128 time=0.177
-Renamer/typechecker [Domain.Types.Feedback.Feedback]: alloc=64018632 time=22.368
-Desugar [Domain.Types.Feedback.Feedback]: alloc=4807952 time=2.066
-Simplifier [Domain.Types.Feedback.Feedback]: alloc=45001416 time=15.430
-Specialise [Domain.Types.Feedback.Feedback]: alloc=10154976 time=3.345
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Feedback.Feedback]: alloc=23017888 time=8.445
-Simplifier [Domain.Types.Feedback.Feedback]: alloc=237141336 time=85.983
-Float inwards [Domain.Types.Feedback.Feedback]: alloc=22296 time=0.005
-Called arity analysis [Domain.Types.Feedback.Feedback]: alloc=23872 time=0.006
-Simplifier [Domain.Types.Feedback.Feedback]: alloc=65153024 time=23.281
-Demand analysis [Domain.Types.Feedback.Feedback]: alloc=33980144 time=9.514
-Worker Wrapper binds [Domain.Types.Feedback.Feedback]: alloc=1041208 time=0.711
-Simplifier [Domain.Types.Feedback.Feedback]: alloc=65585536 time=35.636
-Exitification transformation [Domain.Types.Feedback.Feedback]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Feedback.Feedback]: alloc=33257888 time=11.979
-Common sub-expression [Domain.Types.Feedback.Feedback]: alloc=23400 time=0.006
-Float inwards [Domain.Types.Feedback.Feedback]: alloc=22296 time=0.004
-Simplifier [Domain.Types.Feedback.Feedback]: alloc=78363032 time=28.115
-Demand analysis [Domain.Types.Feedback.Feedback]: alloc=32282584 time=8.743
-CoreTidy [Domain.Types.Feedback.Feedback]: alloc=12877264 time=4.983
-CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.040
-CodeGen [Domain.Types.Feedback.Feedback]: alloc=193877288 time=61.481
-systool:as: alloc=103496 time=0.219
-CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.019
-CodeGen [Domain.Types.Feedback.Feedback]: alloc=201714720 time=63.604
-systool:as: alloc=106368 time=0.231
+Parser [Domain.Types.Feedback.Feedback]: alloc=644592 time=0.174
+Renamer/typechecker [Domain.Types.Feedback.Feedback]: alloc=63986912 time=21.136
+Desugar [Domain.Types.Feedback.Feedback]: alloc=4798432 time=2.157
+Simplifier [Domain.Types.Feedback.Feedback]: alloc=21618824 time=5.557
+CoreTidy [Domain.Types.Feedback.Feedback]: alloc=4980728 time=1.419
+CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.008
+CodeGen [Domain.Types.Feedback.Feedback]: alloc=159099968 time=45.792
+systool:as: alloc=103496 time=0.201
+CorePrep [Domain.Types.Feedback.Feedback]: alloc=23272 time=0.015
+CodeGen [Domain.Types.Feedback.Feedback]: alloc=171172120 time=49.542
+systool:as: alloc=106368 time=0.180

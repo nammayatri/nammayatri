@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Vehicle]: alloc=1977312 time=0.456
-Simplify [expr]: alloc=184216 time=0.057
-CorePrep [expr]: alloc=74144 time=0.040
-ByteCodeGen [Ghci1]: alloc=379904 time=0.101
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.052
-Renamer/typechecker [Storage.Beam.Vehicle]: alloc=307888280 time=86.151
-Desugar [Storage.Beam.Vehicle]: alloc=32937648 time=8.872
-Simplifier [Storage.Beam.Vehicle]: alloc=187275552 time=60.617
-Specialise [Storage.Beam.Vehicle]: alloc=97964488 time=27.635
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Vehicle]: alloc=139111536 time=52.711
-Simplifier [Storage.Beam.Vehicle]: alloc=2242726744 time=840.301
-Float inwards [Storage.Beam.Vehicle]: alloc=19320 time=0.005
-Called arity analysis [Storage.Beam.Vehicle]: alloc=20896 time=0.005
-Simplifier [Storage.Beam.Vehicle]: alloc=635781776 time=259.402
-Demand analysis [Storage.Beam.Vehicle]: alloc=482676680 time=114.015
-Worker Wrapper binds [Storage.Beam.Vehicle]: alloc=12423040 time=8.517
-Simplifier [Storage.Beam.Vehicle]: alloc=703581248 time=303.627
-Exitification transformation [Storage.Beam.Vehicle]: alloc=21840 time=0.020
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Vehicle]: alloc=419589528 time=149.732
-Common sub-expression [Storage.Beam.Vehicle]: alloc=20424 time=0.007
-Float inwards [Storage.Beam.Vehicle]: alloc=19320 time=0.035
-Simplifier [Storage.Beam.Vehicle]: alloc=719720504 time=262.371
-Demand analysis [Storage.Beam.Vehicle]: alloc=425610416 time=110.547
-CoreTidy [Storage.Beam.Vehicle]: alloc=176714464 time=105.273
+Parser [Storage.Beam.Vehicle]: alloc=1976232 time=0.386
+Simplify [expr]: alloc=109424 time=0.031
+CorePrep [expr]: alloc=51184 time=0.026
+ByteCodeGen [Ghci1]: alloc=276472 time=0.096
+Simplify [expr]: alloc=46992 time=0.022
+CorePrep [expr]: alloc=26608 time=0.016
+ByteCodeGen [Ghci1]: alloc=131880 time=0.051
+Renamer/typechecker [Storage.Beam.Vehicle]: alloc=305016240 time=86.732
+Desugar [Storage.Beam.Vehicle]: alloc=32958416 time=8.982
+Simplifier [Storage.Beam.Vehicle]: alloc=67908592 time=19.405
+CoreTidy [Storage.Beam.Vehicle]: alloc=18133400 time=5.749
+CorePrep [Storage.Beam.Vehicle]: alloc=20296 time=0.011
+CodeGen [Storage.Beam.Vehicle]: alloc=477206536 time=146.467
+systool:as: alloc=102872 time=0.248
 CorePrep [Storage.Beam.Vehicle]: alloc=20296 time=0.017
-CodeGen [Storage.Beam.Vehicle]: alloc=2241513512 time=763.413
-systool:as: alloc=102872 time=0.261
-CorePrep [Storage.Beam.Vehicle]: alloc=20296 time=0.017
-CodeGen [Storage.Beam.Vehicle]: alloc=2314936104 time=685.949
-systool:as: alloc=105720 time=0.321
+CodeGen [Storage.Beam.Vehicle]: alloc=520781160 time=145.519
+systool:as: alloc=105744 time=0.202

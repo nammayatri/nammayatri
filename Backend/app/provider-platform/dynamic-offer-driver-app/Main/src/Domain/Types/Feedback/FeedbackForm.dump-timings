@@ -1,32 +1,17 @@
-Parser [Domain.Types.Feedback.FeedbackForm]: alloc=1621120 time=0.351
-Simplify [expr]: alloc=34464 time=0.015
-CorePrep [expr]: alloc=22952 time=0.029
-ByteCodeGen [Ghci1]: alloc=94056 time=0.050
-Simplify [expr]: alloc=34464 time=0.014
-CorePrep [expr]: alloc=22952 time=0.014
-ByteCodeGen [Ghci1]: alloc=94056 time=0.049
-Renamer/typechecker [Domain.Types.Feedback.FeedbackForm]: alloc=231922648 time=85.173
-Desugar [Domain.Types.Feedback.FeedbackForm]: alloc=91631336 time=22.216
-Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=205273400 time=85.704
-Specialise [Domain.Types.Feedback.FeedbackForm]: alloc=73110544 time=28.920
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Feedback.FeedbackForm]: alloc=86847488 time=31.307
-Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=2116760456 time=988.046
-Float inwards [Domain.Types.Feedback.FeedbackForm]: alloc=23480 time=0.005
-Called arity analysis [Domain.Types.Feedback.FeedbackForm]: alloc=25056 time=0.006
-Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=494740816 time=623.105
-Demand analysis [Domain.Types.Feedback.FeedbackForm]: alloc=346463312 time=95.347
-Worker Wrapper binds [Domain.Types.Feedback.FeedbackForm]: alloc=13486704 time=7.050
-Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=529861968 time=224.196
-Exitification transformation [Domain.Types.Feedback.FeedbackForm]: alloc=26000 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Feedback.FeedbackForm]: alloc=326265736 time=115.527
-Common sub-expression [Domain.Types.Feedback.FeedbackForm]: alloc=24584 time=0.007
-Float inwards [Domain.Types.Feedback.FeedbackForm]: alloc=23480 time=0.004
-Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=457709304 time=259.060
-Demand analysis [Domain.Types.Feedback.FeedbackForm]: alloc=184487904 time=52.152
-CoreTidy [Domain.Types.Feedback.FeedbackForm]: alloc=55077736 time=46.593
-CorePrep [Domain.Types.Feedback.FeedbackForm]: alloc=24472 time=0.027
-CodeGen [Domain.Types.Feedback.FeedbackForm]: alloc=891345016 time=307.807
-systool:as: alloc=103736 time=0.236
+Parser [Domain.Types.Feedback.FeedbackForm]: alloc=1612464 time=0.326
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.064
+Simplify [expr]: alloc=34912 time=0.015
+CorePrep [expr]: alloc=22880 time=0.013
+ByteCodeGen [Ghci1]: alloc=94056 time=0.036
+Renamer/typechecker [Domain.Types.Feedback.FeedbackForm]: alloc=231579504 time=80.012
+Desugar [Domain.Types.Feedback.FeedbackForm]: alloc=91634408 time=20.702
+Simplifier [Domain.Types.Feedback.FeedbackForm]: alloc=152262928 time=44.517
+CoreTidy [Domain.Types.Feedback.FeedbackForm]: alloc=19175240 time=11.439
+CorePrep [Domain.Types.Feedback.FeedbackForm]: alloc=24472 time=0.021
+CodeGen [Domain.Types.Feedback.FeedbackForm]: alloc=636138480 time=199.812
+systool:as: alloc=103736 time=0.207
 CorePrep [Domain.Types.Feedback.FeedbackForm]: alloc=24472 time=0.017
-CodeGen [Domain.Types.Feedback.FeedbackForm]: alloc=933426544 time=306.379
-systool:as: alloc=106616 time=0.253
+CodeGen [Domain.Types.Feedback.FeedbackForm]: alloc=684074496 time=207.922
+systool:as: alloc=106616 time=0.204

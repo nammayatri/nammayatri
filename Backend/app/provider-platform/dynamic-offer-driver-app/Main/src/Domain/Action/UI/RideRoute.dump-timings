@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.RideRoute]: alloc=650368 time=0.227
-Renamer/typechecker [Domain.Action.UI.RideRoute]: alloc=194557744 time=37.717
-Desugar [Domain.Action.UI.RideRoute]: alloc=176812352 time=29.378
-Simplifier [Domain.Action.UI.RideRoute]: alloc=5441912 time=1.412
-Specialise [Domain.Action.UI.RideRoute]: alloc=294944 time=0.083
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.RideRoute]: alloc=1544096 time=0.385
-Simplifier [Domain.Action.UI.RideRoute]: alloc=3489128 time=0.962
-Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.005
-Called arity analysis [Domain.Action.UI.RideRoute]: alloc=22672 time=0.005
-Simplifier [Domain.Action.UI.RideRoute]: alloc=1964656 time=0.460
-Demand analysis [Domain.Action.UI.RideRoute]: alloc=1138640 time=0.258
-Worker Wrapper binds [Domain.Action.UI.RideRoute]: alloc=231984 time=0.067
-Simplifier [Domain.Action.UI.RideRoute]: alloc=2287624 time=0.660
-Exitification transformation [Domain.Action.UI.RideRoute]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.RideRoute]: alloc=1614624 time=0.405
-Common sub-expression [Domain.Action.UI.RideRoute]: alloc=22200 time=0.004
-Float inwards [Domain.Action.UI.RideRoute]: alloc=21096 time=0.003
-Simplifier [Domain.Action.UI.RideRoute]: alloc=2226088 time=0.603
-Demand analysis [Domain.Action.UI.RideRoute]: alloc=1319160 time=0.298
-CoreTidy [Domain.Action.UI.RideRoute]: alloc=582056 time=0.256
+Parser [Domain.Action.UI.RideRoute]: alloc=650368 time=0.212
+Renamer/typechecker [Domain.Action.UI.RideRoute]: alloc=162486424 time=29.704
+Desugar [Domain.Action.UI.RideRoute]: alloc=173614744 time=27.853
+Simplifier [Domain.Action.UI.RideRoute]: alloc=2008600 time=0.511
+CoreTidy [Domain.Action.UI.RideRoute]: alloc=225992 time=0.089
+CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.008
+CodeGen [Domain.Action.UI.RideRoute]: alloc=10251248 time=2.960
+systool:as: alloc=103240 time=0.180
 CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.010
-CodeGen [Domain.Action.UI.RideRoute]: alloc=11222016 time=3.673
-systool:as: alloc=103232 time=0.147
-CorePrep [Domain.Action.UI.RideRoute]: alloc=22088 time=0.014
-CodeGen [Domain.Action.UI.RideRoute]: alloc=11843056 time=3.943
-systool:as: alloc=106112 time=0.136
+CodeGen [Domain.Action.UI.RideRoute]: alloc=11378504 time=3.186
+systool:as: alloc=106120 time=0.130

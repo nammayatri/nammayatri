@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverLocation]: alloc=5421256 time=1.018
-Renamer/typechecker [Storage.Queries.DriverLocation]: alloc=83779576 time=28.015
-Desugar [Storage.Queries.DriverLocation]: alloc=22997760 time=5.282
-Simplifier [Storage.Queries.DriverLocation]: alloc=58278464 time=17.986
-Specialise [Storage.Queries.DriverLocation]: alloc=19401536 time=4.889
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverLocation]: alloc=23838800 time=8.311
-Simplifier [Storage.Queries.DriverLocation]: alloc=411193104 time=133.043
-Float inwards [Storage.Queries.DriverLocation]: alloc=22296 time=0.005
-Called arity analysis [Storage.Queries.DriverLocation]: alloc=23872 time=0.006
-Simplifier [Storage.Queries.DriverLocation]: alloc=116616960 time=33.275
-Demand analysis [Storage.Queries.DriverLocation]: alloc=40301040 time=15.168
-Worker Wrapper binds [Storage.Queries.DriverLocation]: alloc=1795304 time=1.145
-Simplifier [Storage.Queries.DriverLocation]: alloc=108833632 time=34.041
-Exitification transformation [Storage.Queries.DriverLocation]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverLocation]: alloc=36468848 time=15.305
-Common sub-expression [Storage.Queries.DriverLocation]: alloc=23400 time=0.006
-Float inwards [Storage.Queries.DriverLocation]: alloc=22296 time=0.004
-Simplifier [Storage.Queries.DriverLocation]: alloc=120954600 time=42.565
-Demand analysis [Storage.Queries.DriverLocation]: alloc=35886752 time=14.351
-CoreTidy [Storage.Queries.DriverLocation]: alloc=20699368 time=8.346
+Parser [Storage.Queries.DriverLocation]: alloc=5418520 time=1.106
+Renamer/typechecker [Storage.Queries.DriverLocation]: alloc=71568072 time=22.182
+Desugar [Storage.Queries.DriverLocation]: alloc=22944776 time=4.978
+Simplifier [Storage.Queries.DriverLocation]: alloc=31547160 time=8.214
+CoreTidy [Storage.Queries.DriverLocation]: alloc=4448496 time=1.185
+CorePrep [Storage.Queries.DriverLocation]: alloc=23272 time=0.017
+CodeGen [Storage.Queries.DriverLocation]: alloc=191391288 time=48.400
+systool:as: alloc=103480 time=0.186
 CorePrep [Storage.Queries.DriverLocation]: alloc=23272 time=0.014
-CodeGen [Storage.Queries.DriverLocation]: alloc=308936496 time=93.211
-systool:as: alloc=103472 time=0.236
-CorePrep [Storage.Queries.DriverLocation]: alloc=23272 time=0.015
-CodeGen [Storage.Queries.DriverLocation]: alloc=328202360 time=97.627
-systool:as: alloc=106344 time=0.231
+CodeGen [Storage.Queries.DriverLocation]: alloc=214509096 time=52.635
+systool:as: alloc=106352 time=0.185

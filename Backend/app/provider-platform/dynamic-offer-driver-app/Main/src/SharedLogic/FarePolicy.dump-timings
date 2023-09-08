@@ -1,26 +1,11 @@
-Parser [SharedLogic.FarePolicy]: alloc=2016104 time=0.616
-Renamer/typechecker [SharedLogic.FarePolicy]: alloc=407836392 time=78.683
-Desugar [SharedLogic.FarePolicy]: alloc=396434752 time=66.185
-Simplifier [SharedLogic.FarePolicy]: alloc=9568920 time=2.765
-Specialise [SharedLogic.FarePolicy]: alloc=1531552 time=0.340
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FarePolicy]: alloc=7999080 time=2.196
-Simplifier [SharedLogic.FarePolicy]: alloc=21546600 time=5.472
-Float inwards [SharedLogic.FarePolicy]: alloc=19912 time=0.017
-Called arity analysis [SharedLogic.FarePolicy]: alloc=21488 time=0.006
-Simplifier [SharedLogic.FarePolicy]: alloc=13138872 time=2.582
-Demand analysis [SharedLogic.FarePolicy]: alloc=8336536 time=1.636
-Worker Wrapper binds [SharedLogic.FarePolicy]: alloc=589984 time=0.215
-Simplifier [SharedLogic.FarePolicy]: alloc=7435608 time=1.902
-Exitification transformation [SharedLogic.FarePolicy]: alloc=22432 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FarePolicy]: alloc=6086880 time=1.610
-Common sub-expression [SharedLogic.FarePolicy]: alloc=21016 time=0.005
-Float inwards [SharedLogic.FarePolicy]: alloc=19912 time=0.004
-Simplifier [SharedLogic.FarePolicy]: alloc=11165856 time=2.899
-Demand analysis [SharedLogic.FarePolicy]: alloc=6216968 time=1.308
-CoreTidy [SharedLogic.FarePolicy]: alloc=1847200 time=0.796
-CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.010
-CodeGen [SharedLogic.FarePolicy]: alloc=56338888 time=17.146
-systool:as: alloc=102960 time=0.279
-CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.016
-CodeGen [SharedLogic.FarePolicy]: alloc=59389176 time=17.785
-systool:as: alloc=105832 time=0.236
+Parser [SharedLogic.FarePolicy]: alloc=2013912 time=0.410
+Renamer/typechecker [SharedLogic.FarePolicy]: alloc=277529936 time=54.353
+Desugar [SharedLogic.FarePolicy]: alloc=389372248 time=67.773
+Simplifier [SharedLogic.FarePolicy]: alloc=10577776 time=2.532
+CoreTidy [SharedLogic.FarePolicy]: alloc=1243712 time=0.461
+CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.011
+CodeGen [SharedLogic.FarePolicy]: alloc=63076608 time=16.819
+systool:as: alloc=102968 time=0.161
+CorePrep [SharedLogic.FarePolicy]: alloc=20888 time=0.020
+CodeGen [SharedLogic.FarePolicy]: alloc=69208456 time=17.797
+systool:as: alloc=105840 time=0.169

@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Rating]: alloc=2158456 time=0.576
-Renamer/typechecker [Storage.Queries.Rating]: alloc=181121344 time=52.816
-Desugar [Storage.Queries.Rating]: alloc=8036384 time=2.409
-Simplifier [Storage.Queries.Rating]: alloc=71910888 time=23.011
-Specialise [Storage.Queries.Rating]: alloc=14509304 time=4.700
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Rating]: alloc=16054120 time=6.660
-Simplifier [Storage.Queries.Rating]: alloc=239843096 time=74.719
-Float inwards [Storage.Queries.Rating]: alloc=19912 time=0.005
-Called arity analysis [Storage.Queries.Rating]: alloc=21488 time=0.005
-Simplifier [Storage.Queries.Rating]: alloc=77839576 time=25.129
-Demand analysis [Storage.Queries.Rating]: alloc=14420432 time=7.372
-Worker Wrapper binds [Storage.Queries.Rating]: alloc=1061056 time=0.608
-Simplifier [Storage.Queries.Rating]: alloc=70453856 time=23.556
-Exitification transformation [Storage.Queries.Rating]: alloc=22432 time=0.008
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Rating]: alloc=14912960 time=5.081
-Common sub-expression [Storage.Queries.Rating]: alloc=21016 time=0.005
-Float inwards [Storage.Queries.Rating]: alloc=19912 time=0.004
-Simplifier [Storage.Queries.Rating]: alloc=84016608 time=23.651
-Demand analysis [Storage.Queries.Rating]: alloc=14713168 time=6.744
-CoreTidy [Storage.Queries.Rating]: alloc=14676896 time=4.938
-CorePrep [Storage.Queries.Rating]: alloc=20888 time=0.017
-CodeGen [Storage.Queries.Rating]: alloc=98404432 time=33.119
-systool:as: alloc=102984 time=0.207
-CorePrep [Storage.Queries.Rating]: alloc=20888 time=0.018
-CodeGen [Storage.Queries.Rating]: alloc=105670672 time=35.217
-systool:as: alloc=105856 time=0.211
+Parser [Storage.Queries.Rating]: alloc=2156256 time=0.497
+Renamer/typechecker [Storage.Queries.Rating]: alloc=177519088 time=48.279
+Desugar [Storage.Queries.Rating]: alloc=8002952 time=2.412
+Simplifier [Storage.Queries.Rating]: alloc=32894664 time=8.579
+CoreTidy [Storage.Queries.Rating]: alloc=6302712 time=1.936
+CorePrep [Storage.Queries.Rating]: alloc=20888 time=0.010
+CodeGen [Storage.Queries.Rating]: alloc=138766960 time=35.954
+systool:as: alloc=102992 time=0.197
+CorePrep [Storage.Queries.Rating]: alloc=20888 time=0.014
+CodeGen [Storage.Queries.Rating]: alloc=158646216 time=39.430
+systool:as: alloc=105888 time=0.192

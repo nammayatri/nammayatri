@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=682016 time=0.163
-Renamer/typechecker [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=105072184 time=29.970
-Desugar [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=5502736 time=2.345
-Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=82903920 time=29.402
-Specialise [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=25071336 time=8.116
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=38630320 time=14.741
-Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=481003376 time=191.104
-Float inwards [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=25272 time=0.006
-Called arity analysis [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=26848 time=0.006
-Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=137919904 time=70.910
-Demand analysis [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=66441880 time=16.665
-Worker Wrapper binds [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=1753880 time=1.220
-Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=132049240 time=43.781
-Exitification transformation [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=27792 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=69013008 time=26.470
-Common sub-expression [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=26376 time=0.008
-Float inwards [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=25272 time=0.005
-Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=154163640 time=75.197
-Demand analysis [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=60386000 time=16.303
-CoreTidy [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=21448560 time=8.499
-CorePrep [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=26264 time=0.039
-CodeGen [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=202015952 time=76.168
-systool:as: alloc=104168 time=0.243
+Parser [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=681472 time=0.164
+Renamer/typechecker [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=105028832 time=28.562
+Desugar [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=5499288 time=2.191
+Simplifier [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=37076200 time=9.587
+CoreTidy [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=10339624 time=2.831
+CorePrep [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=26264 time=0.011
+CodeGen [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=260755456 time=85.540
+systool:as: alloc=104144 time=0.193
 CorePrep [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=26264 time=0.017
-CodeGen [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=210728048 time=70.515
-systool:as: alloc=107024 time=0.169
+CodeGen [Domain.Types.DriverOnboarding.AadhaarOtp]: alloc=279245896 time=85.178
+systool:as: alloc=107024 time=0.197

@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Merchant.MerchantMessage]: alloc=1243432 time=0.300
-Renamer/typechecker [Storage.Queries.Merchant.MerchantMessage]: alloc=42313688 time=14.760
-Desugar [Storage.Queries.Merchant.MerchantMessage]: alloc=3229800 time=1.589
-Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=10824824 time=3.681
-Specialise [Storage.Queries.Merchant.MerchantMessage]: alloc=4021632 time=1.292
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.MerchantMessage]: alloc=6742288 time=2.122
-Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=160686624 time=45.732
-Float inwards [Storage.Queries.Merchant.MerchantMessage]: alloc=25272 time=0.005
-Called arity analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=26848 time=0.006
-Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=34001408 time=10.030
-Demand analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=6285328 time=2.767
-Worker Wrapper binds [Storage.Queries.Merchant.MerchantMessage]: alloc=311088 time=0.199
-Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=33108824 time=9.588
-Exitification transformation [Storage.Queries.Merchant.MerchantMessage]: alloc=27792 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.MerchantMessage]: alloc=5476776 time=2.418
-Common sub-expression [Storage.Queries.Merchant.MerchantMessage]: alloc=26376 time=0.005
-Float inwards [Storage.Queries.Merchant.MerchantMessage]: alloc=25272 time=0.004
-Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=37500920 time=12.306
-Demand analysis [Storage.Queries.Merchant.MerchantMessage]: alloc=6122736 time=3.138
-CoreTidy [Storage.Queries.Merchant.MerchantMessage]: alloc=6686256 time=2.873
-CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.016
-CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=53941296 time=19.943
-systool:as: alloc=104128 time=0.200
-CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.016
-CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=57493104 time=20.356
-systool:as: alloc=107008 time=0.231
+Parser [Storage.Queries.Merchant.MerchantMessage]: alloc=1243432 time=0.269
+Renamer/typechecker [Storage.Queries.Merchant.MerchantMessage]: alloc=41675528 time=13.812
+Desugar [Storage.Queries.Merchant.MerchantMessage]: alloc=3206344 time=1.497
+Simplifier [Storage.Queries.Merchant.MerchantMessage]: alloc=7486080 time=2.149
+CoreTidy [Storage.Queries.Merchant.MerchantMessage]: alloc=1334184 time=0.378
+CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.008
+CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=25696008 time=7.031
+systool:as: alloc=104136 time=0.176
+CorePrep [Storage.Queries.Merchant.MerchantMessage]: alloc=26264 time=0.012
+CodeGen [Storage.Queries.Merchant.MerchantMessage]: alloc=29553864 time=7.577
+systool:as: alloc=107016 time=0.141

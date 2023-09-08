@@ -1,26 +1,11 @@
-Parser [Storage.Queries.GoHomeConfig]: alloc=1182432 time=0.304
-Renamer/typechecker [Storage.Queries.GoHomeConfig]: alloc=54489808 time=19.119
-Desugar [Storage.Queries.GoHomeConfig]: alloc=3338384 time=1.518
-Simplifier [Storage.Queries.GoHomeConfig]: alloc=25456000 time=8.226
-Specialise [Storage.Queries.GoHomeConfig]: alloc=9080472 time=2.299
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.GoHomeConfig]: alloc=11056592 time=3.533
-Simplifier [Storage.Queries.GoHomeConfig]: alloc=144960216 time=49.256
-Float inwards [Storage.Queries.GoHomeConfig]: alloc=21704 time=0.006
-Called arity analysis [Storage.Queries.GoHomeConfig]: alloc=23280 time=0.006
-Simplifier [Storage.Queries.GoHomeConfig]: alloc=27468808 time=8.625
-Demand analysis [Storage.Queries.GoHomeConfig]: alloc=9629512 time=2.883
-Worker Wrapper binds [Storage.Queries.GoHomeConfig]: alloc=462952 time=0.291
-Simplifier [Storage.Queries.GoHomeConfig]: alloc=23143880 time=8.269
-Exitification transformation [Storage.Queries.GoHomeConfig]: alloc=24224 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.GoHomeConfig]: alloc=8769584 time=3.368
-Common sub-expression [Storage.Queries.GoHomeConfig]: alloc=22808 time=0.007
-Float inwards [Storage.Queries.GoHomeConfig]: alloc=21704 time=0.005
-Simplifier [Storage.Queries.GoHomeConfig]: alloc=34516280 time=17.488
-Demand analysis [Storage.Queries.GoHomeConfig]: alloc=10115392 time=2.625
-CoreTidy [Storage.Queries.GoHomeConfig]: alloc=10088152 time=3.209
-CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.013
-CodeGen [Storage.Queries.GoHomeConfig]: alloc=91463368 time=31.382
-systool:as: alloc=103376 time=0.208
-CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.016
-CodeGen [Storage.Queries.GoHomeConfig]: alloc=96749816 time=33.004
-systool:as: alloc=106224 time=0.202
+Parser [Storage.Queries.GoHomeConfig]: alloc=1182432 time=0.318
+Renamer/typechecker [Storage.Queries.GoHomeConfig]: alloc=53857600 time=16.663
+Desugar [Storage.Queries.GoHomeConfig]: alloc=3324928 time=1.474
+Simplifier [Storage.Queries.GoHomeConfig]: alloc=15332568 time=3.829
+CoreTidy [Storage.Queries.GoHomeConfig]: alloc=3733520 time=0.987
+CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.008
+CodeGen [Storage.Queries.GoHomeConfig]: alloc=50816432 time=13.180
+systool:as: alloc=103384 time=0.148
+CorePrep [Storage.Queries.GoHomeConfig]: alloc=22680 time=0.015
+CodeGen [Storage.Queries.GoHomeConfig]: alloc=58031544 time=14.230
+systool:as: alloc=106232 time=0.136

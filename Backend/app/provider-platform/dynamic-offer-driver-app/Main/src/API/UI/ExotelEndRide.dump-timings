@@ -1,26 +1,11 @@
-Parser [API.UI.ExotelEndRide]: alloc=1121168 time=0.298
-Renamer/typechecker [API.UI.ExotelEndRide]: alloc=100992864 time=29.380
-Desugar [API.UI.ExotelEndRide]: alloc=484760 time=0.902
-Simplifier [API.UI.ExotelEndRide]: alloc=69553904 time=21.512
-Specialise [API.UI.ExotelEndRide]: alloc=5413944 time=2.879
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.ExotelEndRide]: alloc=15809552 time=5.731
-Simplifier [API.UI.ExotelEndRide]: alloc=159298200 time=49.317
-Float inwards [API.UI.ExotelEndRide]: alloc=19320 time=0.005
-Called arity analysis [API.UI.ExotelEndRide]: alloc=20896 time=0.006
-Simplifier [API.UI.ExotelEndRide]: alloc=28051672 time=13.231
-Demand analysis [API.UI.ExotelEndRide]: alloc=37305328 time=8.828
-Worker Wrapper binds [API.UI.ExotelEndRide]: alloc=422576 time=0.260
-Simplifier [API.UI.ExotelEndRide]: alloc=47779312 time=12.596
-Exitification transformation [API.UI.ExotelEndRide]: alloc=21840 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.ExotelEndRide]: alloc=26473552 time=9.831
-Common sub-expression [API.UI.ExotelEndRide]: alloc=20424 time=0.007
-Float inwards [API.UI.ExotelEndRide]: alloc=19320 time=0.004
-Simplifier [API.UI.ExotelEndRide]: alloc=123112992 time=43.657
-Demand analysis [API.UI.ExotelEndRide]: alloc=48175928 time=12.467
-CoreTidy [API.UI.ExotelEndRide]: alloc=15946360 time=4.663
-CorePrep [API.UI.ExotelEndRide]: alloc=20296 time=0.012
-CodeGen [API.UI.ExotelEndRide]: alloc=181228680 time=42.970
-systool:as: alloc=102824 time=0.199
-CorePrep [API.UI.ExotelEndRide]: alloc=20296 time=0.016
-CodeGen [API.UI.ExotelEndRide]: alloc=185736216 time=43.957
-systool:as: alloc=105696 time=0.193
+Parser [API.UI.ExotelEndRide]: alloc=1120616 time=0.276
+Renamer/typechecker [API.UI.ExotelEndRide]: alloc=100828440 time=27.572
+Desugar [API.UI.ExotelEndRide]: alloc=484064 time=0.961
+Simplifier [API.UI.ExotelEndRide]: alloc=22588320 time=7.975
+CoreTidy [API.UI.ExotelEndRide]: alloc=14101880 time=3.087
+CorePrep [API.UI.ExotelEndRide]: alloc=20296 time=0.008
+CodeGen [API.UI.ExotelEndRide]: alloc=36285016 time=12.521
+systool:as: alloc=102832 time=0.211
+CorePrep [API.UI.ExotelEndRide]: alloc=20296 time=0.013
+CodeGen [API.UI.ExotelEndRide]: alloc=39073072 time=12.673
+systool:as: alloc=105704 time=0.185

@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2402896 time=0.537
-Simplify [expr]: alloc=183976 time=0.078
-CorePrep [expr]: alloc=73944 time=0.061
-ByteCodeGen [Ghci1]: alloc=379944 time=0.112
-Simplify [expr]: alloc=47024 time=0.021
-CorePrep [expr]: alloc=26752 time=0.018
-ByteCodeGen [Ghci1]: alloc=131880 time=0.054
-Renamer/typechecker [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=361604728 time=122.055
-Desugar [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=36865504 time=12.618
-Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=225657592 time=915.875
-Specialise [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=125066424 time=31.930
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=162923192 time=65.697
-Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2502319744 time=1036.050
-Float inwards [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=31240 time=0.006
-Called arity analysis [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32816 time=0.033
-Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=708317848 time=271.263
-Demand analysis [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=617966152 time=141.949
-Worker Wrapper binds [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=16731560 time=10.895
-Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=793069232 time=339.547
-Exitification transformation [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33760 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=528844032 time=193.436
-Common sub-expression [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32344 time=0.008
-Float inwards [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=31240 time=0.005
-Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=794322248 time=374.171
-Demand analysis [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=524340888 time=115.610
-CoreTidy [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=140151400 time=64.160
-CorePrep [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.030
-CodeGen [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2623407928 time=858.621
-systool:as: alloc=105368 time=0.354
-CorePrep [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.019
-CodeGen [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2706818168 time=820.075
-systool:as: alloc=108240 time=0.275
+Parser [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2400656 time=0.410
+Simplify [expr]: alloc=109424 time=0.031
+CorePrep [expr]: alloc=51184 time=0.024
+ByteCodeGen [Ghci1]: alloc=276472 time=0.081
+Simplify [expr]: alloc=46992 time=0.022
+CorePrep [expr]: alloc=26608 time=0.019
+ByteCodeGen [Ghci1]: alloc=131880 time=0.050
+Renamer/typechecker [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=358490312 time=94.638
+Desugar [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=36839288 time=9.395
+Simplifier [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=81619680 time=22.671
+CoreTidy [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=22424440 time=7.477
+CorePrep [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.012
+CodeGen [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=566944464 time=165.601
+systool:as: alloc=105368 time=0.217
+CorePrep [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.024
+CodeGen [Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate]: alloc=617308912 time=169.017
+systool:as: alloc=108240 time=0.170

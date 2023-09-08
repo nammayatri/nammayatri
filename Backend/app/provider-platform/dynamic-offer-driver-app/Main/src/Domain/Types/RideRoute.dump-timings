@@ -1,26 +1,11 @@
-Parser [Domain.Types.RideRoute]: alloc=420752 time=0.165
-Renamer/typechecker [Domain.Types.RideRoute]: alloc=33471024 time=13.266
-Desugar [Domain.Types.RideRoute]: alloc=1586456 time=1.271
-Simplifier [Domain.Types.RideRoute]: alloc=29906632 time=10.846
-Specialise [Domain.Types.RideRoute]: alloc=7809064 time=2.825
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RideRoute]: alloc=17080448 time=6.268
-Simplifier [Domain.Types.RideRoute]: alloc=657736368 time=269.483
-Float inwards [Domain.Types.RideRoute]: alloc=19912 time=0.005
-Called arity analysis [Domain.Types.RideRoute]: alloc=21488 time=0.006
-Simplifier [Domain.Types.RideRoute]: alloc=136149488 time=66.855
-Demand analysis [Domain.Types.RideRoute]: alloc=107919416 time=28.480
-Worker Wrapper binds [Domain.Types.RideRoute]: alloc=3814784 time=2.143
-Simplifier [Domain.Types.RideRoute]: alloc=162279920 time=79.074
-Exitification transformation [Domain.Types.RideRoute]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RideRoute]: alloc=101188096 time=30.782
-Common sub-expression [Domain.Types.RideRoute]: alloc=21016 time=0.006
-Float inwards [Domain.Types.RideRoute]: alloc=19912 time=0.004
-Simplifier [Domain.Types.RideRoute]: alloc=132466208 time=47.494
-Demand analysis [Domain.Types.RideRoute]: alloc=55524416 time=14.625
-CoreTidy [Domain.Types.RideRoute]: alloc=8685648 time=4.059
-CorePrep [Domain.Types.RideRoute]: alloc=20888 time=0.010
-CodeGen [Domain.Types.RideRoute]: alloc=106597112 time=38.506
-systool:as: alloc=102968 time=0.223
-CorePrep [Domain.Types.RideRoute]: alloc=20888 time=0.017
-CodeGen [Domain.Types.RideRoute]: alloc=111544360 time=36.431
-systool:as: alloc=105840 time=0.217
+Parser [Domain.Types.RideRoute]: alloc=420752 time=0.145
+Renamer/typechecker [Domain.Types.RideRoute]: alloc=33436272 time=11.638
+Desugar [Domain.Types.RideRoute]: alloc=1581776 time=1.248
+Simplifier [Domain.Types.RideRoute]: alloc=10136856 time=2.840
+CoreTidy [Domain.Types.RideRoute]: alloc=2186128 time=0.717
+CorePrep [Domain.Types.RideRoute]: alloc=20888 time=0.007
+CodeGen [Domain.Types.RideRoute]: alloc=77922248 time=23.228
+systool:as: alloc=102968 time=0.179
+CorePrep [Domain.Types.RideRoute]: alloc=20888 time=0.014
+CodeGen [Domain.Types.RideRoute]: alloc=83771224 time=24.819
+systool:as: alloc=105840 time=0.160

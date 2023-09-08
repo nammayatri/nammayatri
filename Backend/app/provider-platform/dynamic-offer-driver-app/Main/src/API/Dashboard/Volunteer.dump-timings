@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Volunteer]: alloc=849144 time=0.255
-Renamer/typechecker [API.Dashboard.Volunteer]: alloc=10438192 time=5.533
-Desugar [API.Dashboard.Volunteer]: alloc=345312 time=0.865
-Simplifier [API.Dashboard.Volunteer]: alloc=6397536 time=1.643
-Specialise [API.Dashboard.Volunteer]: alloc=690472 time=0.139
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Volunteer]: alloc=2622608 time=0.615
-Simplifier [API.Dashboard.Volunteer]: alloc=1043736 time=0.290
-Float inwards [API.Dashboard.Volunteer]: alloc=20216 time=0.004
-Called arity analysis [API.Dashboard.Volunteer]: alloc=21792 time=0.004
-Simplifier [API.Dashboard.Volunteer]: alloc=1108280 time=0.341
-Demand analysis [API.Dashboard.Volunteer]: alloc=1867280 time=0.323
-Worker Wrapper binds [API.Dashboard.Volunteer]: alloc=31296 time=0.014
-Simplifier [API.Dashboard.Volunteer]: alloc=1847208 time=0.344
-Exitification transformation [API.Dashboard.Volunteer]: alloc=22720 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Volunteer]: alloc=745600 time=0.184
-Common sub-expression [API.Dashboard.Volunteer]: alloc=21320 time=0.004
-Float inwards [API.Dashboard.Volunteer]: alloc=20216 time=0.003
-Simplifier [API.Dashboard.Volunteer]: alloc=2332840 time=0.467
-Demand analysis [API.Dashboard.Volunteer]: alloc=1870232 time=0.312
-CoreTidy [API.Dashboard.Volunteer]: alloc=612888 time=0.179
+Parser [API.Dashboard.Volunteer]: alloc=849144 time=0.206
+Renamer/typechecker [API.Dashboard.Volunteer]: alloc=10469512 time=5.298
+Desugar [API.Dashboard.Volunteer]: alloc=345384 time=0.892
+Simplifier [API.Dashboard.Volunteer]: alloc=1039088 time=0.352
+CoreTidy [API.Dashboard.Volunteer]: alloc=180704 time=0.083
+CorePrep [API.Dashboard.Volunteer]: alloc=21176 time=0.007
+CodeGen [API.Dashboard.Volunteer]: alloc=6246304 time=2.249
+systool:as: alloc=103032 time=0.182
 CorePrep [API.Dashboard.Volunteer]: alloc=21176 time=0.009
-CodeGen [API.Dashboard.Volunteer]: alloc=9846120 time=2.941
-systool:as: alloc=103024 time=0.175
-CorePrep [API.Dashboard.Volunteer]: alloc=21176 time=0.011
-CodeGen [API.Dashboard.Volunteer]: alloc=10119224 time=2.836
-systool:as: alloc=105896 time=0.106
+CodeGen [API.Dashboard.Volunteer]: alloc=6718880 time=2.207
+systool:as: alloc=105904 time=0.134

@@ -1,26 +1,11 @@
-Parser [API.Beckn.Select]: alloc=1192680 time=0.416
-Renamer/typechecker [API.Beckn.Select]: alloc=48686104 time=18.037
-Desugar [API.Beckn.Select]: alloc=840504 time=1.336
-Simplifier [API.Beckn.Select]: alloc=40491528 time=12.803
-Specialise [API.Beckn.Select]: alloc=3164952 time=1.691
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Select]: alloc=11969896 time=3.985
-Simplifier [API.Beckn.Select]: alloc=115596128 time=36.741
-Float inwards [API.Beckn.Select]: alloc=18120 time=0.005
-Called arity analysis [API.Beckn.Select]: alloc=19696 time=0.005
-Simplifier [API.Beckn.Select]: alloc=28512448 time=11.092
-Demand analysis [API.Beckn.Select]: alloc=42812176 time=10.022
-Worker Wrapper binds [API.Beckn.Select]: alloc=552016 time=0.331
-Simplifier [API.Beckn.Select]: alloc=44498600 time=11.955
-Exitification transformation [API.Beckn.Select]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Select]: alloc=30298776 time=10.512
-Common sub-expression [API.Beckn.Select]: alloc=19224 time=0.006
-Float inwards [API.Beckn.Select]: alloc=18120 time=0.004
-Simplifier [API.Beckn.Select]: alloc=79587280 time=30.957
-Demand analysis [API.Beckn.Select]: alloc=48350144 time=11.697
-CoreTidy [API.Beckn.Select]: alloc=17933184 time=5.808
-CorePrep [API.Beckn.Select]: alloc=19112 time=0.014
-CodeGen [API.Beckn.Select]: alloc=206804576 time=55.188
-systool:as: alloc=102584 time=0.261
-CorePrep [API.Beckn.Select]: alloc=19112 time=0.020
-CodeGen [API.Beckn.Select]: alloc=212490104 time=57.900
-systool:as: alloc=105464 time=0.273
+Parser [API.Beckn.Select]: alloc=1192680 time=0.289
+Renamer/typechecker [API.Beckn.Select]: alloc=48713496 time=15.505
+Desugar [API.Beckn.Select]: alloc=840360 time=1.124
+Simplifier [API.Beckn.Select]: alloc=11606008 time=4.192
+CoreTidy [API.Beckn.Select]: alloc=7082672 time=1.534
+CorePrep [API.Beckn.Select]: alloc=19112 time=0.008
+CodeGen [API.Beckn.Select]: alloc=28900032 time=9.671
+systool:as: alloc=102592 time=0.186
+CorePrep [API.Beckn.Select]: alloc=19112 time=0.013
+CodeGen [API.Beckn.Select]: alloc=31469872 time=10.065
+systool:as: alloc=105472 time=0.154

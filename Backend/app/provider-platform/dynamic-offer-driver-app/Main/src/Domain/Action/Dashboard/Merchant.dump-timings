@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Merchant]: alloc=18697544 time=3.248
-Renamer/typechecker [Domain.Action.Dashboard.Merchant]: alloc=1332191608 time=317.858
-Desugar [Domain.Action.Dashboard.Merchant]: alloc=29033536 time=7.489
-Simplifier [Domain.Action.Dashboard.Merchant]: alloc=243811392 time=68.724
-Specialise [Domain.Action.Dashboard.Merchant]: alloc=48697224 time=28.705
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Merchant]: alloc=140464000 time=53.565
-Simplifier [Domain.Action.Dashboard.Merchant]: alloc=943012856 time=316.242
-Float inwards [Domain.Action.Dashboard.Merchant]: alloc=22888 time=0.015
-Called arity analysis [Domain.Action.Dashboard.Merchant]: alloc=24464 time=0.007
-Simplifier [Domain.Action.Dashboard.Merchant]: alloc=253742704 time=89.320
-Demand analysis [Domain.Action.Dashboard.Merchant]: alloc=285916176 time=64.008
-Worker Wrapper binds [Domain.Action.Dashboard.Merchant]: alloc=5096096 time=3.212
-Simplifier [Domain.Action.Dashboard.Merchant]: alloc=233447104 time=80.670
-Exitification transformation [Domain.Action.Dashboard.Merchant]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Merchant]: alloc=193917064 time=63.020
-Common sub-expression [Domain.Action.Dashboard.Merchant]: alloc=23992 time=0.008
-Float inwards [Domain.Action.Dashboard.Merchant]: alloc=22888 time=0.009
-Simplifier [Domain.Action.Dashboard.Merchant]: alloc=304833168 time=111.969
-Demand analysis [Domain.Action.Dashboard.Merchant]: alloc=298196992 time=62.780
-CoreTidy [Domain.Action.Dashboard.Merchant]: alloc=69387184 time=25.767
-CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.013
-CodeGen [Domain.Action.Dashboard.Merchant]: alloc=1688815584 time=469.247
-systool:as: alloc=103632 time=0.286
-CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.016
-CodeGen [Domain.Action.Dashboard.Merchant]: alloc=1741706688 time=467.980
-systool:as: alloc=106512 time=0.290
+Parser [Domain.Action.Dashboard.Merchant]: alloc=18691480 time=2.962
+Renamer/typechecker [Domain.Action.Dashboard.Merchant]: alloc=1286152208 time=308.071
+Desugar [Domain.Action.Dashboard.Merchant]: alloc=28642056 time=7.503
+Simplifier [Domain.Action.Dashboard.Merchant]: alloc=78855192 time=20.065
+CoreTidy [Domain.Action.Dashboard.Merchant]: alloc=14334104 time=4.154
+CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.012
+CodeGen [Domain.Action.Dashboard.Merchant]: alloc=478965088 time=131.982
+systool:as: alloc=103640 time=0.216
+CorePrep [Domain.Action.Dashboard.Merchant]: alloc=23880 time=0.018
+CodeGen [Domain.Action.Dashboard.Merchant]: alloc=522261424 time=141.125
+systool:as: alloc=106520 time=0.221

@@ -1,32 +1,17 @@
-Parser [Storage.Beam.BookingCancellationReason]: alloc=1759376 time=0.513
-Simplify [expr]: alloc=184296 time=0.070
-CorePrep [expr]: alloc=74104 time=0.041
-ByteCodeGen [Ghci1]: alloc=379864 time=0.106
-Simplify [expr]: alloc=47024 time=0.021
-CorePrep [expr]: alloc=26752 time=0.021
-ByteCodeGen [Ghci1]: alloc=131880 time=0.053
-Renamer/typechecker [Storage.Beam.BookingCancellationReason]: alloc=211716264 time=59.250
-Desugar [Storage.Beam.BookingCancellationReason]: alloc=26160944 time=7.134
-Simplifier [Storage.Beam.BookingCancellationReason]: alloc=128228632 time=40.926
-Specialise [Storage.Beam.BookingCancellationReason]: alloc=59978640 time=16.880
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.BookingCancellationReason]: alloc=101888456 time=37.666
-Simplifier [Storage.Beam.BookingCancellationReason]: alloc=1463399896 time=556.559
-Float inwards [Storage.Beam.BookingCancellationReason]: alloc=24680 time=0.005
-Called arity analysis [Storage.Beam.BookingCancellationReason]: alloc=26256 time=0.007
-Simplifier [Storage.Beam.BookingCancellationReason]: alloc=415216744 time=162.831
-Demand analysis [Storage.Beam.BookingCancellationReason]: alloc=325148584 time=86.575
-Worker Wrapper binds [Storage.Beam.BookingCancellationReason]: alloc=8571400 time=5.325
-Simplifier [Storage.Beam.BookingCancellationReason]: alloc=461984552 time=184.462
-Exitification transformation [Storage.Beam.BookingCancellationReason]: alloc=27200 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.BookingCancellationReason]: alloc=280281264 time=143.365
-Common sub-expression [Storage.Beam.BookingCancellationReason]: alloc=25784 time=0.007
-Float inwards [Storage.Beam.BookingCancellationReason]: alloc=24680 time=0.005
-Simplifier [Storage.Beam.BookingCancellationReason]: alloc=480114680 time=185.486
-Demand analysis [Storage.Beam.BookingCancellationReason]: alloc=291060024 time=95.103
-CoreTidy [Storage.Beam.BookingCancellationReason]: alloc=94956320 time=26.931
-CorePrep [Storage.Beam.BookingCancellationReason]: alloc=25656 time=0.014
-CodeGen [Storage.Beam.BookingCancellationReason]: alloc=1423924416 time=516.462
-systool:as: alloc=103944 time=0.279
-CorePrep [Storage.Beam.BookingCancellationReason]: alloc=25656 time=0.017
-CodeGen [Storage.Beam.BookingCancellationReason]: alloc=1467991416 time=461.289
-systool:as: alloc=106816 time=0.322
+Parser [Storage.Beam.BookingCancellationReason]: alloc=1757136 time=0.439
+Simplify [expr]: alloc=109424 time=0.031
+CorePrep [expr]: alloc=51184 time=0.024
+ByteCodeGen [Ghci1]: alloc=276472 time=0.081
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.018
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.BookingCancellationReason]: alloc=209354856 time=65.212
+Desugar [Storage.Beam.BookingCancellationReason]: alloc=26146328 time=7.107
+Simplifier [Storage.Beam.BookingCancellationReason]: alloc=44010176 time=13.231
+CoreTidy [Storage.Beam.BookingCancellationReason]: alloc=10841496 time=3.608
+CorePrep [Storage.Beam.BookingCancellationReason]: alloc=25656 time=0.011
+CodeGen [Storage.Beam.BookingCancellationReason]: alloc=316685344 time=101.321
+systool:as: alloc=103944 time=0.197
+CorePrep [Storage.Beam.BookingCancellationReason]: alloc=25656 time=0.015
+CodeGen [Storage.Beam.BookingCancellationReason]: alloc=345556456 time=99.225
+systool:as: alloc=106816 time=0.175

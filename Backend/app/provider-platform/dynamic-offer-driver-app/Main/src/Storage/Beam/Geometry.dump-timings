@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Geometry]: alloc=1009088 time=0.319
-Simplify [expr]: alloc=97256 time=0.053
-CorePrep [expr]: alloc=43488 time=0.045
-ByteCodeGen [Ghci1]: alloc=217456 time=0.087
-Simplify [expr]: alloc=47024 time=0.018
-CorePrep [expr]: alloc=26752 time=0.014
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.Geometry]: alloc=76446760 time=29.154
-Desugar [Storage.Beam.Geometry]: alloc=17304272 time=5.449
-Simplifier [Storage.Beam.Geometry]: alloc=38230576 time=14.173
-Specialise [Storage.Beam.Geometry]: alloc=12720664 time=4.342
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Geometry]: alloc=40762072 time=15.015
-Simplifier [Storage.Beam.Geometry]: alloc=302748080 time=125.306
-Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.005
-Called arity analysis [Storage.Beam.Geometry]: alloc=21200 time=0.006
-Simplifier [Storage.Beam.Geometry]: alloc=81992736 time=29.144
-Demand analysis [Storage.Beam.Geometry]: alloc=81547920 time=39.307
-Worker Wrapper binds [Storage.Beam.Geometry]: alloc=2549104 time=1.014
-Simplifier [Storage.Beam.Geometry]: alloc=103946112 time=35.246
-Exitification transformation [Storage.Beam.Geometry]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Geometry]: alloc=72343304 time=26.136
-Common sub-expression [Storage.Beam.Geometry]: alloc=20728 time=0.007
-Float inwards [Storage.Beam.Geometry]: alloc=19624 time=0.005
-Simplifier [Storage.Beam.Geometry]: alloc=105521536 time=60.668
-Demand analysis [Storage.Beam.Geometry]: alloc=74247568 time=17.928
-CoreTidy [Storage.Beam.Geometry]: alloc=17171784 time=8.837
-CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.039
-CodeGen [Storage.Beam.Geometry]: alloc=417470288 time=151.808
-systool:as: alloc=102904 time=0.248
-CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.016
-CodeGen [Storage.Beam.Geometry]: alloc=430898880 time=140.230
-systool:as: alloc=105776 time=0.262
+Parser [Storage.Beam.Geometry]: alloc=1008008 time=0.291
+Simplify [expr]: alloc=72480 time=0.025
+CorePrep [expr]: alloc=36304 time=0.019
+ByteCodeGen [Ghci1]: alloc=183200 time=0.069
+Simplify [expr]: alloc=46992 time=0.015
+CorePrep [expr]: alloc=26608 time=0.012
+ByteCodeGen [Ghci1]: alloc=131880 time=0.038
+Renamer/typechecker [Storage.Beam.Geometry]: alloc=74690928 time=26.843
+Desugar [Storage.Beam.Geometry]: alloc=17286864 time=5.136
+Simplifier [Storage.Beam.Geometry]: alloc=14416496 time=4.252
+CoreTidy [Storage.Beam.Geometry]: alloc=2427968 time=0.854
+CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.009
+CodeGen [Storage.Beam.Geometry]: alloc=98829880 time=30.441
+systool:as: alloc=102904 time=0.184
+CorePrep [Storage.Beam.Geometry]: alloc=20584 time=0.014
+CodeGen [Storage.Beam.Geometry]: alloc=107993944 time=32.299
+systool:as: alloc=105776 time=0.146

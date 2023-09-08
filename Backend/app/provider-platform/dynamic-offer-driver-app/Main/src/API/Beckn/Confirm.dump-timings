@@ -1,26 +1,11 @@
-Parser [API.Beckn.Confirm]: alloc=2877848 time=0.771
-Renamer/typechecker [API.Beckn.Confirm]: alloc=2855624480 time=528.948
-Desugar [API.Beckn.Confirm]: alloc=4774249208 time=781.332
-Simplifier [API.Beckn.Confirm]: alloc=173084176 time=55.994
-Specialise [API.Beckn.Confirm]: alloc=20408408 time=9.533
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Beckn.Confirm]: alloc=38233608 time=15.553
-Simplifier [API.Beckn.Confirm]: alloc=428441728 time=150.197
-Float inwards [API.Beckn.Confirm]: alloc=18424 time=0.004
-Called arity analysis [API.Beckn.Confirm]: alloc=20000 time=0.006
-Simplifier [API.Beckn.Confirm]: alloc=79051888 time=49.957
-Demand analysis [API.Beckn.Confirm]: alloc=91015408 time=22.604
-Worker Wrapper binds [API.Beckn.Confirm]: alloc=1370112 time=0.975
-Simplifier [API.Beckn.Confirm]: alloc=120580040 time=44.241
-Exitification transformation [API.Beckn.Confirm]: alloc=20928 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Beckn.Confirm]: alloc=72370848 time=26.193
-Common sub-expression [API.Beckn.Confirm]: alloc=19528 time=0.006
-Float inwards [API.Beckn.Confirm]: alloc=18424 time=0.004
-Simplifier [API.Beckn.Confirm]: alloc=303813096 time=135.896
-Demand analysis [API.Beckn.Confirm]: alloc=100274808 time=26.944
-CoreTidy [API.Beckn.Confirm]: alloc=57178624 time=16.580
-CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.018
-CodeGen [API.Beckn.Confirm]: alloc=472292768 time=125.058
-systool:as: alloc=102640 time=0.232
-CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.018
-CodeGen [API.Beckn.Confirm]: alloc=486575576 time=123.658
-systool:as: alloc=105544 time=0.246
+Parser [API.Beckn.Confirm]: alloc=2877848 time=0.651
+Renamer/typechecker [API.Beckn.Confirm]: alloc=2541024600 time=490.311
+Desugar [API.Beckn.Confirm]: alloc=4686289504 time=788.592
+Simplifier [API.Beckn.Confirm]: alloc=62646592 time=27.415
+CoreTidy [API.Beckn.Confirm]: alloc=35783056 time=12.352
+CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.014
+CodeGen [API.Beckn.Confirm]: alloc=121019536 time=49.873
+systool:as: alloc=102648 time=0.203
+CorePrep [API.Beckn.Confirm]: alloc=19400 time=0.013
+CodeGen [API.Beckn.Confirm]: alloc=133027256 time=39.767
+systool:as: alloc=105528 time=0.177

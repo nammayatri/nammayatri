@@ -1,26 +1,11 @@
-Parser [SharedLogic.DriverPool]: alloc=22702624 time=4.186
-Renamer/typechecker [SharedLogic.DriverPool]: alloc=8932740408 time=1807.442
-Desugar [SharedLogic.DriverPool]: alloc=8848051096 time=1580.589
-Simplifier [SharedLogic.DriverPool]: alloc=109794840 time=34.736
-Specialise [SharedLogic.DriverPool]: alloc=18494200 time=6.790
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverPool]: alloc=71846344 time=32.833
-Simplifier [SharedLogic.DriverPool]: alloc=827604072 time=372.634
-Float inwards [SharedLogic.DriverPool]: alloc=19912 time=0.005
-Called arity analysis [SharedLogic.DriverPool]: alloc=21488 time=0.006
-Simplifier [SharedLogic.DriverPool]: alloc=231865336 time=85.298
-Demand analysis [SharedLogic.DriverPool]: alloc=227265888 time=68.438
-Worker Wrapper binds [SharedLogic.DriverPool]: alloc=10603440 time=3.869
-Simplifier [SharedLogic.DriverPool]: alloc=261261008 time=122.776
-Exitification transformation [SharedLogic.DriverPool]: alloc=22432 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverPool]: alloc=224046568 time=93.296
-Common sub-expression [SharedLogic.DriverPool]: alloc=21016 time=0.007
-Float inwards [SharedLogic.DriverPool]: alloc=19912 time=0.004
-Simplifier [SharedLogic.DriverPool]: alloc=282852984 time=143.731
-Demand analysis [SharedLogic.DriverPool]: alloc=260170008 time=76.962
-CoreTidy [SharedLogic.DriverPool]: alloc=41754600 time=24.817
-CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.015
-CodeGen [SharedLogic.DriverPool]: alloc=1307038920 time=459.594
-systool:as: alloc=102960 time=0.306
-CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.019
-CodeGen [SharedLogic.DriverPool]: alloc=1362463640 time=3072.211
-systool:as: alloc=105832 time=0.259
+Parser [SharedLogic.DriverPool]: alloc=22699880 time=3.631
+Renamer/typechecker [SharedLogic.DriverPool]: alloc=6342002880 time=1155.463
+Desugar [SharedLogic.DriverPool]: alloc=8689722064 time=1517.158
+Simplifier [SharedLogic.DriverPool]: alloc=127221408 time=39.734
+CoreTidy [SharedLogic.DriverPool]: alloc=9121320 time=3.672
+CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.012
+CodeGen [SharedLogic.DriverPool]: alloc=500822920 time=146.034
+systool:as: alloc=102968 time=0.233
+CorePrep [SharedLogic.DriverPool]: alloc=20888 time=0.017
+CodeGen [SharedLogic.DriverPool]: alloc=548187696 time=150.597
+systool:as: alloc=105840 time=0.228

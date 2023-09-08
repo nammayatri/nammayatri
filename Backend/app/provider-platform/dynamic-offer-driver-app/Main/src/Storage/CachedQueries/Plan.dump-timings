@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Plan]: alloc=2834336 time=0.554
-Renamer/typechecker [Storage.CachedQueries.Plan]: alloc=915693272 time=174.064
-Desugar [Storage.CachedQueries.Plan]: alloc=1179692600 time=194.189
-Simplifier [Storage.CachedQueries.Plan]: alloc=18249152 time=4.366
-Specialise [Storage.CachedQueries.Plan]: alloc=3445128 time=1.010
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Plan]: alloc=16186512 time=4.466
-Simplifier [Storage.CachedQueries.Plan]: alloc=238860920 time=85.537
-Float inwards [Storage.CachedQueries.Plan]: alloc=21096 time=0.005
-Called arity analysis [Storage.CachedQueries.Plan]: alloc=22672 time=0.019
-Simplifier [Storage.CachedQueries.Plan]: alloc=68578888 time=22.003
-Demand analysis [Storage.CachedQueries.Plan]: alloc=66077728 time=16.326
-Worker Wrapper binds [Storage.CachedQueries.Plan]: alloc=2765224 time=1.299
-Simplifier [Storage.CachedQueries.Plan]: alloc=75439984 time=25.662
-Exitification transformation [Storage.CachedQueries.Plan]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Plan]: alloc=64614504 time=20.719
-Common sub-expression [Storage.CachedQueries.Plan]: alloc=22200 time=0.007
-Float inwards [Storage.CachedQueries.Plan]: alloc=21096 time=0.004
-Simplifier [Storage.CachedQueries.Plan]: alloc=78110032 time=27.555
-Demand analysis [Storage.CachedQueries.Plan]: alloc=70119408 time=15.666
-CoreTidy [Storage.CachedQueries.Plan]: alloc=10175960 time=5.482
+Parser [Storage.CachedQueries.Plan]: alloc=2830480 time=0.545
+Renamer/typechecker [Storage.CachedQueries.Plan]: alloc=594668272 time=104.084
+Desugar [Storage.CachedQueries.Plan]: alloc=1158354920 time=184.706
+Simplifier [Storage.CachedQueries.Plan]: alloc=20051816 time=4.018
+CoreTidy [Storage.CachedQueries.Plan]: alloc=1968256 time=0.579
+CorePrep [Storage.CachedQueries.Plan]: alloc=22088 time=0.008
+CodeGen [Storage.CachedQueries.Plan]: alloc=87548576 time=23.492
+systool:as: alloc=103256 time=0.163
 CorePrep [Storage.CachedQueries.Plan]: alloc=22088 time=0.015
-CodeGen [Storage.CachedQueries.Plan]: alloc=337133360 time=111.649
-systool:as: alloc=103248 time=0.199
-CorePrep [Storage.CachedQueries.Plan]: alloc=22088 time=0.018
-CodeGen [Storage.CachedQueries.Plan]: alloc=351831104 time=97.866
-systool:as: alloc=106152 time=0.264
+CodeGen [Storage.CachedQueries.Plan]: alloc=95938880 time=25.240
+systool:as: alloc=106160 time=0.182

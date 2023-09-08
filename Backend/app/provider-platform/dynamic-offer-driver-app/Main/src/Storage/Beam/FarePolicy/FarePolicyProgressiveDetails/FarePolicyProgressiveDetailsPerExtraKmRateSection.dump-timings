@@ -1,32 +1,17 @@
-Parser [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=1514848 time=0.367
-Simplify [expr]: alloc=97336 time=0.119
-CorePrep [expr]: alloc=43528 time=0.028
-ByteCodeGen [Ghci1]: alloc=217456 time=0.095
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=97038104 time=33.742
-Desugar [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=18485472 time=5.554
-Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=50459536 time=17.223
-Specialise [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=18274608 time=5.611
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=49132912 time=17.158
-Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=411111840 time=160.920
-Float inwards [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=43752 time=0.034
-Called arity analysis [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=45328 time=0.008
-Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=111852936 time=38.267
-Demand analysis [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=109694320 time=27.918
-Worker Wrapper binds [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=3189752 time=2.048
-Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=136693696 time=47.452
-Exitification transformation [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=46272 time=0.035
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=95642296 time=33.496
-Common sub-expression [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=44856 time=0.036
-Float inwards [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=43752 time=0.007
-Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=139935376 time=90.503
-Demand analysis [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=100401528 time=24.505
-CoreTidy [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=24788576 time=11.389
-CorePrep [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=44728 time=0.042
-CodeGen [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=559135168 time=180.751
-systool:as: alloc=108048 time=0.225
+Parser [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=1513096 time=0.430
+Simplify [expr]: alloc=72480 time=0.025
+CorePrep [expr]: alloc=36304 time=0.019
+ByteCodeGen [Ghci1]: alloc=183200 time=0.063
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.012
+ByteCodeGen [Ghci1]: alloc=131880 time=0.039
+Renamer/typechecker [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=95226928 time=31.313
+Desugar [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=18483760 time=5.408
+Simplifier [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=18296560 time=5.287
+CoreTidy [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=3428328 time=1.137
+CorePrep [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=44728 time=0.011
+CodeGen [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=128351696 time=37.958
+systool:as: alloc=108048 time=0.171
 CorePrep [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=44728 time=0.018
-CodeGen [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=575736568 time=182.509
-systool:as: alloc=110920 time=0.231
+CodeGen [Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection]: alloc=140134896 time=41.261
+systool:as: alloc=110920 time=0.237

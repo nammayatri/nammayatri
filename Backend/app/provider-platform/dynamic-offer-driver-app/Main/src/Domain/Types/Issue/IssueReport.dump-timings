@@ -1,29 +1,14 @@
-Parser [Domain.Types.Issue.IssueReport]: alloc=1064416 time=0.322
-Simplify [expr]: alloc=34464 time=0.042
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.049
-Renamer/typechecker [Domain.Types.Issue.IssueReport]: alloc=146032408 time=47.103
-Desugar [Domain.Types.Issue.IssueReport]: alloc=47789864 time=11.744
-Simplifier [Domain.Types.Issue.IssueReport]: alloc=105201320 time=36.887
-Specialise [Domain.Types.Issue.IssueReport]: alloc=26890104 time=9.594
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueReport]: alloc=52949048 time=28.409
-Simplifier [Domain.Types.Issue.IssueReport]: alloc=662143712 time=271.066
-Float inwards [Domain.Types.Issue.IssueReport]: alloc=22296 time=0.006
-Called arity analysis [Domain.Types.Issue.IssueReport]: alloc=23872 time=0.007
-Simplifier [Domain.Types.Issue.IssueReport]: alloc=200098288 time=84.668
-Demand analysis [Domain.Types.Issue.IssueReport]: alloc=98557888 time=36.683
-Worker Wrapper binds [Domain.Types.Issue.IssueReport]: alloc=4063544 time=2.038
-Simplifier [Domain.Types.Issue.IssueReport]: alloc=200434320 time=90.062
-Exitification transformation [Domain.Types.Issue.IssueReport]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueReport]: alloc=106261840 time=33.862
-Common sub-expression [Domain.Types.Issue.IssueReport]: alloc=23400 time=0.008
-Float inwards [Domain.Types.Issue.IssueReport]: alloc=22296 time=0.017
-Simplifier [Domain.Types.Issue.IssueReport]: alloc=230130376 time=110.945
-Demand analysis [Domain.Types.Issue.IssueReport]: alloc=87361848 time=32.221
-CoreTidy [Domain.Types.Issue.IssueReport]: alloc=30722160 time=9.599
-CorePrep [Domain.Types.Issue.IssueReport]: alloc=23272 time=0.014
-CodeGen [Domain.Types.Issue.IssueReport]: alloc=389070720 time=136.745
-systool:as: alloc=103488 time=0.265
+Parser [Domain.Types.Issue.IssueReport]: alloc=1061184 time=0.249
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.045
+Renamer/typechecker [Domain.Types.Issue.IssueReport]: alloc=145868584 time=43.234
+Desugar [Domain.Types.Issue.IssueReport]: alloc=47798632 time=11.427
+Simplifier [Domain.Types.Issue.IssueReport]: alloc=77676592 time=19.347
+CoreTidy [Domain.Types.Issue.IssueReport]: alloc=11894552 time=3.333
+CorePrep [Domain.Types.Issue.IssueReport]: alloc=23272 time=0.011
+CodeGen [Domain.Types.Issue.IssueReport]: alloc=311608408 time=95.767
+systool:as: alloc=103488 time=0.229
 CorePrep [Domain.Types.Issue.IssueReport]: alloc=23272 time=0.017
-CodeGen [Domain.Types.Issue.IssueReport]: alloc=406789264 time=130.804
-systool:as: alloc=106360 time=0.243
+CodeGen [Domain.Types.Issue.IssueReport]: alloc=334659928 time=97.566
+systool:as: alloc=106384 time=0.218

@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.LeaderBoard]: alloc=5563584 time=1.289
-Renamer/typechecker [Domain.Action.UI.LeaderBoard]: alloc=1147123480 time=246.190
-Desugar [Domain.Action.UI.LeaderBoard]: alloc=4247092232 time=703.232
-Simplifier [Domain.Action.UI.LeaderBoard]: alloc=88758944 time=31.673
-Specialise [Domain.Action.UI.LeaderBoard]: alloc=20427552 time=6.787
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.LeaderBoard]: alloc=44463240 time=15.818
-Simplifier [Domain.Action.UI.LeaderBoard]: alloc=615713096 time=247.558
-Float inwards [Domain.Action.UI.LeaderBoard]: alloc=21704 time=0.005
-Called arity analysis [Domain.Action.UI.LeaderBoard]: alloc=23280 time=0.006
-Simplifier [Domain.Action.UI.LeaderBoard]: alloc=166501688 time=78.738
-Demand analysis [Domain.Action.UI.LeaderBoard]: alloc=110949216 time=30.377
-Worker Wrapper binds [Domain.Action.UI.LeaderBoard]: alloc=3801648 time=2.109
-Simplifier [Domain.Action.UI.LeaderBoard]: alloc=163928760 time=59.792
-Exitification transformation [Domain.Action.UI.LeaderBoard]: alloc=24224 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.LeaderBoard]: alloc=102659560 time=35.827
-Common sub-expression [Domain.Action.UI.LeaderBoard]: alloc=22808 time=0.007
-Float inwards [Domain.Action.UI.LeaderBoard]: alloc=21704 time=0.004
-Simplifier [Domain.Action.UI.LeaderBoard]: alloc=168065856 time=62.228
-Demand analysis [Domain.Action.UI.LeaderBoard]: alloc=78483528 time=21.576
-CoreTidy [Domain.Action.UI.LeaderBoard]: alloc=21774152 time=7.206
-CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.013
-CodeGen [Domain.Action.UI.LeaderBoard]: alloc=435425984 time=135.731
-systool:as: alloc=103360 time=0.224
-CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.019
-CodeGen [Domain.Action.UI.LeaderBoard]: alloc=454828328 time=142.737
-systool:as: alloc=106232 time=0.251
+Parser [Domain.Action.UI.LeaderBoard]: alloc=5559216 time=1.233
+Renamer/typechecker [Domain.Action.UI.LeaderBoard]: alloc=632986888 time=134.474
+Desugar [Domain.Action.UI.LeaderBoard]: alloc=4170873352 time=682.216
+Simplifier [Domain.Action.UI.LeaderBoard]: alloc=36647576 time=10.290
+CoreTidy [Domain.Action.UI.LeaderBoard]: alloc=6615528 time=2.295
+CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.009
+CodeGen [Domain.Action.UI.LeaderBoard]: alloc=311166088 time=89.136
+systool:as: alloc=103368 time=0.187
+CorePrep [Domain.Action.UI.LeaderBoard]: alloc=22680 time=0.014
+CodeGen [Domain.Action.UI.LeaderBoard]: alloc=337278408 time=93.369
+systool:as: alloc=106240 time=0.194

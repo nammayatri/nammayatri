@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Feedback.Feedback]: alloc=1050832 time=0.293
-Renamer/typechecker [Storage.Queries.Feedback.Feedback]: alloc=23451936 time=8.181
-Desugar [Storage.Queries.Feedback.Feedback]: alloc=2514088 time=1.380
-Simplifier [Storage.Queries.Feedback.Feedback]: alloc=9251496 time=2.978
-Specialise [Storage.Queries.Feedback.Feedback]: alloc=2948160 time=0.960
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Feedback.Feedback]: alloc=5827432 time=1.705
-Simplifier [Storage.Queries.Feedback.Feedback]: alloc=137358248 time=42.234
-Float inwards [Storage.Queries.Feedback.Feedback]: alloc=23192 time=0.006
-Called arity analysis [Storage.Queries.Feedback.Feedback]: alloc=24768 time=0.006
-Simplifier [Storage.Queries.Feedback.Feedback]: alloc=31296528 time=9.523
-Demand analysis [Storage.Queries.Feedback.Feedback]: alloc=5027928 time=2.745
-Worker Wrapper binds [Storage.Queries.Feedback.Feedback]: alloc=374128 time=0.219
-Simplifier [Storage.Queries.Feedback.Feedback]: alloc=30867544 time=9.456
-Exitification transformation [Storage.Queries.Feedback.Feedback]: alloc=25696 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Feedback.Feedback]: alloc=5429992 time=2.499
-Common sub-expression [Storage.Queries.Feedback.Feedback]: alloc=24296 time=0.005
-Float inwards [Storage.Queries.Feedback.Feedback]: alloc=23192 time=0.005
-Simplifier [Storage.Queries.Feedback.Feedback]: alloc=40073568 time=13.357
-Demand analysis [Storage.Queries.Feedback.Feedback]: alloc=6672768 time=3.128
-CoreTidy [Storage.Queries.Feedback.Feedback]: alloc=6909256 time=2.991
-CorePrep [Storage.Queries.Feedback.Feedback]: alloc=24168 time=0.016
-CodeGen [Storage.Queries.Feedback.Feedback]: alloc=47931792 time=16.954
-systool:as: alloc=103696 time=0.225
-CorePrep [Storage.Queries.Feedback.Feedback]: alloc=24168 time=0.021
-CodeGen [Storage.Queries.Feedback.Feedback]: alloc=51508688 time=18.268
-systool:as: alloc=106576 time=0.245
+Parser [Storage.Queries.Feedback.Feedback]: alloc=1050832 time=0.315
+Renamer/typechecker [Storage.Queries.Feedback.Feedback]: alloc=22292936 time=7.267
+Desugar [Storage.Queries.Feedback.Feedback]: alloc=2508936 time=1.313
+Simplifier [Storage.Queries.Feedback.Feedback]: alloc=4883376 time=1.306
+CoreTidy [Storage.Queries.Feedback.Feedback]: alloc=696360 time=0.211
+CorePrep [Storage.Queries.Feedback.Feedback]: alloc=24168 time=0.006
+CodeGen [Storage.Queries.Feedback.Feedback]: alloc=28323800 time=7.826
+systool:as: alloc=103704 time=0.163
+CorePrep [Storage.Queries.Feedback.Feedback]: alloc=24168 time=0.011
+CodeGen [Storage.Queries.Feedback.Feedback]: alloc=31702704 time=8.626
+systool:as: alloc=106584 time=0.147

@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Exophone]: alloc=2736080 time=0.600
-Renamer/typechecker [Storage.Queries.Exophone]: alloc=291461032 time=85.204
-Desugar [Storage.Queries.Exophone]: alloc=9050968 time=2.612
-Simplifier [Storage.Queries.Exophone]: alloc=120262840 time=36.396
-Specialise [Storage.Queries.Exophone]: alloc=28175016 time=7.983
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Exophone]: alloc=23830512 time=9.243
-Simplifier [Storage.Queries.Exophone]: alloc=399405720 time=136.311
-Float inwards [Storage.Queries.Exophone]: alloc=20504 time=0.005
-Called arity analysis [Storage.Queries.Exophone]: alloc=22080 time=0.006
-Simplifier [Storage.Queries.Exophone]: alloc=96204960 time=28.039
-Demand analysis [Storage.Queries.Exophone]: alloc=22595760 time=9.466
-Worker Wrapper binds [Storage.Queries.Exophone]: alloc=1141632 time=0.674
-Simplifier [Storage.Queries.Exophone]: alloc=89564712 time=26.110
-Exitification transformation [Storage.Queries.Exophone]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Exophone]: alloc=20282832 time=8.718
-Common sub-expression [Storage.Queries.Exophone]: alloc=21608 time=0.007
-Float inwards [Storage.Queries.Exophone]: alloc=20504 time=0.004
-Simplifier [Storage.Queries.Exophone]: alloc=104825424 time=41.815
-Demand analysis [Storage.Queries.Exophone]: alloc=20265728 time=8.998
-CoreTidy [Storage.Queries.Exophone]: alloc=17429592 time=6.003
+Parser [Storage.Queries.Exophone]: alloc=2734448 time=0.603
+Renamer/typechecker [Storage.Queries.Exophone]: alloc=286339976 time=74.197
+Desugar [Storage.Queries.Exophone]: alloc=9013336 time=2.561
+Simplifier [Storage.Queries.Exophone]: alloc=50736696 time=13.928
+CoreTidy [Storage.Queries.Exophone]: alloc=9917256 time=2.647
+CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.010
+CodeGen [Storage.Queries.Exophone]: alloc=221456592 time=56.697
+systool:as: alloc=103112 time=0.162
 CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.015
-CodeGen [Storage.Queries.Exophone]: alloc=138721520 time=45.452
-systool:as: alloc=103104 time=0.205
-CorePrep [Storage.Queries.Exophone]: alloc=21496 time=0.016
-CodeGen [Storage.Queries.Exophone]: alloc=148438808 time=47.446
-systool:as: alloc=105984 time=0.189
+CodeGen [Storage.Queries.Exophone]: alloc=252041344 time=61.576
+systool:as: alloc=105992 time=0.179

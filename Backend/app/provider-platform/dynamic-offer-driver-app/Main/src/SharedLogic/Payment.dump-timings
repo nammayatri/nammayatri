@@ -1,26 +1,11 @@
-Parser [SharedLogic.Payment]: alloc=3237904 time=0.763
-Renamer/typechecker [SharedLogic.Payment]: alloc=483769952 time=106.973
-Desugar [SharedLogic.Payment]: alloc=872590048 time=139.979
-Simplifier [SharedLogic.Payment]: alloc=17204528 time=5.282
-Specialise [SharedLogic.Payment]: alloc=3546256 time=0.787
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Payment]: alloc=11916464 time=3.486
-Simplifier [SharedLogic.Payment]: alloc=42925760 time=12.601
-Float inwards [SharedLogic.Payment]: alloc=19032 time=0.005
-Called arity analysis [SharedLogic.Payment]: alloc=20608 time=0.006
-Simplifier [SharedLogic.Payment]: alloc=15849152 time=4.153
-Demand analysis [SharedLogic.Payment]: alloc=19804760 time=4.132
-Worker Wrapper binds [SharedLogic.Payment]: alloc=331376 time=0.180
-Simplifier [SharedLogic.Payment]: alloc=13647784 time=4.175
-Exitification transformation [SharedLogic.Payment]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Payment]: alloc=11079280 time=3.282
-Common sub-expression [SharedLogic.Payment]: alloc=20136 time=0.005
-Float inwards [SharedLogic.Payment]: alloc=19032 time=0.004
-Simplifier [SharedLogic.Payment]: alloc=18679560 time=5.507
-Demand analysis [SharedLogic.Payment]: alloc=17017520 time=3.674
-CoreTidy [SharedLogic.Payment]: alloc=4202600 time=1.563
-CorePrep [SharedLogic.Payment]: alloc=19992 time=0.010
-CodeGen [SharedLogic.Payment]: alloc=108722672 time=31.953
-systool:as: alloc=102768 time=0.196
-CorePrep [SharedLogic.Payment]: alloc=19992 time=0.018
-CodeGen [SharedLogic.Payment]: alloc=113629712 time=32.703
-systool:as: alloc=105648 time=0.199
+Parser [SharedLogic.Payment]: alloc=3237904 time=0.648
+Renamer/typechecker [SharedLogic.Payment]: alloc=403335504 time=101.414
+Desugar [SharedLogic.Payment]: alloc=856945784 time=151.041
+Simplifier [SharedLogic.Payment]: alloc=12044696 time=3.714
+CoreTidy [SharedLogic.Payment]: alloc=1621864 time=0.575
+CorePrep [SharedLogic.Payment]: alloc=19992 time=0.009
+CodeGen [SharedLogic.Payment]: alloc=99713280 time=28.866
+systool:as: alloc=102776 time=0.175
+CorePrep [SharedLogic.Payment]: alloc=19992 time=0.014
+CodeGen [SharedLogic.Payment]: alloc=108353008 time=28.272
+systool:as: alloc=105656 time=0.168

@@ -1,26 +1,11 @@
-Parser [Domain.Types.MetaData]: alloc=506960 time=0.189
-Renamer/typechecker [Domain.Types.MetaData]: alloc=53517280 time=15.866
-Desugar [Domain.Types.MetaData]: alloc=2900024 time=1.793
-Simplifier [Domain.Types.MetaData]: alloc=43958008 time=15.665
-Specialise [Domain.Types.MetaData]: alloc=12386160 time=3.966
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.MetaData]: alloc=25502544 time=9.030
-Simplifier [Domain.Types.MetaData]: alloc=376584776 time=137.395
-Float inwards [Domain.Types.MetaData]: alloc=19624 time=0.006
-Called arity analysis [Domain.Types.MetaData]: alloc=21200 time=0.006
-Simplifier [Domain.Types.MetaData]: alloc=96945328 time=48.851
-Demand analysis [Domain.Types.MetaData]: alloc=48262624 time=12.673
-Worker Wrapper binds [Domain.Types.MetaData]: alloc=1411072 time=0.904
-Simplifier [Domain.Types.MetaData]: alloc=96397424 time=31.640
-Exitification transformation [Domain.Types.MetaData]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.MetaData]: alloc=51854104 time=18.410
-Common sub-expression [Domain.Types.MetaData]: alloc=20728 time=0.006
-Float inwards [Domain.Types.MetaData]: alloc=19624 time=0.004
-Simplifier [Domain.Types.MetaData]: alloc=109637624 time=40.131
-Demand analysis [Domain.Types.MetaData]: alloc=41068720 time=12.120
-CoreTidy [Domain.Types.MetaData]: alloc=12542760 time=25.520
-CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.040
-CodeGen [Domain.Types.MetaData]: alloc=118571464 time=38.078
-systool:as: alloc=102928 time=0.219
-CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.016
-CodeGen [Domain.Types.MetaData]: alloc=123653728 time=39.992
-systool:as: alloc=105776 time=0.211
+Parser [Domain.Types.MetaData]: alloc=504800 time=0.142
+Renamer/typechecker [Domain.Types.MetaData]: alloc=53488112 time=15.721
+Desugar [Domain.Types.MetaData]: alloc=2895992 time=1.576
+Simplifier [Domain.Types.MetaData]: alloc=16223752 time=4.121
+CoreTidy [Domain.Types.MetaData]: alloc=4473032 time=1.170
+CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.008
+CodeGen [Domain.Types.MetaData]: alloc=110542248 time=35.827
+systool:as: alloc=102904 time=0.183
+CorePrep [Domain.Types.MetaData]: alloc=20584 time=0.014
+CodeGen [Domain.Types.MetaData]: alloc=118318472 time=35.143
+systool:as: alloc=105776 time=0.192

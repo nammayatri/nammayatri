@@ -1,26 +1,11 @@
-Parser [Beckn.ACL.Status]: alloc=772576 time=0.274
-Renamer/typechecker [Beckn.ACL.Status]: alloc=65325312 time=19.021
-Desugar [Beckn.ACL.Status]: alloc=5400880 time=2.020
-Simplifier [Beckn.ACL.Status]: alloc=4214576 time=1.482
-Specialise [Beckn.ACL.Status]: alloc=417344 time=0.126
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Beckn.ACL.Status]: alloc=1546408 time=0.507
-Simplifier [Beckn.ACL.Status]: alloc=7486016 time=2.637
-Float inwards [Beckn.ACL.Status]: alloc=18120 time=0.004
-Called arity analysis [Beckn.ACL.Status]: alloc=19696 time=0.005
-Simplifier [Beckn.ACL.Status]: alloc=2691728 time=0.881
-Demand analysis [Beckn.ACL.Status]: alloc=3269984 time=0.771
-Worker Wrapper binds [Beckn.ACL.Status]: alloc=127968 time=0.055
-Simplifier [Beckn.ACL.Status]: alloc=2878048 time=0.962
-Exitification transformation [Beckn.ACL.Status]: alloc=20640 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Beckn.ACL.Status]: alloc=2616616 time=0.764
-Common sub-expression [Beckn.ACL.Status]: alloc=19224 time=0.005
-Float inwards [Beckn.ACL.Status]: alloc=18120 time=0.003
-Simplifier [Beckn.ACL.Status]: alloc=3237512 time=1.002
-Demand analysis [Beckn.ACL.Status]: alloc=3071272 time=0.680
-CoreTidy [Beckn.ACL.Status]: alloc=970680 time=0.364
-CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.007
-CodeGen [Beckn.ACL.Status]: alloc=22911864 time=7.085
-systool:as: alloc=102584 time=0.207
-CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.011
-CodeGen [Beckn.ACL.Status]: alloc=23822144 time=7.478
-systool:as: alloc=105464 time=0.160
+Parser [Beckn.ACL.Status]: alloc=772576 time=0.251
+Renamer/typechecker [Beckn.ACL.Status]: alloc=58240640 time=16.635
+Desugar [Beckn.ACL.Status]: alloc=5318424 time=1.790
+Simplifier [Beckn.ACL.Status]: alloc=1675512 time=0.555
+CoreTidy [Beckn.ACL.Status]: alloc=198976 time=0.093
+CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.008
+CodeGen [Beckn.ACL.Status]: alloc=14039616 time=3.935
+systool:as: alloc=102592 time=0.169
+CorePrep [Beckn.ACL.Status]: alloc=19112 time=0.010
+CodeGen [Beckn.ACL.Status]: alloc=15624952 time=4.171
+systool:as: alloc=105472 time=0.122

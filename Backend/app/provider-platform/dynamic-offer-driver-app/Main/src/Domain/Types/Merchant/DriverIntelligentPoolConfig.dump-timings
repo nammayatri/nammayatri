@@ -1,26 +1,11 @@
-Parser [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=1332888 time=0.307
-Renamer/typechecker [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=123933416 time=33.910
-Desugar [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=10481216 time=3.528
-Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=152364792 time=49.285
-Specialise [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=42463800 time=13.016
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=76274248 time=28.129
-Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=1146618344 time=463.452
-Float inwards [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.006
-Called arity analysis [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=29536 time=0.006
-Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=348682616 time=135.730
-Demand analysis [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=177271024 time=69.089
-Worker Wrapper binds [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=5197328 time=2.672
-Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=322492648 time=130.111
-Exitification transformation [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=30464 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=181706544 time=55.832
-Common sub-expression [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=29064 time=0.008
-Float inwards [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=27960 time=0.005
-Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=397332224 time=167.084
-Demand analysis [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=161206424 time=60.253
-CoreTidy [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=46246936 time=12.898
-CorePrep [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.012
-CodeGen [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=472332240 time=157.473
-systool:as: alloc=104648 time=0.284
-CorePrep [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.017
-CodeGen [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=491970712 time=154.152
-systool:as: alloc=107528 time=0.320
+Parser [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=1317968 time=0.256
+Renamer/typechecker [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=123940704 time=33.124
+Desugar [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=10477448 time=3.347
+Simplifier [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=61451112 time=15.320
+CoreTidy [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=18111784 time=5.057
+CorePrep [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.011
+CodeGen [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=403162440 time=120.001
+systool:as: alloc=104648 time=0.187
+CorePrep [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=28936 time=0.020
+CodeGen [Domain.Types.Merchant.DriverIntelligentPoolConfig]: alloc=431602984 time=122.792
+systool:as: alloc=107552 time=0.212

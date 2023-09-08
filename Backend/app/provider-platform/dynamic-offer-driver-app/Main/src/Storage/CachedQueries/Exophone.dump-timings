@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Exophone]: alloc=3239224 time=0.965
-Renamer/typechecker [Storage.CachedQueries.Exophone]: alloc=1803182320 time=329.083
-Desugar [Storage.CachedQueries.Exophone]: alloc=1040450064 time=164.835
-Simplifier [Storage.CachedQueries.Exophone]: alloc=30438184 time=8.323
-Specialise [Storage.CachedQueries.Exophone]: alloc=4183136 time=1.231
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Exophone]: alloc=18373608 time=5.007
-Simplifier [Storage.CachedQueries.Exophone]: alloc=139649504 time=47.322
-Float inwards [Storage.CachedQueries.Exophone]: alloc=22296 time=0.005
-Called arity analysis [Storage.CachedQueries.Exophone]: alloc=23872 time=0.008
-Simplifier [Storage.CachedQueries.Exophone]: alloc=45692656 time=12.399
-Demand analysis [Storage.CachedQueries.Exophone]: alloc=41377848 time=9.605
-Worker Wrapper binds [Storage.CachedQueries.Exophone]: alloc=2938352 time=1.112
-Simplifier [Storage.CachedQueries.Exophone]: alloc=47717280 time=15.161
-Exitification transformation [Storage.CachedQueries.Exophone]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Exophone]: alloc=39515976 time=11.719
-Common sub-expression [Storage.CachedQueries.Exophone]: alloc=23400 time=0.006
-Float inwards [Storage.CachedQueries.Exophone]: alloc=22296 time=0.004
-Simplifier [Storage.CachedQueries.Exophone]: alloc=48232520 time=15.886
-Demand analysis [Storage.CachedQueries.Exophone]: alloc=38157272 time=8.095
-CoreTidy [Storage.CachedQueries.Exophone]: alloc=7879944 time=3.437
-CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.010
-CodeGen [Storage.CachedQueries.Exophone]: alloc=210525648 time=59.036
-systool:as: alloc=103496 time=0.192
-CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.015
-CodeGen [Storage.CachedQueries.Exophone]: alloc=220263640 time=62.112
-systool:as: alloc=106368 time=0.207
+Parser [Storage.CachedQueries.Exophone]: alloc=3238136 time=0.686
+Renamer/typechecker [Storage.CachedQueries.Exophone]: alloc=1262741824 time=206.751
+Desugar [Storage.CachedQueries.Exophone]: alloc=1021572016 time=161.141
+Simplifier [Storage.CachedQueries.Exophone]: alloc=20785808 time=4.095
+CoreTidy [Storage.CachedQueries.Exophone]: alloc=2166664 time=0.723
+CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.008
+CodeGen [Storage.CachedQueries.Exophone]: alloc=92708424 time=24.025
+systool:as: alloc=103504 time=0.188
+CorePrep [Storage.CachedQueries.Exophone]: alloc=23272 time=0.016
+CodeGen [Storage.CachedQueries.Exophone]: alloc=101832656 time=25.834
+systool:as: alloc=106376 time=0.188

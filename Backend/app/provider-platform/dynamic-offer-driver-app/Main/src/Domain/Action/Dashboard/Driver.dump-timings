@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Driver]: alloc=27973456 time=5.322
-Renamer/typechecker [Domain.Action.Dashboard.Driver]: alloc=1615410456 time=391.231
-Desugar [Domain.Action.Dashboard.Driver]: alloc=209209608 time=38.777
-Simplifier [Domain.Action.Dashboard.Driver]: alloc=271120360 time=84.397
-Specialise [Domain.Action.Dashboard.Driver]: alloc=90157208 time=46.282
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Driver]: alloc=137840632 time=59.736
-Simplifier [Domain.Action.Dashboard.Driver]: alloc=1481490856 time=513.262
-Float inwards [Domain.Action.Dashboard.Driver]: alloc=22296 time=0.005
-Called arity analysis [Domain.Action.Dashboard.Driver]: alloc=23872 time=0.006
-Simplifier [Domain.Action.Dashboard.Driver]: alloc=354974888 time=132.430
-Demand analysis [Domain.Action.Dashboard.Driver]: alloc=382057016 time=84.144
-Worker Wrapper binds [Domain.Action.Dashboard.Driver]: alloc=9027664 time=5.123
-Simplifier [Domain.Action.Dashboard.Driver]: alloc=315933896 time=128.314
-Exitification transformation [Domain.Action.Dashboard.Driver]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Driver]: alloc=251210032 time=124.732
-Common sub-expression [Domain.Action.Dashboard.Driver]: alloc=23400 time=0.007
-Float inwards [Domain.Action.Dashboard.Driver]: alloc=22296 time=0.004
-Simplifier [Domain.Action.Dashboard.Driver]: alloc=437817904 time=171.046
-Demand analysis [Domain.Action.Dashboard.Driver]: alloc=359124480 time=78.718
-CoreTidy [Domain.Action.Dashboard.Driver]: alloc=102466560 time=58.847
-CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.015
-CodeGen [Domain.Action.Dashboard.Driver]: alloc=2468300272 time=645.124
-systool:as: alloc=103512 time=0.285
-CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.018
-CodeGen [Domain.Action.Dashboard.Driver]: alloc=2539982896 time=610.807
-systool:as: alloc=106384 time=0.283
+Parser [Domain.Action.Dashboard.Driver]: alloc=27969064 time=4.897
+Renamer/typechecker [Domain.Action.Dashboard.Driver]: alloc=1482966792 time=374.835
+Desugar [Domain.Action.Dashboard.Driver]: alloc=205698048 time=38.123
+Simplifier [Domain.Action.Dashboard.Driver]: alloc=119541720 time=42.080
+CoreTidy [Domain.Action.Dashboard.Driver]: alloc=21804816 time=13.203
+CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.014
+CodeGen [Domain.Action.Dashboard.Driver]: alloc=686687696 time=199.264
+systool:as: alloc=103520 time=0.242
+CorePrep [Domain.Action.Dashboard.Driver]: alloc=23272 time=0.017
+CodeGen [Domain.Action.Dashboard.Driver]: alloc=750529912 time=208.081
+systool:as: alloc=106392 time=0.214

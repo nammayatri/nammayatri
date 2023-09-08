@@ -1,26 +1,11 @@
-Parser [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=728400 time=0.245
-Renamer/typechecker [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=74060144 time=28.617
-Desugar [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=1781256 time=1.370
-Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=26276120 time=9.700
-Specialise [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=5868360 time=4.284
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=15080752 time=5.304
-Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=185263472 time=82.198
-Float inwards [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=26472 time=0.006
-Called arity analysis [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=28048 time=0.007
-Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=50430136 time=21.554
-Demand analysis [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=33054776 time=10.230
-Worker Wrapper binds [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=913824 time=0.434
-Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=52843768 time=22.327
-Exitification transformation [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=28992 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=33135024 time=15.890
-Common sub-expression [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=27576 time=0.007
-Float inwards [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=26472 time=0.004
-Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=62047288 time=30.273
-Demand analysis [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=35473344 time=10.450
-CoreTidy [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=9623816 time=3.704
-CorePrep [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.011
-CodeGen [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=179181544 time=65.366
-systool:as: alloc=104360 time=0.224
-CorePrep [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.016
-CodeGen [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=185981760 time=71.212
-systool:as: alloc=107232 time=0.214
+Parser [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=725128 time=0.209
+Renamer/typechecker [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=66133696 time=23.572
+Desugar [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=1780392 time=1.355
+Simplifier [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=10767912 time=2.959
+CoreTidy [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=2181880 time=0.580
+CorePrep [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.007
+CodeGen [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=87217728 time=25.917
+systool:as: alloc=104368 time=0.162
+CorePrep [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=27448 time=0.012
+CodeGen [Domain.Types.FarePolicy.DriverExtraFeeBounds]: alloc=93837568 time=28.596
+systool:as: alloc=107240 time=0.153

@@ -1,26 +1,11 @@
-Parser [Domain.Types.Merchant.TransporterConfig]: alloc=1619328 time=0.342
-Renamer/typechecker [Domain.Types.Merchant.TransporterConfig]: alloc=243465224 time=68.987
-Desugar [Domain.Types.Merchant.TransporterConfig]: alloc=24882344 time=6.254
-Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=283518440 time=89.946
-Specialise [Domain.Types.Merchant.TransporterConfig]: alloc=87453712 time=26.661
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant.TransporterConfig]: alloc=138797736 time=66.765
-Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=1876146184 time=749.153
-Float inwards [Domain.Types.Merchant.TransporterConfig]: alloc=24984 time=0.006
-Called arity analysis [Domain.Types.Merchant.TransporterConfig]: alloc=26560 time=0.006
-Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=627295944 time=239.204
-Demand analysis [Domain.Types.Merchant.TransporterConfig]: alloc=321854184 time=96.477
-Worker Wrapper binds [Domain.Types.Merchant.TransporterConfig]: alloc=9848544 time=4.774
-Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=572682600 time=220.419
-Exitification transformation [Domain.Types.Merchant.TransporterConfig]: alloc=27488 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant.TransporterConfig]: alloc=320068104 time=155.743
-Common sub-expression [Domain.Types.Merchant.TransporterConfig]: alloc=26088 time=0.006
-Float inwards [Domain.Types.Merchant.TransporterConfig]: alloc=24984 time=0.004
-Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=721818776 time=301.617
-Demand analysis [Domain.Types.Merchant.TransporterConfig]: alloc=297578688 time=93.024
-CoreTidy [Domain.Types.Merchant.TransporterConfig]: alloc=97327784 time=25.477
-CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.016
-CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=1003608032 time=307.204
-systool:as: alloc=104040 time=0.318
-CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.017
-CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=1037009568 time=304.636
-systool:as: alloc=106912 time=0.249
+Parser [Domain.Types.Merchant.TransporterConfig]: alloc=1596088 time=0.256
+Renamer/typechecker [Domain.Types.Merchant.TransporterConfig]: alloc=243400464 time=72.736
+Desugar [Domain.Types.Merchant.TransporterConfig]: alloc=24863184 time=6.205
+Simplifier [Domain.Types.Merchant.TransporterConfig]: alloc=143359248 time=43.091
+CoreTidy [Domain.Types.Merchant.TransporterConfig]: alloc=47693752 time=13.976
+CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.013
+CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=813598344 time=228.171
+systool:as: alloc=104040 time=0.185
+CorePrep [Domain.Types.Merchant.TransporterConfig]: alloc=25944 time=0.018
+CodeGen [Domain.Types.Merchant.TransporterConfig]: alloc=862700768 time=229.633
+systool:as: alloc=106912 time=0.235

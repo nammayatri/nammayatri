@@ -1,26 +1,11 @@
-Parser [Tools.Metrics.ARDUBPPMetrics]: alloc=2236632 time=0.559
-Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics]: alloc=109119632 time=28.339
-Desugar [Tools.Metrics.ARDUBPPMetrics]: alloc=29161152 time=6.504
-Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=11103360 time=4.026
-Specialise [Tools.Metrics.ARDUBPPMetrics]: alloc=2105808 time=0.662
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics.ARDUBPPMetrics]: alloc=4032360 time=1.362
-Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=31825776 time=14.643
-Float inwards [Tools.Metrics.ARDUBPPMetrics]: alloc=21704 time=0.005
-Called arity analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=23280 time=0.006
-Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=8654280 time=2.788
-Demand analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=7256496 time=1.837
-Worker Wrapper binds [Tools.Metrics.ARDUBPPMetrics]: alloc=774144 time=0.267
-Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=12025464 time=3.967
-Exitification transformation [Tools.Metrics.ARDUBPPMetrics]: alloc=24224 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics.ARDUBPPMetrics]: alloc=8560568 time=2.628
-Common sub-expression [Tools.Metrics.ARDUBPPMetrics]: alloc=22808 time=0.005
-Float inwards [Tools.Metrics.ARDUBPPMetrics]: alloc=21704 time=0.004
-Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=11439672 time=4.014
-Demand analysis [Tools.Metrics.ARDUBPPMetrics]: alloc=8226336 time=2.097
-CoreTidy [Tools.Metrics.ARDUBPPMetrics]: alloc=3419232 time=1.258
-CorePrep [Tools.Metrics.ARDUBPPMetrics]: alloc=22680 time=0.011
-CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=73503704 time=23.990
-systool:as: alloc=103336 time=0.185
+Parser [Tools.Metrics.ARDUBPPMetrics]: alloc=2232792 time=0.515
+Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics]: alloc=86706808 time=22.279
+Desugar [Tools.Metrics.ARDUBPPMetrics]: alloc=28720336 time=6.130
+Simplifier [Tools.Metrics.ARDUBPPMetrics]: alloc=8576120 time=2.412
+CoreTidy [Tools.Metrics.ARDUBPPMetrics]: alloc=597744 time=0.203
+CorePrep [Tools.Metrics.ARDUBPPMetrics]: alloc=22680 time=0.008
+CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=48406072 time=13.561
+systool:as: alloc=103344 time=0.157
 CorePrep [Tools.Metrics.ARDUBPPMetrics]: alloc=22680 time=0.013
-CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=76923240 time=24.520
-systool:as: alloc=106208 time=0.200
+CodeGen [Tools.Metrics.ARDUBPPMetrics]: alloc=53216048 time=14.177
+systool:as: alloc=106216 time=0.156

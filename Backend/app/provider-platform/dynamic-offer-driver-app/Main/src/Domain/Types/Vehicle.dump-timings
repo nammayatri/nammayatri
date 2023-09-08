@@ -1,32 +1,17 @@
-Parser [Domain.Types.Vehicle]: alloc=2342088 time=0.567
-Simplify [expr]: alloc=34464 time=0.017
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.048
-Simplify [expr]: alloc=34464 time=0.015
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.044
-Renamer/typechecker [Domain.Types.Vehicle]: alloc=232474832 time=75.331
-Desugar [Domain.Types.Vehicle]: alloc=94866784 time=22.479
-Simplifier [Domain.Types.Vehicle]: alloc=187796096 time=77.611
-Specialise [Domain.Types.Vehicle]: alloc=46609608 time=12.364
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Vehicle]: alloc=78640000 time=26.549
-Simplifier [Domain.Types.Vehicle]: alloc=824130856 time=362.112
-Float inwards [Domain.Types.Vehicle]: alloc=19320 time=0.008
-Called arity analysis [Domain.Types.Vehicle]: alloc=20896 time=0.007
-Simplifier [Domain.Types.Vehicle]: alloc=237508456 time=96.865
-Demand analysis [Domain.Types.Vehicle]: alloc=120230160 time=51.556
-Worker Wrapper binds [Domain.Types.Vehicle]: alloc=5180128 time=2.393
-Simplifier [Domain.Types.Vehicle]: alloc=245532416 time=109.620
-Exitification transformation [Domain.Types.Vehicle]: alloc=21840 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Vehicle]: alloc=133792928 time=60.957
-Common sub-expression [Domain.Types.Vehicle]: alloc=20424 time=0.007
-Float inwards [Domain.Types.Vehicle]: alloc=19320 time=0.004
-Simplifier [Domain.Types.Vehicle]: alloc=274966664 time=132.244
-Demand analysis [Domain.Types.Vehicle]: alloc=110619760 time=27.806
-CoreTidy [Domain.Types.Vehicle]: alloc=49087592 time=30.006
-CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.014
-CodeGen [Domain.Types.Vehicle]: alloc=806053072 time=277.529
-systool:as: alloc=102848 time=0.230
-CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.017
-CodeGen [Domain.Types.Vehicle]: alloc=842654624 time=271.051
-systool:as: alloc=105720 time=0.286
+Parser [Domain.Types.Vehicle]: alloc=2333408 time=0.510
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.046
+Simplify [expr]: alloc=34912 time=0.016
+CorePrep [expr]: alloc=22880 time=0.014
+ByteCodeGen [Ghci1]: alloc=94056 time=0.040
+Renamer/typechecker [Domain.Types.Vehicle]: alloc=232287760 time=77.126
+Desugar [Domain.Types.Vehicle]: alloc=94871552 time=21.589
+Simplifier [Domain.Types.Vehicle]: alloc=148681136 time=44.187
+CoreTidy [Domain.Types.Vehicle]: alloc=20058144 time=5.191
+CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.011
+CodeGen [Domain.Types.Vehicle]: alloc=592708288 time=173.746
+systool:as: alloc=102872 time=0.186
+CorePrep [Domain.Types.Vehicle]: alloc=20296 time=0.018
+CodeGen [Domain.Types.Vehicle]: alloc=637184504 time=180.338
+systool:as: alloc=105720 time=0.188

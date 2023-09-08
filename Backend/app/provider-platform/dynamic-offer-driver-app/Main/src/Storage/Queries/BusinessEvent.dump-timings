@@ -1,26 +1,11 @@
-Parser [Storage.Queries.BusinessEvent]: alloc=2470864 time=0.497
-Renamer/typechecker [Storage.Queries.BusinessEvent]: alloc=39624000 time=12.214
-Desugar [Storage.Queries.BusinessEvent]: alloc=3397848 time=1.677
-Simplifier [Storage.Queries.BusinessEvent]: alloc=21968592 time=7.139
-Specialise [Storage.Queries.BusinessEvent]: alloc=6744320 time=1.751
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.BusinessEvent]: alloc=9410640 time=2.971
-Simplifier [Storage.Queries.BusinessEvent]: alloc=352710568 time=102.484
-Float inwards [Storage.Queries.BusinessEvent]: alloc=22008 time=0.005
-Called arity analysis [Storage.Queries.BusinessEvent]: alloc=23584 time=0.006
-Simplifier [Storage.Queries.BusinessEvent]: alloc=118074800 time=37.504
-Demand analysis [Storage.Queries.BusinessEvent]: alloc=8217072 time=12.082
-Worker Wrapper binds [Storage.Queries.BusinessEvent]: alloc=431992 time=0.328
-Simplifier [Storage.Queries.BusinessEvent]: alloc=119454312 time=37.118
-Exitification transformation [Storage.Queries.BusinessEvent]: alloc=24512 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.BusinessEvent]: alloc=7905184 time=6.725
-Common sub-expression [Storage.Queries.BusinessEvent]: alloc=23112 time=0.007
-Float inwards [Storage.Queries.BusinessEvent]: alloc=22008 time=0.004
-Simplifier [Storage.Queries.BusinessEvent]: alloc=126505328 time=43.167
-Demand analysis [Storage.Queries.BusinessEvent]: alloc=8755848 time=12.178
-CoreTidy [Storage.Queries.BusinessEvent]: alloc=23919960 time=8.098
+Parser [Storage.Queries.BusinessEvent]: alloc=2469208 time=0.557
+Renamer/typechecker [Storage.Queries.BusinessEvent]: alloc=37646608 time=11.084
+Desugar [Storage.Queries.BusinessEvent]: alloc=3378624 time=1.605
+Simplifier [Storage.Queries.BusinessEvent]: alloc=14561712 time=3.663
+CoreTidy [Storage.Queries.BusinessEvent]: alloc=3250200 time=0.845
+CorePrep [Storage.Queries.BusinessEvent]: alloc=22968 time=0.008
+CodeGen [Storage.Queries.BusinessEvent]: alloc=52481896 time=13.452
+systool:as: alloc=103408 time=0.162
 CorePrep [Storage.Queries.BusinessEvent]: alloc=22968 time=0.014
-CodeGen [Storage.Queries.BusinessEvent]: alloc=81692352 time=28.737
-systool:as: alloc=103408 time=0.171
-CorePrep [Storage.Queries.BusinessEvent]: alloc=22968 time=0.016
-CodeGen [Storage.Queries.BusinessEvent]: alloc=86596840 time=31.095
-systool:as: alloc=106280 time=0.204
+CodeGen [Storage.Queries.BusinessEvent]: alloc=59846144 time=14.959
+systool:as: alloc=106280 time=0.144

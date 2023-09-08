@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Issue]: alloc=1710520 time=0.338
-Renamer/typechecker [API.Dashboard.Issue]: alloc=15425856 time=6.306
-Desugar [API.Dashboard.Issue]: alloc=501808 time=0.909
-Simplifier [API.Dashboard.Issue]: alloc=7810104 time=1.984
-Specialise [API.Dashboard.Issue]: alloc=791920 time=0.159
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Issue]: alloc=3022288 time=0.731
-Simplifier [API.Dashboard.Issue]: alloc=7065024 time=1.683
-Float inwards [API.Dashboard.Issue]: alloc=19032 time=0.004
-Called arity analysis [API.Dashboard.Issue]: alloc=20608 time=0.005
-Simplifier [API.Dashboard.Issue]: alloc=2729848 time=0.615
-Demand analysis [API.Dashboard.Issue]: alloc=2320600 time=0.482
-Worker Wrapper binds [API.Dashboard.Issue]: alloc=46936 time=0.026
-Simplifier [API.Dashboard.Issue]: alloc=4755904 time=1.099
-Exitification transformation [API.Dashboard.Issue]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Issue]: alloc=1315312 time=0.398
-Common sub-expression [API.Dashboard.Issue]: alloc=20136 time=0.004
-Float inwards [API.Dashboard.Issue]: alloc=19032 time=0.003
-Simplifier [API.Dashboard.Issue]: alloc=5490840 time=1.273
-Demand analysis [API.Dashboard.Issue]: alloc=2540920 time=0.586
-CoreTidy [API.Dashboard.Issue]: alloc=1182112 time=0.417
-CorePrep [API.Dashboard.Issue]: alloc=19992 time=0.011
-CodeGen [API.Dashboard.Issue]: alloc=20645872 time=7.365
-systool:as: alloc=102776 time=0.165
-CorePrep [API.Dashboard.Issue]: alloc=19992 time=0.012
-CodeGen [API.Dashboard.Issue]: alloc=21521128 time=7.421
-systool:as: alloc=105656 time=0.131
+Parser [API.Dashboard.Issue]: alloc=1710520 time=0.315
+Renamer/typechecker [API.Dashboard.Issue]: alloc=15435360 time=5.983
+Desugar [API.Dashboard.Issue]: alloc=501888 time=0.911
+Simplifier [API.Dashboard.Issue]: alloc=4608408 time=1.002
+CoreTidy [API.Dashboard.Issue]: alloc=482552 time=0.154
+CorePrep [API.Dashboard.Issue]: alloc=19992 time=0.007
+CodeGen [API.Dashboard.Issue]: alloc=13901352 time=4.705
+systool:as: alloc=102784 time=0.167
+CorePrep [API.Dashboard.Issue]: alloc=19992 time=0.009
+CodeGen [API.Dashboard.Issue]: alloc=15030864 time=4.890
+systool:as: alloc=105664 time=0.143

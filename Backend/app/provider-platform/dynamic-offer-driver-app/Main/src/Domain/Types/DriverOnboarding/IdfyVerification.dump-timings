@@ -1,32 +1,17 @@
-Parser [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=1906296 time=0.455
-Simplify [expr]: alloc=34464 time=0.020
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.046
-Simplify [expr]: alloc=34464 time=0.043
-CorePrep [expr]: alloc=22952 time=0.014
-ByteCodeGen [Ghci1]: alloc=94056 time=0.040
-Renamer/typechecker [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=136240600 time=42.032
-Desugar [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=90916592 time=20.469
-Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=62173480 time=20.139
-Specialise [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=13044736 time=4.143
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=30839776 time=10.548
-Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=269680720 time=95.528
-Float inwards [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=27064 time=0.010
-Called arity analysis [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28640 time=0.007
-Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=74198848 time=22.675
-Demand analysis [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=44649328 time=11.056
-Worker Wrapper binds [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=2615672 time=1.143
-Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=87535512 time=26.443
-Exitification transformation [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=29584 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=47856672 time=15.363
-Common sub-expression [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28168 time=0.006
-Float inwards [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=27064 time=0.004
-Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=95035336 time=34.270
-Demand analysis [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=41555864 time=9.456
-CoreTidy [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=23371904 time=7.813
-CorePrep [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28040 time=0.013
-CodeGen [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=395356496 time=128.298
-systool:as: alloc=104512 time=0.238
-CorePrep [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28040 time=0.034
-CodeGen [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=412259704 time=127.499
-systool:as: alloc=107384 time=0.214
+Parser [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=1897032 time=0.430
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.045
+Simplify [expr]: alloc=34912 time=0.014
+CorePrep [expr]: alloc=22880 time=0.012
+ByteCodeGen [Ghci1]: alloc=94056 time=0.038
+Renamer/typechecker [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=135996064 time=41.734
+Desugar [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=90935160 time=20.589
+Simplifier [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=77061920 time=19.783
+CoreTidy [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=8715328 time=2.497
+CorePrep [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28040 time=0.011
+CodeGen [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=247987624 time=78.569
+systool:as: alloc=104512 time=0.158
+CorePrep [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=28040 time=0.017
+CodeGen [Domain.Types.DriverOnboarding.IdfyVerification]: alloc=265225120 time=77.308
+systool:as: alloc=107384 time=0.174

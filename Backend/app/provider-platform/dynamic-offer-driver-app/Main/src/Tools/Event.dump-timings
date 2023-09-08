@@ -1,26 +1,11 @@
-Parser [Tools.Event]: alloc=4706216 time=1.137
-Renamer/typechecker [Tools.Event]: alloc=1225573016 time=272.983
-Desugar [Tools.Event]: alloc=268729880 time=47.653
-Simplifier [Tools.Event]: alloc=147132384 time=50.182
-Specialise [Tools.Event]: alloc=37905080 time=13.067
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Event]: alloc=71914296 time=26.479
-Simplifier [Tools.Event]: alloc=782131880 time=327.845
-Float inwards [Tools.Event]: alloc=16648 time=0.005
-Called arity analysis [Tools.Event]: alloc=18224 time=0.006
-Simplifier [Tools.Event]: alloc=236126592 time=86.209
-Demand analysis [Tools.Event]: alloc=169645488 time=47.060
-Worker Wrapper binds [Tools.Event]: alloc=6091920 time=3.343
-Simplifier [Tools.Event]: alloc=251554064 time=109.041
-Exitification transformation [Tools.Event]: alloc=19136 time=0.017
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Event]: alloc=159412432 time=48.517
-Common sub-expression [Tools.Event]: alloc=17752 time=0.012
-Float inwards [Tools.Event]: alloc=16648 time=0.004
-Simplifier [Tools.Event]: alloc=289354928 time=126.787
-Demand analysis [Tools.Event]: alloc=160817152 time=41.258
-CoreTidy [Tools.Event]: alloc=48153064 time=19.565
-CorePrep [Tools.Event]: alloc=17608 time=0.012
-CodeGen [Tools.Event]: alloc=752188736 time=255.131
-systool:as: alloc=102248 time=0.279
-CorePrep [Tools.Event]: alloc=17608 time=0.015
-CodeGen [Tools.Event]: alloc=790722584 time=240.427
-systool:as: alloc=105152 time=0.288
+Parser [Tools.Event]: alloc=4683912 time=1.000
+Renamer/typechecker [Tools.Event]: alloc=1010630224 time=219.786
+Desugar [Tools.Event]: alloc=264172808 time=46.896
+Simplifier [Tools.Event]: alloc=68715008 time=19.955
+CoreTidy [Tools.Event]: alloc=18488792 time=6.366
+CorePrep [Tools.Event]: alloc=17608 time=0.010
+CodeGen [Tools.Event]: alloc=490699632 time=148.811
+systool:as: alloc=102256 time=0.207
+CorePrep [Tools.Event]: alloc=17608 time=0.016
+CodeGen [Tools.Event]: alloc=530332952 time=149.194
+systool:as: alloc=105160 time=0.174

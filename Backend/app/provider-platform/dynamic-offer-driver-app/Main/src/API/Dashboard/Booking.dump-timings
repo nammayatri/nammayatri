@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Booking]: alloc=800952 time=0.224
-Renamer/typechecker [API.Dashboard.Booking]: alloc=9363288 time=4.592
-Desugar [API.Dashboard.Booking]: alloc=342240 time=0.862
-Simplifier [API.Dashboard.Booking]: alloc=5013640 time=1.256
-Specialise [API.Dashboard.Booking]: alloc=689272 time=0.149
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Booking]: alloc=2622400 time=0.597
-Simplifier [API.Dashboard.Booking]: alloc=1076704 time=0.279
-Float inwards [API.Dashboard.Booking]: alloc=19624 time=0.004
-Called arity analysis [API.Dashboard.Booking]: alloc=21200 time=0.005
-Simplifier [API.Dashboard.Booking]: alloc=1141176 time=0.275
-Demand analysis [API.Dashboard.Booking]: alloc=1873544 time=0.341
-Worker Wrapper binds [API.Dashboard.Booking]: alloc=30704 time=0.014
-Simplifier [API.Dashboard.Booking]: alloc=1916368 time=0.367
-Exitification transformation [API.Dashboard.Booking]: alloc=22128 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Booking]: alloc=745088 time=0.186
-Common sub-expression [API.Dashboard.Booking]: alloc=20728 time=0.004
-Float inwards [API.Dashboard.Booking]: alloc=19624 time=0.003
-Simplifier [API.Dashboard.Booking]: alloc=2402080 time=0.488
-Demand analysis [API.Dashboard.Booking]: alloc=1876496 time=0.323
-CoreTidy [API.Dashboard.Booking]: alloc=616624 time=0.185
-CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.009
-CodeGen [API.Dashboard.Booking]: alloc=9873256 time=2.935
-systool:as: alloc=102928 time=0.163
-CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.013
-CodeGen [API.Dashboard.Booking]: alloc=10138392 time=3.162
-systool:as: alloc=105776 time=0.130
+Parser [API.Dashboard.Booking]: alloc=800952 time=0.180
+Renamer/typechecker [API.Dashboard.Booking]: alloc=9350736 time=4.291
+Desugar [API.Dashboard.Booking]: alloc=342336 time=0.877
+Simplifier [API.Dashboard.Booking]: alloc=1137664 time=0.352
+CoreTidy [API.Dashboard.Booking]: alloc=185560 time=0.082
+CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.010
+CodeGen [API.Dashboard.Booking]: alloc=6243592 time=2.172
+systool:as: alloc=102912 time=0.173
+CorePrep [API.Dashboard.Booking]: alloc=20584 time=0.012
+CodeGen [API.Dashboard.Booking]: alloc=6722536 time=2.216
+systool:as: alloc=105784 time=0.152

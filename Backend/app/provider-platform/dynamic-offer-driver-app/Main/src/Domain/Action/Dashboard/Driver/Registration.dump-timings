@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Driver.Registration]: alloc=3978432 time=0.945
-Renamer/typechecker [Domain.Action.Dashboard.Driver.Registration]: alloc=210193184 time=61.688
-Desugar [Domain.Action.Dashboard.Driver.Registration]: alloc=1665448 time=1.422
-Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=105580072 time=35.873
-Specialise [Domain.Action.Dashboard.Driver.Registration]: alloc=7771048 time=5.027
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Driver.Registration]: alloc=22522072 time=9.937
-Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=190943392 time=66.326
-Float inwards [Domain.Action.Dashboard.Driver.Registration]: alloc=26184 time=0.006
-Called arity analysis [Domain.Action.Dashboard.Driver.Registration]: alloc=27760 time=0.006
-Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=26347648 time=16.124
-Demand analysis [Domain.Action.Dashboard.Driver.Registration]: alloc=28224968 time=8.323
-Worker Wrapper binds [Domain.Action.Dashboard.Driver.Registration]: alloc=615136 time=0.326
-Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=49668392 time=12.001
-Exitification transformation [Domain.Action.Dashboard.Driver.Registration]: alloc=28672 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Driver.Registration]: alloc=23238608 time=8.706
-Common sub-expression [Domain.Action.Dashboard.Driver.Registration]: alloc=27288 time=0.006
-Float inwards [Domain.Action.Dashboard.Driver.Registration]: alloc=26184 time=0.004
-Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=172280672 time=60.523
-Demand analysis [Domain.Action.Dashboard.Driver.Registration]: alloc=33534488 time=12.255
-CoreTidy [Domain.Action.Dashboard.Driver.Registration]: alloc=28061056 time=8.483
+Parser [Domain.Action.Dashboard.Driver.Registration]: alloc=3974584 time=0.850
+Renamer/typechecker [Domain.Action.Dashboard.Driver.Registration]: alloc=209043240 time=58.766
+Desugar [Domain.Action.Dashboard.Driver.Registration]: alloc=1678808 time=1.354
+Simplifier [Domain.Action.Dashboard.Driver.Registration]: alloc=33928296 time=12.938
+CoreTidy [Domain.Action.Dashboard.Driver.Registration]: alloc=21387592 time=5.212
+CorePrep [Domain.Action.Dashboard.Driver.Registration]: alloc=27144 time=0.012
+CodeGen [Domain.Action.Dashboard.Driver.Registration]: alloc=80154712 time=26.493
+systool:as: alloc=104344 time=0.189
 CorePrep [Domain.Action.Dashboard.Driver.Registration]: alloc=27144 time=0.016
-CodeGen [Domain.Action.Dashboard.Driver.Registration]: alloc=156632880 time=43.609
-systool:as: alloc=104336 time=0.205
-CorePrep [Domain.Action.Dashboard.Driver.Registration]: alloc=27144 time=0.015
-CodeGen [Domain.Action.Dashboard.Driver.Registration]: alloc=162281728 time=46.360
-systool:as: alloc=107216 time=0.219
+CodeGen [Domain.Action.Dashboard.Driver.Registration]: alloc=87091144 time=27.216
+systool:as: alloc=107224 time=0.170

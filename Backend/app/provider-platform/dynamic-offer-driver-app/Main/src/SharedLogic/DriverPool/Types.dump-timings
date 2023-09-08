@@ -1,26 +1,11 @@
-Parser [SharedLogic.DriverPool.Types]: alloc=2346256 time=0.657
-Renamer/typechecker [SharedLogic.DriverPool.Types]: alloc=270398072 time=81.921
-Desugar [SharedLogic.DriverPool.Types]: alloc=15893272 time=5.100
-Simplifier [SharedLogic.DriverPool.Types]: alloc=223697120 time=78.102
-Specialise [SharedLogic.DriverPool.Types]: alloc=66046504 time=20.115
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverPool.Types]: alloc=94119968 time=35.305
-Simplifier [SharedLogic.DriverPool.Types]: alloc=1329069552 time=550.071
-Float inwards [SharedLogic.DriverPool.Types]: alloc=21704 time=0.005
-Called arity analysis [SharedLogic.DriverPool.Types]: alloc=23280 time=0.006
-Simplifier [SharedLogic.DriverPool.Types]: alloc=394917944 time=190.322
-Demand analysis [SharedLogic.DriverPool.Types]: alloc=197226792 time=48.183
-Worker Wrapper binds [SharedLogic.DriverPool.Types]: alloc=5959776 time=4.267
-Simplifier [SharedLogic.DriverPool.Types]: alloc=377511296 time=147.787
-Exitification transformation [SharedLogic.DriverPool.Types]: alloc=24224 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverPool.Types]: alloc=211468640 time=132.371
-Common sub-expression [SharedLogic.DriverPool.Types]: alloc=22808 time=0.007
-Float inwards [SharedLogic.DriverPool.Types]: alloc=21704 time=0.005
-Simplifier [SharedLogic.DriverPool.Types]: alloc=440161240 time=180.899
-Demand analysis [SharedLogic.DriverPool.Types]: alloc=172648136 time=47.394
-CoreTidy [SharedLogic.DriverPool.Types]: alloc=53379048 time=20.966
-CorePrep [SharedLogic.DriverPool.Types]: alloc=22680 time=0.015
-CodeGen [SharedLogic.DriverPool.Types]: alloc=630662792 time=202.119
-systool:as: alloc=103392 time=0.310
-CorePrep [SharedLogic.DriverPool.Types]: alloc=22680 time=0.017
-CodeGen [SharedLogic.DriverPool.Types]: alloc=657023928 time=203.201
-systool:as: alloc=106264 time=0.302
+Parser [SharedLogic.DriverPool.Types]: alloc=2338064 time=0.399
+Renamer/typechecker [SharedLogic.DriverPool.Types]: alloc=270300168 time=82.565
+Desugar [SharedLogic.DriverPool.Types]: alloc=15861248 time=4.909
+Simplifier [SharedLogic.DriverPool.Types]: alloc=87823080 time=24.908
+CoreTidy [SharedLogic.DriverPool.Types]: alloc=25200736 time=8.308
+CorePrep [SharedLogic.DriverPool.Types]: alloc=22680 time=0.011
+CodeGen [SharedLogic.DriverPool.Types]: alloc=616545552 time=197.754
+systool:as: alloc=103424 time=0.202
+CorePrep [SharedLogic.DriverPool.Types]: alloc=22680 time=0.021
+CodeGen [SharedLogic.DriverPool.Types]: alloc=660942216 time=196.850
+systool:as: alloc=106272 time=0.220

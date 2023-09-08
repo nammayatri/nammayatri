@@ -1,26 +1,11 @@
-Parser [API.UI.LeaderBoard]: alloc=939776 time=0.282
-Renamer/typechecker [API.UI.LeaderBoard]: alloc=51805872 time=18.058
-Desugar [API.UI.LeaderBoard]: alloc=802184 time=1.059
-Simplifier [API.UI.LeaderBoard]: alloc=38776608 time=11.953
-Specialise [API.UI.LeaderBoard]: alloc=3786760 time=1.920
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.LeaderBoard]: alloc=11447664 time=4.009
-Simplifier [API.UI.LeaderBoard]: alloc=72460680 time=22.960
-Float inwards [API.UI.LeaderBoard]: alloc=18712 time=0.005
-Called arity analysis [API.UI.LeaderBoard]: alloc=20288 time=0.006
-Simplifier [API.UI.LeaderBoard]: alloc=12977640 time=6.413
-Demand analysis [API.UI.LeaderBoard]: alloc=19515008 time=4.422
-Worker Wrapper binds [API.UI.LeaderBoard]: alloc=174472 time=0.135
-Simplifier [API.UI.LeaderBoard]: alloc=25336088 time=5.860
-Exitification transformation [API.UI.LeaderBoard]: alloc=21232 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.LeaderBoard]: alloc=10103632 time=4.290
-Common sub-expression [API.UI.LeaderBoard]: alloc=19816 time=0.008
-Float inwards [API.UI.LeaderBoard]: alloc=18712 time=0.004
-Simplifier [API.UI.LeaderBoard]: alloc=55582848 time=21.598
-Demand analysis [API.UI.LeaderBoard]: alloc=21016488 time=5.708
-CoreTidy [API.UI.LeaderBoard]: alloc=6706176 time=2.034
-CorePrep [API.UI.LeaderBoard]: alloc=19704 time=0.012
-CodeGen [API.UI.LeaderBoard]: alloc=69601888 time=16.776
-systool:as: alloc=102696 time=0.280
-CorePrep [API.UI.LeaderBoard]: alloc=19704 time=0.016
-CodeGen [API.UI.LeaderBoard]: alloc=70523440 time=17.412
-systool:as: alloc=105576 time=0.238
+Parser [API.UI.LeaderBoard]: alloc=939776 time=0.218
+Renamer/typechecker [API.UI.LeaderBoard]: alloc=51824880 time=16.217
+Desugar [API.UI.LeaderBoard]: alloc=800440 time=1.086
+Simplifier [API.UI.LeaderBoard]: alloc=13058512 time=4.205
+CoreTidy [API.UI.LeaderBoard]: alloc=7258632 time=1.551
+CorePrep [API.UI.LeaderBoard]: alloc=19704 time=0.007
+CodeGen [API.UI.LeaderBoard]: alloc=21061488 time=7.661
+systool:as: alloc=102704 time=0.176
+CorePrep [API.UI.LeaderBoard]: alloc=19704 time=0.013
+CodeGen [API.UI.LeaderBoard]: alloc=22602424 time=7.751
+systool:as: alloc=105584 time=0.172

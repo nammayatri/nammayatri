@@ -1,38 +1,23 @@
-Parser [Domain.Types.Plan]: alloc=3617632 time=0.705
-Simplify [expr]: alloc=34464 time=0.020
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.060
-Simplify [expr]: alloc=34464 time=0.013
-CorePrep [expr]: alloc=22952 time=0.013
+Parser [Domain.Types.Plan]: alloc=3602960 time=0.563
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.045
+Simplify [expr]: alloc=34912 time=0.015
+CorePrep [expr]: alloc=22880 time=0.013
+ByteCodeGen [Ghci1]: alloc=94056 time=0.037
+Simplify [expr]: alloc=34912 time=0.012
+CorePrep [expr]: alloc=22880 time=0.011
 ByteCodeGen [Ghci1]: alloc=94056 time=0.033
-Simplify [expr]: alloc=34464 time=0.012
-CorePrep [expr]: alloc=22952 time=0.011
-ByteCodeGen [Ghci1]: alloc=94056 time=0.030
-Simplify [expr]: alloc=34464 time=0.013
-CorePrep [expr]: alloc=22952 time=0.011
+Simplify [expr]: alloc=34912 time=0.011
+CorePrep [expr]: alloc=22880 time=0.010
 ByteCodeGen [Ghci1]: alloc=94056 time=0.031
-Renamer/typechecker [Domain.Types.Plan]: alloc=313249448 time=97.586
-Desugar [Domain.Types.Plan]: alloc=176371416 time=38.937
-Simplifier [Domain.Types.Plan]: alloc=242031968 time=83.160
-Specialise [Domain.Types.Plan]: alloc=87515056 time=26.197
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Plan]: alloc=107720256 time=59.395
-Simplifier [Domain.Types.Plan]: alloc=1354410536 time=566.941
-Float inwards [Domain.Types.Plan]: alloc=18424 time=0.004
-Called arity analysis [Domain.Types.Plan]: alloc=20000 time=0.006
-Simplifier [Domain.Types.Plan]: alloc=391142584 time=137.649
-Demand analysis [Domain.Types.Plan]: alloc=201222920 time=54.843
-Worker Wrapper binds [Domain.Types.Plan]: alloc=8388256 time=4.801
-Simplifier [Domain.Types.Plan]: alloc=403592216 time=200.056
-Exitification transformation [Domain.Types.Plan]: alloc=20928 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Plan]: alloc=217739416 time=92.428
-Common sub-expression [Domain.Types.Plan]: alloc=19528 time=0.007
-Float inwards [Domain.Types.Plan]: alloc=18424 time=0.004
-Simplifier [Domain.Types.Plan]: alloc=440847304 time=187.787
-Demand analysis [Domain.Types.Plan]: alloc=172203696 time=70.359
-CoreTidy [Domain.Types.Plan]: alloc=70663416 time=24.013
-CorePrep [Domain.Types.Plan]: alloc=19400 time=0.016
-CodeGen [Domain.Types.Plan]: alloc=1076558392 time=400.670
-systool:as: alloc=102656 time=0.232
-CorePrep [Domain.Types.Plan]: alloc=19400 time=0.016
-CodeGen [Domain.Types.Plan]: alloc=1127759904 time=368.777
-systool:as: alloc=105536 time=0.261
+Renamer/typechecker [Domain.Types.Plan]: alloc=309597928 time=91.617
+Desugar [Domain.Types.Plan]: alloc=176371800 time=38.368
+Simplifier [Domain.Types.Plan]: alloc=187713576 time=61.498
+CoreTidy [Domain.Types.Plan]: alloc=25602848 time=6.207
+CorePrep [Domain.Types.Plan]: alloc=19400 time=0.010
+CodeGen [Domain.Types.Plan]: alloc=767845976 time=229.712
+systool:as: alloc=102656 time=0.223
+CorePrep [Domain.Types.Plan]: alloc=19400 time=0.017
+CodeGen [Domain.Types.Plan]: alloc=825262136 time=242.763
+systool:as: alloc=105536 time=0.223

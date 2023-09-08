@@ -1,32 +1,17 @@
-Parser [Domain.Types.DriverFee]: alloc=2094536 time=0.581
-Simplify [expr]: alloc=34464 time=0.018
-CorePrep [expr]: alloc=22952 time=0.017
-ByteCodeGen [Ghci1]: alloc=94056 time=0.048
-Simplify [expr]: alloc=34464 time=0.014
-CorePrep [expr]: alloc=22952 time=0.014
-ByteCodeGen [Ghci1]: alloc=94056 time=0.035
-Renamer/typechecker [Domain.Types.DriverFee]: alloc=163992544 time=53.940
-Desugar [Domain.Types.DriverFee]: alloc=91703392 time=20.611
-Simplifier [Domain.Types.DriverFee]: alloc=119989480 time=39.419
-Specialise [Domain.Types.DriverFee]: alloc=26802168 time=8.491
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverFee]: alloc=52909120 time=18.587
-Simplifier [Domain.Types.DriverFee]: alloc=506298792 time=209.207
-Float inwards [Domain.Types.DriverFee]: alloc=19912 time=0.005
-Called arity analysis [Domain.Types.DriverFee]: alloc=21488 time=0.006
-Simplifier [Domain.Types.DriverFee]: alloc=138094296 time=58.031
-Demand analysis [Domain.Types.DriverFee]: alloc=83839712 time=21.298
-Worker Wrapper binds [Domain.Types.DriverFee]: alloc=3870712 time=2.134
-Simplifier [Domain.Types.DriverFee]: alloc=152450112 time=62.873
-Exitification transformation [Domain.Types.DriverFee]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverFee]: alloc=89180696 time=29.889
-Common sub-expression [Domain.Types.DriverFee]: alloc=21016 time=0.008
-Float inwards [Domain.Types.DriverFee]: alloc=19912 time=0.004
-Simplifier [Domain.Types.DriverFee]: alloc=173759872 time=79.294
-Demand analysis [Domain.Types.DriverFee]: alloc=85930320 time=18.867
-CoreTidy [Domain.Types.DriverFee]: alloc=37513288 time=12.846
-CorePrep [Domain.Types.DriverFee]: alloc=20888 time=0.027
-CodeGen [Domain.Types.DriverFee]: alloc=706205296 time=237.890
-systool:as: alloc=102968 time=0.211
+Parser [Domain.Types.DriverFee]: alloc=2086400 time=0.498
+Simplify [expr]: alloc=34912 time=0.018
+CorePrep [expr]: alloc=22880 time=0.016
+ByteCodeGen [Ghci1]: alloc=94056 time=0.051
+Simplify [expr]: alloc=34912 time=0.015
+CorePrep [expr]: alloc=22880 time=0.012
+ByteCodeGen [Ghci1]: alloc=94056 time=0.036
+Renamer/typechecker [Domain.Types.DriverFee]: alloc=163700032 time=58.122
+Desugar [Domain.Types.DriverFee]: alloc=91710168 time=24.045
+Simplifier [Domain.Types.DriverFee]: alloc=109148784 time=36.504
+CoreTidy [Domain.Types.DriverFee]: alloc=13440560 time=4.288
+CorePrep [Domain.Types.DriverFee]: alloc=20888 time=0.009
+CodeGen [Domain.Types.DriverFee]: alloc=413647048 time=133.385
+systool:as: alloc=102968 time=0.199
 CorePrep [Domain.Types.DriverFee]: alloc=20888 time=0.019
-CodeGen [Domain.Types.DriverFee]: alloc=740009648 time=229.787
-systool:as: alloc=105864 time=0.244
+CodeGen [Domain.Types.DriverFee]: alloc=445107416 time=140.022
+systool:as: alloc=105840 time=0.249

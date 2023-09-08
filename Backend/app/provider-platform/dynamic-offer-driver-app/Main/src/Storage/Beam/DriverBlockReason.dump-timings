@@ -1,32 +1,17 @@
-Parser [Storage.Beam.DriverBlockReason]: alloc=1290552 time=0.339
-Simplify [expr]: alloc=97336 time=0.049
-CorePrep [expr]: alloc=43528 time=0.028
-ByteCodeGen [Ghci1]: alloc=217456 time=0.074
-Simplify [expr]: alloc=47024 time=0.021
-CorePrep [expr]: alloc=26752 time=0.017
-ByteCodeGen [Ghci1]: alloc=131880 time=0.049
-Renamer/typechecker [Storage.Beam.DriverBlockReason]: alloc=94309872 time=33.439
-Desugar [Storage.Beam.DriverBlockReason]: alloc=18466792 time=5.360
-Simplifier [Storage.Beam.DriverBlockReason]: alloc=54436392 time=18.669
-Specialise [Storage.Beam.DriverBlockReason]: alloc=21014120 time=6.538
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.DriverBlockReason]: alloc=53025840 time=18.592
-Simplifier [Storage.Beam.DriverBlockReason]: alloc=543231224 time=216.853
-Float inwards [Storage.Beam.DriverBlockReason]: alloc=22296 time=0.005
-Called arity analysis [Storage.Beam.DriverBlockReason]: alloc=23872 time=0.006
-Simplifier [Storage.Beam.DriverBlockReason]: alloc=136869368 time=60.430
-Demand analysis [Storage.Beam.DriverBlockReason]: alloc=121899912 time=30.085
-Worker Wrapper binds [Storage.Beam.DriverBlockReason]: alloc=3556464 time=2.104
-Simplifier [Storage.Beam.DriverBlockReason]: alloc=162920952 time=60.929
-Exitification transformation [Storage.Beam.DriverBlockReason]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.DriverBlockReason]: alloc=108408336 time=40.215
-Common sub-expression [Storage.Beam.DriverBlockReason]: alloc=23400 time=0.007
-Float inwards [Storage.Beam.DriverBlockReason]: alloc=22296 time=0.004
-Simplifier [Storage.Beam.DriverBlockReason]: alloc=163391840 time=62.906
-Demand analysis [Storage.Beam.DriverBlockReason]: alloc=106395720 time=26.198
-CoreTidy [Storage.Beam.DriverBlockReason]: alloc=25444608 time=15.316
-CorePrep [Storage.Beam.DriverBlockReason]: alloc=23272 time=0.018
-CodeGen [Storage.Beam.DriverBlockReason]: alloc=596339680 time=220.403
-systool:as: alloc=103456 time=0.234
-CorePrep [Storage.Beam.DriverBlockReason]: alloc=23272 time=0.044
-CodeGen [Storage.Beam.DriverBlockReason]: alloc=615990672 time=193.549
-systool:as: alloc=106352 time=0.262
+Parser [Storage.Beam.DriverBlockReason]: alloc=1289448 time=0.395
+Simplify [expr]: alloc=72480 time=0.027
+CorePrep [expr]: alloc=36304 time=0.020
+ByteCodeGen [Ghci1]: alloc=183200 time=0.064
+Simplify [expr]: alloc=46992 time=0.019
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.044
+Renamer/typechecker [Storage.Beam.DriverBlockReason]: alloc=92486856 time=32.331
+Desugar [Storage.Beam.DriverBlockReason]: alloc=18461184 time=5.344
+Simplifier [Storage.Beam.DriverBlockReason]: alloc=18807328 time=5.894
+CoreTidy [Storage.Beam.DriverBlockReason]: alloc=3519072 time=1.255
+CorePrep [Storage.Beam.DriverBlockReason]: alloc=23272 time=0.009
+CodeGen [Storage.Beam.DriverBlockReason]: alloc=133072984 time=43.533
+systool:as: alloc=103456 time=0.175
+CorePrep [Storage.Beam.DriverBlockReason]: alloc=23272 time=0.015
+CodeGen [Storage.Beam.DriverBlockReason]: alloc=145345624 time=44.311
+systool:as: alloc=106328 time=0.176

@@ -1,26 +1,11 @@
-Parser [SharedLogic.Ride]: alloc=1162200 time=0.356
-Renamer/typechecker [SharedLogic.Ride]: alloc=582973032 time=103.873
-Desugar [SharedLogic.Ride]: alloc=293391840 time=48.277
-Simplifier [SharedLogic.Ride]: alloc=5679384 time=1.842
-Specialise [SharedLogic.Ride]: alloc=1747056 time=0.599
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.Ride]: alloc=8010152 time=2.854
-Simplifier [SharedLogic.Ride]: alloc=131221456 time=49.127
-Float inwards [SharedLogic.Ride]: alloc=18120 time=0.005
-Called arity analysis [SharedLogic.Ride]: alloc=19696 time=0.005
-Simplifier [SharedLogic.Ride]: alloc=31130800 time=9.759
-Demand analysis [SharedLogic.Ride]: alloc=22458760 time=5.443
-Worker Wrapper binds [SharedLogic.Ride]: alloc=1132992 time=0.458
-Simplifier [SharedLogic.Ride]: alloc=33651472 time=11.259
-Exitification transformation [SharedLogic.Ride]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.Ride]: alloc=22150520 time=6.946
-Common sub-expression [SharedLogic.Ride]: alloc=19224 time=0.005
-Float inwards [SharedLogic.Ride]: alloc=18120 time=0.004
-Simplifier [SharedLogic.Ride]: alloc=32534832 time=11.270
-Demand analysis [SharedLogic.Ride]: alloc=19387128 time=4.399
-CoreTidy [SharedLogic.Ride]: alloc=4147040 time=1.769
-CorePrep [SharedLogic.Ride]: alloc=19112 time=0.009
-CodeGen [SharedLogic.Ride]: alloc=93906208 time=27.695
-systool:as: alloc=102592 time=0.186
+Parser [SharedLogic.Ride]: alloc=1161096 time=0.279
+Renamer/typechecker [SharedLogic.Ride]: alloc=427914032 time=73.653
+Desugar [SharedLogic.Ride]: alloc=288068264 time=43.953
+Simplifier [SharedLogic.Ride]: alloc=5796296 time=1.170
+CoreTidy [SharedLogic.Ride]: alloc=656168 time=0.209
 CorePrep [SharedLogic.Ride]: alloc=19112 time=0.014
-CodeGen [SharedLogic.Ride]: alloc=98444880 time=29.055
-systool:as: alloc=105472 time=0.202
+CodeGen [SharedLogic.Ride]: alloc=26908456 time=7.488
+systool:as: alloc=102600 time=0.170
+CorePrep [SharedLogic.Ride]: alloc=19112 time=0.013
+CodeGen [SharedLogic.Ride]: alloc=29536264 time=8.054
+systool:as: alloc=105480 time=0.140

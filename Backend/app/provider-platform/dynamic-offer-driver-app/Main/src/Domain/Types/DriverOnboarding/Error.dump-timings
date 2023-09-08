@@ -1,32 +1,17 @@
-Parser [Domain.Types.DriverOnboarding.Error]: alloc=3601648 time=0.677
-Simplify [expr]: alloc=179800 time=0.079
-CorePrep [expr]: alloc=31288 time=0.017
-ByteCodeGen [Ghci1]: alloc=169192 time=0.714
-Simplify [expr]: alloc=34464 time=0.013
-CorePrep [expr]: alloc=22952 time=0.011
-ByteCodeGen [Ghci1]: alloc=94056 time=0.031
-Renamer/typechecker [Domain.Types.DriverOnboarding.Error]: alloc=242183504 time=269.198
-Desugar [Domain.Types.DriverOnboarding.Error]: alloc=55153504 time=14.351
-Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=191048256 time=66.432
-Specialise [Domain.Types.DriverOnboarding.Error]: alloc=40530920 time=12.019
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.Error]: alloc=66877736 time=23.202
-Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=985420336 time=378.996
-Float inwards [Domain.Types.DriverOnboarding.Error]: alloc=23800 time=0.005
-Called arity analysis [Domain.Types.DriverOnboarding.Error]: alloc=25376 time=0.006
-Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=294666344 time=115.986
-Demand analysis [Domain.Types.DriverOnboarding.Error]: alloc=286310536 time=80.803
-Worker Wrapper binds [Domain.Types.DriverOnboarding.Error]: alloc=6571424 time=3.639
-Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=332211928 time=137.536
-Exitification transformation [Domain.Types.DriverOnboarding.Error]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.Error]: alloc=277481464 time=108.434
-Common sub-expression [Domain.Types.DriverOnboarding.Error]: alloc=24904 time=0.007
-Float inwards [Domain.Types.DriverOnboarding.Error]: alloc=23800 time=0.004
-Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=393565192 time=163.433
-Demand analysis [Domain.Types.DriverOnboarding.Error]: alloc=351015792 time=104.997
-CoreTidy [Domain.Types.DriverOnboarding.Error]: alloc=77904224 time=45.491
-CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.015
-CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=1907763160 time=636.928
-systool:as: alloc=103824 time=0.315
-CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.021
-CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=1980055672 time=625.526
-systool:as: alloc=106704 time=0.246
+Parser [Domain.Types.DriverOnboarding.Error]: alloc=3587936 time=0.623
+Simplify [expr]: alloc=57168 time=0.024
+CorePrep [expr]: alloc=31144 time=0.019
+ByteCodeGen [Ghci1]: alloc=169192 time=0.066
+Simplify [expr]: alloc=34912 time=0.017
+CorePrep [expr]: alloc=22880 time=0.014
+ByteCodeGen [Ghci1]: alloc=94056 time=0.040
+Renamer/typechecker [Domain.Types.DriverOnboarding.Error]: alloc=240374248 time=77.121
+Desugar [Domain.Types.DriverOnboarding.Error]: alloc=47590432 time=10.925
+Simplifier [Domain.Types.DriverOnboarding.Error]: alloc=91188352 time=29.498
+CoreTidy [Domain.Types.DriverOnboarding.Error]: alloc=20607296 time=4.976
+CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.010
+CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=518212272 time=153.585
+systool:as: alloc=103832 time=0.173
+CorePrep [Domain.Types.DriverOnboarding.Error]: alloc=24760 time=0.014
+CodeGen [Domain.Types.DriverOnboarding.Error]: alloc=561724352 time=158.785
+systool:as: alloc=106712 time=0.173

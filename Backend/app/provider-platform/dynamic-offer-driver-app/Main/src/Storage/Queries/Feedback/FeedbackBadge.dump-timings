@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Feedback.FeedbackBadge]: alloc=1661560 time=0.436
-Renamer/typechecker [Storage.Queries.Feedback.FeedbackBadge]: alloc=138254832 time=46.362
-Desugar [Storage.Queries.Feedback.FeedbackBadge]: alloc=5478232 time=2.009
-Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=45484872 time=15.204
-Specialise [Storage.Queries.Feedback.FeedbackBadge]: alloc=12708400 time=3.755
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Feedback.FeedbackBadge]: alloc=14110312 time=5.420
-Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=230840976 time=73.188
-Float inwards [Storage.Queries.Feedback.FeedbackBadge]: alloc=24680 time=0.005
-Called arity analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=26256 time=0.005
-Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=55025024 time=17.728
-Demand analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=10687360 time=5.365
-Worker Wrapper binds [Storage.Queries.Feedback.FeedbackBadge]: alloc=658816 time=0.484
-Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=51853712 time=21.638
-Exitification transformation [Storage.Queries.Feedback.FeedbackBadge]: alloc=27200 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Feedback.FeedbackBadge]: alloc=10743816 time=4.427
-Common sub-expression [Storage.Queries.Feedback.FeedbackBadge]: alloc=25784 time=0.005
-Float inwards [Storage.Queries.Feedback.FeedbackBadge]: alloc=24680 time=0.004
-Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=63663912 time=20.256
-Demand analysis [Storage.Queries.Feedback.FeedbackBadge]: alloc=10891800 time=4.966
-CoreTidy [Storage.Queries.Feedback.FeedbackBadge]: alloc=11275320 time=4.378
-CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.014
-CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=75916808 time=26.243
-systool:as: alloc=104008 time=0.179
-CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.017
-CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=81710504 time=27.271
-systool:as: alloc=106904 time=0.210
+Parser [Storage.Queries.Feedback.FeedbackBadge]: alloc=1659888 time=0.421
+Renamer/typechecker [Storage.Queries.Feedback.FeedbackBadge]: alloc=136311528 time=41.697
+Desugar [Storage.Queries.Feedback.FeedbackBadge]: alloc=5452880 time=1.815
+Simplifier [Storage.Queries.Feedback.FeedbackBadge]: alloc=27403960 time=7.267
+CoreTidy [Storage.Queries.Feedback.FeedbackBadge]: alloc=5219648 time=1.535
+CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.009
+CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=109314656 time=33.209
+systool:as: alloc=104016 time=0.179
+CorePrep [Storage.Queries.Feedback.FeedbackBadge]: alloc=25656 time=0.015
+CodeGen [Storage.Queries.Feedback.FeedbackBadge]: alloc=125080328 time=32.531
+systool:as: alloc=106888 time=0.165

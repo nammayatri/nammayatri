@@ -1,26 +1,11 @@
-Parser [Domain.Types.GoHomeConfig]: alloc=717248 time=0.213
-Renamer/typechecker [Domain.Types.GoHomeConfig]: alloc=88038960 time=24.426
-Desugar [Domain.Types.GoHomeConfig]: alloc=5881992 time=2.386
-Simplifier [Domain.Types.GoHomeConfig]: alloc=79199376 time=27.008
-Specialise [Domain.Types.GoHomeConfig]: alloc=20319504 time=10.182
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.GoHomeConfig]: alloc=41055824 time=14.195
-Simplifier [Domain.Types.GoHomeConfig]: alloc=497606368 time=209.326
-Float inwards [Domain.Types.GoHomeConfig]: alloc=20808 time=0.005
-Called arity analysis [Domain.Types.GoHomeConfig]: alloc=22384 time=0.006
-Simplifier [Domain.Types.GoHomeConfig]: alloc=154063936 time=62.216
-Demand analysis [Domain.Types.GoHomeConfig]: alloc=75786880 time=27.208
-Worker Wrapper binds [Domain.Types.GoHomeConfig]: alloc=2425560 time=0.896
-Simplifier [Domain.Types.GoHomeConfig]: alloc=138873472 time=54.763
-Exitification transformation [Domain.Types.GoHomeConfig]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.GoHomeConfig]: alloc=74697024 time=36.146
-Common sub-expression [Domain.Types.GoHomeConfig]: alloc=21912 time=0.007
-Float inwards [Domain.Types.GoHomeConfig]: alloc=20808 time=0.004
-Simplifier [Domain.Types.GoHomeConfig]: alloc=173446904 time=77.819
-Demand analysis [Domain.Types.GoHomeConfig]: alloc=73244688 time=23.264
-CoreTidy [Domain.Types.GoHomeConfig]: alloc=23400992 time=6.891
-CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.044
-CodeGen [Domain.Types.GoHomeConfig]: alloc=263799400 time=93.734
-systool:as: alloc=103168 time=0.221
+Parser [Domain.Types.GoHomeConfig]: alloc=711232 time=0.161
+Renamer/typechecker [Domain.Types.GoHomeConfig]: alloc=88014232 time=24.802
+Desugar [Domain.Types.GoHomeConfig]: alloc=5876712 time=2.214
+Simplifier [Domain.Types.GoHomeConfig]: alloc=32135048 time=9.919
+CoreTidy [Domain.Types.GoHomeConfig]: alloc=9776416 time=1.996
+CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.008
+CodeGen [Domain.Types.GoHomeConfig]: alloc=226908752 time=68.608
+systool:as: alloc=103144 time=0.205
 CorePrep [Domain.Types.GoHomeConfig]: alloc=21784 time=0.015
-CodeGen [Domain.Types.GoHomeConfig]: alloc=275278808 time=91.631
-systool:as: alloc=106024 time=0.253
+CodeGen [Domain.Types.GoHomeConfig]: alloc=243367224 time=70.792
+systool:as: alloc=106024 time=0.160

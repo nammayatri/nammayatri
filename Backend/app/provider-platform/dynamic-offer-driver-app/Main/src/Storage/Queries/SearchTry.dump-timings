@@ -1,26 +1,11 @@
-Parser [Storage.Queries.SearchTry]: alloc=2732920 time=0.499
-Renamer/typechecker [Storage.Queries.SearchTry]: alloc=350138552 time=96.744
-Desugar [Storage.Queries.SearchTry]: alloc=11337104 time=3.226
-Simplifier [Storage.Queries.SearchTry]: alloc=226508616 time=69.142
-Specialise [Storage.Queries.SearchTry]: alloc=44031688 time=12.741
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.SearchTry]: alloc=42857184 time=17.792
-Simplifier [Storage.Queries.SearchTry]: alloc=418987120 time=165.030
-Float inwards [Storage.Queries.SearchTry]: alloc=20808 time=0.005
-Called arity analysis [Storage.Queries.SearchTry]: alloc=22384 time=0.006
-Simplifier [Storage.Queries.SearchTry]: alloc=79946856 time=35.916
-Demand analysis [Storage.Queries.SearchTry]: alloc=28331488 time=6.950
-Worker Wrapper binds [Storage.Queries.SearchTry]: alloc=1612168 time=0.905
-Simplifier [Storage.Queries.SearchTry]: alloc=62417016 time=19.557
-Exitification transformation [Storage.Queries.SearchTry]: alloc=23312 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.SearchTry]: alloc=26585952 time=9.332
-Common sub-expression [Storage.Queries.SearchTry]: alloc=21912 time=0.006
-Float inwards [Storage.Queries.SearchTry]: alloc=20808 time=0.004
-Simplifier [Storage.Queries.SearchTry]: alloc=100772560 time=36.002
-Demand analysis [Storage.Queries.SearchTry]: alloc=26176288 time=8.079
-CoreTidy [Storage.Queries.SearchTry]: alloc=18330600 time=7.218
-CorePrep [Storage.Queries.SearchTry]: alloc=21784 time=0.029
-CodeGen [Storage.Queries.SearchTry]: alloc=149284568 time=49.662
-systool:as: alloc=103160 time=0.261
+Parser [Storage.Queries.SearchTry]: alloc=2730696 time=0.557
+Renamer/typechecker [Storage.Queries.SearchTry]: alloc=345852768 time=97.962
+Desugar [Storage.Queries.SearchTry]: alloc=11289976 time=3.056
+Simplifier [Storage.Queries.SearchTry]: alloc=104867488 time=31.469
+CoreTidy [Storage.Queries.SearchTry]: alloc=26084688 time=9.053
+CorePrep [Storage.Queries.SearchTry]: alloc=21784 time=0.011
+CodeGen [Storage.Queries.SearchTry]: alloc=404403224 time=118.690
+systool:as: alloc=103168 time=0.209
 CorePrep [Storage.Queries.SearchTry]: alloc=21784 time=0.015
-CodeGen [Storage.Queries.SearchTry]: alloc=161781696 time=52.793
-systool:as: alloc=106040 time=0.213
+CodeGen [Storage.Queries.SearchTry]: alloc=461747192 time=116.865
+systool:as: alloc=106048 time=0.213

@@ -1,26 +1,11 @@
-Parser [Domain.Types.KioskLocation]: alloc=514920 time=0.142
-Renamer/typechecker [Domain.Types.KioskLocation]: alloc=54954880 time=16.006
-Desugar [Domain.Types.KioskLocation]: alloc=3193280 time=1.793
-Simplifier [Domain.Types.KioskLocation]: alloc=45241176 time=16.115
-Specialise [Domain.Types.KioskLocation]: alloc=11867040 time=4.404
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.KioskLocation]: alloc=25022744 time=9.478
-Simplifier [Domain.Types.KioskLocation]: alloc=297293944 time=128.293
-Float inwards [Domain.Types.KioskLocation]: alloc=21096 time=0.005
-Called arity analysis [Domain.Types.KioskLocation]: alloc=22672 time=0.006
-Simplifier [Domain.Types.KioskLocation]: alloc=86345040 time=26.477
-Demand analysis [Domain.Types.KioskLocation]: alloc=43752976 time=19.579
-Worker Wrapper binds [Domain.Types.KioskLocation]: alloc=1167304 time=0.626
-Simplifier [Domain.Types.KioskLocation]: alloc=82384872 time=26.007
-Exitification transformation [Domain.Types.KioskLocation]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.KioskLocation]: alloc=44170400 time=24.481
-Common sub-expression [Domain.Types.KioskLocation]: alloc=22200 time=0.007
-Float inwards [Domain.Types.KioskLocation]: alloc=21096 time=0.004
-Simplifier [Domain.Types.KioskLocation]: alloc=100998920 time=45.597
-Demand analysis [Domain.Types.KioskLocation]: alloc=41346256 time=10.488
-CoreTidy [Domain.Types.KioskLocation]: alloc=14145512 time=5.237
-CorePrep [Domain.Types.KioskLocation]: alloc=22088 time=0.015
-CodeGen [Domain.Types.KioskLocation]: alloc=163820160 time=60.902
-systool:as: alloc=103208 time=0.208
-CorePrep [Domain.Types.KioskLocation]: alloc=22088 time=0.013
-CodeGen [Domain.Types.KioskLocation]: alloc=170638952 time=55.768
-systool:as: alloc=106088 time=0.247
+Parser [Domain.Types.KioskLocation]: alloc=513312 time=0.150
+Renamer/typechecker [Domain.Types.KioskLocation]: alloc=54934112 time=17.625
+Desugar [Domain.Types.KioskLocation]: alloc=3188768 time=1.651
+Simplifier [Domain.Types.KioskLocation]: alloc=19857664 time=4.878
+CoreTidy [Domain.Types.KioskLocation]: alloc=5173248 time=2.171
+CorePrep [Domain.Types.KioskLocation]: alloc=22088 time=0.008
+CodeGen [Domain.Types.KioskLocation]: alloc=154632416 time=48.432
+systool:as: alloc=103232 time=0.174
+CorePrep [Domain.Types.KioskLocation]: alloc=22088 time=0.014
+CodeGen [Domain.Types.KioskLocation]: alloc=166347304 time=50.845
+systool:as: alloc=106088 time=0.156

@@ -1,38 +1,23 @@
-Parser [Domain.Types.DriverInformation]: alloc=3062568 time=0.668
-Simplify [expr]: alloc=19176 time=0.011
-CorePrep [expr]: alloc=16448 time=0.012
-ByteCodeGen [Ghci1]: alloc=39272 time=0.035
-Simplify [expr]: alloc=34464 time=0.014
-CorePrep [expr]: alloc=22952 time=0.015
-ByteCodeGen [Ghci1]: alloc=94056 time=0.045
-Simplify [expr]: alloc=19176 time=0.011
-CorePrep [expr]: alloc=16448 time=0.011
-ByteCodeGen [Ghci1]: alloc=39272 time=0.034
-Simplify [expr]: alloc=34464 time=0.013
-CorePrep [expr]: alloc=22952 time=0.011
-ByteCodeGen [Ghci1]: alloc=94056 time=0.032
-Renamer/typechecker [Domain.Types.DriverInformation]: alloc=339314952 time=110.154
-Desugar [Domain.Types.DriverInformation]: alloc=99497672 time=23.111
-Simplifier [Domain.Types.DriverInformation]: alloc=304912400 time=123.046
-Specialise [Domain.Types.DriverInformation]: alloc=108963864 time=30.388
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverInformation]: alloc=139613336 time=67.800
-Simplifier [Domain.Types.DriverInformation]: alloc=2173709896 time=966.417
-Float inwards [Domain.Types.DriverInformation]: alloc=22296 time=0.006
-Called arity analysis [Domain.Types.DriverInformation]: alloc=23872 time=0.006
-Simplifier [Domain.Types.DriverInformation]: alloc=638251344 time=253.412
-Demand analysis [Domain.Types.DriverInformation]: alloc=330737424 time=97.501
-Worker Wrapper binds [Domain.Types.DriverInformation]: alloc=11740256 time=5.116
-Simplifier [Domain.Types.DriverInformation]: alloc=623690696 time=288.949
-Exitification transformation [Domain.Types.DriverInformation]: alloc=24816 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverInformation]: alloc=362488216 time=175.564
-Common sub-expression [Domain.Types.DriverInformation]: alloc=23400 time=0.007
-Float inwards [Domain.Types.DriverInformation]: alloc=22296 time=0.004
-Simplifier [Domain.Types.DriverInformation]: alloc=694712936 time=751.423
-Demand analysis [Domain.Types.DriverInformation]: alloc=291021928 time=68.367
-CoreTidy [Domain.Types.DriverInformation]: alloc=95785080 time=33.245
-CorePrep [Domain.Types.DriverInformation]: alloc=23272 time=0.016
-CodeGen [Domain.Types.DriverInformation]: alloc=1258727872 time=448.590
-systool:as: alloc=103456 time=0.259
-CorePrep [Domain.Types.DriverInformation]: alloc=23272 time=0.017
-CodeGen [Domain.Types.DriverInformation]: alloc=1314380344 time=419.456
-systool:as: alloc=106328 time=0.252
+Parser [Domain.Types.DriverInformation]: alloc=3045224 time=0.629
+Simplify [expr]: alloc=19176 time=0.017
+CorePrep [expr]: alloc=16424 time=0.013
+ByteCodeGen [Ghci1]: alloc=39272 time=0.033
+Simplify [expr]: alloc=34912 time=0.019
+CorePrep [expr]: alloc=22880 time=0.015
+ByteCodeGen [Ghci1]: alloc=94056 time=0.044
+Simplify [expr]: alloc=19176 time=0.014
+CorePrep [expr]: alloc=16424 time=0.013
+ByteCodeGen [Ghci1]: alloc=39272 time=0.030
+Simplify [expr]: alloc=34912 time=0.014
+CorePrep [expr]: alloc=22880 time=0.012
+ByteCodeGen [Ghci1]: alloc=94056 time=0.037
+Renamer/typechecker [Domain.Types.DriverInformation]: alloc=338790776 time=119.676
+Desugar [Domain.Types.DriverInformation]: alloc=99433744 time=27.177
+Simplifier [Domain.Types.DriverInformation]: alloc=233674440 time=83.794
+CoreTidy [Domain.Types.DriverInformation]: alloc=35908896 time=11.780
+CorePrep [Domain.Types.DriverInformation]: alloc=23272 time=0.015
+CodeGen [Domain.Types.DriverInformation]: alloc=872104432 time=267.442
+systool:as: alloc=103456 time=0.206
+CorePrep [Domain.Types.DriverInformation]: alloc=23272 time=0.023
+CodeGen [Domain.Types.DriverInformation]: alloc=935202280 time=285.599
+systool:as: alloc=106328 time=0.198

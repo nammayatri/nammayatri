@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverOnboarding.OperatingCity]: alloc=438992 time=0.130
-Renamer/typechecker [Domain.Types.DriverOnboarding.OperatingCity]: alloc=46198256 time=13.261
-Desugar [Domain.Types.DriverOnboarding.OperatingCity]: alloc=2552056 time=1.485
-Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=34820928 time=12.171
-Specialise [Domain.Types.DriverOnboarding.OperatingCity]: alloc=9905008 time=3.380
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.OperatingCity]: alloc=20619976 time=7.513
-Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=237931808 time=86.406
-Float inwards [Domain.Types.DriverOnboarding.OperatingCity]: alloc=26184 time=0.005
-Called arity analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27760 time=0.007
-Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=65431192 time=22.703
-Demand analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=32174072 time=9.202
-Worker Wrapper binds [Domain.Types.DriverOnboarding.OperatingCity]: alloc=851720 time=0.682
-Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=63788240 time=40.911
-Exitification transformation [Domain.Types.DriverOnboarding.OperatingCity]: alloc=28672 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.OperatingCity]: alloc=32836912 time=11.007
-Common sub-expression [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27288 time=0.006
-Float inwards [Domain.Types.DriverOnboarding.OperatingCity]: alloc=26184 time=0.005
-Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=76796816 time=27.220
-Demand analysis [Domain.Types.DriverOnboarding.OperatingCity]: alloc=29770464 time=8.418
-CoreTidy [Domain.Types.DriverOnboarding.OperatingCity]: alloc=11139256 time=4.307
-CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.010
-CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=103458464 time=35.796
-systool:as: alloc=104320 time=0.215
-CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.017
-CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=107859920 time=36.798
-systool:as: alloc=107200 time=0.218
+Parser [Domain.Types.DriverOnboarding.OperatingCity]: alloc=438456 time=0.116
+Renamer/typechecker [Domain.Types.DriverOnboarding.OperatingCity]: alloc=46172112 time=14.614
+Desugar [Domain.Types.DriverOnboarding.OperatingCity]: alloc=2552224 time=1.744
+Simplifier [Domain.Types.DriverOnboarding.OperatingCity]: alloc=16509784 time=5.651
+CoreTidy [Domain.Types.DriverOnboarding.OperatingCity]: alloc=4379648 time=1.774
+CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.007
+CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=117475736 time=42.468
+systool:as: alloc=104320 time=0.146
+CorePrep [Domain.Types.DriverOnboarding.OperatingCity]: alloc=27144 time=0.013
+CodeGen [Domain.Types.DriverOnboarding.OperatingCity]: alloc=125780352 time=213.917
+systool:as: alloc=107224 time=0.156

@@ -1,26 +1,11 @@
-Parser [Domain.Types.Common]: alloc=200592 time=0.089
-Renamer/typechecker [Domain.Types.Common]: alloc=290200 time=0.313
-Desugar [Domain.Types.Common]: alloc=310008 time=0.788
-Simplifier [Domain.Types.Common]: alloc=160840 time=0.090
-Specialise [Domain.Types.Common]: alloc=41144 time=0.016
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Common]: alloc=157376 time=0.055
-Simplifier [Domain.Types.Common]: alloc=210208 time=0.066
-Float inwards [Domain.Types.Common]: alloc=19032 time=0.004
-Called arity analysis [Domain.Types.Common]: alloc=20608 time=0.004
-Simplifier [Domain.Types.Common]: alloc=253336 time=0.064
-Demand analysis [Domain.Types.Common]: alloc=140440 time=0.037
-Worker Wrapper binds [Domain.Types.Common]: alloc=29136 time=0.010
-Simplifier [Domain.Types.Common]: alloc=210664 time=0.051
-Exitification transformation [Domain.Types.Common]: alloc=21520 time=0.003
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Common]: alloc=151760 time=0.038
-Common sub-expression [Domain.Types.Common]: alloc=20136 time=0.004
-Float inwards [Domain.Types.Common]: alloc=19032 time=0.004
-Simplifier [Domain.Types.Common]: alloc=279584 time=0.083
-Demand analysis [Domain.Types.Common]: alloc=140440 time=0.027
-CoreTidy [Domain.Types.Common]: alloc=151752 time=0.082
+Parser [Domain.Types.Common]: alloc=200592 time=0.082
+Renamer/typechecker [Domain.Types.Common]: alloc=289576 time=0.282
+Desugar [Domain.Types.Common]: alloc=310008 time=0.822
+Simplifier [Domain.Types.Common]: alloc=340704 time=0.131
+CoreTidy [Domain.Types.Common]: alloc=101496 time=0.049
 CorePrep [Domain.Types.Common]: alloc=19992 time=0.005
-CodeGen [Domain.Types.Common]: alloc=1984984 time=0.597
-systool:as: alloc=102768 time=0.230
-CorePrep [Domain.Types.Common]: alloc=19992 time=0.021
-CodeGen [Domain.Types.Common]: alloc=1946032 time=1.088
-systool:as: alloc=105648 time=0.214
+CodeGen [Domain.Types.Common]: alloc=1892568 time=0.544
+systool:as: alloc=102776 time=0.110
+CorePrep [Domain.Types.Common]: alloc=19992 time=0.012
+CodeGen [Domain.Types.Common]: alloc=1874480 time=0.474
+systool:as: alloc=105656 time=0.090

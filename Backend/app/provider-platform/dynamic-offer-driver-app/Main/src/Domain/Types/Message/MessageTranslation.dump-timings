@@ -1,26 +1,11 @@
-Parser [Domain.Types.Message.MessageTranslation]: alloc=465984 time=0.149
-Renamer/typechecker [Domain.Types.Message.MessageTranslation]: alloc=12322456 time=4.104
-Desugar [Domain.Types.Message.MessageTranslation]: alloc=2325776 time=1.558
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2448208 time=0.785
-Specialise [Domain.Types.Message.MessageTranslation]: alloc=344480 time=0.083
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Message.MessageTranslation]: alloc=1345704 time=0.422
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=1774856 time=0.554
-Float inwards [Domain.Types.Message.MessageTranslation]: alloc=24984 time=0.005
-Called arity analysis [Domain.Types.Message.MessageTranslation]: alloc=26560 time=0.005
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2185168 time=0.646
-Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1651008 time=0.425
-Worker Wrapper binds [Domain.Types.Message.MessageTranslation]: alloc=72608 time=0.027
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=2939144 time=0.766
-Exitification transformation [Domain.Types.Message.MessageTranslation]: alloc=27488 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Message.MessageTranslation]: alloc=1350448 time=0.413
-Common sub-expression [Domain.Types.Message.MessageTranslation]: alloc=26088 time=0.005
-Float inwards [Domain.Types.Message.MessageTranslation]: alloc=24984 time=0.004
-Simplifier [Domain.Types.Message.MessageTranslation]: alloc=4015544 time=1.175
-Demand analysis [Domain.Types.Message.MessageTranslation]: alloc=1657280 time=0.420
-CoreTidy [Domain.Types.Message.MessageTranslation]: alloc=1292600 time=0.489
-CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.010
-CodeGen [Domain.Types.Message.MessageTranslation]: alloc=19680784 time=6.999
-systool:as: alloc=104040 time=0.214
-CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.017
-CodeGen [Domain.Types.Message.MessageTranslation]: alloc=20242480 time=7.029
-systool:as: alloc=106912 time=0.193
+Parser [Domain.Types.Message.MessageTranslation]: alloc=465448 time=0.130
+Renamer/typechecker [Domain.Types.Message.MessageTranslation]: alloc=12329768 time=4.185
+Desugar [Domain.Types.Message.MessageTranslation]: alloc=2322280 time=1.486
+Simplifier [Domain.Types.Message.MessageTranslation]: alloc=4144992 time=1.224
+CoreTidy [Domain.Types.Message.MessageTranslation]: alloc=871960 time=0.253
+CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.008
+CodeGen [Domain.Types.Message.MessageTranslation]: alloc=17092352 time=5.634
+systool:as: alloc=104040 time=0.155
+CorePrep [Domain.Types.Message.MessageTranslation]: alloc=25944 time=0.012
+CodeGen [Domain.Types.Message.MessageTranslation]: alloc=17662864 time=5.544
+systool:as: alloc=106912 time=0.134

@@ -1,26 +1,11 @@
-Parser [Domain.Types.Issue.IssueOption]: alloc=408152 time=0.132
-Renamer/typechecker [Domain.Types.Issue.IssueOption]: alloc=27389096 time=9.491
-Desugar [Domain.Types.Issue.IssueOption]: alloc=1623200 time=1.276
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=21823600 time=7.674
-Specialise [Domain.Types.Issue.IssueOption]: alloc=5181152 time=1.843
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.IssueOption]: alloc=13916192 time=5.121
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=148397624 time=63.707
-Float inwards [Domain.Types.Issue.IssueOption]: alloc=22296 time=0.006
-Called arity analysis [Domain.Types.Issue.IssueOption]: alloc=23872 time=0.006
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=37780056 time=14.242
-Demand analysis [Domain.Types.Issue.IssueOption]: alloc=19723432 time=5.999
-Worker Wrapper binds [Domain.Types.Issue.IssueOption]: alloc=639880 time=5.136
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=38946680 time=12.549
-Exitification transformation [Domain.Types.Issue.IssueOption]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.IssueOption]: alloc=20978776 time=7.822
-Common sub-expression [Domain.Types.Issue.IssueOption]: alloc=23400 time=0.007
-Float inwards [Domain.Types.Issue.IssueOption]: alloc=22296 time=0.004
-Simplifier [Domain.Types.Issue.IssueOption]: alloc=45927064 time=23.329
-Demand analysis [Domain.Types.Issue.IssueOption]: alloc=18614712 time=5.175
-CoreTidy [Domain.Types.Issue.IssueOption]: alloc=6941616 time=2.801
-CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.010
-CodeGen [Domain.Types.Issue.IssueOption]: alloc=98351088 time=37.067
-systool:as: alloc=103480 time=0.196
-CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.017
-CodeGen [Domain.Types.Issue.IssueOption]: alloc=102539336 time=36.100
-systool:as: alloc=106376 time=0.208
+Parser [Domain.Types.Issue.IssueOption]: alloc=407608 time=0.119
+Renamer/typechecker [Domain.Types.Issue.IssueOption]: alloc=27366096 time=9.179
+Desugar [Domain.Types.Issue.IssueOption]: alloc=1621096 time=1.321
+Simplifier [Domain.Types.Issue.IssueOption]: alloc=8733456 time=2.468
+CoreTidy [Domain.Types.Issue.IssueOption]: alloc=1946888 time=0.569
+CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.007
+CodeGen [Domain.Types.Issue.IssueOption]: alloc=66342464 time=19.773
+systool:as: alloc=103488 time=0.177
+CorePrep [Domain.Types.Issue.IssueOption]: alloc=23272 time=0.013
+CodeGen [Domain.Types.Issue.IssueOption]: alloc=71366096 time=21.069
+systool:as: alloc=106360 time=0.147

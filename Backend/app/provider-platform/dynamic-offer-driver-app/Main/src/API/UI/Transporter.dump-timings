@@ -1,26 +1,11 @@
-Parser [API.UI.Transporter]: alloc=1025856 time=0.355
-Renamer/typechecker [API.UI.Transporter]: alloc=53439064 time=17.035
-Desugar [API.UI.Transporter]: alloc=382280 time=0.875
-Simplifier [API.UI.Transporter]: alloc=10337184 time=2.784
-Specialise [API.UI.Transporter]: alloc=2901160 time=0.669
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Transporter]: alloc=8969768 time=1.974
-Simplifier [API.UI.Transporter]: alloc=17046792 time=3.452
-Float inwards [API.UI.Transporter]: alloc=18712 time=0.005
-Called arity analysis [API.UI.Transporter]: alloc=20288 time=0.007
-Simplifier [API.UI.Transporter]: alloc=9965200 time=1.666
-Demand analysis [API.UI.Transporter]: alloc=19605856 time=2.710
-Worker Wrapper binds [API.UI.Transporter]: alloc=68256 time=0.057
-Simplifier [API.UI.Transporter]: alloc=17227280 time=2.505
-Exitification transformation [API.UI.Transporter]: alloc=21232 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Transporter]: alloc=7546928 time=1.647
-Common sub-expression [API.UI.Transporter]: alloc=19816 time=0.005
-Float inwards [API.UI.Transporter]: alloc=18712 time=0.004
-Simplifier [API.UI.Transporter]: alloc=23066048 time=3.987
-Demand analysis [API.UI.Transporter]: alloc=19565448 time=2.941
-CoreTidy [API.UI.Transporter]: alloc=6529160 time=1.571
-CorePrep [API.UI.Transporter]: alloc=19704 time=0.012
-CodeGen [API.UI.Transporter]: alloc=74132480 time=16.597
-systool:as: alloc=102696 time=0.223
-CorePrep [API.UI.Transporter]: alloc=19704 time=0.021
-CodeGen [API.UI.Transporter]: alloc=75118216 time=18.004
-systool:as: alloc=105576 time=0.225
+Parser [API.UI.Transporter]: alloc=1025856 time=0.228
+Renamer/typechecker [API.UI.Transporter]: alloc=53104056 time=15.416
+Desugar [API.UI.Transporter]: alloc=382184 time=0.900
+Simplifier [API.UI.Transporter]: alloc=2380872 time=0.614
+CoreTidy [API.UI.Transporter]: alloc=427520 time=0.159
+CorePrep [API.UI.Transporter]: alloc=19704 time=0.007
+CodeGen [API.UI.Transporter]: alloc=12166336 time=4.081
+systool:as: alloc=102704 time=0.191
+CorePrep [API.UI.Transporter]: alloc=19704 time=0.010
+CodeGen [API.UI.Transporter]: alloc=13136384 time=4.291
+systool:as: alloc=105584 time=0.151

@@ -1,29 +1,14 @@
-Parser [Domain.Types.Merchant]: alloc=2021720 time=0.543
-Simplify [expr]: alloc=34464 time=0.017
-CorePrep [expr]: alloc=22952 time=0.030
-ByteCodeGen [Ghci1]: alloc=94056 time=0.047
-Renamer/typechecker [Domain.Types.Merchant]: alloc=212143672 time=66.204
-Desugar [Domain.Types.Merchant]: alloc=56399424 time=14.117
-Simplifier [Domain.Types.Merchant]: alloc=228213096 time=77.486
-Specialise [Domain.Types.Merchant]: alloc=69244792 time=39.209
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Merchant]: alloc=107316136 time=36.087
-Simplifier [Domain.Types.Merchant]: alloc=1358827344 time=558.008
-Float inwards [Domain.Types.Merchant]: alloc=19624 time=0.005
-Called arity analysis [Domain.Types.Merchant]: alloc=21200 time=0.006
-Simplifier [Domain.Types.Merchant]: alloc=431064848 time=182.774
-Demand analysis [Domain.Types.Merchant]: alloc=214643168 time=51.342
-Worker Wrapper binds [Domain.Types.Merchant]: alloc=7260816 time=4.365
-Simplifier [Domain.Types.Merchant]: alloc=409455760 time=166.820
-Exitification transformation [Domain.Types.Merchant]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Merchant]: alloc=231523888 time=112.931
-Common sub-expression [Domain.Types.Merchant]: alloc=20728 time=0.006
-Float inwards [Domain.Types.Merchant]: alloc=19624 time=0.004
-Simplifier [Domain.Types.Merchant]: alloc=487397192 time=211.649
-Demand analysis [Domain.Types.Merchant]: alloc=197507488 time=63.768
-CoreTidy [Domain.Types.Merchant]: alloc=65847392 time=35.075
-CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.029
-CodeGen [Domain.Types.Merchant]: alloc=787158128 time=278.504
-systool:as: alloc=102904 time=0.284
-CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.043
-CodeGen [Domain.Types.Merchant]: alloc=819908200 time=254.228
-systool:as: alloc=105776 time=0.259
+Parser [Domain.Types.Merchant]: alloc=2009248 time=0.460
+Simplify [expr]: alloc=34912 time=0.019
+CorePrep [expr]: alloc=22880 time=0.019
+ByteCodeGen [Ghci1]: alloc=94056 time=0.048
+Renamer/typechecker [Domain.Types.Merchant]: alloc=212687840 time=67.799
+Desugar [Domain.Types.Merchant]: alloc=56376064 time=17.493
+Simplifier [Domain.Types.Merchant]: alloc=168300672 time=55.667
+CoreTidy [Domain.Types.Merchant]: alloc=28660664 time=11.102
+CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.014
+CodeGen [Domain.Types.Merchant]: alloc=638533272 time=190.485
+systool:as: alloc=102904 time=0.181
+CorePrep [Domain.Types.Merchant]: alloc=20584 time=0.016
+CodeGen [Domain.Types.Merchant]: alloc=683575656 time=201.473
+systool:as: alloc=105776 time=0.200

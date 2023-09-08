@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=5371144 time=1.347
-Renamer/typechecker [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=144590504 time=52.154
-Desugar [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=12862792 time=3.939
-Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=80826592 time=24.808
-Specialise [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=20578664 time=5.015
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=87712304 time=27.917
-Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=254572576 time=87.294
-Float inwards [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=29752 time=0.010
-Called arity analysis [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=31328 time=0.008
-Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=88227472 time=41.014
-Demand analysis [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=92478624 time=23.145
-Worker Wrapper binds [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=2470352 time=1.404
-Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=97070488 time=31.743
-Exitification transformation [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=32256 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=99278320 time=30.654
-Common sub-expression [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=30856 time=0.008
-Float inwards [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=29752 time=0.004
-Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=119692064 time=41.901
-Demand analysis [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=97950816 time=43.317
-CoreTidy [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=24144440 time=7.841
-CorePrep [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=30712 time=0.041
-CodeGen [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=699206440 time=221.704
-systool:as: alloc=105032 time=0.251
-CorePrep [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=30712 time=0.018
-CodeGen [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=726432296 time=204.198
-systool:as: alloc=107904 time=0.227
+Parser [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=5371144 time=1.026
+Renamer/typechecker [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=126659136 time=40.678
+Desugar [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=12826712 time=3.656
+Simplifier [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=36949352 time=8.936
+CoreTidy [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=4990752 time=1.445
+CorePrep [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=30712 time=0.013
+CodeGen [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=231711520 time=58.369
+systool:as: alloc=105040 time=0.229
+CorePrep [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=30712 time=0.015
+CodeGen [Storage.Queries.Person.GetNearestDriversCurrentlyOnRide]: alloc=251210304 time=63.516
+systool:as: alloc=107936 time=0.188

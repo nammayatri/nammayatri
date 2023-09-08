@@ -1,32 +1,17 @@
-Parser [Storage.Beam.MetaData]: alloc=1455352 time=0.322
-Simplify [expr]: alloc=97336 time=0.052
-CorePrep [expr]: alloc=43528 time=0.028
-ByteCodeGen [Ghci1]: alloc=217456 time=0.078
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.050
-Renamer/typechecker [Storage.Beam.MetaData]: alloc=153202400 time=46.024
-Desugar [Storage.Beam.MetaData]: alloc=22665856 time=6.450
-Simplifier [Storage.Beam.MetaData]: alloc=108470976 time=33.105
-Specialise [Storage.Beam.MetaData]: alloc=37170960 time=11.814
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.MetaData]: alloc=77087088 time=27.805
-Simplifier [Storage.Beam.MetaData]: alloc=916399984 time=367.148
-Float inwards [Storage.Beam.MetaData]: alloc=19624 time=0.005
-Called arity analysis [Storage.Beam.MetaData]: alloc=21200 time=0.006
-Simplifier [Storage.Beam.MetaData]: alloc=252422944 time=102.243
-Demand analysis [Storage.Beam.MetaData]: alloc=219925016 time=55.556
-Worker Wrapper binds [Storage.Beam.MetaData]: alloc=5674600 time=3.418
-Simplifier [Storage.Beam.MetaData]: alloc=288814712 time=107.943
-Exitification transformation [Storage.Beam.MetaData]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.MetaData]: alloc=189014360 time=62.586
-Common sub-expression [Storage.Beam.MetaData]: alloc=20728 time=0.008
-Float inwards [Storage.Beam.MetaData]: alloc=19624 time=0.004
-Simplifier [Storage.Beam.MetaData]: alloc=296899712 time=133.568
-Demand analysis [Storage.Beam.MetaData]: alloc=197177264 time=47.738
-CoreTidy [Storage.Beam.MetaData]: alloc=52949768 time=42.171
-CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.014
-CodeGen [Storage.Beam.MetaData]: alloc=1031058744 time=315.412
-systool:as: alloc=102904 time=0.343
-CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.023
-CodeGen [Storage.Beam.MetaData]: alloc=1064037872 time=321.976
-systool:as: alloc=105776 time=0.275
+Parser [Storage.Beam.MetaData]: alloc=1454272 time=0.404
+Simplify [expr]: alloc=72480 time=0.026
+CorePrep [expr]: alloc=36304 time=0.021
+ByteCodeGen [Ghci1]: alloc=183200 time=0.069
+Simplify [expr]: alloc=46992 time=0.018
+CorePrep [expr]: alloc=26608 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.MetaData]: alloc=151214728 time=51.296
+Desugar [Storage.Beam.MetaData]: alloc=22648304 time=6.373
+Simplifier [Storage.Beam.MetaData]: alloc=32233272 time=9.711
+CoreTidy [Storage.Beam.MetaData]: alloc=7282240 time=2.392
+CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.011
+CodeGen [Storage.Beam.MetaData]: alloc=230891864 time=75.574
+systool:as: alloc=102904 time=0.199
+CorePrep [Storage.Beam.MetaData]: alloc=20584 time=0.018
+CodeGen [Storage.Beam.MetaData]: alloc=252264280 time=74.414
+systool:as: alloc=105776 time=0.220

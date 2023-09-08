@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.KioskLocation]: alloc=1149224 time=0.341
-Renamer/typechecker [Storage.CachedQueries.KioskLocation]: alloc=229000144 time=42.510
-Desugar [Storage.CachedQueries.KioskLocation]: alloc=337231872 time=55.029
-Simplifier [Storage.CachedQueries.KioskLocation]: alloc=4046528 time=1.240
-Specialise [Storage.CachedQueries.KioskLocation]: alloc=1239960 time=0.402
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.KioskLocation]: alloc=6557248 time=1.983
-Simplifier [Storage.CachedQueries.KioskLocation]: alloc=100590808 time=36.668
-Float inwards [Storage.CachedQueries.KioskLocation]: alloc=23800 time=0.005
-Called arity analysis [Storage.CachedQueries.KioskLocation]: alloc=25376 time=0.007
-Simplifier [Storage.CachedQueries.KioskLocation]: alloc=25732984 time=8.016
-Demand analysis [Storage.CachedQueries.KioskLocation]: alloc=23841680 time=5.734
-Worker Wrapper binds [Storage.CachedQueries.KioskLocation]: alloc=854104 time=0.428
-Simplifier [Storage.CachedQueries.KioskLocation]: alloc=29585880 time=9.914
-Exitification transformation [Storage.CachedQueries.KioskLocation]: alloc=26288 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.KioskLocation]: alloc=21675168 time=7.138
-Common sub-expression [Storage.CachedQueries.KioskLocation]: alloc=24904 time=0.006
-Float inwards [Storage.CachedQueries.KioskLocation]: alloc=23800 time=0.004
-Simplifier [Storage.CachedQueries.KioskLocation]: alloc=28616960 time=9.931
-Demand analysis [Storage.CachedQueries.KioskLocation]: alloc=19498224 time=4.507
-CoreTidy [Storage.CachedQueries.KioskLocation]: alloc=3180912 time=1.596
+Parser [Storage.CachedQueries.KioskLocation]: alloc=1148136 time=0.266
+Renamer/typechecker [Storage.CachedQueries.KioskLocation]: alloc=149601840 time=28.960
+Desugar [Storage.CachedQueries.KioskLocation]: alloc=331130648 time=53.373
+Simplifier [Storage.CachedQueries.KioskLocation]: alloc=5124632 time=1.062
+CoreTidy [Storage.CachedQueries.KioskLocation]: alloc=530224 time=0.184
+CorePrep [Storage.CachedQueries.KioskLocation]: alloc=24760 time=0.007
+CodeGen [Storage.CachedQueries.KioskLocation]: alloc=22030888 time=7.115
+systool:as: alloc=103800 time=0.167
 CorePrep [Storage.CachedQueries.KioskLocation]: alloc=24760 time=0.010
-CodeGen [Storage.CachedQueries.KioskLocation]: alloc=92026504 time=27.212
-systool:as: alloc=103792 time=0.267
-CorePrep [Storage.CachedQueries.KioskLocation]: alloc=24760 time=0.029
-CodeGen [Storage.CachedQueries.KioskLocation]: alloc=96772984 time=28.033
-systool:as: alloc=106672 time=0.220
+CodeGen [Storage.CachedQueries.KioskLocation]: alloc=24128176 time=6.892
+systool:as: alloc=106680 time=0.126

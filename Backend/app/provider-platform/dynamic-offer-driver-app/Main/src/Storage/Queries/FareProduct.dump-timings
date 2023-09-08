@@ -1,26 +1,11 @@
-Parser [Storage.Queries.FareProduct]: alloc=1630384 time=0.376
-Renamer/typechecker [Storage.Queries.FareProduct]: alloc=84357688 time=25.401
-Desugar [Storage.Queries.FareProduct]: alloc=4641376 time=1.890
-Simplifier [Storage.Queries.FareProduct]: alloc=25624672 time=8.308
-Specialise [Storage.Queries.FareProduct]: alloc=8530464 time=2.461
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FareProduct]: alloc=10899792 time=3.684
-Simplifier [Storage.Queries.FareProduct]: alloc=240905760 time=66.240
-Float inwards [Storage.Queries.FareProduct]: alloc=21416 time=0.005
-Called arity analysis [Storage.Queries.FareProduct]: alloc=22992 time=0.006
-Simplifier [Storage.Queries.FareProduct]: alloc=50907264 time=15.043
-Demand analysis [Storage.Queries.FareProduct]: alloc=9162528 time=4.574
-Worker Wrapper binds [Storage.Queries.FareProduct]: alloc=408568 time=0.305
-Simplifier [Storage.Queries.FareProduct]: alloc=48604240 time=14.236
-Exitification transformation [Storage.Queries.FareProduct]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FareProduct]: alloc=7558840 time=3.796
-Common sub-expression [Storage.Queries.FareProduct]: alloc=22520 time=0.007
-Float inwards [Storage.Queries.FareProduct]: alloc=21416 time=0.004
-Simplifier [Storage.Queries.FareProduct]: alloc=52723952 time=17.634
-Demand analysis [Storage.Queries.FareProduct]: alloc=7809256 time=4.289
-CoreTidy [Storage.Queries.FareProduct]: alloc=9101304 time=4.385
-CorePrep [Storage.Queries.FareProduct]: alloc=22376 time=0.016
-CodeGen [Storage.Queries.FareProduct]: alloc=65691952 time=23.580
-systool:as: alloc=103304 time=0.209
-CorePrep [Storage.Queries.FareProduct]: alloc=22376 time=0.018
-CodeGen [Storage.Queries.FareProduct]: alloc=70331288 time=26.711
-systool:as: alloc=106160 time=0.189
+Parser [Storage.Queries.FareProduct]: alloc=1629832 time=0.356
+Renamer/typechecker [Storage.Queries.FareProduct]: alloc=83353312 time=25.635
+Desugar [Storage.Queries.FareProduct]: alloc=4625552 time=1.764
+Simplifier [Storage.Queries.FareProduct]: alloc=16478688 time=4.219
+CoreTidy [Storage.Queries.FareProduct]: alloc=3126064 time=0.816
+CorePrep [Storage.Queries.FareProduct]: alloc=22376 time=0.009
+CodeGen [Storage.Queries.FareProduct]: alloc=57469088 time=15.239
+systool:as: alloc=103280 time=0.178
+CorePrep [Storage.Queries.FareProduct]: alloc=22376 time=0.013
+CodeGen [Storage.Queries.FareProduct]: alloc=66175832 time=16.571
+systool:as: alloc=106160 time=0.159

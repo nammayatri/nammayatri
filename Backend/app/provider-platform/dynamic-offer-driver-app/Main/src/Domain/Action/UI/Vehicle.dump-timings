@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Vehicle]: alloc=4592464 time=0.928
-Renamer/typechecker [Domain.Action.UI.Vehicle]: alloc=409199640 time=115.671
-Desugar [Domain.Action.UI.Vehicle]: alloc=172072256 time=33.067
-Simplifier [Domain.Action.UI.Vehicle]: alloc=154401784 time=53.395
-Specialise [Domain.Action.UI.Vehicle]: alloc=39984048 time=12.966
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Vehicle]: alloc=65527384 time=25.025
-Simplifier [Domain.Action.UI.Vehicle]: alloc=925266560 time=399.209
-Float inwards [Domain.Action.UI.Vehicle]: alloc=20504 time=0.005
-Called arity analysis [Domain.Action.UI.Vehicle]: alloc=22080 time=0.006
-Simplifier [Domain.Action.UI.Vehicle]: alloc=236275144 time=103.739
-Demand analysis [Domain.Action.UI.Vehicle]: alloc=151011416 time=43.126
-Worker Wrapper binds [Domain.Action.UI.Vehicle]: alloc=5203888 time=3.372
-Simplifier [Domain.Action.UI.Vehicle]: alloc=251393192 time=112.089
-Exitification transformation [Domain.Action.UI.Vehicle]: alloc=23024 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Vehicle]: alloc=145408696 time=52.195
-Common sub-expression [Domain.Action.UI.Vehicle]: alloc=21608 time=0.008
-Float inwards [Domain.Action.UI.Vehicle]: alloc=20504 time=0.004
-Simplifier [Domain.Action.UI.Vehicle]: alloc=251175184 time=127.476
-Demand analysis [Domain.Action.UI.Vehicle]: alloc=111072112 time=31.876
-CoreTidy [Domain.Action.UI.Vehicle]: alloc=37534632 time=16.847
-CorePrep [Domain.Action.UI.Vehicle]: alloc=21496 time=0.014
-CodeGen [Domain.Action.UI.Vehicle]: alloc=532494120 time=174.438
-systool:as: alloc=103112 time=0.256
-CorePrep [Domain.Action.UI.Vehicle]: alloc=21496 time=0.014
-CodeGen [Domain.Action.UI.Vehicle]: alloc=555398424 time=180.406
-systool:as: alloc=105992 time=0.259
+Parser [Domain.Action.UI.Vehicle]: alloc=4592464 time=0.991
+Renamer/typechecker [Domain.Action.UI.Vehicle]: alloc=364553320 time=103.645
+Desugar [Domain.Action.UI.Vehicle]: alloc=169186224 time=30.495
+Simplifier [Domain.Action.UI.Vehicle]: alloc=88767592 time=25.337
+CoreTidy [Domain.Action.UI.Vehicle]: alloc=14294952 time=4.970
+CorePrep [Domain.Action.UI.Vehicle]: alloc=21496 time=0.011
+CodeGen [Domain.Action.UI.Vehicle]: alloc=446139048 time=138.358
+systool:as: alloc=103120 time=0.211
+CorePrep [Domain.Action.UI.Vehicle]: alloc=21496 time=0.018
+CodeGen [Domain.Action.UI.Vehicle]: alloc=481203224 time=138.845
+systool:as: alloc=106000 time=0.203

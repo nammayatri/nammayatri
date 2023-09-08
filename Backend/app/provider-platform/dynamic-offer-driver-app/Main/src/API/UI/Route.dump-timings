@@ -1,26 +1,11 @@
-Parser [API.UI.Route]: alloc=1322952 time=0.358
-Renamer/typechecker [API.UI.Route]: alloc=50911496 time=16.684
-Desugar [API.UI.Route]: alloc=862728 time=1.089
-Simplifier [API.UI.Route]: alloc=37429792 time=11.317
-Specialise [API.UI.Route]: alloc=3757008 time=1.769
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Route]: alloc=11067648 time=3.474
-Simplifier [API.UI.Route]: alloc=87890064 time=27.087
-Float inwards [API.UI.Route]: alloc=16936 time=0.009
-Called arity analysis [API.UI.Route]: alloc=18512 time=0.010
-Simplifier [API.UI.Route]: alloc=17781152 time=7.207
-Demand analysis [API.UI.Route]: alloc=27158960 time=5.349
-Worker Wrapper binds [API.UI.Route]: alloc=217200 time=0.148
-Simplifier [API.UI.Route]: alloc=30380032 time=6.606
-Exitification transformation [API.UI.Route]: alloc=19456 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Route]: alloc=14737664 time=4.470
-Common sub-expression [API.UI.Route]: alloc=18040 time=0.005
-Float inwards [API.UI.Route]: alloc=16936 time=0.003
-Simplifier [API.UI.Route]: alloc=63161184 time=21.547
-Demand analysis [API.UI.Route]: alloc=24442520 time=5.970
-CoreTidy [API.UI.Route]: alloc=13640328 time=3.683
-CorePrep [API.UI.Route]: alloc=17912 time=0.011
-CodeGen [API.UI.Route]: alloc=101117848 time=24.749
-systool:as: alloc=102336 time=0.218
-CorePrep [API.UI.Route]: alloc=17912 time=0.018
-CodeGen [API.UI.Route]: alloc=103282248 time=25.501
-systool:as: alloc=105208 time=0.195
+Parser [API.UI.Route]: alloc=1321328 time=0.328
+Renamer/typechecker [API.UI.Route]: alloc=50909904 time=14.422
+Desugar [API.UI.Route]: alloc=861664 time=1.096
+Simplifier [API.UI.Route]: alloc=12379000 time=4.370
+CoreTidy [API.UI.Route]: alloc=7331944 time=1.628
+CorePrep [API.UI.Route]: alloc=17912 time=0.008
+CodeGen [API.UI.Route]: alloc=23491760 time=8.351
+systool:as: alloc=102344 time=0.204
+CorePrep [API.UI.Route]: alloc=17912 time=0.012
+CodeGen [API.UI.Route]: alloc=25263928 time=8.150
+systool:as: alloc=105216 time=0.148

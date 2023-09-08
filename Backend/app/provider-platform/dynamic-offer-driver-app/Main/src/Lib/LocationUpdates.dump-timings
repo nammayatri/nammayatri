@@ -1,26 +1,11 @@
-Parser [Lib.LocationUpdates]: alloc=3306856 time=0.822
-Renamer/typechecker [Lib.LocationUpdates]: alloc=644460784 time=135.923
-Desugar [Lib.LocationUpdates]: alloc=590637712 time=94.326
-Simplifier [Lib.LocationUpdates]: alloc=80358408 time=24.705
-Specialise [Lib.LocationUpdates]: alloc=7164288 time=3.288
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Lib.LocationUpdates]: alloc=22185168 time=7.877
-Simplifier [Lib.LocationUpdates]: alloc=321390056 time=117.912
-Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.006
-Called arity analysis [Lib.LocationUpdates]: alloc=20608 time=0.005
-Simplifier [Lib.LocationUpdates]: alloc=84348040 time=37.290
-Demand analysis [Lib.LocationUpdates]: alloc=104018608 time=23.678
-Worker Wrapper binds [Lib.LocationUpdates]: alloc=1947768 time=1.067
-Simplifier [Lib.LocationUpdates]: alloc=107809656 time=34.493
-Exitification transformation [Lib.LocationUpdates]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Lib.LocationUpdates]: alloc=84943664 time=27.309
-Common sub-expression [Lib.LocationUpdates]: alloc=20136 time=0.007
-Float inwards [Lib.LocationUpdates]: alloc=19032 time=0.004
-Simplifier [Lib.LocationUpdates]: alloc=195123912 time=66.684
-Demand analysis [Lib.LocationUpdates]: alloc=126268600 time=29.313
-CoreTidy [Lib.LocationUpdates]: alloc=32398376 time=11.325
-CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.014
-CodeGen [Lib.LocationUpdates]: alloc=580128816 time=154.832
-systool:as: alloc=102728 time=0.214
-CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.017
-CodeGen [Lib.LocationUpdates]: alloc=598082504 time=162.290
-systool:as: alloc=105608 time=0.219
+Parser [Lib.LocationUpdates]: alloc=3305744 time=0.727
+Renamer/typechecker [Lib.LocationUpdates]: alloc=503004392 time=101.538
+Desugar [Lib.LocationUpdates]: alloc=580017648 time=96.105
+Simplifier [Lib.LocationUpdates]: alloc=42328288 time=17.649
+CoreTidy [Lib.LocationUpdates]: alloc=14686928 time=3.775
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.010
+CodeGen [Lib.LocationUpdates]: alloc=93916832 time=28.593
+systool:as: alloc=102736 time=0.260
+CorePrep [Lib.LocationUpdates]: alloc=19992 time=0.030
+CodeGen [Lib.LocationUpdates]: alloc=102725088 time=29.362
+systool:as: alloc=105616 time=0.189

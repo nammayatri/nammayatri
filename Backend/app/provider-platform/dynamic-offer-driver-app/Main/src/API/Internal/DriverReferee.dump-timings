@@ -1,26 +1,11 @@
-Parser [API.Internal.DriverReferee]: alloc=596600 time=0.224
-Renamer/typechecker [API.Internal.DriverReferee]: alloc=49779064 time=13.615
-Desugar [API.Internal.DriverReferee]: alloc=371512 time=0.905
-Simplifier [API.Internal.DriverReferee]: alloc=34584728 time=10.046
-Specialise [API.Internal.DriverReferee]: alloc=2569288 time=1.096
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Internal.DriverReferee]: alloc=10606792 time=3.244
-Simplifier [API.Internal.DriverReferee]: alloc=73463720 time=20.826
-Float inwards [API.Internal.DriverReferee]: alloc=21096 time=0.005
-Called arity analysis [API.Internal.DriverReferee]: alloc=22672 time=0.006
-Simplifier [API.Internal.DriverReferee]: alloc=13413728 time=4.777
-Demand analysis [API.Internal.DriverReferee]: alloc=20844408 time=3.727
-Worker Wrapper binds [API.Internal.DriverReferee]: alloc=183072 time=0.099
-Simplifier [API.Internal.DriverReferee]: alloc=26146088 time=4.705
-Exitification transformation [API.Internal.DriverReferee]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Internal.DriverReferee]: alloc=11624616 time=3.428
-Common sub-expression [API.Internal.DriverReferee]: alloc=22200 time=0.005
-Float inwards [API.Internal.DriverReferee]: alloc=21096 time=0.004
-Simplifier [API.Internal.DriverReferee]: alloc=59276104 time=19.331
-Demand analysis [API.Internal.DriverReferee]: alloc=22475400 time=5.134
-CoreTidy [API.Internal.DriverReferee]: alloc=12653816 time=3.150
-CorePrep [API.Internal.DriverReferee]: alloc=22088 time=0.011
-CodeGen [API.Internal.DriverReferee]: alloc=87702200 time=20.435
-systool:as: alloc=103208 time=0.181
+Parser [API.Internal.DriverReferee]: alloc=596600 time=0.193
+Renamer/typechecker [API.Internal.DriverReferee]: alloc=49792728 time=13.812
+Desugar [API.Internal.DriverReferee]: alloc=371592 time=0.907
+Simplifier [API.Internal.DriverReferee]: alloc=11403304 time=4.038
+CoreTidy [API.Internal.DriverReferee]: alloc=7087160 time=1.633
+CorePrep [API.Internal.DriverReferee]: alloc=22088 time=0.010
+CodeGen [API.Internal.DriverReferee]: alloc=18043384 time=6.493
+systool:as: alloc=103216 time=0.210
 CorePrep [API.Internal.DriverReferee]: alloc=22088 time=0.014
-CodeGen [API.Internal.DriverReferee]: alloc=89581352 time=21.168
-systool:as: alloc=106088 time=0.169
+CodeGen [API.Internal.DriverReferee]: alloc=19375240 time=6.571
+systool:as: alloc=106096 time=0.180

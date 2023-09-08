@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverStats]: alloc=534200 time=0.180
-Renamer/typechecker [Domain.Types.DriverStats]: alloc=29764080 time=8.593
-Desugar [Domain.Types.DriverStats]: alloc=4074976 time=1.919
-Simplifier [Domain.Types.DriverStats]: alloc=5950176 time=1.673
-Specialise [Domain.Types.DriverStats]: alloc=710104 time=0.147
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverStats]: alloc=2916352 time=0.867
-Simplifier [Domain.Types.DriverStats]: alloc=4416416 time=1.241
-Float inwards [Domain.Types.DriverStats]: alloc=20504 time=0.005
-Called arity analysis [Domain.Types.DriverStats]: alloc=22080 time=0.006
-Simplifier [Domain.Types.DriverStats]: alloc=5022288 time=1.319
-Demand analysis [Domain.Types.DriverStats]: alloc=3875984 time=0.906
-Worker Wrapper binds [Domain.Types.DriverStats]: alloc=211696 time=0.077
-Simplifier [Domain.Types.DriverStats]: alloc=6662432 time=1.591
-Exitification transformation [Domain.Types.DriverStats]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverStats]: alloc=2933192 time=0.782
-Common sub-expression [Domain.Types.DriverStats]: alloc=21608 time=0.004
-Float inwards [Domain.Types.DriverStats]: alloc=20504 time=0.003
-Simplifier [Domain.Types.DriverStats]: alloc=8906376 time=2.390
-Demand analysis [Domain.Types.DriverStats]: alloc=3891384 time=0.900
-CoreTidy [Domain.Types.DriverStats]: alloc=3239672 time=0.889
-CorePrep [Domain.Types.DriverStats]: alloc=21496 time=0.010
-CodeGen [Domain.Types.DriverStats]: alloc=37040208 time=12.047
-systool:as: alloc=103088 time=0.177
-CorePrep [Domain.Types.DriverStats]: alloc=21496 time=0.017
-CodeGen [Domain.Types.DriverStats]: alloc=37843360 time=12.434
-systool:as: alloc=105968 time=0.160
+Parser [Domain.Types.DriverStats]: alloc=529304 time=0.127
+Renamer/typechecker [Domain.Types.DriverStats]: alloc=29744656 time=8.369
+Desugar [Domain.Types.DriverStats]: alloc=4073416 time=1.866
+Simplifier [Domain.Types.DriverStats]: alloc=10165408 time=2.528
+CoreTidy [Domain.Types.DriverStats]: alloc=2235336 time=0.541
+CorePrep [Domain.Types.DriverStats]: alloc=21496 time=0.007
+CodeGen [Domain.Types.DriverStats]: alloc=31525096 time=8.898
+systool:as: alloc=103088 time=0.244
+CorePrep [Domain.Types.DriverStats]: alloc=21496 time=0.012
+CodeGen [Domain.Types.DriverStats]: alloc=32636280 time=9.614
+systool:as: alloc=105968 time=0.144

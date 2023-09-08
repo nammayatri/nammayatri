@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverBlockReason]: alloc=490136 time=0.165
-Renamer/typechecker [Domain.Types.DriverBlockReason]: alloc=29377056 time=10.787
-Desugar [Domain.Types.DriverBlockReason]: alloc=1598512 time=1.292
-Simplifier [Domain.Types.DriverBlockReason]: alloc=34061104 time=12.712
-Specialise [Domain.Types.DriverBlockReason]: alloc=7956800 time=5.630
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverBlockReason]: alloc=17058744 time=6.055
-Simplifier [Domain.Types.DriverBlockReason]: alloc=268587224 time=125.200
-Float inwards [Domain.Types.DriverBlockReason]: alloc=22296 time=0.006
-Called arity analysis [Domain.Types.DriverBlockReason]: alloc=23872 time=0.006
-Simplifier [Domain.Types.DriverBlockReason]: alloc=59136560 time=28.484
-Demand analysis [Domain.Types.DriverBlockReason]: alloc=32131936 time=12.851
-Worker Wrapper binds [Domain.Types.DriverBlockReason]: alloc=1060728 time=0.350
-Simplifier [Domain.Types.DriverBlockReason]: alloc=62503224 time=26.584
-Exitification transformation [Domain.Types.DriverBlockReason]: alloc=24816 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverBlockReason]: alloc=34359152 time=15.441
-Common sub-expression [Domain.Types.DriverBlockReason]: alloc=23400 time=0.007
-Float inwards [Domain.Types.DriverBlockReason]: alloc=22296 time=0.004
-Simplifier [Domain.Types.DriverBlockReason]: alloc=66967632 time=31.277
-Demand analysis [Domain.Types.DriverBlockReason]: alloc=25669688 time=9.357
-CoreTidy [Domain.Types.DriverBlockReason]: alloc=7832184 time=3.470
-CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.010
-CodeGen [Domain.Types.DriverBlockReason]: alloc=98102904 time=39.470
-systool:as: alloc=103448 time=0.244
-CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.016
-CodeGen [Domain.Types.DriverBlockReason]: alloc=102402648 time=39.831
-systool:as: alloc=106320 time=0.269
+Parser [Domain.Types.DriverBlockReason]: alloc=489048 time=0.114
+Renamer/typechecker [Domain.Types.DriverBlockReason]: alloc=29317344 time=9.772
+Desugar [Domain.Types.DriverBlockReason]: alloc=1597272 time=1.334
+Simplifier [Domain.Types.DriverBlockReason]: alloc=10160000 time=2.869
+CoreTidy [Domain.Types.DriverBlockReason]: alloc=2194184 time=0.674
+CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.008
+CodeGen [Domain.Types.DriverBlockReason]: alloc=78195080 time=23.533
+systool:as: alloc=103456 time=0.160
+CorePrep [Domain.Types.DriverBlockReason]: alloc=23272 time=0.013
+CodeGen [Domain.Types.DriverBlockReason]: alloc=84084432 time=25.046
+systool:as: alloc=106328 time=0.130

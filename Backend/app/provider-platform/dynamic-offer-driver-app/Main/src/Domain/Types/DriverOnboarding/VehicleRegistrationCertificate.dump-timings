@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2809464 time=0.558
-Renamer/typechecker [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=164679056 time=44.716
-Desugar [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=14429920 time=4.571
-Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=129904984 time=41.143
-Specialise [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=36663216 time=11.131
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=65957568 time=23.158
-Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=1227558600 time=492.886
-Float inwards [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=31240 time=0.006
-Called arity analysis [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32816 time=0.006
-Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=320325112 time=123.620
-Demand analysis [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=191612168 time=53.534
-Worker Wrapper binds [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=6531448 time=3.975
-Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=328219592 time=124.302
-Exitification transformation [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=33760 time=0.013
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=184173912 time=64.563
-Common sub-expression [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32344 time=0.008
-Float inwards [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=31240 time=0.005
-Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=352661688 time=175.634
-Demand analysis [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=142847152 time=37.196
-CoreTidy [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=42836256 time=15.215
-CorePrep [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.015
-CodeGen [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=449306576 time=150.438
-systool:as: alloc=105368 time=0.287
-CorePrep [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.017
-CodeGen [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=464925856 time=137.011
-systool:as: alloc=108240 time=0.303
+Parser [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=2800152 time=0.605
+Renamer/typechecker [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=164621168 time=42.715
+Desugar [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=14433544 time=4.405
+Simplifier [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=66097616 time=17.356
+CoreTidy [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=18907952 time=5.800
+CorePrep [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.010
+CodeGen [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=385487224 time=117.179
+systool:as: alloc=105368 time=0.184
+CorePrep [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=32216 time=0.019
+CodeGen [Domain.Types.DriverOnboarding.VehicleRegistrationCertificate]: alloc=410775376 time=116.999
+systool:as: alloc=108240 time=0.179

@@ -1,26 +1,11 @@
-Parser [SharedLogic.FareCalculator]: alloc=8968520 time=1.624
-Renamer/typechecker [SharedLogic.FareCalculator]: alloc=230491016 time=72.176
-Desugar [SharedLogic.FareCalculator]: alloc=185529808 time=30.517
-Simplifier [SharedLogic.FareCalculator]: alloc=36855992 time=11.917
-Specialise [SharedLogic.FareCalculator]: alloc=5588832 time=1.530
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FareCalculator]: alloc=23793472 time=7.845
-Simplifier [SharedLogic.FareCalculator]: alloc=141252656 time=47.019
-Float inwards [SharedLogic.FareCalculator]: alloc=21096 time=0.005
-Called arity analysis [SharedLogic.FareCalculator]: alloc=22672 time=0.006
-Simplifier [SharedLogic.FareCalculator]: alloc=44158304 time=13.457
-Demand analysis [SharedLogic.FareCalculator]: alloc=57587048 time=13.314
-Worker Wrapper binds [SharedLogic.FareCalculator]: alloc=1450824 time=0.858
-Simplifier [SharedLogic.FareCalculator]: alloc=54615424 time=17.916
-Exitification transformation [SharedLogic.FareCalculator]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FareCalculator]: alloc=43271904 time=14.388
-Common sub-expression [SharedLogic.FareCalculator]: alloc=22200 time=0.006
-Float inwards [SharedLogic.FareCalculator]: alloc=21096 time=0.004
-Simplifier [SharedLogic.FareCalculator]: alloc=56024264 time=19.849
-Demand analysis [SharedLogic.FareCalculator]: alloc=47481256 time=18.274
-CoreTidy [SharedLogic.FareCalculator]: alloc=10455680 time=3.840
-CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.009
-CodeGen [SharedLogic.FareCalculator]: alloc=345376512 time=100.266
-systool:as: alloc=103200 time=0.225
-CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.017
-CodeGen [SharedLogic.FareCalculator]: alloc=357401240 time=104.839
-systool:as: alloc=106104 time=0.241
+Parser [SharedLogic.FareCalculator]: alloc=8966888 time=1.645
+Renamer/typechecker [SharedLogic.FareCalculator]: alloc=194559192 time=61.217
+Desugar [SharedLogic.FareCalculator]: alloc=182308152 time=31.306
+Simplifier [SharedLogic.FareCalculator]: alloc=24940368 time=7.172
+CoreTidy [SharedLogic.FareCalculator]: alloc=2655872 time=0.954
+CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.010
+CodeGen [SharedLogic.FareCalculator]: alloc=166137224 time=48.127
+systool:as: alloc=103200 time=0.160
+CorePrep [SharedLogic.FareCalculator]: alloc=22088 time=0.016
+CodeGen [SharedLogic.FareCalculator]: alloc=181905368 time=47.775
+systool:as: alloc=106080 time=0.181

@@ -1,26 +1,11 @@
-Parser [Domain.Action.Internal.Auth]: alloc=1024168 time=0.345
-Renamer/typechecker [Domain.Action.Internal.Auth]: alloc=37146888 time=18.569
-Desugar [Domain.Action.Internal.Auth]: alloc=1464824 time=1.629
-Simplifier [Domain.Action.Internal.Auth]: alloc=25548504 time=9.311
-Specialise [Domain.Action.Internal.Auth]: alloc=4387832 time=1.842
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Internal.Auth]: alloc=13874256 time=4.772
-Simplifier [Domain.Action.Internal.Auth]: alloc=206218816 time=67.200
-Float inwards [Domain.Action.Internal.Auth]: alloc=21416 time=0.005
-Called arity analysis [Domain.Action.Internal.Auth]: alloc=22992 time=0.005
-Simplifier [Domain.Action.Internal.Auth]: alloc=49136016 time=15.350
-Demand analysis [Domain.Action.Internal.Auth]: alloc=39173928 time=9.115
-Worker Wrapper binds [Domain.Action.Internal.Auth]: alloc=1097664 time=0.620
-Simplifier [Domain.Action.Internal.Auth]: alloc=50095840 time=16.371
-Exitification transformation [Domain.Action.Internal.Auth]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Internal.Auth]: alloc=29648328 time=9.922
-Common sub-expression [Domain.Action.Internal.Auth]: alloc=22520 time=0.007
-Float inwards [Domain.Action.Internal.Auth]: alloc=21416 time=0.004
-Simplifier [Domain.Action.Internal.Auth]: alloc=56881688 time=18.826
-Demand analysis [Domain.Action.Internal.Auth]: alloc=36516824 time=8.041
-CoreTidy [Domain.Action.Internal.Auth]: alloc=9182024 time=3.613
-CorePrep [Domain.Action.Internal.Auth]: alloc=22376 time=0.009
-CodeGen [Domain.Action.Internal.Auth]: alloc=196783816 time=57.698
-systool:as: alloc=103320 time=0.222
-CorePrep [Domain.Action.Internal.Auth]: alloc=22376 time=0.019
-CodeGen [Domain.Action.Internal.Auth]: alloc=202575568 time=60.043
-systool:as: alloc=106200 time=0.195
+Parser [Domain.Action.Internal.Auth]: alloc=1023080 time=0.292
+Renamer/typechecker [Domain.Action.Internal.Auth]: alloc=36898864 time=15.848
+Desugar [Domain.Action.Internal.Auth]: alloc=1460888 time=1.436
+Simplifier [Domain.Action.Internal.Auth]: alloc=8802248 time=2.395
+CoreTidy [Domain.Action.Internal.Auth]: alloc=1125664 time=0.404
+CorePrep [Domain.Action.Internal.Auth]: alloc=22376 time=0.008
+CodeGen [Domain.Action.Internal.Auth]: alloc=64472552 time=18.213
+systool:as: alloc=103328 time=0.184
+CorePrep [Domain.Action.Internal.Auth]: alloc=22376 time=0.014
+CodeGen [Domain.Action.Internal.Auth]: alloc=70742248 time=20.149
+systool:as: alloc=106208 time=0.159

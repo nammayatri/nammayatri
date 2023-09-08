@@ -1,26 +1,11 @@
-Parser [API.UI.RideRoute]: alloc=750216 time=0.254
-Renamer/typechecker [API.UI.RideRoute]: alloc=49202392 time=14.884
-Desugar [API.UI.RideRoute]: alloc=675760 time=1.001
-Simplifier [API.UI.RideRoute]: alloc=36369608 time=11.010
-Specialise [API.UI.RideRoute]: alloc=2982384 time=1.682
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.RideRoute]: alloc=9658328 time=3.209
-Simplifier [API.UI.RideRoute]: alloc=91097032 time=27.449
-Float inwards [API.UI.RideRoute]: alloc=18120 time=0.005
-Called arity analysis [API.UI.RideRoute]: alloc=19696 time=0.006
-Simplifier [API.UI.RideRoute]: alloc=18554920 time=8.085
-Demand analysis [API.UI.RideRoute]: alloc=19238320 time=4.452
-Worker Wrapper binds [API.UI.RideRoute]: alloc=405728 time=0.156
-Simplifier [API.UI.RideRoute]: alloc=23945728 time=5.526
-Exitification transformation [API.UI.RideRoute]: alloc=20640 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.RideRoute]: alloc=11301408 time=3.863
-Common sub-expression [API.UI.RideRoute]: alloc=19224 time=0.006
-Float inwards [API.UI.RideRoute]: alloc=18120 time=0.004
-Simplifier [API.UI.RideRoute]: alloc=54016872 time=19.946
-Demand analysis [API.UI.RideRoute]: alloc=18660216 time=4.771
-CoreTidy [API.UI.RideRoute]: alloc=4716368 time=1.368
-CorePrep [API.UI.RideRoute]: alloc=19112 time=0.011
-CodeGen [API.UI.RideRoute]: alloc=72408480 time=15.842
-systool:as: alloc=102576 time=0.197
-CorePrep [API.UI.RideRoute]: alloc=19112 time=0.017
-CodeGen [API.UI.RideRoute]: alloc=73883936 time=16.691
-systool:as: alloc=105456 time=0.170
+Parser [API.UI.RideRoute]: alloc=750216 time=0.187
+Renamer/typechecker [API.UI.RideRoute]: alloc=49193280 time=14.398
+Desugar [API.UI.RideRoute]: alloc=674600 time=1.000
+Simplifier [API.UI.RideRoute]: alloc=10663616 time=3.854
+CoreTidy [API.UI.RideRoute]: alloc=7004680 time=1.597
+CorePrep [API.UI.RideRoute]: alloc=19112 time=0.009
+CodeGen [API.UI.RideRoute]: alloc=17857992 time=6.531
+systool:as: alloc=102584 time=0.188
+CorePrep [API.UI.RideRoute]: alloc=19112 time=0.014
+CodeGen [API.UI.RideRoute]: alloc=19181648 time=6.683
+systool:as: alloc=105488 time=0.170

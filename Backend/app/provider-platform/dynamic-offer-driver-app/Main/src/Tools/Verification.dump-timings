@@ -1,26 +1,11 @@
-Parser [Tools.Verification]: alloc=2089368 time=0.498
-Renamer/typechecker [Tools.Verification]: alloc=1150414416 time=197.614
-Desugar [Tools.Verification]: alloc=932153232 time=147.405
-Simplifier [Tools.Verification]: alloc=7252384 time=2.255
-Specialise [Tools.Verification]: alloc=1456736 time=0.407
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Verification]: alloc=5712072 time=1.501
-Simplifier [Tools.Verification]: alloc=29036648 time=8.559
-Float inwards [Tools.Verification]: alloc=18712 time=0.004
-Called arity analysis [Tools.Verification]: alloc=20288 time=0.005
-Simplifier [Tools.Verification]: alloc=13533088 time=3.456
-Demand analysis [Tools.Verification]: alloc=15443360 time=3.229
-Worker Wrapper binds [Tools.Verification]: alloc=522672 time=0.187
-Simplifier [Tools.Verification]: alloc=12089128 time=3.506
-Exitification transformation [Tools.Verification]: alloc=21232 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Verification]: alloc=11492632 time=3.148
-Common sub-expression [Tools.Verification]: alloc=19816 time=0.005
-Float inwards [Tools.Verification]: alloc=18712 time=0.004
-Simplifier [Tools.Verification]: alloc=16348600 time=4.605
-Demand analysis [Tools.Verification]: alloc=17463304 time=3.459
-CoreTidy [Tools.Verification]: alloc=2681160 time=1.232
-CorePrep [Tools.Verification]: alloc=19704 time=0.009
-CodeGen [Tools.Verification]: alloc=84062904 time=24.365
-systool:as: alloc=102704 time=0.222
-CorePrep [Tools.Verification]: alloc=19704 time=0.014
-CodeGen [Tools.Verification]: alloc=88376928 time=25.198
-systool:as: alloc=105560 time=0.155
+Parser [Tools.Verification]: alloc=2089368 time=0.378
+Renamer/typechecker [Tools.Verification]: alloc=1015344472 time=169.433
+Desugar [Tools.Verification]: alloc=914955040 time=147.822
+Simplifier [Tools.Verification]: alloc=7973976 time=2.028
+CoreTidy [Tools.Verification]: alloc=847872 time=0.296
+CorePrep [Tools.Verification]: alloc=19704 time=0.013
+CodeGen [Tools.Verification]: alloc=43313568 time=11.994
+systool:as: alloc=102688 time=0.220
+CorePrep [Tools.Verification]: alloc=19704 time=0.013
+CodeGen [Tools.Verification]: alloc=48213368 time=13.265
+systool:as: alloc=105568 time=0.173

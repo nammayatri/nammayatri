@@ -1,26 +1,11 @@
-Parser [Domain.Types.FarePolicy.Common]: alloc=726504 time=0.214
-Renamer/typechecker [Domain.Types.FarePolicy.Common]: alloc=59207168 time=21.262
-Desugar [Domain.Types.FarePolicy.Common]: alloc=2724696 time=1.671
-Simplifier [Domain.Types.FarePolicy.Common]: alloc=71593512 time=29.119
-Specialise [Domain.Types.FarePolicy.Common]: alloc=13826136 time=4.166
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FarePolicy.Common]: alloc=29112088 time=10.689
-Simplifier [Domain.Types.FarePolicy.Common]: alloc=337135256 time=152.392
-Float inwards [Domain.Types.FarePolicy.Common]: alloc=22296 time=0.005
-Called arity analysis [Domain.Types.FarePolicy.Common]: alloc=23872 time=0.006
-Simplifier [Domain.Types.FarePolicy.Common]: alloc=82130776 time=33.382
-Demand analysis [Domain.Types.FarePolicy.Common]: alloc=39985424 time=15.548
-Worker Wrapper binds [Domain.Types.FarePolicy.Common]: alloc=1500048 time=0.832
-Simplifier [Domain.Types.FarePolicy.Common]: alloc=85678832 time=36.100
-Exitification transformation [Domain.Types.FarePolicy.Common]: alloc=24816 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FarePolicy.Common]: alloc=43286160 time=14.583
-Common sub-expression [Domain.Types.FarePolicy.Common]: alloc=23400 time=0.007
-Float inwards [Domain.Types.FarePolicy.Common]: alloc=22296 time=0.004
-Simplifier [Domain.Types.FarePolicy.Common]: alloc=99672928 time=49.644
-Demand analysis [Domain.Types.FarePolicy.Common]: alloc=36536424 time=13.802
-CoreTidy [Domain.Types.FarePolicy.Common]: alloc=18698232 time=6.903
-CorePrep [Domain.Types.FarePolicy.Common]: alloc=23272 time=0.016
-CodeGen [Domain.Types.FarePolicy.Common]: alloc=348833616 time=126.017
-systool:as: alloc=103504 time=0.210
-CorePrep [Domain.Types.FarePolicy.Common]: alloc=23272 time=0.020
-CodeGen [Domain.Types.FarePolicy.Common]: alloc=365507064 time=127.186
-systool:as: alloc=106376 time=0.207
+Parser [Domain.Types.FarePolicy.Common]: alloc=722656 time=0.160
+Renamer/typechecker [Domain.Types.FarePolicy.Common]: alloc=59063232 time=20.029
+Desugar [Domain.Types.FarePolicy.Common]: alloc=2673864 time=1.516
+Simplifier [Domain.Types.FarePolicy.Common]: alloc=25214408 time=6.203
+CoreTidy [Domain.Types.FarePolicy.Common]: alloc=4926944 time=1.378
+CorePrep [Domain.Types.FarePolicy.Common]: alloc=23272 time=0.007
+CodeGen [Domain.Types.FarePolicy.Common]: alloc=197413472 time=62.884
+systool:as: alloc=103512 time=0.163
+CorePrep [Domain.Types.FarePolicy.Common]: alloc=23272 time=0.015
+CodeGen [Domain.Types.FarePolicy.Common]: alloc=213086432 time=64.839
+systool:as: alloc=106384 time=0.155

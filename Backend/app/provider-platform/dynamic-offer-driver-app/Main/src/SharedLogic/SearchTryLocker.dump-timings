@@ -1,26 +1,11 @@
-Parser [SharedLogic.SearchTryLocker]: alloc=1209872 time=0.324
-Renamer/typechecker [SharedLogic.SearchTryLocker]: alloc=429750928 time=74.715
-Desugar [SharedLogic.SearchTryLocker]: alloc=112540424 time=18.797
-Simplifier [SharedLogic.SearchTryLocker]: alloc=5029504 time=1.289
-Specialise [SharedLogic.SearchTryLocker]: alloc=694576 time=0.210
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.SearchTryLocker]: alloc=3388912 time=0.772
-Simplifier [SharedLogic.SearchTryLocker]: alloc=27502168 time=8.461
-Float inwards [SharedLogic.SearchTryLocker]: alloc=21416 time=0.005
-Called arity analysis [SharedLogic.SearchTryLocker]: alloc=22992 time=0.005
-Simplifier [SharedLogic.SearchTryLocker]: alloc=12395792 time=3.288
-Demand analysis [SharedLogic.SearchTryLocker]: alloc=13856312 time=3.028
-Worker Wrapper binds [SharedLogic.SearchTryLocker]: alloc=977544 time=0.344
-Simplifier [SharedLogic.SearchTryLocker]: alloc=14839512 time=4.603
-Exitification transformation [SharedLogic.SearchTryLocker]: alloc=23904 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.SearchTryLocker]: alloc=14372312 time=4.316
-Common sub-expression [SharedLogic.SearchTryLocker]: alloc=22520 time=0.005
-Float inwards [SharedLogic.SearchTryLocker]: alloc=21416 time=0.004
-Simplifier [SharedLogic.SearchTryLocker]: alloc=15869584 time=5.062
-Demand analysis [SharedLogic.SearchTryLocker]: alloc=19731120 time=4.038
-CoreTidy [SharedLogic.SearchTryLocker]: alloc=3038656 time=1.241
+Parser [SharedLogic.SearchTryLocker]: alloc=1208224 time=0.265
+Renamer/typechecker [SharedLogic.SearchTryLocker]: alloc=302659640 time=55.687
+Desugar [SharedLogic.SearchTryLocker]: alloc=110498528 time=18.394
+Simplifier [SharedLogic.SearchTryLocker]: alloc=10044616 time=1.902
+CoreTidy [SharedLogic.SearchTryLocker]: alloc=703784 time=0.224
 CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.008
-CodeGen [SharedLogic.SearchTryLocker]: alloc=94595792 time=27.477
-systool:as: alloc=103256 time=0.258
-CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.017
-CodeGen [SharedLogic.SearchTryLocker]: alloc=98018056 time=28.513
-systool:as: alloc=106136 time=0.256
+CodeGen [SharedLogic.SearchTryLocker]: alloc=29443520 time=8.039
+systool:as: alloc=103264 time=0.181
+CorePrep [SharedLogic.SearchTryLocker]: alloc=22376 time=0.012
+CodeGen [SharedLogic.SearchTryLocker]: alloc=32391824 time=8.921
+systool:as: alloc=106144 time=0.137

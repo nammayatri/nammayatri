@@ -1,26 +1,11 @@
-Parser [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=1671080 time=0.421
-Renamer/typechecker [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=63084064 time=23.427
-Desugar [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=4374688 time=1.898
-Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=19382632 time=7.164
-Specialise [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=4422696 time=1.320
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=7285080 time=2.346
-Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=177593200 time=51.115
-Float inwards [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=29752 time=0.006
-Called arity analysis [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=31328 time=0.007
-Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=54532656 time=16.539
-Demand analysis [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=8062768 time=5.148
-Worker Wrapper binds [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=327424 time=0.248
-Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=54415080 time=15.815
-Exitification transformation [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=32256 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=7404184 time=4.118
-Common sub-expression [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=30856 time=0.007
-Float inwards [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=29752 time=0.005
-Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=61109520 time=19.623
-Demand analysis [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=8399872 time=5.343
-CoreTidy [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=11297936 time=3.880
-CorePrep [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=30712 time=0.040
-CodeGen [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=74208472 time=26.195
-systool:as: alloc=105048 time=0.242
-CorePrep [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=30712 time=0.017
-CodeGen [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=78288416 time=27.511
-systool:as: alloc=107920 time=0.182
+Parser [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=1670008 time=0.425
+Renamer/typechecker [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=61997088 time=25.246
+Desugar [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=4361992 time=1.673
+Simplifier [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=7740160 time=2.143
+CoreTidy [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=2048000 time=0.613
+CorePrep [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=30712 time=0.009
+CodeGen [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=43102608 time=11.390
+systool:as: alloc=105048 time=0.160
+CorePrep [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=30712 time=0.013
+CodeGen [Storage.Queries.FarePolicy.FarePolicyProgressiveDetails]: alloc=49184824 time=12.415
+systool:as: alloc=107920 time=0.154

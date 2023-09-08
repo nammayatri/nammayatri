@@ -1,26 +1,11 @@
-Parser [Domain.Types.RegistryMapFallback]: alloc=336208 time=0.117
-Renamer/typechecker [Domain.Types.RegistryMapFallback]: alloc=26490768 time=11.376
-Desugar [Domain.Types.RegistryMapFallback]: alloc=1523560 time=1.292
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=21409944 time=8.051
-Specialise [Domain.Types.RegistryMapFallback]: alloc=5125504 time=1.929
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.RegistryMapFallback]: alloc=13617776 time=5.137
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=143077856 time=54.454
-Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.004
-Called arity analysis [Domain.Types.RegistryMapFallback]: alloc=24464 time=0.006
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=36681880 time=12.765
-Demand analysis [Domain.Types.RegistryMapFallback]: alloc=19851784 time=5.356
-Worker Wrapper binds [Domain.Types.RegistryMapFallback]: alloc=629912 time=0.420
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=37559920 time=12.886
-Exitification transformation [Domain.Types.RegistryMapFallback]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.RegistryMapFallback]: alloc=21123424 time=7.886
-Common sub-expression [Domain.Types.RegistryMapFallback]: alloc=23992 time=0.032
-Float inwards [Domain.Types.RegistryMapFallback]: alloc=22888 time=0.004
-Simplifier [Domain.Types.RegistryMapFallback]: alloc=44513280 time=17.437
-Demand analysis [Domain.Types.RegistryMapFallback]: alloc=18737032 time=5.633
-CoreTidy [Domain.Types.RegistryMapFallback]: alloc=6888176 time=3.093
-CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.009
-CodeGen [Domain.Types.RegistryMapFallback]: alloc=97867960 time=36.563
-systool:as: alloc=103576 time=0.238
-CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.018
-CodeGen [Domain.Types.RegistryMapFallback]: alloc=101952224 time=34.712
-systool:as: alloc=106456 time=0.194
+Parser [Domain.Types.RegistryMapFallback]: alloc=335672 time=0.109
+Renamer/typechecker [Domain.Types.RegistryMapFallback]: alloc=26472960 time=9.825
+Desugar [Domain.Types.RegistryMapFallback]: alloc=1517032 time=1.340
+Simplifier [Domain.Types.RegistryMapFallback]: alloc=8460272 time=2.526
+CoreTidy [Domain.Types.RegistryMapFallback]: alloc=1791912 time=0.579
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.010
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=65008512 time=19.056
+systool:as: alloc=103600 time=0.178
+CorePrep [Domain.Types.RegistryMapFallback]: alloc=23880 time=0.015
+CodeGen [Domain.Types.RegistryMapFallback]: alloc=69902528 time=21.116
+systool:as: alloc=106456 time=0.149

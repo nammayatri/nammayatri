@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.OnMessage]: alloc=1276672 time=0.361
-Renamer/typechecker [Domain.Action.UI.OnMessage]: alloc=338469152 time=70.946
-Desugar [Domain.Action.UI.OnMessage]: alloc=492414096 time=87.777
-Simplifier [Domain.Action.UI.OnMessage]: alloc=28378304 time=11.847
-Specialise [Domain.Action.UI.OnMessage]: alloc=5870280 time=2.351
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.OnMessage]: alloc=14281704 time=5.784
-Simplifier [Domain.Action.UI.OnMessage]: alloc=144070848 time=60.196
-Float inwards [Domain.Action.UI.OnMessage]: alloc=21096 time=0.006
-Called arity analysis [Domain.Action.UI.OnMessage]: alloc=22672 time=0.007
-Simplifier [Domain.Action.UI.OnMessage]: alloc=38052384 time=20.327
-Demand analysis [Domain.Action.UI.OnMessage]: alloc=20383752 time=5.523
-Worker Wrapper binds [Domain.Action.UI.OnMessage]: alloc=776344 time=0.509
-Simplifier [Domain.Action.UI.OnMessage]: alloc=37750624 time=14.492
-Exitification transformation [Domain.Action.UI.OnMessage]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.OnMessage]: alloc=20800112 time=7.738
-Common sub-expression [Domain.Action.UI.OnMessage]: alloc=22200 time=0.007
-Float inwards [Domain.Action.UI.OnMessage]: alloc=21096 time=0.004
-Simplifier [Domain.Action.UI.OnMessage]: alloc=43033344 time=16.597
-Demand analysis [Domain.Action.UI.OnMessage]: alloc=18733760 time=5.454
-CoreTidy [Domain.Action.UI.OnMessage]: alloc=6466184 time=2.956
-CorePrep [Domain.Action.UI.OnMessage]: alloc=22088 time=0.010
-CodeGen [Domain.Action.UI.OnMessage]: alloc=101922896 time=34.216
-systool:as: alloc=103232 time=0.206
-CorePrep [Domain.Action.UI.OnMessage]: alloc=22088 time=0.017
-CodeGen [Domain.Action.UI.OnMessage]: alloc=107021520 time=36.044
-systool:as: alloc=106112 time=0.210
+Parser [Domain.Action.UI.OnMessage]: alloc=1276672 time=0.396
+Renamer/typechecker [Domain.Action.UI.OnMessage]: alloc=291063408 time=61.301
+Desugar [Domain.Action.UI.OnMessage]: alloc=483648712 time=86.190
+Simplifier [Domain.Action.UI.OnMessage]: alloc=11306280 time=3.297
+CoreTidy [Domain.Action.UI.OnMessage]: alloc=1849408 time=0.650
+CorePrep [Domain.Action.UI.OnMessage]: alloc=22088 time=0.011
+CodeGen [Domain.Action.UI.OnMessage]: alloc=81140480 time=23.971
+systool:as: alloc=103240 time=0.180
+CorePrep [Domain.Action.UI.OnMessage]: alloc=22088 time=0.014
+CodeGen [Domain.Action.UI.OnMessage]: alloc=88002840 time=25.282
+systool:as: alloc=106120 time=0.163

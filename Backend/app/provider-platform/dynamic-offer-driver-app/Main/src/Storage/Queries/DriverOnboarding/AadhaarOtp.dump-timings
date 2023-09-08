@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=1996536 time=0.448
-Renamer/typechecker [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=122796984 time=38.284
-Desugar [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=4874864 time=1.882
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=49516944 time=16.130
-Specialise [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=15521008 time=4.489
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=17892760 time=6.660
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=468452000 time=143.256
-Float inwards [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=26184 time=0.005
-Called arity analysis [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27760 time=0.006
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=116273320 time=38.164
-Demand analysis [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=14975920 time=10.683
-Worker Wrapper binds [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=962968 time=0.584
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=112016840 time=34.818
-Exitification transformation [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=28672 time=0.011
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=15923800 time=5.783
-Common sub-expression [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27288 time=0.009
-Float inwards [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=26184 time=0.006
-Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=137418080 time=37.194
-Demand analysis [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=18068168 time=10.216
-CoreTidy [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=23358056 time=8.397
-CorePrep [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27144 time=0.015
-CodeGen [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=121614480 time=40.725
-systool:as: alloc=104344 time=0.226
-CorePrep [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27144 time=0.016
-CodeGen [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=131114072 time=44.457
-systool:as: alloc=107224 time=0.212
+Parser [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=1994880 time=0.419
+Renamer/typechecker [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=121340560 time=34.519
+Desugar [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=4848448 time=1.814
+Simplifier [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27112776 time=6.793
+CoreTidy [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=5216608 time=1.338
+CorePrep [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27144 time=0.009
+CodeGen [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=122637376 time=32.071
+systool:as: alloc=104344 time=0.176
+CorePrep [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=27144 time=0.018
+CodeGen [Storage.Queries.DriverOnboarding.AadhaarOtp]: alloc=139280376 time=35.031
+systool:as: alloc=107224 time=0.170

@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Message]: alloc=4518552 time=1.029
-Renamer/typechecker [Domain.Action.UI.Message]: alloc=1360156480 time=257.428
-Desugar [Domain.Action.UI.Message]: alloc=523231824 time=83.069
-Simplifier [Domain.Action.UI.Message]: alloc=146909400 time=48.276
-Specialise [Domain.Action.UI.Message]: alloc=45977920 time=13.693
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Message]: alloc=59340432 time=21.847
-Simplifier [Domain.Action.UI.Message]: alloc=1053453728 time=410.324
-Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.005
-Called arity analysis [Domain.Action.UI.Message]: alloc=22080 time=0.006
-Simplifier [Domain.Action.UI.Message]: alloc=269509416 time=124.865
-Demand analysis [Domain.Action.UI.Message]: alloc=173213448 time=47.230
-Worker Wrapper binds [Domain.Action.UI.Message]: alloc=5732472 time=3.439
-Simplifier [Domain.Action.UI.Message]: alloc=263002288 time=119.128
-Exitification transformation [Domain.Action.UI.Message]: alloc=23024 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Message]: alloc=151368224 time=53.388
-Common sub-expression [Domain.Action.UI.Message]: alloc=21608 time=0.008
-Float inwards [Domain.Action.UI.Message]: alloc=20504 time=0.005
-Simplifier [Domain.Action.UI.Message]: alloc=286511200 time=143.434
-Demand analysis [Domain.Action.UI.Message]: alloc=135745032 time=35.071
-CoreTidy [Domain.Action.UI.Message]: alloc=36733944 time=15.177
-CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.013
-CodeGen [Domain.Action.UI.Message]: alloc=565407600 time=166.019
-systool:as: alloc=103112 time=0.216
-CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.017
-CodeGen [Domain.Action.UI.Message]: alloc=587897416 time=172.756
-systool:as: alloc=106016 time=0.234
+Parser [Domain.Action.UI.Message]: alloc=4513640 time=0.920
+Renamer/typechecker [Domain.Action.UI.Message]: alloc=1178777008 time=221.439
+Desugar [Domain.Action.UI.Message]: alloc=513744736 time=80.901
+Simplifier [Domain.Action.UI.Message]: alloc=71536776 time=19.189
+CoreTidy [Domain.Action.UI.Message]: alloc=12952840 time=4.129
+CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.010
+CodeGen [Domain.Action.UI.Message]: alloc=388694040 time=120.539
+systool:as: alloc=103120 time=0.225
+CorePrep [Domain.Action.UI.Message]: alloc=21496 time=0.016
+CodeGen [Domain.Action.UI.Message]: alloc=418393784 time=120.804
+systool:as: alloc=106024 time=0.203

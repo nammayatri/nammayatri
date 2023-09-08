@@ -1,26 +1,11 @@
-Parser [API.UI.Message]: alloc=2199224 time=0.419
-Renamer/typechecker [API.UI.Message]: alloc=17887576 time=7.354
-Desugar [API.UI.Message]: alloc=1027320 time=1.120
-Simplifier [API.UI.Message]: alloc=6516760 time=1.737
-Specialise [API.UI.Message]: alloc=777432 time=0.173
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Message]: alloc=2949328 time=0.735
-Simplifier [API.UI.Message]: alloc=3714856 time=0.996
-Float inwards [API.UI.Message]: alloc=17528 time=0.004
-Called arity analysis [API.UI.Message]: alloc=19104 time=0.005
-Simplifier [API.UI.Message]: alloc=2078656 time=0.501
-Demand analysis [API.UI.Message]: alloc=3067104 time=0.577
-Worker Wrapper binds [API.UI.Message]: alloc=33672 time=0.022
-Simplifier [API.UI.Message]: alloc=3358456 time=0.702
-Exitification transformation [API.UI.Message]: alloc=20048 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Message]: alloc=1029424 time=0.313
-Common sub-expression [API.UI.Message]: alloc=18632 time=0.004
-Float inwards [API.UI.Message]: alloc=17528 time=0.003
-Simplifier [API.UI.Message]: alloc=4097056 time=1.066
-Demand analysis [API.UI.Message]: alloc=3058952 time=0.612
-CoreTidy [API.UI.Message]: alloc=1089816 time=0.393
-CorePrep [API.UI.Message]: alloc=18504 time=0.013
-CodeGen [API.UI.Message]: alloc=15407984 time=5.269
-systool:as: alloc=102456 time=0.220
-CorePrep [API.UI.Message]: alloc=18504 time=0.019
-CodeGen [API.UI.Message]: alloc=16000648 time=5.479
-systool:as: alloc=105352 time=0.154
+Parser [API.UI.Message]: alloc=2199224 time=0.355
+Renamer/typechecker [API.UI.Message]: alloc=17896416 time=6.891
+Desugar [API.UI.Message]: alloc=1026536 time=1.051
+Simplifier [API.UI.Message]: alloc=3297392 time=0.823
+CoreTidy [API.UI.Message]: alloc=582784 time=0.182
+CorePrep [API.UI.Message]: alloc=18504 time=0.007
+CodeGen [API.UI.Message]: alloc=11994296 time=3.900
+systool:as: alloc=102464 time=0.166
+CorePrep [API.UI.Message]: alloc=18504 time=0.009
+CodeGen [API.UI.Message]: alloc=12943448 time=4.311
+systool:as: alloc=105336 time=0.145

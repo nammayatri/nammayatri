@@ -1,26 +1,11 @@
-Parser [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=1276000 time=0.387
-Renamer/typechecker [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28542120 time=11.946
-Desugar [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=1729016 time=1.391
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=33207328 time=11.425
-Specialise [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=8102016 time=2.738
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=18697544 time=7.028
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=907644592 time=393.568
-Float inwards [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=27064 time=0.006
-Called arity analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28640 time=0.006
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=185959432 time=76.136
-Demand analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=157622056 time=55.166
-Worker Wrapper binds [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=5736976 time=1.857
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=236256848 time=92.890
-Exitification transformation [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=29584 time=0.033
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=150296264 time=68.808
-Common sub-expression [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28168 time=0.007
-Float inwards [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=27064 time=0.005
-Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=190211520 time=89.747
-Demand analysis [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=92411896 time=26.685
-CoreTidy [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=13535184 time=4.545
-CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28040 time=0.011
-CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=242019784 time=85.762
-systool:as: alloc=104480 time=0.226
-CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28040 time=0.018
-CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=251721064 time=85.739
-systool:as: alloc=107352 time=0.196
+Parser [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=1272168 time=0.309
+Renamer/typechecker [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28565792 time=11.366
+Desugar [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=1727792 time=1.353
+Simplifier [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=13662912 time=3.895
+CoreTidy [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=2009376 time=0.659
+CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28040 time=0.009
+CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=85971568 time=28.151
+systool:as: alloc=104488 time=0.161
+CorePrep [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=28040 time=0.015
+CodeGen [Domain.Types.FarePolicy.FarePolicySlabsDetails]: alloc=92378632 time=28.139
+systool:as: alloc=107360 time=0.153

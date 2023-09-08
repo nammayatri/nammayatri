@@ -1,26 +1,11 @@
-Parser [SharedLogic.FareProduct]: alloc=3061320 time=0.727
-Renamer/typechecker [SharedLogic.FareProduct]: alloc=268168728 time=62.464
-Desugar [SharedLogic.FareProduct]: alloc=1240538592 time=204.940
-Simplifier [SharedLogic.FareProduct]: alloc=12197208 time=3.457
-Specialise [SharedLogic.FareProduct]: alloc=1602336 time=0.436
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.FareProduct]: alloc=5889024 time=1.703
-Simplifier [SharedLogic.FareProduct]: alloc=145653720 time=50.448
-Float inwards [SharedLogic.FareProduct]: alloc=20216 time=0.007
-Called arity analysis [SharedLogic.FareProduct]: alloc=21792 time=0.007
-Simplifier [SharedLogic.FareProduct]: alloc=58051288 time=19.516
-Demand analysis [SharedLogic.FareProduct]: alloc=70595096 time=17.438
-Worker Wrapper binds [SharedLogic.FareProduct]: alloc=1987912 time=0.982
-Simplifier [SharedLogic.FareProduct]: alloc=65654104 time=21.754
-Exitification transformation [SharedLogic.FareProduct]: alloc=22720 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.FareProduct]: alloc=69451952 time=22.866
-Common sub-expression [SharedLogic.FareProduct]: alloc=21320 time=0.009
-Float inwards [SharedLogic.FareProduct]: alloc=20216 time=0.005
-Simplifier [SharedLogic.FareProduct]: alloc=78270016 time=29.109
-Demand analysis [SharedLogic.FareProduct]: alloc=91514176 time=29.425
-CoreTidy [SharedLogic.FareProduct]: alloc=12440392 time=3.720
-CorePrep [SharedLogic.FareProduct]: alloc=21176 time=0.010
-CodeGen [SharedLogic.FareProduct]: alloc=436508968 time=118.471
-systool:as: alloc=103016 time=0.227
-CorePrep [SharedLogic.FareProduct]: alloc=21176 time=0.018
-CodeGen [SharedLogic.FareProduct]: alloc=451983208 time=121.718
-systool:as: alloc=105888 time=0.193
+Parser [SharedLogic.FareProduct]: alloc=3058000 time=0.648
+Renamer/typechecker [SharedLogic.FareProduct]: alloc=190723888 time=49.083
+Desugar [SharedLogic.FareProduct]: alloc=1218456936 time=206.124
+Simplifier [SharedLogic.FareProduct]: alloc=9568200 time=2.624
+CoreTidy [SharedLogic.FareProduct]: alloc=1065208 time=0.434
+CorePrep [SharedLogic.FareProduct]: alloc=21176 time=0.009
+CodeGen [SharedLogic.FareProduct]: alloc=61352096 time=18.731
+systool:as: alloc=103024 time=0.219
+CorePrep [SharedLogic.FareProduct]: alloc=21176 time=0.013
+CodeGen [SharedLogic.FareProduct]: alloc=66854216 time=17.809
+systool:as: alloc=105896 time=0.222

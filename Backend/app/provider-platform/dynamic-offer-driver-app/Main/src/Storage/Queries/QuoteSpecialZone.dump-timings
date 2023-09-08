@@ -1,26 +1,11 @@
-Parser [Storage.Queries.QuoteSpecialZone]: alloc=2256080 time=0.512
-Renamer/typechecker [Storage.Queries.QuoteSpecialZone]: alloc=109012320 time=34.842
-Desugar [Storage.Queries.QuoteSpecialZone]: alloc=5469112 time=2.034
-Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=67718432 time=20.896
-Specialise [Storage.Queries.QuoteSpecialZone]: alloc=18140408 time=4.708
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.QuoteSpecialZone]: alloc=16439096 time=6.197
-Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=183990976 time=67.531
-Float inwards [Storage.Queries.QuoteSpecialZone]: alloc=22888 time=0.005
-Called arity analysis [Storage.Queries.QuoteSpecialZone]: alloc=24464 time=0.006
-Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=40078584 time=15.011
-Demand analysis [Storage.Queries.QuoteSpecialZone]: alloc=22504072 time=7.038
-Worker Wrapper binds [Storage.Queries.QuoteSpecialZone]: alloc=1061568 time=0.716
-Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=39105664 time=15.032
-Exitification transformation [Storage.Queries.QuoteSpecialZone]: alloc=25408 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.QuoteSpecialZone]: alloc=21494288 time=8.178
-Common sub-expression [Storage.Queries.QuoteSpecialZone]: alloc=23992 time=0.034
-Float inwards [Storage.Queries.QuoteSpecialZone]: alloc=22888 time=0.005
-Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=48474016 time=32.580
-Demand analysis [Storage.Queries.QuoteSpecialZone]: alloc=24178656 time=7.200
-CoreTidy [Storage.Queries.QuoteSpecialZone]: alloc=12297688 time=5.409
-CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.042
-CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=156338704 time=52.903
-systool:as: alloc=103592 time=0.254
-CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.017
-CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=165023176 time=52.986
-systool:as: alloc=106472 time=0.260
+Parser [Storage.Queries.QuoteSpecialZone]: alloc=2255528 time=0.585
+Renamer/typechecker [Storage.Queries.QuoteSpecialZone]: alloc=106042520 time=31.569
+Desugar [Storage.Queries.QuoteSpecialZone]: alloc=5450816 time=1.934
+Simplifier [Storage.Queries.QuoteSpecialZone]: alloc=21819944 time=5.432
+CoreTidy [Storage.Queries.QuoteSpecialZone]: alloc=7008824 time=1.857
+CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.008
+CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=119812464 time=30.812
+systool:as: alloc=103600 time=0.193
+CorePrep [Storage.Queries.QuoteSpecialZone]: alloc=23880 time=0.019
+CodeGen [Storage.Queries.QuoteSpecialZone]: alloc=136714960 time=33.916
+systool:as: alloc=106480 time=0.192

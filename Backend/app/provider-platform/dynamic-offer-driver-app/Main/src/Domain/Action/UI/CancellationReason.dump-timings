@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.CancellationReason]: alloc=466696 time=0.142
-Renamer/typechecker [Domain.Action.UI.CancellationReason]: alloc=23284952 time=6.212
-Desugar [Domain.Action.UI.CancellationReason]: alloc=7686424 time=2.146
-Simplifier [Domain.Action.UI.CancellationReason]: alloc=263928 time=0.182
-Specialise [Domain.Action.UI.CancellationReason]: alloc=66848 time=0.035
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.CancellationReason]: alloc=259848 time=0.093
-Simplifier [Domain.Action.UI.CancellationReason]: alloc=548480 time=0.265
-Float inwards [Domain.Action.UI.CancellationReason]: alloc=23800 time=0.005
-Called arity analysis [Domain.Action.UI.CancellationReason]: alloc=25376 time=0.005
-Simplifier [Domain.Action.UI.CancellationReason]: alloc=318528 time=0.111
-Demand analysis [Domain.Action.UI.CancellationReason]: alloc=281208 time=0.093
-Worker Wrapper binds [Domain.Action.UI.CancellationReason]: alloc=122016 time=0.039
-Simplifier [Domain.Action.UI.CancellationReason]: alloc=1452280 time=0.482
-Exitification transformation [Domain.Action.UI.CancellationReason]: alloc=26288 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.CancellationReason]: alloc=839520 time=0.253
-Common sub-expression [Domain.Action.UI.CancellationReason]: alloc=24904 time=0.004
-Float inwards [Domain.Action.UI.CancellationReason]: alloc=23800 time=0.004
-Simplifier [Domain.Action.UI.CancellationReason]: alloc=1074600 time=0.346
-Demand analysis [Domain.Action.UI.CancellationReason]: alloc=485040 time=0.132
-CoreTidy [Domain.Action.UI.CancellationReason]: alloc=305336 time=0.148
-CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.008
-CodeGen [Domain.Action.UI.CancellationReason]: alloc=4109168 time=1.577
-systool:as: alloc=103776 time=0.176
-CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.013
-CodeGen [Domain.Action.UI.CancellationReason]: alloc=4284984 time=1.552
-systool:as: alloc=106656 time=0.139
+Parser [Domain.Action.UI.CancellationReason]: alloc=466696 time=0.160
+Renamer/typechecker [Domain.Action.UI.CancellationReason]: alloc=19513904 time=5.209
+Desugar [Domain.Action.UI.CancellationReason]: alloc=7560552 time=2.309
+Simplifier [Domain.Action.UI.CancellationReason]: alloc=385352 time=0.161
+CoreTidy [Domain.Action.UI.CancellationReason]: alloc=79376 time=0.045
+CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.006
+CodeGen [Domain.Action.UI.CancellationReason]: alloc=3342968 time=1.155
+systool:as: alloc=103800 time=0.155
+CorePrep [Domain.Action.UI.CancellationReason]: alloc=24760 time=0.011
+CodeGen [Domain.Action.UI.CancellationReason]: alloc=3655568 time=1.207
+systool:as: alloc=106656 time=0.104

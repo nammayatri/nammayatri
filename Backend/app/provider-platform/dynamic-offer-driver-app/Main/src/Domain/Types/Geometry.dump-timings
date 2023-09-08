@@ -1,26 +1,11 @@
-Parser [Domain.Types.Geometry]: alloc=311464 time=0.121
-Renamer/typechecker [Domain.Types.Geometry]: alloc=9952672 time=3.755
-Desugar [Domain.Types.Geometry]: alloc=1061528 time=1.159
-Simplifier [Domain.Types.Geometry]: alloc=3292456 time=1.163
-Specialise [Domain.Types.Geometry]: alloc=274728 time=0.082
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Geometry]: alloc=1285904 time=0.457
-Simplifier [Domain.Types.Geometry]: alloc=4061864 time=1.538
-Float inwards [Domain.Types.Geometry]: alloc=19624 time=0.005
-Called arity analysis [Domain.Types.Geometry]: alloc=21200 time=0.005
-Simplifier [Domain.Types.Geometry]: alloc=2049984 time=0.732
-Demand analysis [Domain.Types.Geometry]: alloc=1254976 time=0.390
-Worker Wrapper binds [Domain.Types.Geometry]: alloc=84896 time=0.044
-Simplifier [Domain.Types.Geometry]: alloc=2331224 time=0.816
-Exitification transformation [Domain.Types.Geometry]: alloc=22128 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Geometry]: alloc=1112536 time=0.384
-Common sub-expression [Domain.Types.Geometry]: alloc=20728 time=0.005
-Float inwards [Domain.Types.Geometry]: alloc=19624 time=0.004
-Simplifier [Domain.Types.Geometry]: alloc=2868304 time=1.036
-Demand analysis [Domain.Types.Geometry]: alloc=1351376 time=0.395
-CoreTidy [Domain.Types.Geometry]: alloc=722080 time=0.320
-CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.009
-CodeGen [Domain.Types.Geometry]: alloc=25087112 time=8.708
-systool:as: alloc=102896 time=0.202
-CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.019
-CodeGen [Domain.Types.Geometry]: alloc=25963176 time=10.159
-systool:as: alloc=105768 time=0.165
+Parser [Domain.Types.Geometry]: alloc=310928 time=0.099
+Renamer/typechecker [Domain.Types.Geometry]: alloc=9958136 time=3.591
+Desugar [Domain.Types.Geometry]: alloc=1060784 time=1.154
+Simplifier [Domain.Types.Geometry]: alloc=2256416 time=0.863
+CoreTidy [Domain.Types.Geometry]: alloc=354712 time=0.158
+CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.007
+CodeGen [Domain.Types.Geometry]: alloc=13696904 time=4.311
+systool:as: alloc=102904 time=0.151
+CorePrep [Domain.Types.Geometry]: alloc=20584 time=0.010
+CodeGen [Domain.Types.Geometry]: alloc=14667096 time=4.662
+systool:as: alloc=105776 time=0.123

@@ -1,26 +1,11 @@
-Parser [Tools.Metrics]: alloc=278040 time=0.081
-Renamer/typechecker [Tools.Metrics]: alloc=2015976 time=0.755
-Desugar [Tools.Metrics]: alloc=293384 time=0.812
-Simplifier [Tools.Metrics]: alloc=45680 time=0.046
-Specialise [Tools.Metrics]: alloc=23336 time=0.025
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics]: alloc=69200 time=0.032
-Simplifier [Tools.Metrics]: alloc=67864 time=0.039
-Float inwards [Tools.Metrics]: alloc=17240 time=0.004
-Called arity analysis [Tools.Metrics]: alloc=18816 time=0.004
-Simplifier [Tools.Metrics]: alloc=78264 time=0.029
-Demand analysis [Tools.Metrics]: alloc=42320 time=0.020
-Worker Wrapper binds [Tools.Metrics]: alloc=20912 time=0.007
-Simplifier [Tools.Metrics]: alloc=68368 time=0.022
-Exitification transformation [Tools.Metrics]: alloc=19744 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics]: alloc=67272 time=0.019
-Common sub-expression [Tools.Metrics]: alloc=18344 time=0.003
-Float inwards [Tools.Metrics]: alloc=17240 time=0.003
-Simplifier [Tools.Metrics]: alloc=84832 time=0.034
-Demand analysis [Tools.Metrics]: alloc=42320 time=0.011
-CoreTidy [Tools.Metrics]: alloc=57904 time=0.053
-CorePrep [Tools.Metrics]: alloc=18200 time=0.005
-CodeGen [Tools.Metrics]: alloc=628448 time=0.194
-systool:as: alloc=102400 time=0.123
-CorePrep [Tools.Metrics]: alloc=18200 time=0.010
-CodeGen [Tools.Metrics]: alloc=625520 time=0.192
-systool:as: alloc=105248 time=0.123
+Parser [Tools.Metrics]: alloc=278040 time=0.073
+Renamer/typechecker [Tools.Metrics]: alloc=2019560 time=0.677
+Desugar [Tools.Metrics]: alloc=294568 time=0.808
+Simplifier [Tools.Metrics]: alloc=93616 time=0.070
+CoreTidy [Tools.Metrics]: alloc=44216 time=0.031
+CorePrep [Tools.Metrics]: alloc=18200 time=0.006
+CodeGen [Tools.Metrics]: alloc=607040 time=0.189
+systool:as: alloc=102384 time=0.109
+CorePrep [Tools.Metrics]: alloc=18200 time=0.008
+CodeGen [Tools.Metrics]: alloc=604112 time=0.164
+systool:as: alloc=105256 time=0.118

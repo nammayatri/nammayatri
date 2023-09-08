@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.DriverReferral]: alloc=1757648 time=0.480
-Renamer/typechecker [Domain.Action.UI.DriverReferral]: alloc=187448200 time=45.915
-Desugar [Domain.Action.UI.DriverReferral]: alloc=277059928 time=52.796
-Simplifier [Domain.Action.UI.DriverReferral]: alloc=23040136 time=10.217
-Specialise [Domain.Action.UI.DriverReferral]: alloc=5259584 time=2.054
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverReferral]: alloc=14859080 time=5.556
-Simplifier [Domain.Action.UI.DriverReferral]: alloc=172137680 time=66.511
-Float inwards [Domain.Action.UI.DriverReferral]: alloc=22600 time=0.005
-Called arity analysis [Domain.Action.UI.DriverReferral]: alloc=24176 time=0.007
-Simplifier [Domain.Action.UI.DriverReferral]: alloc=50252888 time=19.774
-Demand analysis [Domain.Action.UI.DriverReferral]: alloc=41046640 time=22.774
-Worker Wrapper binds [Domain.Action.UI.DriverReferral]: alloc=1180480 time=0.602
-Simplifier [Domain.Action.UI.DriverReferral]: alloc=53666632 time=17.649
-Exitification transformation [Domain.Action.UI.DriverReferral]: alloc=25104 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverReferral]: alloc=40685208 time=14.579
-Common sub-expression [Domain.Action.UI.DriverReferral]: alloc=23704 time=0.008
-Float inwards [Domain.Action.UI.DriverReferral]: alloc=22600 time=0.005
-Simplifier [Domain.Action.UI.DriverReferral]: alloc=63971376 time=24.714
-Demand analysis [Domain.Action.UI.DriverReferral]: alloc=47274616 time=12.955
-CoreTidy [Domain.Action.UI.DriverReferral]: alloc=9598520 time=5.228
-CorePrep [Domain.Action.UI.DriverReferral]: alloc=23560 time=0.013
-CodeGen [Domain.Action.UI.DriverReferral]: alloc=236891048 time=85.029
-systool:as: alloc=103536 time=0.226
-CorePrep [Domain.Action.UI.DriverReferral]: alloc=23560 time=0.018
-CodeGen [Domain.Action.UI.DriverReferral]: alloc=246182432 time=79.650
-systool:as: alloc=106408 time=0.245
+Parser [Domain.Action.UI.DriverReferral]: alloc=1757648 time=0.460
+Renamer/typechecker [Domain.Action.UI.DriverReferral]: alloc=154955680 time=35.912
+Desugar [Domain.Action.UI.DriverReferral]: alloc=272109936 time=46.542
+Simplifier [Domain.Action.UI.DriverReferral]: alloc=11632736 time=3.283
+CoreTidy [Domain.Action.UI.DriverReferral]: alloc=1819248 time=0.655
+CorePrep [Domain.Action.UI.DriverReferral]: alloc=23560 time=0.015
+CodeGen [Domain.Action.UI.DriverReferral]: alloc=100823728 time=30.895
+systool:as: alloc=103568 time=0.175
+CorePrep [Domain.Action.UI.DriverReferral]: alloc=23560 time=0.015
+CodeGen [Domain.Action.UI.DriverReferral]: alloc=109817256 time=30.173
+systool:as: alloc=106416 time=0.166

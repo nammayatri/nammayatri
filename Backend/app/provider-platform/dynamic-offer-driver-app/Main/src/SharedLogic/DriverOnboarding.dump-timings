@@ -1,26 +1,11 @@
-Parser [SharedLogic.DriverOnboarding]: alloc=1300672 time=0.392
-Renamer/typechecker [SharedLogic.DriverOnboarding]: alloc=66197200 time=21.009
-Desugar [SharedLogic.DriverOnboarding]: alloc=543504 time=1.019
-Simplifier [SharedLogic.DriverOnboarding]: alloc=38707128 time=11.771
-Specialise [SharedLogic.DriverOnboarding]: alloc=2942304 time=1.360
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.DriverOnboarding]: alloc=11884376 time=3.904
-Simplifier [SharedLogic.DriverOnboarding]: alloc=128625936 time=37.844
-Float inwards [SharedLogic.DriverOnboarding]: alloc=21704 time=0.005
-Called arity analysis [SharedLogic.DriverOnboarding]: alloc=23280 time=0.006
-Simplifier [SharedLogic.DriverOnboarding]: alloc=29337008 time=10.398
-Demand analysis [SharedLogic.DriverOnboarding]: alloc=40015472 time=8.178
-Worker Wrapper binds [SharedLogic.DriverOnboarding]: alloc=650904 time=0.481
-Simplifier [SharedLogic.DriverOnboarding]: alloc=43677280 time=10.523
-Exitification transformation [SharedLogic.DriverOnboarding]: alloc=24224 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.DriverOnboarding]: alloc=28254784 time=8.551
-Common sub-expression [SharedLogic.DriverOnboarding]: alloc=22808 time=0.006
-Float inwards [SharedLogic.DriverOnboarding]: alloc=21704 time=0.004
-Simplifier [SharedLogic.DriverOnboarding]: alloc=79591992 time=27.536
-Demand analysis [SharedLogic.DriverOnboarding]: alloc=46856280 time=10.229
-CoreTidy [SharedLogic.DriverOnboarding]: alloc=15267152 time=4.579
+Parser [SharedLogic.DriverOnboarding]: alloc=1300128 time=0.279
+Renamer/typechecker [SharedLogic.DriverOnboarding]: alloc=64899304 time=20.375
+Desugar [SharedLogic.DriverOnboarding]: alloc=541824 time=1.038
+Simplifier [SharedLogic.DriverOnboarding]: alloc=11705640 time=3.949
+CoreTidy [SharedLogic.DriverOnboarding]: alloc=7148328 time=1.883
 CorePrep [SharedLogic.DriverOnboarding]: alloc=22680 time=0.010
-CodeGen [SharedLogic.DriverOnboarding]: alloc=199139208 time=50.174
-systool:as: alloc=103328 time=0.204
+CodeGen [SharedLogic.DriverOnboarding]: alloc=30449280 time=10.356
+systool:as: alloc=103336 time=0.217
 CorePrep [SharedLogic.DriverOnboarding]: alloc=22680 time=0.015
-CodeGen [SharedLogic.DriverOnboarding]: alloc=204905856 time=51.416
-systool:as: alloc=106200 time=0.191
+CodeGen [SharedLogic.DriverOnboarding]: alloc=33084824 time=10.679
+systool:as: alloc=106208 time=0.150

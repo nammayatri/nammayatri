@@ -1,26 +1,11 @@
-Parser [Domain.Action.Dashboard.Booking]: alloc=5280528 time=1.132
-Renamer/typechecker [Domain.Action.Dashboard.Booking]: alloc=120693256 time=33.724
-Desugar [Domain.Action.Dashboard.Booking]: alloc=1966376 time=1.424
-Simplifier [Domain.Action.Dashboard.Booking]: alloc=35602128 time=10.437
-Specialise [Domain.Action.Dashboard.Booking]: alloc=6290392 time=1.591
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Dashboard.Booking]: alloc=22057656 time=6.248
-Simplifier [Domain.Action.Dashboard.Booking]: alloc=152176080 time=43.436
-Float inwards [Domain.Action.Dashboard.Booking]: alloc=22600 time=0.005
-Called arity analysis [Domain.Action.Dashboard.Booking]: alloc=24176 time=0.006
-Simplifier [Domain.Action.Dashboard.Booking]: alloc=45685168 time=12.968
-Demand analysis [Domain.Action.Dashboard.Booking]: alloc=51828120 time=10.140
-Worker Wrapper binds [Domain.Action.Dashboard.Booking]: alloc=711960 time=0.465
-Simplifier [Domain.Action.Dashboard.Booking]: alloc=44107784 time=11.523
-Exitification transformation [Domain.Action.Dashboard.Booking]: alloc=25104 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Dashboard.Booking]: alloc=26942496 time=8.020
-Common sub-expression [Domain.Action.Dashboard.Booking]: alloc=23704 time=0.007
-Float inwards [Domain.Action.Dashboard.Booking]: alloc=22600 time=0.005
-Simplifier [Domain.Action.Dashboard.Booking]: alloc=54701784 time=15.655
-Demand analysis [Domain.Action.Dashboard.Booking]: alloc=46566960 time=8.535
-CoreTidy [Domain.Action.Dashboard.Booking]: alloc=12186536 time=3.863
-CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.010
-CodeGen [Domain.Action.Dashboard.Booking]: alloc=270233568 time=69.715
-systool:as: alloc=103568 time=0.211
-CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.015
-CodeGen [Domain.Action.Dashboard.Booking]: alloc=279920296 time=71.982
-systool:as: alloc=106440 time=0.188
+Parser [Domain.Action.Dashboard.Booking]: alloc=5280528 time=0.974
+Renamer/typechecker [Domain.Action.Dashboard.Booking]: alloc=119936272 time=32.397
+Desugar [Domain.Action.Dashboard.Booking]: alloc=1956480 time=1.376
+Simplifier [Domain.Action.Dashboard.Booking]: alloc=7750720 time=2.004
+CoreTidy [Domain.Action.Dashboard.Booking]: alloc=1033424 time=0.365
+CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.008
+CodeGen [Domain.Action.Dashboard.Booking]: alloc=83103208 time=22.153
+systool:as: alloc=103576 time=0.207
+CorePrep [Domain.Action.Dashboard.Booking]: alloc=23560 time=0.017
+CodeGen [Domain.Action.Dashboard.Booking]: alloc=91947328 time=24.631
+systool:as: alloc=106448 time=0.183

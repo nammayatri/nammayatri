@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=1375392 time=0.314
-Renamer/typechecker [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=47597192 time=15.155
-Desugar [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=3286144 time=1.522
-Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=16010968 time=5.215
-Specialise [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=5142904 time=1.424
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=7654424 time=2.441
-Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=231429336 time=63.540
-Float inwards [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=27064 time=0.005
-Called arity analysis [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28640 time=0.006
-Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=69367056 time=19.987
-Demand analysis [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=7306352 time=5.693
-Worker Wrapper binds [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=366640 time=0.244
-Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=68042856 time=19.003
-Exitification transformation [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=29584 time=0.007
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=7163088 time=4.302
-Common sub-expression [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28168 time=0.007
-Float inwards [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=27064 time=0.005
-Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=75611160 time=24.718
-Demand analysis [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=7740360 time=6.485
-CoreTidy [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=13709528 time=4.979
-CorePrep [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28040 time=0.015
-CodeGen [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=69121816 time=25.424
-systool:as: alloc=104496 time=0.199
-CorePrep [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28040 time=0.023
-CodeGen [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=73620168 time=25.339
-systool:as: alloc=107368 time=0.229
+Parser [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=1375392 time=0.337
+Renamer/typechecker [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=46943928 time=15.112
+Desugar [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=3260808 time=1.442
+Simplifier [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=10261920 time=2.639
+CoreTidy [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=2139016 time=0.546
+CorePrep [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28040 time=0.008
+CodeGen [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=34948776 time=8.866
+systool:as: alloc=104504 time=0.171
+CorePrep [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=28040 time=0.012
+CodeGen [Storage.Queries.Merchant.MerchantPaymentMethod]: alloc=40157496 time=10.086
+systool:as: alloc=107376 time=0.153

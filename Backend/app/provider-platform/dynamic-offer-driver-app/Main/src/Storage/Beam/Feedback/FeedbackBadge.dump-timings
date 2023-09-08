@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Feedback.FeedbackBadge]: alloc=1383160 time=0.421
-Simplify [expr]: alloc=184136 time=0.065
-CorePrep [expr]: alloc=74024 time=0.041
-ByteCodeGen [Ghci1]: alloc=379864 time=0.105
-Simplify [expr]: alloc=47024 time=0.019
-CorePrep [expr]: alloc=26752 time=0.016
-ByteCodeGen [Ghci1]: alloc=131880 time=0.050
-Renamer/typechecker [Storage.Beam.Feedback.FeedbackBadge]: alloc=136751600 time=42.878
-Desugar [Storage.Beam.Feedback.FeedbackBadge]: alloc=21485704 time=6.190
-Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=86631336 time=26.940
-Specialise [Storage.Beam.Feedback.FeedbackBadge]: alloc=26622064 time=8.816
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Feedback.FeedbackBadge]: alloc=63734776 time=23.283
-Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=657911104 time=260.709
-Float inwards [Storage.Beam.Feedback.FeedbackBadge]: alloc=23800 time=0.005
-Called arity analysis [Storage.Beam.Feedback.FeedbackBadge]: alloc=25376 time=0.006
-Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=191697760 time=74.430
-Demand analysis [Storage.Beam.Feedback.FeedbackBadge]: alloc=185285896 time=47.813
-Worker Wrapper binds [Storage.Beam.Feedback.FeedbackBadge]: alloc=4769512 time=2.941
-Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=226803376 time=90.784
-Exitification transformation [Storage.Beam.Feedback.FeedbackBadge]: alloc=26288 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Feedback.FeedbackBadge]: alloc=156534024 time=54.616
-Common sub-expression [Storage.Beam.Feedback.FeedbackBadge]: alloc=24904 time=0.007
-Float inwards [Storage.Beam.Feedback.FeedbackBadge]: alloc=23800 time=0.004
-Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=234209560 time=113.615
-Demand analysis [Storage.Beam.Feedback.FeedbackBadge]: alloc=170568704 time=43.021
-CoreTidy [Storage.Beam.Feedback.FeedbackBadge]: alloc=42375000 time=34.592
-CorePrep [Storage.Beam.Feedback.FeedbackBadge]: alloc=24760 time=0.015
-CodeGen [Storage.Beam.Feedback.FeedbackBadge]: alloc=888770656 time=310.703
-systool:as: alloc=103792 time=0.310
-CorePrep [Storage.Beam.Feedback.FeedbackBadge]: alloc=24760 time=0.017
-CodeGen [Storage.Beam.Feedback.FeedbackBadge]: alloc=916173032 time=287.316
-systool:as: alloc=106672 time=0.254
+Parser [Storage.Beam.Feedback.FeedbackBadge]: alloc=1382072 time=0.342
+Simplify [expr]: alloc=109424 time=0.030
+CorePrep [expr]: alloc=51184 time=0.023
+ByteCodeGen [Ghci1]: alloc=276472 time=0.091
+Simplify [expr]: alloc=46992 time=0.017
+CorePrep [expr]: alloc=26608 time=0.013
+ByteCodeGen [Ghci1]: alloc=131880 time=0.042
+Renamer/typechecker [Storage.Beam.Feedback.FeedbackBadge]: alloc=134587288 time=43.794
+Desugar [Storage.Beam.Feedback.FeedbackBadge]: alloc=21468064 time=6.094
+Simplifier [Storage.Beam.Feedback.FeedbackBadge]: alloc=27587280 time=8.079
+CoreTidy [Storage.Beam.Feedback.FeedbackBadge]: alloc=6057792 time=2.020
+CorePrep [Storage.Beam.Feedback.FeedbackBadge]: alloc=24760 time=0.010
+CodeGen [Storage.Beam.Feedback.FeedbackBadge]: alloc=199900608 time=57.010
+systool:as: alloc=103792 time=0.172
+CorePrep [Storage.Beam.Feedback.FeedbackBadge]: alloc=24760 time=0.018
+CodeGen [Storage.Beam.Feedback.FeedbackBadge]: alloc=218697704 time=61.632
+systool:as: alloc=106672 time=0.174

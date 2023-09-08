@@ -1,26 +1,11 @@
-Parser [Storage.Queries.RegistryMapFallback]: alloc=1249288 time=0.314
-Renamer/typechecker [Storage.Queries.RegistryMapFallback]: alloc=105042256 time=31.208
-Desugar [Storage.Queries.RegistryMapFallback]: alloc=3001696 time=1.546
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=19184336 time=6.924
-Specialise [Storage.Queries.RegistryMapFallback]: alloc=4635432 time=1.751
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.RegistryMapFallback]: alloc=6307576 time=2.203
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=79300616 time=25.380
-Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.007
-Called arity analysis [Storage.Queries.RegistryMapFallback]: alloc=25376 time=0.006
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=17678768 time=5.526
-Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=5146696 time=1.651
-Worker Wrapper binds [Storage.Queries.RegistryMapFallback]: alloc=302480 time=0.191
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=16320216 time=4.964
-Exitification transformation [Storage.Queries.RegistryMapFallback]: alloc=26288 time=0.018
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.RegistryMapFallback]: alloc=4925824 time=1.742
-Common sub-expression [Storage.Queries.RegistryMapFallback]: alloc=24904 time=0.005
-Float inwards [Storage.Queries.RegistryMapFallback]: alloc=23800 time=0.004
-Simplifier [Storage.Queries.RegistryMapFallback]: alloc=18229312 time=6.114
-Demand analysis [Storage.Queries.RegistryMapFallback]: alloc=4333136 time=1.469
-CoreTidy [Storage.Queries.RegistryMapFallback]: alloc=3397080 time=1.375
-CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.010
-CodeGen [Storage.Queries.RegistryMapFallback]: alloc=41765184 time=14.750
-systool:as: alloc=103768 time=0.271
-CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.021
-CodeGen [Storage.Queries.RegistryMapFallback]: alloc=44813000 time=16.224
-systool:as: alloc=106648 time=0.230
+Parser [Storage.Queries.RegistryMapFallback]: alloc=1248184 time=0.292
+Renamer/typechecker [Storage.Queries.RegistryMapFallback]: alloc=103328840 time=30.035
+Desugar [Storage.Queries.RegistryMapFallback]: alloc=2998928 time=1.658
+Simplifier [Storage.Queries.RegistryMapFallback]: alloc=14060856 time=3.953
+CoreTidy [Storage.Queries.RegistryMapFallback]: alloc=2180856 time=0.607
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.007
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=47781664 time=12.965
+systool:as: alloc=103776 time=0.178
+CorePrep [Storage.Queries.RegistryMapFallback]: alloc=24760 time=0.013
+CodeGen [Storage.Queries.RegistryMapFallback]: alloc=55361864 time=14.396
+systool:as: alloc=106656 time=0.181

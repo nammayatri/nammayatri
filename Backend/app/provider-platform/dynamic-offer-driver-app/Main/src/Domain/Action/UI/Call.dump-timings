@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Call]: alloc=7874016 time=1.634
-Renamer/typechecker [Domain.Action.UI.Call]: alloc=1331986400 time=262.531
-Desugar [Domain.Action.UI.Call]: alloc=1263898512 time=202.691
-Simplifier [Domain.Action.UI.Call]: alloc=74392952 time=26.443
-Specialise [Domain.Action.UI.Call]: alloc=16037696 time=5.178
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Call]: alloc=44057536 time=15.388
-Simplifier [Domain.Action.UI.Call]: alloc=373007504 time=143.397
-Float inwards [Domain.Action.UI.Call]: alloc=19624 time=0.005
-Called arity analysis [Domain.Action.UI.Call]: alloc=21200 time=0.005
-Simplifier [Domain.Action.UI.Call]: alloc=111245272 time=37.197
-Demand analysis [Domain.Action.UI.Call]: alloc=91448832 time=23.876
-Worker Wrapper binds [Domain.Action.UI.Call]: alloc=3008584 time=1.866
-Simplifier [Domain.Action.UI.Call]: alloc=115907984 time=57.493
-Exitification transformation [Domain.Action.UI.Call]: alloc=22128 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Call]: alloc=86830904 time=27.918
-Common sub-expression [Domain.Action.UI.Call]: alloc=20728 time=0.007
-Float inwards [Domain.Action.UI.Call]: alloc=19624 time=0.004
-Simplifier [Domain.Action.UI.Call]: alloc=137592376 time=48.380
-Demand analysis [Domain.Action.UI.Call]: alloc=102754376 time=27.534
-CoreTidy [Domain.Action.UI.Call]: alloc=21913704 time=11.118
-CorePrep [Domain.Action.UI.Call]: alloc=20584 time=0.016
-CodeGen [Domain.Action.UI.Call]: alloc=578077896 time=188.501
-systool:as: alloc=102928 time=0.250
-CorePrep [Domain.Action.UI.Call]: alloc=20584 time=0.017
-CodeGen [Domain.Action.UI.Call]: alloc=603250224 time=176.960
-systool:as: alloc=105800 time=0.211
+Parser [Domain.Action.UI.Call]: alloc=7874016 time=1.980
+Renamer/typechecker [Domain.Action.UI.Call]: alloc=1134874384 time=535.442
+Desugar [Domain.Action.UI.Call]: alloc=1241316248 time=205.955
+Simplifier [Domain.Action.UI.Call]: alloc=56587816 time=15.937
+CoreTidy [Domain.Action.UI.Call]: alloc=5024864 time=1.861
+CorePrep [Domain.Action.UI.Call]: alloc=20584 time=0.008
+CodeGen [Domain.Action.UI.Call]: alloc=318678128 time=90.147
+systool:as: alloc=102936 time=0.225
+CorePrep [Domain.Action.UI.Call]: alloc=20584 time=0.014
+CodeGen [Domain.Action.UI.Call]: alloc=350791472 time=92.778
+systool:as: alloc=105808 time=0.186

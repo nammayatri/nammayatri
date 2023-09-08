@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.PlanTranslation]: alloc=1145208 time=0.340
-Renamer/typechecker [Storage.CachedQueries.PlanTranslation]: alloc=231277368 time=44.519
-Desugar [Storage.CachedQueries.PlanTranslation]: alloc=337276312 time=54.361
-Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=4512360 time=1.238
-Specialise [Storage.CachedQueries.PlanTranslation]: alloc=1322088 time=0.412
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.PlanTranslation]: alloc=6746992 time=2.081
-Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=120164056 time=43.780
-Float inwards [Storage.CachedQueries.PlanTranslation]: alloc=24392 time=0.005
-Called arity analysis [Storage.CachedQueries.PlanTranslation]: alloc=25968 time=0.006
-Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=29571256 time=9.580
-Demand analysis [Storage.CachedQueries.PlanTranslation]: alloc=26987728 time=6.419
-Worker Wrapper binds [Storage.CachedQueries.PlanTranslation]: alloc=1059568 time=0.496
-Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=34640024 time=11.743
-Exitification transformation [Storage.CachedQueries.PlanTranslation]: alloc=26896 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.PlanTranslation]: alloc=27517192 time=8.604
-Common sub-expression [Storage.CachedQueries.PlanTranslation]: alloc=25496 time=0.007
-Float inwards [Storage.CachedQueries.PlanTranslation]: alloc=24392 time=0.004
-Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=35266424 time=12.444
-Demand analysis [Storage.CachedQueries.PlanTranslation]: alloc=28855456 time=6.367
-CoreTidy [Storage.CachedQueries.PlanTranslation]: alloc=4382184 time=2.237
-CorePrep [Storage.CachedQueries.PlanTranslation]: alloc=25352 time=0.012
-CodeGen [Storage.CachedQueries.PlanTranslation]: alloc=132274232 time=38.318
-systool:as: alloc=103920 time=0.233
-CorePrep [Storage.CachedQueries.PlanTranslation]: alloc=25352 time=0.018
-CodeGen [Storage.CachedQueries.PlanTranslation]: alloc=137819160 time=38.869
-systool:as: alloc=106792 time=0.268
+Parser [Storage.CachedQueries.PlanTranslation]: alloc=1144104 time=0.285
+Renamer/typechecker [Storage.CachedQueries.PlanTranslation]: alloc=151249376 time=28.038
+Desugar [Storage.CachedQueries.PlanTranslation]: alloc=331176424 time=52.286
+Simplifier [Storage.CachedQueries.PlanTranslation]: alloc=5262896 time=1.148
+CoreTidy [Storage.CachedQueries.PlanTranslation]: alloc=539664 time=0.185
+CorePrep [Storage.CachedQueries.PlanTranslation]: alloc=25352 time=0.008
+CodeGen [Storage.CachedQueries.PlanTranslation]: alloc=24024496 time=6.631
+systool:as: alloc=103928 time=0.169
+CorePrep [Storage.CachedQueries.PlanTranslation]: alloc=25352 time=0.014
+CodeGen [Storage.CachedQueries.PlanTranslation]: alloc=26319032 time=7.281
+systool:as: alloc=106800 time=0.134

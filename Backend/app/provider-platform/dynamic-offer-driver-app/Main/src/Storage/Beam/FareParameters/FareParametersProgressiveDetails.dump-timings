@@ -1,32 +1,17 @@
-Parser [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=1298560 time=0.348
-Simplify [expr]: alloc=97256 time=0.052
-CorePrep [expr]: alloc=43488 time=0.041
-ByteCodeGen [Ghci1]: alloc=217456 time=0.089
-Simplify [expr]: alloc=47024 time=0.046
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.046
-Renamer/typechecker [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=96155456 time=33.807
-Desugar [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=18473872 time=5.401
-Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=51944880 time=17.486
-Specialise [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=19391776 time=6.597
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=50743176 time=18.233
-Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=459151880 time=161.423
-Float inwards [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=31240 time=0.007
-Called arity analysis [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32816 time=0.008
-Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=122460184 time=61.640
-Demand analysis [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=113986264 time=28.975
-Worker Wrapper binds [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=3288912 time=2.024
-Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=147800848 time=50.816
-Exitification transformation [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=33760 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=99909656 time=34.607
-Common sub-expression [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32344 time=0.007
-Float inwards [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=31240 time=0.005
-Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=149791344 time=55.918
-Demand analysis [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=102097064 time=25.652
-CoreTidy [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=24757296 time=12.006
-CorePrep [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32216 time=0.015
-CodeGen [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=561905688 time=180.851
-systool:as: alloc=105360 time=0.250
-CorePrep [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32216 time=0.018
-CodeGen [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=579205248 time=184.285
-systool:as: alloc=108232 time=0.273
+Parser [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=1297432 time=0.372
+Simplify [expr]: alloc=72480 time=0.026
+CorePrep [expr]: alloc=36304 time=0.020
+ByteCodeGen [Ghci1]: alloc=183200 time=0.066
+Simplify [expr]: alloc=46992 time=0.016
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.042
+Renamer/typechecker [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=94343232 time=32.068
+Desugar [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=18462096 time=5.510
+Simplifier [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=18543320 time=5.405
+CoreTidy [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=3458936 time=1.189
+CorePrep [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32216 time=0.010
+CodeGen [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=130779608 time=39.302
+systool:as: alloc=105360 time=0.158
+CorePrep [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=32216 time=0.014
+CodeGen [Storage.Beam.FareParameters.FareParametersProgressiveDetails]: alloc=142825264 time=42.399
+systool:as: alloc=108232 time=0.178

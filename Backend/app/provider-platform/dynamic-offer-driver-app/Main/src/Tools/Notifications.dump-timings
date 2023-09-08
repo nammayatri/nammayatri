@@ -1,26 +1,11 @@
-Parser [Tools.Notifications]: alloc=13781120 time=2.033
-Renamer/typechecker [Tools.Notifications]: alloc=4383383024 time=835.971
-Desugar [Tools.Notifications]: alloc=1441796584 time=230.829
-Simplifier [Tools.Notifications]: alloc=52670120 time=13.801
-Specialise [Tools.Notifications]: alloc=11659856 time=2.943
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Notifications]: alloc=46054336 time=12.998
-Simplifier [Tools.Notifications]: alloc=435199576 time=159.623
-Float inwards [Tools.Notifications]: alloc=19032 time=0.004
-Called arity analysis [Tools.Notifications]: alloc=20608 time=0.005
-Simplifier [Tools.Notifications]: alloc=156866392 time=57.262
-Demand analysis [Tools.Notifications]: alloc=180589224 time=41.239
-Worker Wrapper binds [Tools.Notifications]: alloc=8705752 time=3.602
-Simplifier [Tools.Notifications]: alloc=171616192 time=64.667
-Exitification transformation [Tools.Notifications]: alloc=21520 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Notifications]: alloc=154104232 time=48.881
-Common sub-expression [Tools.Notifications]: alloc=20136 time=0.007
-Float inwards [Tools.Notifications]: alloc=19032 time=0.004
-Simplifier [Tools.Notifications]: alloc=168452528 time=83.592
-Demand analysis [Tools.Notifications]: alloc=173185704 time=37.624
-CoreTidy [Tools.Notifications]: alloc=33115504 time=14.763
-CorePrep [Tools.Notifications]: alloc=19992 time=0.012
-CodeGen [Tools.Notifications]: alloc=854736448 time=266.031
-systool:as: alloc=102736 time=0.223
-CorePrep [Tools.Notifications]: alloc=19992 time=0.017
-CodeGen [Tools.Notifications]: alloc=884926912 time=255.112
-systool:as: alloc=105616 time=0.281
+Parser [Tools.Notifications]: alloc=13770648 time=1.928
+Renamer/typechecker [Tools.Notifications]: alloc=3161340008 time=543.142
+Desugar [Tools.Notifications]: alloc=1415556240 time=231.485
+Simplifier [Tools.Notifications]: alloc=78172552 time=17.593
+CoreTidy [Tools.Notifications]: alloc=5198608 time=1.802
+CorePrep [Tools.Notifications]: alloc=19992 time=0.009
+CodeGen [Tools.Notifications]: alloc=299127960 time=80.964
+systool:as: alloc=102744 time=0.221
+CorePrep [Tools.Notifications]: alloc=19992 time=0.019
+CodeGen [Tools.Notifications]: alloc=334501376 time=84.046
+systool:as: alloc=105624 time=0.217

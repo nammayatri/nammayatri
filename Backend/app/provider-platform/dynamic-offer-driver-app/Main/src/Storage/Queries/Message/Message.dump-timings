@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Message.Message]: alloc=3562568 time=0.802
-Renamer/typechecker [Storage.Queries.Message.Message]: alloc=235680664 time=70.326
-Desugar [Storage.Queries.Message.Message]: alloc=12432616 time=3.371
-Simplifier [Storage.Queries.Message.Message]: alloc=128848760 time=42.228
-Specialise [Storage.Queries.Message.Message]: alloc=26429032 time=8.624
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Message.Message]: alloc=30315232 time=12.973
-Simplifier [Storage.Queries.Message.Message]: alloc=578038904 time=182.393
-Float inwards [Storage.Queries.Message.Message]: alloc=22600 time=0.005
-Called arity analysis [Storage.Queries.Message.Message]: alloc=24176 time=0.006
-Simplifier [Storage.Queries.Message.Message]: alloc=173398760 time=51.308
-Demand analysis [Storage.Queries.Message.Message]: alloc=20508736 time=15.817
-Worker Wrapper binds [Storage.Queries.Message.Message]: alloc=1178328 time=0.739
-Simplifier [Storage.Queries.Message.Message]: alloc=163309376 time=49.092
-Exitification transformation [Storage.Queries.Message.Message]: alloc=25104 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Message.Message]: alloc=19443968 time=11.283
-Common sub-expression [Storage.Queries.Message.Message]: alloc=23704 time=0.006
-Float inwards [Storage.Queries.Message.Message]: alloc=22600 time=0.004
-Simplifier [Storage.Queries.Message.Message]: alloc=187563216 time=50.792
-Demand analysis [Storage.Queries.Message.Message]: alloc=18655808 time=15.381
-CoreTidy [Storage.Queries.Message.Message]: alloc=32513400 time=10.344
-CorePrep [Storage.Queries.Message.Message]: alloc=23560 time=0.015
-CodeGen [Storage.Queries.Message.Message]: alloc=134102064 time=45.670
-systool:as: alloc=103568 time=0.231
-CorePrep [Storage.Queries.Message.Message]: alloc=23560 time=0.016
-CodeGen [Storage.Queries.Message.Message]: alloc=143704736 time=48.807
-systool:as: alloc=106440 time=0.265
+Parser [Storage.Queries.Message.Message]: alloc=3556600 time=0.738
+Renamer/typechecker [Storage.Queries.Message.Message]: alloc=230683552 time=65.333
+Desugar [Storage.Queries.Message.Message]: alloc=12371752 time=3.236
+Simplifier [Storage.Queries.Message.Message]: alloc=50509192 time=13.572
+CoreTidy [Storage.Queries.Message.Message]: alloc=16240336 time=4.379
+CorePrep [Storage.Queries.Message.Message]: alloc=23560 time=0.009
+CodeGen [Storage.Queries.Message.Message]: alloc=277238584 time=70.861
+systool:as: alloc=103576 time=0.188
+CorePrep [Storage.Queries.Message.Message]: alloc=23560 time=0.017
+CodeGen [Storage.Queries.Message.Message]: alloc=315936160 time=77.458
+systool:as: alloc=106448 time=0.193

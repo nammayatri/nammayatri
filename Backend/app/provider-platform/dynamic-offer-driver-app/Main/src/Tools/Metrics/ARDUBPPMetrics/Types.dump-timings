@@ -1,26 +1,11 @@
-Parser [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=1864000 time=0.513
-Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=21938008 time=11.725
-Desugar [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2238552 time=1.466
-Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=6344064 time=2.216
-Specialise [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=909144 time=0.354
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2353608 time=0.770
-Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=71778328 time=24.048
-Float inwards [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=23480 time=0.006
-Called arity analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=25056 time=0.006
-Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=26137816 time=8.757
-Demand analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=37606464 time=8.835
-Worker Wrapper binds [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=858616 time=0.495
-Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=34487328 time=11.471
-Exitification transformation [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=26000 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=30157888 time=9.864
-Common sub-expression [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24584 time=0.006
-Float inwards [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=23480 time=0.006
-Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=33847216 time=12.271
-Demand analysis [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=34023760 time=13.972
-CoreTidy [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=6827648 time=2.311
-CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.011
-CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=194191568 time=61.957
-systool:as: alloc=103776 time=0.181
-CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.017
-CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=198622632 time=61.538
-systool:as: alloc=106656 time=0.180
+Parser [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=1860160 time=0.482
+Renamer/typechecker [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=21385032 time=10.343
+Desugar [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=2243944 time=1.430
+Simplifier [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=4131984 time=1.167
+CoreTidy [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=707672 time=0.230
+CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.008
+CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=38005000 time=11.401
+systool:as: alloc=103784 time=0.168
+CorePrep [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=24472 time=0.013
+CodeGen [Tools.Metrics.ARDUBPPMetrics.Types]: alloc=40954560 time=11.893
+systool:as: alloc=106664 time=0.136

@@ -1,26 +1,11 @@
-Parser [API.UI.Registration]: alloc=1540424 time=0.400
-Renamer/typechecker [API.UI.Registration]: alloc=125323336 time=31.606
-Desugar [API.UI.Registration]: alloc=515040 time=0.949
-Simplifier [API.UI.Registration]: alloc=93845072 time=30.573
-Specialise [API.UI.Registration]: alloc=6145856 time=4.204
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.Registration]: alloc=17048088 time=7.217
-Simplifier [API.UI.Registration]: alloc=181133960 time=62.332
-Float inwards [API.UI.Registration]: alloc=19032 time=0.005
-Called arity analysis [API.UI.Registration]: alloc=20608 time=0.005
-Simplifier [API.UI.Registration]: alloc=24231696 time=15.398
-Demand analysis [API.UI.Registration]: alloc=28028120 time=7.961
-Worker Wrapper binds [API.UI.Registration]: alloc=438768 time=0.205
-Simplifier [API.UI.Registration]: alloc=48788680 time=11.588
-Exitification transformation [API.UI.Registration]: alloc=21520 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.Registration]: alloc=21586216 time=8.033
-Common sub-expression [API.UI.Registration]: alloc=20136 time=0.005
-Float inwards [API.UI.Registration]: alloc=19032 time=0.004
-Simplifier [API.UI.Registration]: alloc=171051816 time=59.154
-Demand analysis [API.UI.Registration]: alloc=33096296 time=11.767
-CoreTidy [API.UI.Registration]: alloc=27092936 time=7.614
-CorePrep [API.UI.Registration]: alloc=19992 time=0.015
-CodeGen [API.UI.Registration]: alloc=135337592 time=35.314
-systool:as: alloc=102752 time=0.198
-CorePrep [API.UI.Registration]: alloc=19992 time=0.015
-CodeGen [API.UI.Registration]: alloc=139446616 time=36.010
-systool:as: alloc=105632 time=0.170
+Parser [API.UI.Registration]: alloc=1540424 time=0.327
+Renamer/typechecker [API.UI.Registration]: alloc=125368376 time=32.424
+Desugar [API.UI.Registration]: alloc=515224 time=0.977
+Simplifier [API.UI.Registration]: alloc=32294280 time=12.217
+CoreTidy [API.UI.Registration]: alloc=20993200 time=5.155
+CorePrep [API.UI.Registration]: alloc=19992 time=0.011
+CodeGen [API.UI.Registration]: alloc=40882824 time=15.158
+systool:as: alloc=102760 time=0.193
+CorePrep [API.UI.Registration]: alloc=19992 time=0.014
+CodeGen [API.UI.Registration]: alloc=43842520 time=14.760
+systool:as: alloc=105640 time=0.159

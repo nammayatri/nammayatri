@@ -1,32 +1,17 @@
-Parser [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=1967688 time=0.457
-Simplify [expr]: alloc=211104 time=0.071
-CorePrep [expr]: alloc=84120 time=0.069
-ByteCodeGen [Ghci1]: alloc=480488 time=0.131
-Simplify [expr]: alloc=47024 time=0.017
-CorePrep [expr]: alloc=26752 time=0.029
-ByteCodeGen [Ghci1]: alloc=131880 time=0.052
-Renamer/typechecker [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=199360792 time=61.298
-Desugar [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=24986352 time=7.359
-Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=141782328 time=42.768
-Specialise [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=46854464 time=15.067
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=85505488 time=32.173
-Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=1094530928 time=431.967
-Float inwards [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.006
-Called arity analysis [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28640 time=0.006
-Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=307534656 time=132.143
-Demand analysis [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=277048816 time=72.456
-Worker Wrapper binds [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=7163504 time=4.514
-Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=362992896 time=137.166
-Exitification transformation [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=29584 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=232617864 time=78.935
-Common sub-expression [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28168 time=0.034
-Float inwards [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=27064 time=0.004
-Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=367753376 time=172.641
-Demand analysis [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=249717240 time=62.787
-CoreTidy [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=75464048 time=33.904
-CorePrep [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.044
-CodeGen [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=1285381464 time=468.864
-systool:as: alloc=104472 time=0.277
-CorePrep [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.031
-CodeGen [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=1324628000 time=410.027
-systool:as: alloc=107344 time=0.332
+Parser [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=1965472 time=0.430
+Simplify [expr]: alloc=136112 time=0.035
+CorePrep [expr]: alloc=62312 time=0.027
+ByteCodeGen [Ghci1]: alloc=357872 time=0.090
+Simplify [expr]: alloc=46992 time=0.023
+CorePrep [expr]: alloc=26608 time=0.015
+ByteCodeGen [Ghci1]: alloc=131880 time=0.049
+Renamer/typechecker [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=197018472 time=56.519
+Desugar [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=24981592 time=6.959
+Simplifier [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=39967696 time=11.604
+CoreTidy [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=9609304 time=3.177
+CorePrep [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.011
+CodeGen [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=286787016 time=89.341
+systool:as: alloc=104472 time=0.258
+CorePrep [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=28040 time=0.017
+CodeGen [Storage.Beam.Merchant.OnboardingDocumentConfig]: alloc=313647968 time=90.092
+systool:as: alloc=107344 time=0.177

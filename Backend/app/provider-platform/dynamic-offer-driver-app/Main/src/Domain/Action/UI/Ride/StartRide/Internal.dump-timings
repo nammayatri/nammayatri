@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Ride.StartRide.Internal]: alloc=1218440 time=0.376
-Renamer/typechecker [Domain.Action.UI.Ride.StartRide.Internal]: alloc=307534152 time=60.122
-Desugar [Domain.Action.UI.Ride.StartRide.Internal]: alloc=65527920 time=12.823
-Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=5065504 time=1.776
-Specialise [Domain.Action.UI.Ride.StartRide.Internal]: alloc=745208 time=0.290
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Ride.StartRide.Internal]: alloc=3475840 time=1.040
-Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=5243592 time=1.424
-Float inwards [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25272 time=0.005
-Called arity analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26848 time=0.006
-Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=3047640 time=0.799
-Demand analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2521000 time=0.617
-Worker Wrapper binds [Domain.Action.UI.Ride.StartRide.Internal]: alloc=199744 time=0.073
-Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2179808 time=0.586
-Exitification transformation [Domain.Action.UI.Ride.StartRide.Internal]: alloc=27792 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2253432 time=0.643
-Common sub-expression [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26376 time=0.005
-Float inwards [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25272 time=0.005
-Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=3199352 time=0.881
-Demand analysis [Domain.Action.UI.Ride.StartRide.Internal]: alloc=2490720 time=0.583
-CoreTidy [Domain.Action.UI.Ride.StartRide.Internal]: alloc=813584 time=0.274
-CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.012
-CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=23623888 time=6.602
-systool:as: alloc=104160 time=0.185
-CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.023
-CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=25342480 time=7.041
-systool:as: alloc=107040 time=0.161
+Parser [Domain.Action.UI.Ride.StartRide.Internal]: alloc=1218440 time=0.263
+Renamer/typechecker [Domain.Action.UI.Ride.StartRide.Internal]: alloc=244083032 time=45.479
+Desugar [Domain.Action.UI.Ride.StartRide.Internal]: alloc=64353336 time=11.212
+Simplifier [Domain.Action.UI.Ride.StartRide.Internal]: alloc=3142264 time=0.792
+CoreTidy [Domain.Action.UI.Ride.StartRide.Internal]: alloc=368296 time=0.129
+CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.009
+CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=17397984 time=4.559
+systool:as: alloc=104168 time=0.160
+CorePrep [Domain.Action.UI.Ride.StartRide.Internal]: alloc=26264 time=0.009
+CodeGen [Domain.Action.UI.Ride.StartRide.Internal]: alloc=19039080 time=4.903
+systool:as: alloc=107048 time=0.113

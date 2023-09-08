@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Location.UpdateLocation]: alloc=7424960 time=1.401
-Renamer/typechecker [Domain.Action.UI.Location.UpdateLocation]: alloc=1444195752 time=300.183
-Desugar [Domain.Action.UI.Location.UpdateLocation]: alloc=3289123896 time=520.498
-Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=169382856 time=57.251
-Specialise [Domain.Action.UI.Location.UpdateLocation]: alloc=37589736 time=12.718
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Location.UpdateLocation]: alloc=76650120 time=27.375
-Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=895811928 time=378.975
-Float inwards [Domain.Action.UI.Location.UpdateLocation]: alloc=25272 time=0.006
-Called arity analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=26848 time=0.006
-Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=281199072 time=120.150
-Demand analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=182409312 time=39.109
-Worker Wrapper binds [Domain.Action.UI.Location.UpdateLocation]: alloc=4619984 time=2.866
-Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=279478024 time=96.584
-Exitification transformation [Domain.Action.UI.Location.UpdateLocation]: alloc=27792 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Location.UpdateLocation]: alloc=174786000 time=84.289
-Common sub-expression [Domain.Action.UI.Location.UpdateLocation]: alloc=26376 time=0.007
-Float inwards [Domain.Action.UI.Location.UpdateLocation]: alloc=25272 time=0.004
-Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=331110896 time=139.620
-Demand analysis [Domain.Action.UI.Location.UpdateLocation]: alloc=186516336 time=42.007
-CoreTidy [Domain.Action.UI.Location.UpdateLocation]: alloc=48382296 time=20.897
-CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.016
-CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=869840936 time=270.739
-systool:as: alloc=104128 time=0.215
-CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.018
-CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=903738168 time=265.765
-systool:as: alloc=107008 time=0.199
+Parser [Domain.Action.UI.Location.UpdateLocation]: alloc=7422752 time=1.590
+Renamer/typechecker [Domain.Action.UI.Location.UpdateLocation]: alloc=1077348608 time=227.705
+Desugar [Domain.Action.UI.Location.UpdateLocation]: alloc=3230461984 time=527.592
+Simplifier [Domain.Action.UI.Location.UpdateLocation]: alloc=88466448 time=24.704
+CoreTidy [Domain.Action.UI.Location.UpdateLocation]: alloc=13478224 time=4.595
+CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.009
+CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=453580728 time=137.657
+systool:as: alloc=104136 time=0.217
+CorePrep [Domain.Action.UI.Location.UpdateLocation]: alloc=26264 time=0.030
+CodeGen [Domain.Action.UI.Location.UpdateLocation]: alloc=489271216 time=137.860
+systool:as: alloc=107040 time=0.240

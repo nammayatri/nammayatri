@@ -1,26 +1,11 @@
-Parser [Domain.Types.DriverLocation]: alloc=572496 time=0.157
-Renamer/typechecker [Domain.Types.DriverLocation]: alloc=55501096 time=17.196
-Desugar [Domain.Types.DriverLocation]: alloc=3153240 time=1.618
-Simplifier [Domain.Types.DriverLocation]: alloc=43034504 time=14.642
-Specialise [Domain.Types.DriverLocation]: alloc=10342824 time=3.464
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.DriverLocation]: alloc=23711728 time=8.334
-Simplifier [Domain.Types.DriverLocation]: alloc=279465912 time=116.264
-Float inwards [Domain.Types.DriverLocation]: alloc=21416 time=0.005
-Called arity analysis [Domain.Types.DriverLocation]: alloc=22992 time=0.006
-Simplifier [Domain.Types.DriverLocation]: alloc=80754392 time=23.516
-Demand analysis [Domain.Types.DriverLocation]: alloc=41060168 time=10.167
-Worker Wrapper binds [Domain.Types.DriverLocation]: alloc=1106656 time=0.697
-Simplifier [Domain.Types.DriverLocation]: alloc=77291392 time=24.725
-Exitification transformation [Domain.Types.DriverLocation]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.DriverLocation]: alloc=41778784 time=15.040
-Common sub-expression [Domain.Types.DriverLocation]: alloc=22520 time=0.007
-Float inwards [Domain.Types.DriverLocation]: alloc=21416 time=0.004
-Simplifier [Domain.Types.DriverLocation]: alloc=96182808 time=50.831
-Demand analysis [Domain.Types.DriverLocation]: alloc=39553128 time=9.666
-CoreTidy [Domain.Types.DriverLocation]: alloc=12954240 time=4.582
+Parser [Domain.Types.DriverLocation]: alloc=571944 time=0.178
+Renamer/typechecker [Domain.Types.DriverLocation]: alloc=55478832 time=17.429
+Desugar [Domain.Types.DriverLocation]: alloc=3143896 time=1.693
+Simplifier [Domain.Types.DriverLocation]: alloc=17688344 time=4.665
+CoreTidy [Domain.Types.DriverLocation]: alloc=4682920 time=1.344
 CorePrep [Domain.Types.DriverLocation]: alloc=22376 time=0.010
-CodeGen [Domain.Types.DriverLocation]: alloc=155342528 time=50.707
-systool:as: alloc=103288 time=0.226
-CorePrep [Domain.Types.DriverLocation]: alloc=22376 time=0.020
-CodeGen [Domain.Types.DriverLocation]: alloc=162053064 time=51.456
-systool:as: alloc=106144 time=0.199
+CodeGen [Domain.Types.DriverLocation]: alloc=130842072 time=41.639
+systool:as: alloc=103264 time=0.196
+CorePrep [Domain.Types.DriverLocation]: alloc=22376 time=0.014
+CodeGen [Domain.Types.DriverLocation]: alloc=140608640 time=41.438
+systool:as: alloc=106144 time=0.148

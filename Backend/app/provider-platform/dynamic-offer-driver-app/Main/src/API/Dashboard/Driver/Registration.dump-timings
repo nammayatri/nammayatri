@@ -1,26 +1,11 @@
-Parser [API.Dashboard.Driver.Registration]: alloc=1900728 time=0.423
-Renamer/typechecker [API.Dashboard.Driver.Registration]: alloc=16692664 time=6.741
-Desugar [API.Dashboard.Driver.Registration]: alloc=518776 time=0.882
-Simplifier [API.Dashboard.Driver.Registration]: alloc=7337264 time=1.894
-Specialise [API.Dashboard.Driver.Registration]: alloc=829600 time=0.210
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.Dashboard.Driver.Registration]: alloc=3164592 time=0.808
-Simplifier [API.Dashboard.Driver.Registration]: alloc=2015080 time=0.520
-Float inwards [API.Dashboard.Driver.Registration]: alloc=23192 time=0.005
-Called arity analysis [API.Dashboard.Driver.Registration]: alloc=24768 time=0.005
-Simplifier [API.Dashboard.Driver.Registration]: alloc=2417296 time=0.508
-Demand analysis [API.Dashboard.Driver.Registration]: alloc=2502048 time=0.482
-Worker Wrapper binds [API.Dashboard.Driver.Registration]: alloc=51360 time=0.022
-Simplifier [API.Dashboard.Driver.Registration]: alloc=3685528 time=0.780
-Exitification transformation [API.Dashboard.Driver.Registration]: alloc=25696 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.Dashboard.Driver.Registration]: alloc=1243224 time=0.334
-Common sub-expression [API.Dashboard.Driver.Registration]: alloc=24296 time=0.004
-Float inwards [API.Dashboard.Driver.Registration]: alloc=23192 time=0.004
-Simplifier [API.Dashboard.Driver.Registration]: alloc=4624368 time=1.143
-Demand analysis [API.Dashboard.Driver.Registration]: alloc=2506864 time=0.498
-CoreTidy [API.Dashboard.Driver.Registration]: alloc=1130680 time=0.367
-CorePrep [API.Dashboard.Driver.Registration]: alloc=24168 time=0.019
-CodeGen [API.Dashboard.Driver.Registration]: alloc=19885040 time=6.994
-systool:as: alloc=103672 time=0.171
-CorePrep [API.Dashboard.Driver.Registration]: alloc=24168 time=0.012
-CodeGen [API.Dashboard.Driver.Registration]: alloc=20860120 time=7.176
-systool:as: alloc=106552 time=0.129
+Parser [API.Dashboard.Driver.Registration]: alloc=1900728 time=0.335
+Renamer/typechecker [API.Dashboard.Driver.Registration]: alloc=16721296 time=6.330
+Desugar [API.Dashboard.Driver.Registration]: alloc=518888 time=0.885
+Simplifier [API.Dashboard.Driver.Registration]: alloc=3388672 time=0.753
+CoreTidy [API.Dashboard.Driver.Registration]: alloc=520720 time=0.158
+CorePrep [API.Dashboard.Driver.Registration]: alloc=24168 time=0.008
+CodeGen [API.Dashboard.Driver.Registration]: alloc=14274480 time=4.840
+systool:as: alloc=103680 time=0.153
+CorePrep [API.Dashboard.Driver.Registration]: alloc=24168 time=0.011
+CodeGen [API.Dashboard.Driver.Registration]: alloc=15556768 time=5.056
+systool:as: alloc=106560 time=0.131

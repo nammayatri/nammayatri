@@ -1,26 +1,11 @@
-Parser [API.UI.KioskLocation]: alloc=655992 time=0.210
-Renamer/typechecker [API.UI.KioskLocation]: alloc=8814944 time=4.747
-Desugar [API.UI.KioskLocation]: alloc=315400 time=0.849
-Simplifier [API.UI.KioskLocation]: alloc=4600584 time=1.164
-Specialise [API.UI.KioskLocation]: alloc=664928 time=0.131
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.KioskLocation]: alloc=2531784 time=0.592
-Simplifier [API.UI.KioskLocation]: alloc=880200 time=0.217
-Float inwards [API.UI.KioskLocation]: alloc=19320 time=0.005
-Called arity analysis [API.UI.KioskLocation]: alloc=20896 time=0.005
-Simplifier [API.UI.KioskLocation]: alloc=903200 time=0.263
-Demand analysis [API.UI.KioskLocation]: alloc=1928920 time=0.318
-Worker Wrapper binds [API.UI.KioskLocation]: alloc=28016 time=0.014
-Simplifier [API.UI.KioskLocation]: alloc=1562680 time=0.306
-Exitification transformation [API.UI.KioskLocation]: alloc=21840 time=0.004
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.KioskLocation]: alloc=670744 time=0.156
-Common sub-expression [API.UI.KioskLocation]: alloc=20424 time=0.004
-Float inwards [API.UI.KioskLocation]: alloc=19320 time=0.003
-Simplifier [API.UI.KioskLocation]: alloc=2008720 time=0.369
-Demand analysis [API.UI.KioskLocation]: alloc=1932784 time=0.291
-CoreTidy [API.UI.KioskLocation]: alloc=530008 time=0.146
-CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.007
-CodeGen [API.UI.KioskLocation]: alloc=7712344 time=2.059
-systool:as: alloc=102824 time=0.146
-CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.008
-CodeGen [API.UI.KioskLocation]: alloc=7866936 time=2.013
-systool:as: alloc=105696 time=0.120
+Parser [API.UI.KioskLocation]: alloc=655992 time=0.157
+Renamer/typechecker [API.UI.KioskLocation]: alloc=8818544 time=4.567
+Desugar [API.UI.KioskLocation]: alloc=315704 time=0.880
+Simplifier [API.UI.KioskLocation]: alloc=566904 time=0.218
+CoreTidy [API.UI.KioskLocation]: alloc=118936 time=0.080
+CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.006
+CodeGen [API.UI.KioskLocation]: alloc=3974568 time=1.409
+systool:as: alloc=102832 time=0.178
+CorePrep [API.UI.KioskLocation]: alloc=20296 time=0.009
+CodeGen [API.UI.KioskLocation]: alloc=4287376 time=1.406
+systool:as: alloc=105704 time=0.139

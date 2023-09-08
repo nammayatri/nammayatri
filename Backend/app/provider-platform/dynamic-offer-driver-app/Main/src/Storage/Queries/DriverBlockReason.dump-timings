@@ -1,26 +1,11 @@
-Parser [Storage.Queries.DriverBlockReason]: alloc=938016 time=0.252
-Renamer/typechecker [Storage.Queries.DriverBlockReason]: alloc=41959472 time=14.307
-Desugar [Storage.Queries.DriverBlockReason]: alloc=2148064 time=1.292
-Simplifier [Storage.Queries.DriverBlockReason]: alloc=5715976 time=2.027
-Specialise [Storage.Queries.DriverBlockReason]: alloc=2403168 time=0.843
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.DriverBlockReason]: alloc=5636648 time=1.667
-Simplifier [Storage.Queries.DriverBlockReason]: alloc=96466992 time=30.650
-Float inwards [Storage.Queries.DriverBlockReason]: alloc=23192 time=0.005
-Called arity analysis [Storage.Queries.DriverBlockReason]: alloc=24768 time=0.006
-Simplifier [Storage.Queries.DriverBlockReason]: alloc=22012384 time=6.875
-Demand analysis [Storage.Queries.DriverBlockReason]: alloc=7315800 time=2.363
-Worker Wrapper binds [Storage.Queries.DriverBlockReason]: alloc=377872 time=0.193
-Simplifier [Storage.Queries.DriverBlockReason]: alloc=20943144 time=6.513
-Exitification transformation [Storage.Queries.DriverBlockReason]: alloc=25696 time=0.031
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.DriverBlockReason]: alloc=7067192 time=2.685
-Common sub-expression [Storage.Queries.DriverBlockReason]: alloc=24296 time=0.006
-Float inwards [Storage.Queries.DriverBlockReason]: alloc=23192 time=0.005
-Simplifier [Storage.Queries.DriverBlockReason]: alloc=24460856 time=8.385
-Demand analysis [Storage.Queries.DriverBlockReason]: alloc=7334360 time=2.346
-CoreTidy [Storage.Queries.DriverBlockReason]: alloc=4851872 time=2.042
+Parser [Storage.Queries.DriverBlockReason]: alloc=938016 time=0.221
+Renamer/typechecker [Storage.Queries.DriverBlockReason]: alloc=41182296 time=13.753
+Desugar [Storage.Queries.DriverBlockReason]: alloc=2133216 time=1.273
+Simplifier [Storage.Queries.DriverBlockReason]: alloc=3591464 time=1.114
+CoreTidy [Storage.Queries.DriverBlockReason]: alloc=430304 time=0.167
 CorePrep [Storage.Queries.DriverBlockReason]: alloc=24168 time=0.010
-CodeGen [Storage.Queries.DriverBlockReason]: alloc=57710200 time=19.704
-systool:as: alloc=103648 time=0.243
-CorePrep [Storage.Queries.DriverBlockReason]: alloc=24168 time=0.029
-CodeGen [Storage.Queries.DriverBlockReason]: alloc=60849320 time=20.590
-systool:as: alloc=106528 time=0.163
+CodeGen [Storage.Queries.DriverBlockReason]: alloc=22576752 time=6.455
+systool:as: alloc=103648 time=0.158
+CorePrep [Storage.Queries.DriverBlockReason]: alloc=24168 time=0.011
+CodeGen [Storage.Queries.DriverBlockReason]: alloc=25472008 time=6.898
+systool:as: alloc=106552 time=0.144

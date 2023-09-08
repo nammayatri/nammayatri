@@ -1,26 +1,11 @@
-Parser [SharedLogic.SyncRide]: alloc=3961440 time=0.810
-Renamer/typechecker [SharedLogic.SyncRide]: alloc=193131440 time=50.210
-Desugar [SharedLogic.SyncRide]: alloc=2181664 time=1.498
-Simplifier [SharedLogic.SyncRide]: alloc=82553568 time=25.596
-Specialise [SharedLogic.SyncRide]: alloc=8851640 time=3.800
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [SharedLogic.SyncRide]: alloc=24093080 time=8.293
-Simplifier [SharedLogic.SyncRide]: alloc=403823104 time=148.027
-Float inwards [SharedLogic.SyncRide]: alloc=19320 time=0.005
-Called arity analysis [SharedLogic.SyncRide]: alloc=20896 time=0.006
-Simplifier [SharedLogic.SyncRide]: alloc=111070864 time=44.800
-Demand analysis [SharedLogic.SyncRide]: alloc=141920776 time=32.806
-Worker Wrapper binds [SharedLogic.SyncRide]: alloc=2302872 time=1.485
-Simplifier [SharedLogic.SyncRide]: alloc=142102112 time=49.438
-Exitification transformation [SharedLogic.SyncRide]: alloc=21840 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [SharedLogic.SyncRide]: alloc=120922224 time=36.841
-Common sub-expression [SharedLogic.SyncRide]: alloc=20424 time=0.007
-Float inwards [SharedLogic.SyncRide]: alloc=19320 time=0.004
-Simplifier [SharedLogic.SyncRide]: alloc=234909120 time=98.697
-Demand analysis [SharedLogic.SyncRide]: alloc=179433560 time=34.841
-CoreTidy [SharedLogic.SyncRide]: alloc=40794248 time=13.169
-CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.014
-CodeGen [SharedLogic.SyncRide]: alloc=829301984 time=237.139
-systool:as: alloc=102840 time=0.276
-CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.019
-CodeGen [SharedLogic.SyncRide]: alloc=853674848 time=223.542
-systool:as: alloc=105736 time=0.243
+Parser [SharedLogic.SyncRide]: alloc=3961440 time=0.801
+Renamer/typechecker [SharedLogic.SyncRide]: alloc=193416176 time=48.526
+Desugar [SharedLogic.SyncRide]: alloc=2177208 time=1.529
+Simplifier [SharedLogic.SyncRide]: alloc=27151712 time=9.139
+CoreTidy [SharedLogic.SyncRide]: alloc=14625544 time=3.386
+CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.008
+CodeGen [SharedLogic.SyncRide]: alloc=110067552 time=32.288
+systool:as: alloc=102848 time=0.168
+CorePrep [SharedLogic.SyncRide]: alloc=20296 time=0.018
+CodeGen [SharedLogic.SyncRide]: alloc=120283216 time=34.002
+systool:as: alloc=105720 time=0.174

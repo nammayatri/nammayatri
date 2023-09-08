@@ -1,26 +1,11 @@
-Parser [Domain.Action.Beckn.Confirm]: alloc=11636816 time=2.060
-Renamer/typechecker [Domain.Action.Beckn.Confirm]: alloc=3172115864 time=631.864
-Desugar [Domain.Action.Beckn.Confirm]: alloc=5474487480 time=891.063
-Simplifier [Domain.Action.Beckn.Confirm]: alloc=67770592 time=20.074
-Specialise [Domain.Action.Beckn.Confirm]: alloc=17461968 time=4.453
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Confirm]: alloc=65201736 time=20.961
-Simplifier [Domain.Action.Beckn.Confirm]: alloc=218611984 time=86.825
-Float inwards [Domain.Action.Beckn.Confirm]: alloc=21416 time=0.006
-Called arity analysis [Domain.Action.Beckn.Confirm]: alloc=22992 time=0.006
-Simplifier [Domain.Action.Beckn.Confirm]: alloc=87684744 time=31.043
-Demand analysis [Domain.Action.Beckn.Confirm]: alloc=77644112 time=18.777
-Worker Wrapper binds [Domain.Action.Beckn.Confirm]: alloc=2279040 time=1.380
-Simplifier [Domain.Action.Beckn.Confirm]: alloc=74286984 time=32.123
-Exitification transformation [Domain.Action.Beckn.Confirm]: alloc=23904 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Confirm]: alloc=63092456 time=19.884
-Common sub-expression [Domain.Action.Beckn.Confirm]: alloc=22520 time=0.006
-Float inwards [Domain.Action.Beckn.Confirm]: alloc=21416 time=0.004
-Simplifier [Domain.Action.Beckn.Confirm]: alloc=97659840 time=30.710
-Demand analysis [Domain.Action.Beckn.Confirm]: alloc=75386408 time=17.541
-CoreTidy [Domain.Action.Beckn.Confirm]: alloc=21420448 time=18.395
-CorePrep [Domain.Action.Beckn.Confirm]: alloc=22376 time=0.017
-CodeGen [Domain.Action.Beckn.Confirm]: alloc=500857744 time=145.221
-systool:as: alloc=103320 time=0.253
-CorePrep [Domain.Action.Beckn.Confirm]: alloc=22376 time=0.018
-CodeGen [Domain.Action.Beckn.Confirm]: alloc=522231912 time=144.496
-systool:as: alloc=106200 time=0.216
+Parser [Domain.Action.Beckn.Confirm]: alloc=11631912 time=2.189
+Renamer/typechecker [Domain.Action.Beckn.Confirm]: alloc=2409092440 time=474.137
+Desugar [Domain.Action.Beckn.Confirm]: alloc=5377017960 time=910.260
+Simplifier [Domain.Action.Beckn.Confirm]: alloc=76001656 time=19.960
+CoreTidy [Domain.Action.Beckn.Confirm]: alloc=7270424 time=2.817
+CorePrep [Domain.Action.Beckn.Confirm]: alloc=22376 time=0.010
+CodeGen [Domain.Action.Beckn.Confirm]: alloc=449668352 time=118.846
+systool:as: alloc=103304 time=0.232
+CorePrep [Domain.Action.Beckn.Confirm]: alloc=22376 time=0.014
+CodeGen [Domain.Action.Beckn.Confirm]: alloc=485235128 time=121.213
+systool:as: alloc=106184 time=0.206

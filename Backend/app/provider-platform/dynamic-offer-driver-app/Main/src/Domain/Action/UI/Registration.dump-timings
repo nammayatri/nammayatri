@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.Registration]: alloc=10485384 time=2.140
-Renamer/typechecker [Domain.Action.UI.Registration]: alloc=2663427824 time=519.509
-Desugar [Domain.Action.UI.Registration]: alloc=1668123552 time=265.223
-Simplifier [Domain.Action.UI.Registration]: alloc=121365528 time=42.172
-Specialise [Domain.Action.UI.Registration]: alloc=28487192 time=9.384
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.Registration]: alloc=64106712 time=23.630
-Simplifier [Domain.Action.UI.Registration]: alloc=686369720 time=280.933
-Float inwards [Domain.Action.UI.Registration]: alloc=22008 time=0.005
-Called arity analysis [Domain.Action.UI.Registration]: alloc=23584 time=0.006
-Simplifier [Domain.Action.UI.Registration]: alloc=201585128 time=90.768
-Demand analysis [Domain.Action.UI.Registration]: alloc=147256640 time=38.708
-Worker Wrapper binds [Domain.Action.UI.Registration]: alloc=4760440 time=2.696
-Simplifier [Domain.Action.UI.Registration]: alloc=200471568 time=71.598
-Exitification transformation [Domain.Action.UI.Registration]: alloc=24512 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.Registration]: alloc=142598912 time=87.748
-Common sub-expression [Domain.Action.UI.Registration]: alloc=23112 time=0.007
-Float inwards [Domain.Action.UI.Registration]: alloc=22008 time=0.004
-Simplifier [Domain.Action.UI.Registration]: alloc=237123608 time=112.073
-Demand analysis [Domain.Action.UI.Registration]: alloc=155377552 time=39.006
-CoreTidy [Domain.Action.UI.Registration]: alloc=36156448 time=17.462
-CorePrep [Domain.Action.UI.Registration]: alloc=22968 time=0.013
-CodeGen [Domain.Action.UI.Registration]: alloc=830303760 time=254.037
-systool:as: alloc=103416 time=0.235
-CorePrep [Domain.Action.UI.Registration]: alloc=22968 time=0.015
-CodeGen [Domain.Action.UI.Registration]: alloc=867195968 time=268.885
-systool:as: alloc=106288 time=0.217
+Parser [Domain.Action.UI.Registration]: alloc=10484288 time=1.713
+Renamer/typechecker [Domain.Action.UI.Registration]: alloc=2215637216 time=425.489
+Desugar [Domain.Action.UI.Registration]: alloc=1637573656 time=275.691
+Simplifier [Domain.Action.UI.Registration]: alloc=87771480 time=25.939
+CoreTidy [Domain.Action.UI.Registration]: alloc=9916416 time=4.082
+CorePrep [Domain.Action.UI.Registration]: alloc=22968 time=0.012
+CodeGen [Domain.Action.UI.Registration]: alloc=471250960 time=137.084
+systool:as: alloc=103424 time=0.224
+CorePrep [Domain.Action.UI.Registration]: alloc=22968 time=0.017
+CodeGen [Domain.Action.UI.Registration]: alloc=512887760 time=142.776
+systool:as: alloc=106296 time=0.226

@@ -1,26 +1,11 @@
-Parser [Storage.Queries.Invoice]: alloc=2035816 time=0.460
-Renamer/typechecker [Storage.Queries.Invoice]: alloc=221195072 time=71.490
-Desugar [Storage.Queries.Invoice]: alloc=8630280 time=2.547
-Simplifier [Storage.Queries.Invoice]: alloc=82219304 time=26.508
-Specialise [Storage.Queries.Invoice]: alloc=24781448 time=6.906
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Queries.Invoice]: alloc=22787464 time=8.197
-Simplifier [Storage.Queries.Invoice]: alloc=386194784 time=130.123
-Float inwards [Storage.Queries.Invoice]: alloc=20216 time=0.005
-Called arity analysis [Storage.Queries.Invoice]: alloc=21792 time=0.006
-Simplifier [Storage.Queries.Invoice]: alloc=89408160 time=26.663
-Demand analysis [Storage.Queries.Invoice]: alloc=25679232 time=9.840
-Worker Wrapper binds [Storage.Queries.Invoice]: alloc=1171528 time=0.738
-Simplifier [Storage.Queries.Invoice]: alloc=84427952 time=25.180
-Exitification transformation [Storage.Queries.Invoice]: alloc=22720 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Queries.Invoice]: alloc=24947608 time=9.994
-Common sub-expression [Storage.Queries.Invoice]: alloc=21320 time=0.005
-Float inwards [Storage.Queries.Invoice]: alloc=20216 time=0.004
-Simplifier [Storage.Queries.Invoice]: alloc=100195296 time=44.050
-Demand analysis [Storage.Queries.Invoice]: alloc=23027048 time=10.733
-CoreTidy [Storage.Queries.Invoice]: alloc=19670712 time=8.164
-CorePrep [Storage.Queries.Invoice]: alloc=21176 time=0.017
-CodeGen [Storage.Queries.Invoice]: alloc=180907392 time=61.628
-systool:as: alloc=103040 time=0.217
-CorePrep [Storage.Queries.Invoice]: alloc=21176 time=0.017
-CodeGen [Storage.Queries.Invoice]: alloc=191976520 time=63.518
-systool:as: alloc=105912 time=0.199
+Parser [Storage.Queries.Invoice]: alloc=2033592 time=0.409
+Renamer/typechecker [Storage.Queries.Invoice]: alloc=218066656 time=64.970
+Desugar [Storage.Queries.Invoice]: alloc=8590872 time=2.473
+Simplifier [Storage.Queries.Invoice]: alloc=47901128 time=13.217
+CoreTidy [Storage.Queries.Invoice]: alloc=9714680 time=2.840
+CorePrep [Storage.Queries.Invoice]: alloc=21176 time=0.009
+CodeGen [Storage.Queries.Invoice]: alloc=183339760 time=56.302
+systool:as: alloc=103072 time=0.171
+CorePrep [Storage.Queries.Invoice]: alloc=21176 time=0.018
+CodeGen [Storage.Queries.Invoice]: alloc=210376064 time=55.032
+systool:as: alloc=105920 time=0.170

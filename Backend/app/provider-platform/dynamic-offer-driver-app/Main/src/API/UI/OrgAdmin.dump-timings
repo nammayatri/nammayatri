@@ -1,26 +1,11 @@
-Parser [API.UI.OrgAdmin]: alloc=845744 time=0.244
-Renamer/typechecker [API.UI.OrgAdmin]: alloc=72481520 time=19.903
-Desugar [API.UI.OrgAdmin]: alloc=390000 time=0.906
-Simplifier [API.UI.OrgAdmin]: alloc=36680184 time=10.510
-Specialise [API.UI.OrgAdmin]: alloc=2603032 time=1.115
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.OrgAdmin]: alloc=10748616 time=3.287
-Simplifier [API.UI.OrgAdmin]: alloc=73872528 time=20.943
-Float inwards [API.UI.OrgAdmin]: alloc=17832 time=0.005
-Called arity analysis [API.UI.OrgAdmin]: alloc=19408 time=0.006
-Simplifier [API.UI.OrgAdmin]: alloc=13752800 time=5.799
-Demand analysis [API.UI.OrgAdmin]: alloc=20980384 time=4.028
-Worker Wrapper binds [API.UI.OrgAdmin]: alloc=179496 time=0.112
-Simplifier [API.UI.OrgAdmin]: alloc=26302760 time=4.890
-Exitification transformation [API.UI.OrgAdmin]: alloc=20336 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.OrgAdmin]: alloc=11737328 time=3.493
-Common sub-expression [API.UI.OrgAdmin]: alloc=18936 time=0.008
-Float inwards [API.UI.OrgAdmin]: alloc=17832 time=0.006
-Simplifier [API.UI.OrgAdmin]: alloc=59416096 time=23.837
-Demand analysis [API.UI.OrgAdmin]: alloc=22503776 time=6.523
-CoreTidy [API.UI.OrgAdmin]: alloc=12657456 time=3.914
-CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.018
-CodeGen [API.UI.OrgAdmin]: alloc=87688272 time=21.403
-systool:as: alloc=102512 time=0.185
-CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.016
-CodeGen [API.UI.OrgAdmin]: alloc=89493440 time=21.295
-systool:as: alloc=105384 time=0.176
+Parser [API.UI.OrgAdmin]: alloc=845744 time=0.220
+Renamer/typechecker [API.UI.OrgAdmin]: alloc=72185680 time=18.805
+Desugar [API.UI.OrgAdmin]: alloc=389952 time=0.894
+Simplifier [API.UI.OrgAdmin]: alloc=11514496 time=4.048
+CoreTidy [API.UI.OrgAdmin]: alloc=7114832 time=1.640
+CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.010
+CodeGen [API.UI.OrgAdmin]: alloc=19663024 time=7.093
+systool:as: alloc=102520 time=0.196
+CorePrep [API.UI.OrgAdmin]: alloc=18792 time=0.014
+CodeGen [API.UI.OrgAdmin]: alloc=21130344 time=7.082
+systool:as: alloc=105392 time=0.162

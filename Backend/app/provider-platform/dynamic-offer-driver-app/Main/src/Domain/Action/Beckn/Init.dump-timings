@@ -1,26 +1,11 @@
-Parser [Domain.Action.Beckn.Init]: alloc=7431472 time=1.606
-Renamer/typechecker [Domain.Action.Beckn.Init]: alloc=1806498696 time=327.990
-Desugar [Domain.Action.Beckn.Init]: alloc=2049907584 time=321.960
-Simplifier [Domain.Action.Beckn.Init]: alloc=42956584 time=12.444
-Specialise [Domain.Action.Beckn.Init]: alloc=12078968 time=2.509
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.Beckn.Init]: alloc=39692968 time=11.617
-Simplifier [Domain.Action.Beckn.Init]: alloc=132838192 time=39.676
-Float inwards [Domain.Action.Beckn.Init]: alloc=20504 time=0.005
-Called arity analysis [Domain.Action.Beckn.Init]: alloc=22080 time=0.005
-Simplifier [Domain.Action.Beckn.Init]: alloc=53671224 time=19.557
-Demand analysis [Domain.Action.Beckn.Init]: alloc=49294752 time=11.475
-Worker Wrapper binds [Domain.Action.Beckn.Init]: alloc=1864536 time=0.878
-Simplifier [Domain.Action.Beckn.Init]: alloc=47220944 time=14.336
-Exitification transformation [Domain.Action.Beckn.Init]: alloc=23024 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.Beckn.Init]: alloc=42898064 time=13.078
-Common sub-expression [Domain.Action.Beckn.Init]: alloc=21608 time=0.006
-Float inwards [Domain.Action.Beckn.Init]: alloc=20504 time=0.004
-Simplifier [Domain.Action.Beckn.Init]: alloc=63085592 time=19.153
-Demand analysis [Domain.Action.Beckn.Init]: alloc=53949368 time=11.507
-CoreTidy [Domain.Action.Beckn.Init]: alloc=14790784 time=5.707
-CorePrep [Domain.Action.Beckn.Init]: alloc=21496 time=0.011
-CodeGen [Domain.Action.Beckn.Init]: alloc=341881056 time=100.362
-systool:as: alloc=103120 time=0.246
-CorePrep [Domain.Action.Beckn.Init]: alloc=21496 time=0.016
-CodeGen [Domain.Action.Beckn.Init]: alloc=355192536 time=98.107
-systool:as: alloc=106024 time=0.249
+Parser [Domain.Action.Beckn.Init]: alloc=7425464 time=1.275
+Renamer/typechecker [Domain.Action.Beckn.Init]: alloc=1379893488 time=247.369
+Desugar [Domain.Action.Beckn.Init]: alloc=2012886416 time=322.419
+Simplifier [Domain.Action.Beckn.Init]: alloc=38761696 time=9.705
+CoreTidy [Domain.Action.Beckn.Init]: alloc=5768928 time=1.790
+CorePrep [Domain.Action.Beckn.Init]: alloc=21496 time=0.009
+CodeGen [Domain.Action.Beckn.Init]: alloc=249967280 time=67.742
+systool:as: alloc=103128 time=0.192
+CorePrep [Domain.Action.Beckn.Init]: alloc=21496 time=0.018
+CodeGen [Domain.Action.Beckn.Init]: alloc=272504048 time=67.941
+systool:as: alloc=106008 time=0.172

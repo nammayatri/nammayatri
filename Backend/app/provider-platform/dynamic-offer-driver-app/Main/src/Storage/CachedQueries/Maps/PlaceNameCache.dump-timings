@@ -1,26 +1,11 @@
-Parser [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=1594416 time=0.361
-Renamer/typechecker [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=447206496 time=78.947
-Desugar [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=409205768 time=66.398
-Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=6878024 time=1.831
-Specialise [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=1647968 time=0.504
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=8832832 time=2.564
-Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=116963528 time=43.575
-Float inwards [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=25576 time=0.005
-Called arity analysis [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=27152 time=0.013
-Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=33054384 time=10.873
-Demand analysis [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=31254792 time=7.655
-Worker Wrapper binds [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=1406520 time=0.672
-Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=37513352 time=12.531
-Exitification transformation [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=28080 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=29319704 time=9.461
-Common sub-expression [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=26680 time=0.007
-Float inwards [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=25576 time=0.005
-Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=36625368 time=12.671
-Demand analysis [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=29513776 time=6.622
-CoreTidy [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=4915952 time=2.366
-CorePrep [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=26552 time=0.037
-CodeGen [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=141621488 time=40.847
-systool:as: alloc=104192 time=0.232
-CorePrep [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=26552 time=0.018
-CodeGen [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=148465216 time=44.398
-systool:as: alloc=107072 time=0.271
+Parser [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=1591680 time=0.357
+Renamer/typechecker [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=326966080 time=58.063
+Desugar [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=401833336 time=65.712
+Simplifier [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=8922120 time=1.855
+CoreTidy [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=904392 time=0.280
+CorePrep [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=26552 time=0.007
+CodeGen [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=37509256 time=10.311
+systool:as: alloc=104200 time=0.208
+CorePrep [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=26552 time=0.012
+CodeGen [Storage.CachedQueries.Maps.PlaceNameCache]: alloc=41126824 time=10.723
+systool:as: alloc=107080 time=0.132

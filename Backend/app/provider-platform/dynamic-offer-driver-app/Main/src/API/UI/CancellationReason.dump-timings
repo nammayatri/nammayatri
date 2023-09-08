@@ -1,26 +1,11 @@
-Parser [API.UI.CancellationReason]: alloc=728152 time=0.232
-Renamer/typechecker [API.UI.CancellationReason]: alloc=16897480 time=6.824
-Desugar [API.UI.CancellationReason]: alloc=325648 time=0.868
-Simplifier [API.UI.CancellationReason]: alloc=5232208 time=1.434
-Specialise [API.UI.CancellationReason]: alloc=1094592 time=0.241
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [API.UI.CancellationReason]: alloc=3504888 time=0.765
-Simplifier [API.UI.CancellationReason]: alloc=6902016 time=1.805
-Float inwards [API.UI.CancellationReason]: alloc=20808 time=0.005
-Called arity analysis [API.UI.CancellationReason]: alloc=22384 time=0.005
-Simplifier [API.UI.CancellationReason]: alloc=1750248 time=0.472
-Demand analysis [API.UI.CancellationReason]: alloc=2166288 time=0.402
-Worker Wrapper binds [API.UI.CancellationReason]: alloc=40848 time=0.020
-Simplifier [API.UI.CancellationReason]: alloc=2226768 time=0.508
-Exitification transformation [API.UI.CancellationReason]: alloc=23312 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [API.UI.CancellationReason]: alloc=920960 time=0.250
-Common sub-expression [API.UI.CancellationReason]: alloc=21912 time=0.004
-Float inwards [API.UI.CancellationReason]: alloc=20808 time=0.003
-Simplifier [API.UI.CancellationReason]: alloc=2817328 time=0.670
-Demand analysis [API.UI.CancellationReason]: alloc=2167648 time=0.364
-CoreTidy [API.UI.CancellationReason]: alloc=671160 time=0.216
-CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.014
-CodeGen [API.UI.CancellationReason]: alloc=11271168 time=3.501
-systool:as: alloc=103120 time=0.172
-CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.012
-CodeGen [API.UI.CancellationReason]: alloc=11597192 time=3.717
-systool:as: alloc=106000 time=0.142
+Parser [API.UI.CancellationReason]: alloc=728152 time=0.175
+Renamer/typechecker [API.UI.CancellationReason]: alloc=16895712 time=6.828
+Desugar [API.UI.CancellationReason]: alloc=325184 time=0.876
+Simplifier [API.UI.CancellationReason]: alloc=996360 time=0.313
+CoreTidy [API.UI.CancellationReason]: alloc=189808 time=0.090
+CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.007
+CodeGen [API.UI.CancellationReason]: alloc=5428976 time=1.841
+systool:as: alloc=103128 time=0.174
+CorePrep [API.UI.CancellationReason]: alloc=21784 time=0.009
+CodeGen [API.UI.CancellationReason]: alloc=5785392 time=1.829
+systool:as: alloc=106008 time=0.166

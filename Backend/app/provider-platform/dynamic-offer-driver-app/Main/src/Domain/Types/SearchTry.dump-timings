@@ -1,32 +1,17 @@
-Parser [Domain.Types.SearchTry]: alloc=1652944 time=0.453
-Simplify [expr]: alloc=34464 time=0.021
-CorePrep [expr]: alloc=22952 time=0.016
-ByteCodeGen [Ghci1]: alloc=94056 time=0.051
-Simplify [expr]: alloc=34464 time=0.015
-CorePrep [expr]: alloc=22952 time=0.012
-ByteCodeGen [Ghci1]: alloc=94056 time=0.035
-Renamer/typechecker [Domain.Types.SearchTry]: alloc=134939856 time=45.880
-Desugar [Domain.Types.SearchTry]: alloc=90272832 time=20.952
-Simplifier [Domain.Types.SearchTry]: alloc=100217344 time=32.350
-Specialise [Domain.Types.SearchTry]: alloc=17209328 time=5.357
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.SearchTry]: alloc=39328752 time=13.441
-Simplifier [Domain.Types.SearchTry]: alloc=298331128 time=106.603
-Float inwards [Domain.Types.SearchTry]: alloc=19912 time=0.005
-Called arity analysis [Domain.Types.SearchTry]: alloc=21488 time=0.006
-Simplifier [Domain.Types.SearchTry]: alloc=81725416 time=42.618
-Demand analysis [Domain.Types.SearchTry]: alloc=46783632 time=11.878
-Worker Wrapper binds [Domain.Types.SearchTry]: alloc=2704128 time=1.306
-Simplifier [Domain.Types.SearchTry]: alloc=93196056 time=28.697
-Exitification transformation [Domain.Types.SearchTry]: alloc=22432 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.SearchTry]: alloc=50549928 time=16.532
-Common sub-expression [Domain.Types.SearchTry]: alloc=21016 time=0.006
-Float inwards [Domain.Types.SearchTry]: alloc=19912 time=0.004
-Simplifier [Domain.Types.SearchTry]: alloc=102304816 time=36.681
-Demand analysis [Domain.Types.SearchTry]: alloc=44550536 time=11.891
-CoreTidy [Domain.Types.SearchTry]: alloc=24991128 time=10.347
-CorePrep [Domain.Types.SearchTry]: alloc=20888 time=0.012
-CodeGen [Domain.Types.SearchTry]: alloc=479327264 time=169.922
-systool:as: alloc=102968 time=0.279
-CorePrep [Domain.Types.SearchTry]: alloc=20888 time=0.021
-CodeGen [Domain.Types.SearchTry]: alloc=502519160 time=151.332
-systool:as: alloc=105840 time=0.278
+Parser [Domain.Types.SearchTry]: alloc=1648592 time=0.428
+Simplify [expr]: alloc=34912 time=0.020
+CorePrep [expr]: alloc=22880 time=0.017
+ByteCodeGen [Ghci1]: alloc=94056 time=0.054
+Simplify [expr]: alloc=34912 time=0.014
+CorePrep [expr]: alloc=22880 time=0.012
+ByteCodeGen [Ghci1]: alloc=94056 time=0.034
+Renamer/typechecker [Domain.Types.SearchTry]: alloc=134694384 time=48.729
+Desugar [Domain.Types.SearchTry]: alloc=90268688 time=20.553
+Simplifier [Domain.Types.SearchTry]: alloc=84047872 time=22.481
+CoreTidy [Domain.Types.SearchTry]: alloc=10116488 time=3.302
+CorePrep [Domain.Types.SearchTry]: alloc=20888 time=0.009
+CodeGen [Domain.Types.SearchTry]: alloc=308634304 time=98.812
+systool:as: alloc=102976 time=0.188
+CorePrep [Domain.Types.SearchTry]: alloc=20888 time=0.013
+CodeGen [Domain.Types.SearchTry]: alloc=331150344 time=97.081
+systool:as: alloc=105848 time=0.181

@@ -1,26 +1,11 @@
-Parser [Domain.Types.Issue.Comment]: alloc=476912 time=0.189
-Renamer/typechecker [Domain.Types.Issue.Comment]: alloc=22497712 time=9.010
-Desugar [Domain.Types.Issue.Comment]: alloc=2302592 time=1.518
-Simplifier [Domain.Types.Issue.Comment]: alloc=7374152 time=2.405
-Specialise [Domain.Types.Issue.Comment]: alloc=614984 time=0.168
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Types.Issue.Comment]: alloc=2828656 time=0.878
-Simplifier [Domain.Types.Issue.Comment]: alloc=13419248 time=4.196
-Float inwards [Domain.Types.Issue.Comment]: alloc=21096 time=0.005
-Called arity analysis [Domain.Types.Issue.Comment]: alloc=22672 time=0.005
-Simplifier [Domain.Types.Issue.Comment]: alloc=4905680 time=1.385
-Demand analysis [Domain.Types.Issue.Comment]: alloc=3464064 time=0.910
-Worker Wrapper binds [Domain.Types.Issue.Comment]: alloc=179424 time=0.105
-Simplifier [Domain.Types.Issue.Comment]: alloc=5525472 time=1.599
-Exitification transformation [Domain.Types.Issue.Comment]: alloc=23616 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Types.Issue.Comment]: alloc=2808624 time=0.848
-Common sub-expression [Domain.Types.Issue.Comment]: alloc=22200 time=0.004
-Float inwards [Domain.Types.Issue.Comment]: alloc=21096 time=0.004
-Simplifier [Domain.Types.Issue.Comment]: alloc=7089976 time=2.252
-Demand analysis [Domain.Types.Issue.Comment]: alloc=3677984 time=0.969
-CoreTidy [Domain.Types.Issue.Comment]: alloc=2066112 time=0.797
-CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.010
-CodeGen [Domain.Types.Issue.Comment]: alloc=56089464 time=18.424
-systool:as: alloc=103240 time=0.248
-CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.016
-CodeGen [Domain.Types.Issue.Comment]: alloc=57955200 time=18.513
-systool:as: alloc=106120 time=0.188
+Parser [Domain.Types.Issue.Comment]: alloc=475296 time=0.130
+Renamer/typechecker [Domain.Types.Issue.Comment]: alloc=22479424 time=8.092
+Desugar [Domain.Types.Issue.Comment]: alloc=2302408 time=1.466
+Simplifier [Domain.Types.Issue.Comment]: alloc=5422000 time=1.626
+CoreTidy [Domain.Types.Issue.Comment]: alloc=971272 time=0.379
+CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.008
+CodeGen [Domain.Types.Issue.Comment]: alloc=32656464 time=9.316
+systool:as: alloc=103240 time=0.150
+CorePrep [Domain.Types.Issue.Comment]: alloc=22088 time=0.013
+CodeGen [Domain.Types.Issue.Comment]: alloc=35027080 time=9.902
+systool:as: alloc=106144 time=0.157

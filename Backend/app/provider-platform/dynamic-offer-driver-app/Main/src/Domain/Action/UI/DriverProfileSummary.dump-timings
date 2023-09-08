@@ -1,26 +1,11 @@
-Parser [Domain.Action.UI.DriverProfileSummary]: alloc=4227360 time=0.902
-Renamer/typechecker [Domain.Action.UI.DriverProfileSummary]: alloc=341193984 time=102.252
-Desugar [Domain.Action.UI.DriverProfileSummary]: alloc=225814032 time=39.230
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=178652520 time=58.563
-Specialise [Domain.Action.UI.DriverProfileSummary]: alloc=44896376 time=14.117
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Domain.Action.UI.DriverProfileSummary]: alloc=81163136 time=28.332
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=1786118640 time=747.978
-Float inwards [Domain.Action.UI.DriverProfileSummary]: alloc=24392 time=0.005
-Called arity analysis [Domain.Action.UI.DriverProfileSummary]: alloc=25968 time=0.006
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=440901392 time=185.348
-Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=263081792 time=74.051
-Worker Wrapper binds [Domain.Action.UI.DriverProfileSummary]: alloc=9216952 time=4.754
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=464997080 time=188.332
-Exitification transformation [Domain.Action.UI.DriverProfileSummary]: alloc=26896 time=0.005
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Domain.Action.UI.DriverProfileSummary]: alloc=249282080 time=141.508
-Common sub-expression [Domain.Action.UI.DriverProfileSummary]: alloc=25496 time=0.010
-Float inwards [Domain.Action.UI.DriverProfileSummary]: alloc=24392 time=0.005
-Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=437966160 time=147.538
-Demand analysis [Domain.Action.UI.DriverProfileSummary]: alloc=166915224 time=46.547
-CoreTidy [Domain.Action.UI.DriverProfileSummary]: alloc=42655624 time=16.570
-CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.014
-CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=431375592 time=128.490
-systool:as: alloc=103904 time=0.216
+Parser [Domain.Action.UI.DriverProfileSummary]: alloc=4223000 time=0.861
+Renamer/typechecker [Domain.Action.UI.DriverProfileSummary]: alloc=315971328 time=88.562
+Desugar [Domain.Action.UI.DriverProfileSummary]: alloc=222097656 time=38.143
+Simplifier [Domain.Action.UI.DriverProfileSummary]: alloc=58308752 time=14.794
+CoreTidy [Domain.Action.UI.DriverProfileSummary]: alloc=16617040 time=5.081
+CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.009
+CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=460211248 time=133.987
+systool:as: alloc=103912 time=0.186
 CorePrep [Domain.Action.UI.DriverProfileSummary]: alloc=25352 time=0.016
-CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=450595000 time=132.332
-systool:as: alloc=106776 time=0.238
+CodeGen [Domain.Action.UI.DriverProfileSummary]: alloc=496296280 time=133.078
+systool:as: alloc=106784 time=0.208

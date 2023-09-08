@@ -1,32 +1,17 @@
-Parser [Storage.Beam.KioskLocation]: alloc=1729456 time=0.448
-Simplify [expr]: alloc=184136 time=0.055
-CorePrep [expr]: alloc=74104 time=0.040
-ByteCodeGen [Ghci1]: alloc=379864 time=0.101
-Simplify [expr]: alloc=47024 time=0.016
-CorePrep [expr]: alloc=26752 time=0.015
-ByteCodeGen [Ghci1]: alloc=131880 time=0.048
-Renamer/typechecker [Storage.Beam.KioskLocation]: alloc=152502160 time=46.217
-Desugar [Storage.Beam.KioskLocation]: alloc=22479536 time=6.541
-Simplifier [Storage.Beam.KioskLocation]: alloc=99157656 time=29.769
-Specialise [Storage.Beam.KioskLocation]: alloc=29445568 time=10.259
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = False}) [Storage.Beam.KioskLocation]: alloc=68190640 time=24.506
-Simplifier [Storage.Beam.KioskLocation]: alloc=762709616 time=278.956
-Float inwards [Storage.Beam.KioskLocation]: alloc=21096 time=0.008
-Called arity analysis [Storage.Beam.KioskLocation]: alloc=22672 time=0.005
-Simplifier [Storage.Beam.KioskLocation]: alloc=225843328 time=66.001
-Demand analysis [Storage.Beam.KioskLocation]: alloc=213103720 time=52.746
-Worker Wrapper binds [Storage.Beam.KioskLocation]: alloc=5325032 time=3.168
-Simplifier [Storage.Beam.KioskLocation]: alloc=263402160 time=103.328
-Exitification transformation [Storage.Beam.KioskLocation]: alloc=23616 time=0.006
-Float out(FOS {Lam = Just 0, Consts = True, OverSatApps = True}) [Storage.Beam.KioskLocation]: alloc=179591480 time=59.918
-Common sub-expression [Storage.Beam.KioskLocation]: alloc=22200 time=0.007
-Float inwards [Storage.Beam.KioskLocation]: alloc=21096 time=0.004
-Simplifier [Storage.Beam.KioskLocation]: alloc=274949744 time=122.630
-Demand analysis [Storage.Beam.KioskLocation]: alloc=196538488 time=46.645
-CoreTidy [Storage.Beam.KioskLocation]: alloc=50143648 time=39.124
-CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.017
-CodeGen [Storage.Beam.KioskLocation]: alloc=989343312 time=314.915
-systool:as: alloc=103208 time=0.266
-CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.017
-CodeGen [Storage.Beam.KioskLocation]: alloc=1019784280 time=305.444
-systool:as: alloc=106088 time=0.292
+Parser [Storage.Beam.KioskLocation]: alloc=1728368 time=0.398
+Simplify [expr]: alloc=109424 time=0.030
+CorePrep [expr]: alloc=51184 time=0.023
+ByteCodeGen [Ghci1]: alloc=276472 time=0.079
+Simplify [expr]: alloc=46992 time=0.019
+CorePrep [expr]: alloc=26608 time=0.014
+ByteCodeGen [Ghci1]: alloc=131880 time=0.046
+Renamer/typechecker [Storage.Beam.KioskLocation]: alloc=150290248 time=44.178
+Desugar [Storage.Beam.KioskLocation]: alloc=22506072 time=6.727
+Simplifier [Storage.Beam.KioskLocation]: alloc=30676184 time=8.537
+CoreTidy [Storage.Beam.KioskLocation]: alloc=6966024 time=2.031
+CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.009
+CodeGen [Storage.Beam.KioskLocation]: alloc=222289392 time=63.357
+systool:as: alloc=103208 time=0.189
+CorePrep [Storage.Beam.KioskLocation]: alloc=22088 time=0.015
+CodeGen [Storage.Beam.KioskLocation]: alloc=243147856 time=69.031
+systool:as: alloc=106088 time=0.179
