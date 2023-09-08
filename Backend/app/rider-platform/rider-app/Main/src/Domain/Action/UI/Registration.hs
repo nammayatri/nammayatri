@@ -42,6 +42,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
@@ -66,6 +67,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonDisability as PDisability
 import qualified Storage.Queries.Person.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
@@ -368,7 +370,9 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
     Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
   decPerson <- decrypt updPerson
-  let personAPIEntity = SP.makePersonAPIEntity decPerson Nothing
+  customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
+  let tag = customerDisability <&> (.tag)
+  let personAPIEntity = SP.makePersonAPIEntity decPerson tag
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of
