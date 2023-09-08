@@ -87,17 +87,17 @@ shareAppConfig state = let
       , margin = MarginHorizontal 16 16},
       secondaryText {
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = MarginVertical 12 24  
+      , margin = MarginVertical 12 24
       , color = Color.black700},
       option1 {
-        text = getString(MAYBE_LATER) 
-      , width = V $ (((EHC.screenWidth unit)-92)/2) 
+        text = getString(MAYBE_LATER)
+      , width = V $ (((EHC.screenWidth unit)-92)/2)
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
       },
       option2 {
-        text = getString(SHARE_APP) 
+        text = getString(SHARE_APP)
       , width = V $ (((EHC.screenWidth unit)-92)/2)
       , color = state.data.config.primaryTextColor
       , strokeColor = state.data.config.primaryBackground
@@ -207,9 +207,9 @@ fareBreakUpConfig state =
               { text = 0
               , offeredFare = state.data.driverInfoCardState.price
               , distanceDifference = state.data.rideRatingState.distanceDifference
-              }  
+              }
           }
-        , rideDetails 
+        , rideDetails
           { destination= state.data.driverInfoCardState.destination
           , destinationTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
           , source = state.data.driverInfoCardState.source
@@ -231,14 +231,14 @@ whereToButtonConfig state =
         { text = (getString WHERE_TO)
         , width = MATCH_PARENT
         , gravity = LEFT
-        , color = state.data.config.primaryTextColor 
+        , color = state.data.config.primaryTextColor
         , accessibilityHint = "Where To : Button"
         }
       , height = V 60
       , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
-      , margin = (MarginHorizontal 16 16)  
-      , isClickable = true 
+      , margin = (MarginHorizontal 16 16)
+      , isClickable = true
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
@@ -298,7 +298,7 @@ rateRideButtonConfig state =
       config
         { textConfig
           { text = (getString RATE_YOUR_DRIVER)
-          ,  color = state.data.config.primaryTextColor 
+          ,  color = state.data.config.primaryTextColor
           }
         , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
         , background = state.data.config.rateCardColor
@@ -407,13 +407,13 @@ logOutPopUpModelConfig state =
           config'
             { primaryText { text = (getString LOGOUT_) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { 
+            , option1 {
                 background = state.data.config.popupBackground
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
               , text = (getString GO_BACK_)
               }
-            , option2 { 
+            , option2 {
                 color = state.data.config.primaryTextColor
               , strokeColor = state.data.config.primaryBackground
               , background = state.data.config.primaryBackground
@@ -461,7 +461,7 @@ logOutPopUpModelConfig state =
           },
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-          , width = MATCH_PARENT 
+          , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
@@ -490,9 +490,9 @@ logOutPopUpModelConfig state =
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             }
-            , option2 { 
-               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT) 
-              , width = MATCH_PARENT 
+            , option2 {
+               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
+              , width = MATCH_PARENT
               , background = Color.white900
               , strokeColor = Color.white900
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
@@ -523,7 +523,7 @@ distanceOusideLimitsConfig state =
           , margin = (Margin 0 16 0 20)
           }
         , option1 { visibility = false }
-        , option2 { 
+        , option2 {
             background = state.data.config.primaryBackground
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryTextColor
@@ -549,7 +549,7 @@ shortDistanceConfig state =
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
           , margin = (Margin 0 16 0 20)
           }
-        , option1 { 
+        , option1 {
             background = state.data.config.popupBackground
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
@@ -616,8 +616,8 @@ rateCardConfig state =
         , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
         , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
-        , driverAdditionsImage = if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                                   else "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
+        , driverAdditionsImage = if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+                                   else "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png"
         , applicableCharges = if state.data.rateCard.nightCharges then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                                  else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
@@ -632,7 +632,7 @@ rateCardConfig state =
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
-        
+
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
@@ -650,7 +650,7 @@ rateCardConfig state =
 yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
 yatriRateCardList vehicleVariant state = do
   let lang = getValueToLocalStore LANGUAGE_KEY
-  case vehicleVariant of 
+  case vehicleVariant of
     "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
                    , { key : "5 km - 13 km" , val : "₹18 / km"}
                    , { key : "13 km - 30 km" , val : "₹25 / km"}
@@ -679,9 +679,9 @@ yatriRateCardList vehicleVariant state = do
 
     _ -> []
 
-getVehicleTitle :: String -> String 
-getVehicleTitle vehicle = 
-  (case vehicle of 
+getVehicleTitle :: String -> String
+getVehicleTitle vehicle =
+  (case vehicle of
     "HATCHBACK" -> (getString HATCHBACK)
     "SUV" -> (getString SUV)
     "SEDAN" -> (getString SEDAN)
@@ -689,11 +689,11 @@ getVehicleTitle vehicle =
     _ -> "") <> " - " <> (getString RATE_CARD)
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
-nyRateCardList state = 
+nyRateCardList state =
   ([{key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.extraFare) <> "/ km")},
     {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toString (state.data.rateCard.pickUpCharges))}
-    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then 
+    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 estimateChangedPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -704,13 +704,13 @@ estimateChangedPopupConfig state =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
         , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> if state.data.rateCard.additionalFare > 0 then "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) else "" }
-        , option1 { 
+        , option1 {
             background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString GO_HOME_)
           }
-        , option2 { 
+        , option2 {
             color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
@@ -968,7 +968,7 @@ zoneTimerExpiredConfig state = let
     }
   }
   in popUpConfig'
-  
+
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config
@@ -1008,7 +1008,8 @@ chooseYourRideConfig state = ChooseYourRide.config
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
-    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
+    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
+    nearByDrivers = state.data.nearByDrivers
   }
 
 

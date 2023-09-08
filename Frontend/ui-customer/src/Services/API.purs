@@ -126,7 +126,7 @@ derive instance genericAuthType :: Generic AuthType _
 instance showAuthType :: Show AuthType where show = genericShow
 instance decodeAuthType :: Decode AuthType where decode = defaultDecode
 instance encodeAuthType :: Encode AuthType where encode = defaultEncode
-instance standardEncodeAuthType :: StandardEncode AuthType 
+instance standardEncodeAuthType :: StandardEncode AuthType
   where
   standardEncode OTP = standardEncode $ show OTP
   standardEncode PASSWORD = standardEncode $ show PASSWORD
@@ -363,7 +363,7 @@ newtype GetPlaceNameBy = GetPlaceNameBy {
   contents :: Contents
 }
 
-data Contents = PlaceId String | LatLongType LatLonBody
+data Contents = PlaceId String | LatLongType LatLong
 
 derive instance genericContents :: Generic Contents _
 instance showContents :: Show Contents where show = genericShow
@@ -375,19 +375,6 @@ instance standardEncodeContents :: StandardEncode Contents
     standardEncode (PlaceId param) = standardEncode param
 
 type PlaceId = String
-
-newtype LatLonBody = LatLonBody
-  { lat :: Number
-  , lon :: Number
-  }
-
-
-derive instance genericLatLonBody :: Generic LatLonBody _
-derive instance newtypeLatLonBody :: Newtype LatLonBody _
-instance standardEncodeLatLonBody :: StandardEncode LatLonBody where standardEncode (LatLonBody payload) = standardEncode payload
-instance showLatLonBody :: Show LatLonBody where show = genericShow
-instance decodeLatLonBody :: Decode LatLonBody where decode = defaultDecode
-instance encodeLatLonBody :: Encode LatLonBody where encode = defaultEncode
 
 newtype GetPlaceNameResp = GetPlaceNameResp (Array PlaceName)
 
@@ -591,7 +578,8 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
-  specialLocationTag :: Maybe String
+  specialLocationTag :: Maybe String,
+  driversLatLong :: Array LatLong
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -1940,7 +1928,7 @@ instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
 
 newtype RideFeedbackReq = RideFeedbackReq
-  { 
+  {
     rideId :: String,
     feedback :: Array FeedbackAnswer
   }

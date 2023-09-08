@@ -136,7 +136,7 @@ type WelcomeScreenState = {
 
 type WelcomeScreenData = {
   carouselModel :: Array CarouselModel,
-  logField :: Object Foreign 
+  logField :: Object Foreign
 }
 
 type StepsHeaderModelState = {
@@ -460,7 +460,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS 
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -589,6 +589,7 @@ type HomeScreenStateData =
   , ratingViewState :: RatingViewState
   , config :: AppConfig
   , logField :: Object Foreign
+  , nearByDrivers :: Maybe Int
   }
 
 type HomeScreenStateProps =
@@ -816,7 +817,7 @@ type EmergencyContactsScreenData = {
   offsetForEmergencyContacts :: Int,
   limitForEmergencyContacts :: Int,
   editedText :: String,
-  logField :: Object Foreign 
+  logField :: Object Foreign
 }
 
 type EmergencyContactsScreenProps = {
@@ -947,7 +948,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
-  , feedbackList :: Array FeedbackAnswer 
+  , feedbackList :: Array FeedbackAnswer
   , appConfig :: AppConfig
   }
 
