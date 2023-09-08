@@ -119,8 +119,9 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
 getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
 getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
-  let tag = customerDisability <&> (.tag)
+  tag <- case person.hasDisability of
+    Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
+    _ -> return Nothing
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson tag
 
@@ -152,7 +153,9 @@ updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool ->
 updateDisability hasDisability mbDisability personId = do
   case (hasDisability, mbDisability) of
     (Nothing, _) -> logDebug "No Disability"
-    (Just False, _) -> QPerson.updateHasDisability personId $ Just False
+    (Just False, _) -> do
+      QPerson.updateHasDisability personId $ Just False
+      PDisability.deleteByPersonId personId
     (Just True, Nothing) -> throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
     (Just True, Just selectedDisability) -> do
       customerDisability <- B.runInReplica $ PDisability.findByPersonId personId

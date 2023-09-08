@@ -12,7 +12,7 @@ module Storage.Queries.Person.PersonDisability where
 
 import Domain.Types.Person
 import qualified Domain.Types.Person.PersonDisability as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -35,6 +35,9 @@ updateDisabilityByPersonId (Id personId) disabilityId tag description = do
       Se.Set BeamPD.updatedAt now
     ]
     [Se.Is BeamPD.personId (Se.Eq personId)]
+
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPD.personId (Se.Eq personId)]
 
 instance FromTType' BeamPD.PersonDisability Domain.PersonDisability where
   fromTType' BeamPD.PersonDisabilityT {..} = do
