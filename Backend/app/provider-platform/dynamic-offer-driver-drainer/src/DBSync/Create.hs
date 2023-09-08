@@ -92,7 +92,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("RiderDetails" :: Text) [(obj, val, entryId, RiderDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RiderDetailsObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequest" :: Text) [(obj, val, entryId, SearchRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchReqLocation" :: Text) [(obj, val, entryId, SearchReqLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchReqLocationObject obj), val) <- cmds]
-    |::| runCreateInKafka dbConf streamKey ("SearchRequestForDriver" :: Text) [(obj, val, entryId, SearchRequestForDriverObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestForDriverObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequestForDriver" :: Text) [(obj, val, entryId, SearchRequestForDriverObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestForDriverObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequestSpecialZone" :: Text) [(obj, val, entryId, SearchRequestSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestSpecialZoneObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchTry" :: Text) [(obj, val, entryId, SearchTryObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchTryObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Vehicle" :: Text) [(obj, val, entryId, VehicleObject obj) | (CreateDBCommand entryId _ _ _ _ (VehicleObject obj), val) <- cmds]
