@@ -57,12 +57,12 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { 
+    , rateCard : {
        additionalFare : 0,
-       nightShiftMultiplier : 0.0, 
+       nightShiftMultiplier : 0.0,
        nightCharges : false,
        currentRateCardType : DefaultRateCard,
-       onFirstPage:false, 
+       onFirstPage:false,
        baseFare : 0,
        extraFare : 0,
        pickUpCharges : 0,
@@ -125,6 +125,7 @@ initData = {
     }
     , config : DC.config
     , logField : empty
+    , nearByDrivers : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -270,7 +271,7 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
-, appConfig : DC.config 
+, appConfig : DC.config
 }
 
 

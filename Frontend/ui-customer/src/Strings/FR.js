@@ -500,4 +500,5 @@ export function getStringValue(key) {
     "JUST_ONE_LAST_THING": "Juste une dernière chose",
     "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément",
     "AUTO_RICKSHAW" : "Pousse-pousse automatique",
+    "CABS_AVAILABLE" : "cabines disponibles"
   }
