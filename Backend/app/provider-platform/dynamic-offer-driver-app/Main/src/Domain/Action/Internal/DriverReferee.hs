@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as SCT
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.RiderDetails as QRD
 
@@ -49,7 +50,8 @@ linkReferee ::
   m APISuccess
 linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
+  merchantConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  unless (Just merchantConfig.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   unless (TU.validateAllDigitWithMinLength 6 referralCode.getId) $
     throwError $ InvalidRequest "Referral Code must have 6 digits"

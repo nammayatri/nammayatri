@@ -46,7 +46,7 @@ import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
-import qualified Domain.Types.Merchant.TransporterConfig as DTC
+import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -60,13 +60,12 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import Tools.Error
 
@@ -75,11 +74,12 @@ merchantUpdate :: ShortId DM.Merchant -> Common.MerchantUpdateReq -> Flow Common
 merchantUpdate merchantShortId req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let updMerchant =
-        merchant{DM.name = fromMaybe merchant.name req.name,
-                 DM.description = req.description <|> merchant.description,
-                 DM.enabled = fromMaybe merchant.enabled req.enabled
-                }
+        merchantConfig{DM.name = fromMaybe merchant.name req.name,
+                       DM.description = req.description <|> merchant.description,
+                       DM.enabled = fromMaybe merchant.enabled req.enabled
+                      }
   now <- getCurrentTime
 
   mbAllExophones <- forM req.exoPhones $ \exophones -> do
@@ -91,7 +91,7 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  _ <- CQM.update updMerchant
+  _ <- CQTC.update updMerchant
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantId merchant.id
     forM_ exophones $ \exophoneReq -> do
@@ -100,11 +100,11 @@ merchantUpdate merchantShortId req = do
   whenJust req.fcmConfig $
     \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
-  CQM.clearCache updMerchant
+  CQTC.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
     let oldExophones = filter (\exophone -> exophone.merchantId == merchant.id) allExophones
     CQExophone.clearCache merchant.id oldExophones
-  whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchant.id
+  whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchantConfig
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   return $ mkMerchantUpdateRes updMerchant
   where
@@ -125,8 +125,8 @@ buildExophone merchantId now req = do
         createdAt = now
       }
 
-mkMerchantUpdateRes :: DM.Merchant -> Common.MerchantUpdateRes
-mkMerchantUpdateRes DM.Merchant {..} =
+mkMerchantUpdateRes :: DMC.MerchantConfig -> Common.MerchantUpdateRes
+mkMerchantUpdateRes DMC.MerchantConfig {..} =
   Common.MerchantUpdateRes
     { name,
       description = description,
@@ -148,8 +148,8 @@ merchantCommonConfig merchantShortId = do
   config <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   pure $ mkMerchantCommonConfigRes config
 
-mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
-mkMerchantCommonConfigRes DTC.TransporterConfig {..} = Common.MerchantCommonConfigRes {..}
+mkMerchantCommonConfigRes :: DMC.MerchantConfig -> Common.MerchantCommonConfigRes
+mkMerchantCommonConfigRes DMC.MerchantConfig {..} = Common.MerchantCommonConfigRes {..}
 
 ---------------------------------------------------------------------
 merchantCommonConfigUpdate :: ShortId DM.Merchant -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
@@ -178,7 +178,7 @@ merchantCommonConfigUpdate merchantShortId req = do
                timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc
               }
   _ <- CQTC.update updConfig
-  CQTC.clearCache merchant.id
+  CQTC.clearCache updConfig
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
 

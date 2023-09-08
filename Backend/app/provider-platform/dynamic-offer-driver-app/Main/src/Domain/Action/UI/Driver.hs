@@ -93,7 +93,8 @@ import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.MerchantConfig
+import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MetaData as MD
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
@@ -156,7 +157,7 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQTC
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
@@ -208,7 +209,7 @@ data DriverInformationRes = DriverInformationRes
     subscribed :: Bool,
     paymentPending :: Bool,
     referralCode :: Maybe Text,
-    organization :: DM.MerchantAPIEntity,
+    organization :: DMC.MerchantConfigAPIEntity,
     language :: Maybe Maps.Language,
     alternateNumber :: Maybe Text,
     canDowngradeToSedan :: Bool,
@@ -590,7 +591,7 @@ getInformation (personId, merchantId) = do
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   organization <-
-    CQM.findById merchantId
+    CQTC.findByMerchantId merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantId Nothing
   makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo
@@ -852,7 +853,7 @@ updateDriver (personId, _) req = do
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
-    CQM.findById merchantId
+    CQTC.findByMerchantId merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantId Nothing
   makeDriverInformationRes driverEntity org driverReferralCode driverStats driverGoHomeInfo
@@ -990,12 +991,12 @@ buildMetaData req personId = do
         MD.updatedAt = now
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r) => DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r) => DriverEntityRes -> DMC.MerchantConfig -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> m DriverInformationRes
 makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats dghInfo = do
-  CQGHC.findByMerchantId org.id >>= \cfg ->
+  CQGHC.findByMerchantId org.merchantId >>= \cfg ->
     return $
       DriverInformationRes
-        { organization = DM.makeMerchantAPIEntity org,
+        { organization = DMC.makeMerchantConfigAPIEntity org,
           referralCode = referralCode <&> (.getId),
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,
@@ -1012,21 +1013,21 @@ getNearbySearchRequests ::
   m GetNearbySearchRequestsRes
 getNearbySearchRequests (driverId, merchantId) = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
+  merchantConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- TODO change error in shared kernel
+  let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig merchantConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantId (cast driverId)
-  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
+  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig merchantConfig) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
-    buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
+    buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig merchantConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
-      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
+      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig merchantConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-    mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
-    mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
+    mkCancellationScoreRelatedConfig :: MerchantConfig -> CancellationScoreRelatedConfig
+    mkCancellationScoreRelatedConfig mc = CancellationScoreRelatedConfig mc.popupDelayToAddAsPenalty mc.thresholdCancellationScore mc.minRidesForCancellationScore
 
 isAllowedExtraFee :: DriverExtraFeeBounds -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
@@ -1203,8 +1204,8 @@ getStats ::
   Day ->
   m DriverStatsRes
 getStats (driverId, merchantId) date = do
-  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
+  merchantConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- TODO change error in shared kernel
+  rides <- runInReplica $ QRide.getRidesForDate driverId date merchantConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   return $
@@ -1239,9 +1240,9 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   let req = IF.FaceValidationReq {file = encImage, brisqueFeatures}
   _ <- validateFaceImage merchantId req
   filePath <- createFilePath (getId driverId) fileType imageExtension
-  transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+  merchantConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
   let fileUrl =
-        transporterConfig.mediaFileUrlPattern
+        merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "driver-profile-picture"
           & T.replace "<FILE_PATH>" filePath
   result <- try @_ @SomeException $ S3.put (T.unpack filePath) encImage
@@ -1497,13 +1498,13 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
-  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  merchantConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId) -- TODO change Error in shared kernel
+  now <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
   let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
-      windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
+      windowEndTime = addUTCTime (86399 + merchantConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
 
   driverFeeByInvoices <- case driverFees of

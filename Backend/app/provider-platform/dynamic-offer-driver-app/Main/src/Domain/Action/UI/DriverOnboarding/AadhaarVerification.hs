@@ -32,7 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
-import Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import Storage.CachedQueries.Merchant.MerchantConfig as CTC
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
 import qualified Storage.Queries.Person as Person

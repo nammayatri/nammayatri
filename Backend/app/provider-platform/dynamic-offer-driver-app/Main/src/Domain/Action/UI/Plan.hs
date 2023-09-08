@@ -41,7 +41,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QTC
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
 import Storage.Queries.DriverFee as QDF

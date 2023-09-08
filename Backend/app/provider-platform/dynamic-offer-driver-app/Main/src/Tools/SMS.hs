@@ -39,9 +39,9 @@ import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 

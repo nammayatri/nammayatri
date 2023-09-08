@@ -23,7 +23,6 @@ where
 import Domain.Types.Merchant as DM
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -51,16 +50,12 @@ update org = do
   updateOneWithKV
     [ Se.Set BeamM.name org.name,
       Se.Set BeamM.description org.description,
-      Se.Set BeamM.headCount org.headCount,
-      Se.Set BeamM.enabled org.enabled,
-      Se.Set BeamM.updatedAt now,
-      Se.Set BeamM.fromTime org.fromTime
+      Se.Set BeamM.updatedAt now
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
 instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
-    regUrl <- parseBaseUrl registryUrl
     pure $
       Just
         Merchant
@@ -70,25 +65,10 @@ instance FromTType' BeamM.Merchant Merchant where
             subscriberId = ShortId subscriberId,
             uniqueKeyId = uniqueKeyId,
             shortId = ShortId shortId,
-            city = city,
-            country = country,
-            mobileNumber = mobileNumber,
-            mobileCountryCode = mobileCountryCode,
-            gstin = gstin,
-            fromTime = fromTime,
-            toTime = toTime,
-            headCount = headCount,
-            geoHashPrecisionValue = geoHashPrecisionValue,
             status = status,
-            verified = verified,
             enabled = enabled,
-            internalApiKey = internalApiKey,
-            minimumDriverRatesCount = minimumDriverRatesCount,
             createdAt = createdAt,
-            updatedAt = updatedAt,
-            geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
-            info = info,
-            registryUrl = regUrl
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -100,24 +80,8 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.subscriberId = getShortId subscriberId,
         BeamM.uniqueKeyId = uniqueKeyId,
         BeamM.shortId = getShortId shortId,
-        BeamM.city = city,
-        BeamM.country = country,
-        BeamM.mobileNumber = mobileNumber,
-        BeamM.mobileCountryCode = mobileCountryCode,
-        BeamM.gstin = gstin,
-        BeamM.fromTime = fromTime,
-        BeamM.toTime = toTime,
-        BeamM.headCount = headCount,
-        BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
         BeamM.status = status,
-        BeamM.verified = verified,
         BeamM.enabled = enabled,
-        BeamM.internalApiKey = internalApiKey,
-        BeamM.minimumDriverRatesCount = minimumDriverRatesCount,
         BeamM.createdAt = createdAt,
-        BeamM.updatedAt = updatedAt,
-        BeamM.originRestriction = origin geofencingConfig,
-        BeamM.destinationRestriction = destination geofencingConfig,
-        BeamM.info = info,
-        BeamM.registryUrl = showBaseUrl registryUrl
+        BeamM.updatedAt = updatedAt
       }

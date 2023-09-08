@@ -20,6 +20,7 @@ import Control.Lens ((%~))
 import qualified Data.Text as T
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantConfigNew
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -29,11 +30,12 @@ import Kernel.Utils.Common
 
 data DStatusReq = DStatusReq
   { booking :: Booking,
-    merchant :: Merchant
+    merchant :: Merchant,
+    merchantConfig :: MerchantConfigNew
   }
 
 buildStatusReq ::
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DStatusReq ->
   m (BecknReq Status.StatusMessage)
 buildStatusReq DStatusReq {..} = do
@@ -49,8 +51,8 @@ buildStatusReq DStatusReq {..} = do
       bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
-      merchant.city
-      merchant.country
+      merchantConfig.city
+      merchantConfig.country
       False
   pure $
     BecknReq context $

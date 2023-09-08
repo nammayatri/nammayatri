@@ -14,29 +14,29 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.MerchantConfig
+module Storage.CachedQueries.FraudConfig
   ( findAllByMerchantId,
   )
 where
 
+import Domain.Types.FraudConfig
 import Domain.Types.Merchant
-import Domain.Types.MerchantConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.MerchantConfig as Queries
+import qualified Storage.Queries.FraudConfig as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m [MerchantConfig]
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m [FraudConfig]
 findAllByMerchantId id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return a
     Nothing -> cacheMerchant id /=<< Queries.findAllByMerchantId id
 
-cacheMerchant :: (CacheFlow m r) => Id Merchant -> [MerchantConfig] -> m ()
+cacheMerchant :: (CacheFlow m r) => Id Merchant -> [FraudConfig] -> m ()
 cacheMerchant merchantId merchantConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeIdKey merchantId) merchantConfig expTime
 
 makeIdKey :: Id Merchant -> Text
-makeIdKey id = "CachedQueries:MerchantConfig:Id-" <> id.getId
+makeIdKey id = "CachedQueries:FraudConfig:Id-" <> id.getId

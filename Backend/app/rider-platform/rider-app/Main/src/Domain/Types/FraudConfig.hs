@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.MerchantConfig where
+module Domain.Types.FraudConfig where
 
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
@@ -20,8 +20,8 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 
 -- Non empty list here?
-data MerchantConfig = MerchantConfig
-  { id :: Id MerchantConfig,
+data FraudConfig = FraudConfig
+  { id :: Id FraudConfig,
     merchantId :: Id Merchant,
     fraudBookingCancellationCountThreshold :: Int,
     fraudBookingCancellationCountWindow :: SWC.SlidingWindowOptions,

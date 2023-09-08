@@ -32,6 +32,7 @@ import Domain.Types.Booking.Type
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -49,6 +50,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
@@ -80,6 +82,7 @@ data DSelectRes = DSelectRes
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
     merchant :: DM.Merchant,
+    merchantConfig :: DMC.MerchantConfigNew,
     autoAssignEnabled :: Bool
   }
 
@@ -123,6 +126,7 @@ select personId estimateId req@DSelectReq {..} = do
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  merchantConfig <- CQMC.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)

@@ -24,9 +24,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common ()
-import Kernel.Types.Geofencing
 import Lib.Utils ()
 import Sequelize
 
@@ -37,26 +35,10 @@ data MerchantT f = MerchantT
     subscriberId :: B.C f Text,
     uniqueKeyId :: B.C f Text,
     shortId :: B.C f Text,
-    mobileNumber :: B.C f (Maybe Text),
-    mobileCountryCode :: B.C f (Maybe Text),
-    gstin :: B.C f (Maybe Text),
-    fromTime :: B.C f (Maybe Time.UTCTime),
-    toTime :: B.C f (Maybe Time.UTCTime),
-    geoHashPrecisionValue :: B.C f Int,
-    headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
-    city :: B.C f Context.City,
-    country :: B.C f Context.Country,
-    verified :: B.C f Bool,
     enabled :: B.C f Bool,
-    internalApiKey :: B.C f Text,
-    minimumDriverRatesCount :: B.C f Int,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime,
-    originRestriction :: B.C f GeoRestriction,
-    destinationRestriction :: B.C f GeoRestriction,
-    info :: B.C f (Maybe Text),
-    registryUrl :: B.C f Text
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -77,26 +59,9 @@ merchantTMod =
       subscriberId = B.fieldNamed "subscriber_id",
       uniqueKeyId = B.fieldNamed "unique_key_id",
       shortId = B.fieldNamed "short_id",
-      mobileNumber = B.fieldNamed "mobile_number",
-      mobileCountryCode = B.fieldNamed "mobile_country_code",
-      gstin = B.fieldNamed "gstin",
-      fromTime = B.fieldNamed "from_time",
-      toTime = B.fieldNamed "to_time",
-      headCount = B.fieldNamed "head_count",
-      geoHashPrecisionValue = B.fieldNamed "geo_hash_precision_value",
       status = B.fieldNamed "status",
-      city = B.fieldNamed "city",
-      country = B.fieldNamed "country",
-      verified = B.fieldNamed "verified",
-      enabled = B.fieldNamed "enabled",
-      internalApiKey = B.fieldNamed "internal_api_key",
-      minimumDriverRatesCount = B.fieldNamed "minimum_driver_rates_count",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at",
-      originRestriction = B.fieldNamed "origin_restriction",
-      destinationRestriction = B.fieldNamed "destination_restriction",
-      info = B.fieldNamed "info",
-      registryUrl = B.fieldNamed "registry_url"
+      updatedAt = B.fieldNamed "updated_at"
     }
 
 $(enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])

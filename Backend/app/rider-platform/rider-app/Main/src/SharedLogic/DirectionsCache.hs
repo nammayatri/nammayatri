@@ -27,28 +27,26 @@ import Data.Time as DT
     utcToLocalTime,
   )
 import Domain.Types.Maps.DirectionsCache as DC
-import Domain.Types.Merchant (Slot)
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.Merchant.MerchantConfigNew (Slot)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import Kernel.Types.Error (MerchantError (MerchantNotFound))
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.Maps.DirectionsCache as DCC
 import qualified Storage.CachedQueries.Maps.DirectionsCache as DQ
-import Storage.CachedQueries.Merchant as M
-import qualified Storage.CachedQueries.Merchant as QMerchant
-import Tools.Error (GenericError (..))
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import qualified Tools.Maps as Maps
 
 getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes merchantId req = do
-  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantConfig <- QMCN.findByMerchantId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   let origin = NE.head req.waypoints
   let dest = NE.last req.waypoints
-  originGeoHash <- fmap pack $ fromMaybeM (InternalError "Failed to compute Origin GeoHash") $ DG.encode merchant.geoHashPrecisionValue (origin.lat, origin.lon) -- This default case will never happen as we are getting lat long from Google and hence a valid geo hash will always be possible for a valid lat long.
-  destGeoHash <- fmap pack $ fromMaybeM (InternalError "Failed to compute Destination GeoHash") $ DG.encode merchant.geoHashPrecisionValue (dest.lat, dest.lon) -- This default case will never happen as we are getting lat long from Google and hence a valid geo hash will always be possible for a valid lat long.
+  originGeoHash <- fmap pack $ fromMaybeM (InternalError "Failed to compute Origin GeoHash") $ DG.encode merchantConfig.geoHashPrecisionValue (origin.lat, origin.lon) -- This default case will never happen as we are getting lat long from Google and hence a valid geo hash will always be possible for a valid lat long.
+  destGeoHash <- fmap pack $ fromMaybeM (InternalError "Failed to compute Destination GeoHash") $ DG.encode merchantConfig.geoHashPrecisionValue (dest.lat, dest.lon) -- This default case will never happen as we are getting lat long from Google and hence a valid geo hash will always be possible for a valid lat long.
   timeSlot <- getSlot merchantId
   case timeSlot of
     Just tmeSlt ->
@@ -77,7 +75,7 @@ getSlot merchantId = do
   utcTime <- getLocalCurrentTime 19800
   let istTime = utcToLocalTime (TimeZone 0 False "") utcTime
   let timeOfDay = localTimeOfDay istTime
-  slots <- fmap (.dirCacheSlot) $ M.findById merchantId >>= fromMaybeM (InternalError "Error in fetching configs from Database")
+  slots <- fmap (.dirCacheSlot) $ QMCN.findByMerchantId merchantId >>= fromMaybeM (InternalError "Error in fetching configs from Database")
   return $ matchSlot timeOfDay slots
 
 matchSlot :: TimeOfDay -> [Slot] -> Maybe Int

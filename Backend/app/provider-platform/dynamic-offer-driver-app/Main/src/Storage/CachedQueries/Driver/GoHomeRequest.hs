@@ -20,7 +20,7 @@ import Kernel.Types.SlidingWindowCounters (PeriodType (Days))
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, getLocalCurrentTime)
 import Kernel.Utils.SlidingWindowCounters (incrementPeriod)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
-import Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import Storage.CachedQueries.Merchant.MerchantConfig as CQTC
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import Storage.Queries.Ride as Ride
 import Tools.Error (GenericError (..))

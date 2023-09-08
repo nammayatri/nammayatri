@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
@@ -57,6 +58,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQMC
+import qualified Storage.Queries.Merchant.MerchantConfig as QMC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -80,7 +83,8 @@ callOnSelect transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   let msgId = searchTry.estimateId.getId
-  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
+  merchantConfig <- QMC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe merchantConfig.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
@@ -103,7 +107,8 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
+  merchantConfig <- QMC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+  context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe merchantConfig.city bapCity) (fromMaybe Context.India bapCountry) False
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
@@ -237,7 +242,10 @@ sendDriverOffer ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -249,20 +257,21 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
   callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
-      (MonadTime m, HasPrettyLogger m r) =>
+      (MonadTime m, HasPrettyLogger m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
       DM.Merchant ->
       DSR.SearchRequest ->
       DDQ.DriverQuote ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do
       now <- getCurrentTime
+      merchantConfig <- CQMC.findByMerchantId org.id >>= fromMaybeM (TransporterConfigNotFound org.id.getId)
       logPretty DEBUG "on_select: searchRequest" searchRequest
       logPretty DEBUG "on_select: quotes" quotes
       let transporterInfo =
             ACL.TransporterInfo
               { merchantShortId = org.shortId,
                 name = org.name,
-                contacts = fromMaybe "" org.mobileNumber,
+                contacts = fromMaybe "" merchantConfig.mobileNumber,
                 ridesInProgress = 0, -- FIXME
                 ridesCompleted = 0, -- FIXME
                 ridesConfirmed = 0 -- FIXME

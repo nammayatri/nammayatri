@@ -22,11 +22,13 @@ import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 
 type API =
   "ride"
@@ -97,10 +99,11 @@ multipleRideSync ::
 multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideSyncReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantConfig <- CQMC.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
-      void $ DRide.rideSync merchant reqItem.rideId
+      void $ DRide.rideSync merchant merchantConfig reqItem.rideId
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}

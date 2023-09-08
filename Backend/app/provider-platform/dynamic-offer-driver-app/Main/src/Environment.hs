@@ -50,7 +50,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.Merchant as CM
+import Storage.CachedQueries.Merchant.MerchantConfig as CQMC
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -262,8 +262,8 @@ instance Registry Flow where
           Just registryMapFallback -> pure $ Just registryMapFallback.registryUrl
           Nothing ->
             do
-              mbMerchant <- CM.findById (Id merchantId)
-              pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
+              mbMerchantConfig <- CQMC.findByMerchantId (Id merchantId)
+              pure ((\merchantConfig -> Just merchantConfig.registryUrl) =<< mbMerchantConfig)
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

@@ -21,6 +21,7 @@ import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
 import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
 import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
+import qualified "rider-app" Storage.Beam.FraudConfig as FraudConfig
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
@@ -31,7 +32,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMe
 import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
 import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
@@ -214,7 +214,7 @@ data DBUpdateObject
   | MerchantPaymentMethodOptions UpdateModel [Set Postgres MerchantPaymentMethod.MerchantPaymentMethodT] (Where Postgres MerchantPaymentMethod.MerchantPaymentMethodT)
   | MerchantServiceConfigOptions UpdateModel [Set Postgres MerchantServiceConfig.MerchantServiceConfigT] (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigOptions UpdateModel [Set Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT] (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
-  | MerchantConfigOptions UpdateModel [Set Postgres MerchantConfig.MerchantConfigT] (Where Postgres MerchantConfig.MerchantConfigT)
+  | MerchantConfigOptions UpdateModel [Set Postgres FraudConfig.FraudConfigT] (Where Postgres FraudConfig.FraudConfigT)
   | OnSearchEventOptions UpdateModel [Set Postgres OnSearchEvent.OnSearchEventT] (Where Postgres OnSearchEvent.OnSearchEventT)
   | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
   | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)

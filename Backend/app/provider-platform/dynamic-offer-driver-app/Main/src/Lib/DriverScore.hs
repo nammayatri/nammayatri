@@ -32,7 +32,7 @@ import Kernel.Utils.Common (CacheFlow, Forkable (fork), Money (Money), fromMaybe
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.DriverInformation as CDI
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CTCQ
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
 import qualified Storage.Queries.DriverStats as DSQ

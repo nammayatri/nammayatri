@@ -22,6 +22,7 @@ where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
@@ -32,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -51,7 +53,8 @@ data RentalSearchRes = RentalSearchRes
     startTime :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    merchantConfig :: DMC.MerchantConfigNew
   }
 
 rentalSearch ::
@@ -72,7 +75,8 @@ rentalSearch personId bundleVersion clientVersion device req = do
   merchant <-
     QMerchant.findById person.merchantId
       >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  validateServiceability merchant.geofencingConfig
+  merchantConfig <- QMCN.findByMerchantId person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
+  validateServiceability merchantConfig.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
   searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing -- Handle disabilityTag if need for rentals

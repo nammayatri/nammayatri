@@ -37,7 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as SCT
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -49,8 +49,9 @@ updateReferralLinkPassword merchantShortId req = do
   unless (TU.validateAllDigitWithMinLength 5 req.referralLinkPassword) $
     throwError (InvalidRequest "Password should be minimum 5 digits in length")
   merchant <- findMerchantByShortId merchantShortId
+  merchantConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   _ <- SCT.updateReferralLinkPassword merchant.id req.referralLinkPassword
-  SCT.clearCache merchant.id
+  SCT.clearCache merchantConfig
   logTagInfo "dashboard -> updateReferralLinkPassword : " (show merchant.id)
   pure Success
 

@@ -57,7 +57,7 @@ import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
 import qualified Storage.Queries.Person as QP

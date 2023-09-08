@@ -13,30 +13,30 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.MerchantConfig
+module Storage.Queries.FraudConfig
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
     #-}
 where
 
+import Domain.Types.FraudConfig as DFC
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.MerchantConfig as DMC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
-import qualified Storage.Beam.MerchantConfig as BeamMC
+import qualified Storage.Beam.FraudConfig as BeamFC
 
-findAllByMerchantId :: MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantId $ Se.Eq merchantId, Se.Is BeamMC.enabled $ Se.Eq True]]
+findAllByMerchantId :: MonadFlow m => Id Merchant -> m [DFC.FraudConfig]
+findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamFC.merchantId $ Se.Eq merchantId, Se.Is BeamFC.enabled $ Se.Eq True]]
 
-instance FromTType' BeamMC.MerchantConfig MerchantConfig where
-  fromTType' BeamMC.MerchantConfigT {..} = do
+instance FromTType' BeamFC.FraudConfig FraudConfig where
+  fromTType' BeamFC.FraudConfigT {..} = do
     pure $
       Just
-        MerchantConfig
+        FraudConfig
           { id = Id id,
             merchantId = Id merchantId,
             fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
@@ -51,19 +51,19 @@ instance FromTType' BeamMC.MerchantConfig MerchantConfig where
             enabled = enabled
           }
 
-instance ToTType' BeamMC.MerchantConfig MerchantConfig where
-  toTType' MerchantConfig {..} = do
-    BeamMC.MerchantConfigT
-      { BeamMC.id = getId id,
-        BeamMC.merchantId = getId merchantId,
-        BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
-        BeamMC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
-        BeamMC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
-        BeamMC.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
-        BeamMC.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
-        BeamMC.fraudSearchCountThreshold = fraudSearchCountThreshold,
-        BeamMC.fraudSearchCountWindow = fraudSearchCountWindow,
-        BeamMC.fraudRideCountThreshold = fraudRideCountThreshold,
-        BeamMC.fraudRideCountWindow = fraudRideCountWindow,
-        BeamMC.enabled = enabled
+instance ToTType' BeamFC.FraudConfig FraudConfig where
+  toTType' FraudConfig {..} = do
+    BeamFC.FraudConfigT
+      { BeamFC.id = getId id,
+        BeamFC.merchantId = getId merchantId,
+        BeamFC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+        BeamFC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+        BeamFC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+        BeamFC.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+        BeamFC.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+        BeamFC.fraudSearchCountThreshold = fraudSearchCountThreshold,
+        BeamFC.fraudSearchCountWindow = fraudSearchCountWindow,
+        BeamFC.fraudRideCountThreshold = fraudRideCountThreshold,
+        BeamFC.fraudRideCountWindow = fraudRideCountWindow,
+        BeamFC.enabled = enabled
       }

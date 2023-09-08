@@ -38,6 +38,7 @@ import Kernel.Utils.Validation
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
@@ -47,12 +48,17 @@ merchantUpdate :: ShortId DM.Merchant -> Common.MerchantUpdateReq -> Flow APISuc
 merchantUpdate merchantShortId req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantConfigNew <- CQMC.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
+  let updMerchantConfig =
+        merchantConfigNew{name = fromMaybe merchant.name req.name,
+                          gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
+                          registryUrl = fromMaybe merchant.registryUrl req.registryUrl
+                         }
   now <- getCurrentTime
 
   mbAllExophones <- forM req.exoPhones $ \exophones -> do
@@ -65,6 +71,7 @@ merchantUpdate merchantShortId req = do
     pure allExophones
 
   void $ CQM.update updMerchant
+  void $ CQMC.updateConfig updMerchantConfig
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantId merchant.id
     forM_ exophones $ \exophoneReq -> do
@@ -72,6 +79,7 @@ merchantUpdate merchantShortId req = do
       CQExophone.create exophone
 
   CQM.clearCache updMerchant
+  CQMC.clearCache updMerchantConfig
   whenJust mbAllExophones $ \allExophones -> do
     let oldExophones = filter (\exophone -> exophone.merchantId == merchant.id) allExophones
     CQExophone.clearCache merchant.id oldExophones

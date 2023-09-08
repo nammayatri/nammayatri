@@ -35,9 +35,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.FraudConfig as SFC
+import qualified Storage.CachedQueries.FraudConfig as CFC
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -76,7 +76,7 @@ blockCustomer merchantShortId customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  SMC.blockCustomer personId Nothing
+  SFC.blockCustomer personId Nothing
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -94,11 +94,11 @@ unblockCustomer merchantShortId customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  merchantConfigs <- CMC.findAllByMerchantId merchantId
+  merchantConfigs <- CFC.findAllByMerchantId merchantId
   mapM_
     ( \mc -> withCrossAppRedis $ do
-        SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow
-        SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
+        SWC.deleteCurrentWindowValues (SFC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow
+        SWC.deleteCurrentWindowValues (SFC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
     )
     merchantConfigs
   void $ QP.updatingEnabledAndBlockedState personId Nothing False

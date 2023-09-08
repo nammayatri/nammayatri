@@ -19,6 +19,7 @@ import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
 import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
 import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
+import qualified "rider-app" Storage.Beam.FraudConfig as FraudConfig
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
@@ -29,7 +30,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMe
 import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
-import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
 import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
@@ -72,7 +72,7 @@ data DBCreateObject
   | MerchantPaymentMethodObject MerchantPaymentMethod.MerchantPaymentMethod
   | MerchantServiceConfigObject MerchantServiceConfig.MerchantServiceConfig
   | MerchantServiceUsageConfigObject MerchantServiceUsageConfig.MerchantServiceUsageConfig
-  | MerchantConfigObject MerchantConfig.MerchantConfig
+  | MerchantConfigObject FraudConfig.FraudConfig
   | OnSearchEventObject OnSearchEvent.OnSearchEvent
   | PaymentOrderObject PaymentOrder.PaymentOrder
   | PaymentTransactionObject PaymentTransaction.PaymentTransaction
@@ -119,7 +119,7 @@ modelName (MerchantMessageObject _) = "MerchantMessage"
 modelName (MerchantPaymentMethodObject _) = "MerchantPaymentMethod"
 modelName (MerchantServiceConfigObject _) = "MerchantServiceConfig"
 modelName (MerchantServiceUsageConfigObject _) = "MerchantServiceUsageConfig"
-modelName (MerchantConfigObject _) = "MerchantConfig"
+modelName (MerchantConfigObject _) = "FraudConfig"
 modelName (OnSearchEventObject _) = "OnSearchEvent"
 modelName (PaymentOrderObject _) = "PaymentOrder"
 modelName (PaymentTransactionObject _) = "PaymentTransaction"

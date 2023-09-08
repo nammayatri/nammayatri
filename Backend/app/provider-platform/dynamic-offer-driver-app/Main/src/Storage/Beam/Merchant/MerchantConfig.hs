@@ -12,23 +12,46 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE InstanceSigs #-}
 
-module Storage.Beam.Merchant.TransporterConfig where
+module Storage.Beam.Merchant.MerchantConfig where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Geofencing
 import Lib.Utils ()
 import Sequelize
 
-data TransporterConfigT f = TransporterConfigT
+data MerchantConfigT f = MerchantConfigT
   { merchantId :: B.C f Text,
+    gstin :: B.C f (Maybe Text),
+    name :: B.C f Text,
+    verified :: B.C f Bool,
+    enabled :: B.C f Bool,
+    description :: B.C f (Maybe Text),
+    mobileNumber :: B.C f (Maybe Text),
+    mobileCountryCode :: B.C f (Maybe Text),
+    fromTime :: B.C f (Maybe Time.UTCTime),
+    toTime :: B.C f (Maybe Time.UTCTime),
+    internalApiKey :: B.C f Text,
+    headCount :: B.C f (Maybe Int),
+    status :: B.C f Domain.Status,
+    info :: B.C f (Maybe Text),
+    originRestriction :: B.C f GeoRestriction,
+    destinationRestriction :: B.C f GeoRestriction,
+    city :: B.C f Context.City,
+    country :: B.C f Context.Country,
+    geoHashPrecisionValue :: B.C f Int,
+    minimumDriverRatesCount :: B.C f Int,
     pickupLocThreshold :: B.C f Meters,
     dropLocThreshold :: B.C f Meters,
     rideTimeEstimatedThreshold :: B.C f Seconds,
@@ -73,22 +96,41 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    registryUrl :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table TransporterConfigT where
-  data PrimaryKey TransporterConfigT f
+instance B.Table MerchantConfigT where
+  data PrimaryKey MerchantConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-type TransporterConfig = TransporterConfigT Identity
+type MerchantConfig = MerchantConfigT Identity
 
-transporterConfigTMod :: TransporterConfigT (B.FieldModification (B.TableField TransporterConfigT))
-transporterConfigTMod =
+merchantConfigTMod :: MerchantConfigT (B.FieldModification (B.TableField MerchantConfigT))
+merchantConfigTMod =
   B.tableModification
     { merchantId = B.fieldNamed "merchant_id",
+      gstin = B.fieldNamed "gstin",
+      name = B.fieldNamed "name",
+      verified = B.fieldNamed "verified",
+      enabled = B.fieldNamed "enabled",
+      description = B.fieldNamed "description",
+      mobileNumber = B.fieldNamed "mobile_number",
+      mobileCountryCode = B.fieldNamed "mobile_country_code",
+      fromTime = B.fieldNamed "from_time",
+      toTime = B.fieldNamed "to_time",
+      internalApiKey = B.fieldNamed "internal_api_key",
+      headCount = B.fieldNamed "head_count",
+      status = B.fieldNamed "status",
+      info = B.fieldNamed "info",
+      originRestriction = B.fieldNamed "origin_restriction",
+      destinationRestriction = B.fieldNamed "destination_restriction",
+      city = B.fieldNamed "city",
+      country = B.fieldNamed "country",
+      geoHashPrecisionValue = B.fieldNamed "geo_hash_precision_value",
       pickupLocThreshold = B.fieldNamed "pickup_loc_threshold",
       dropLocThreshold = B.fieldNamed "drop_loc_threshold",
       rideTimeEstimatedThreshold = B.fieldNamed "ride_time_estimated_threshold",
@@ -112,6 +154,7 @@ transporterConfigTMod =
       actualRideDistanceDiffThreshold = B.fieldNamed "actual_ride_distance_diff_threshold",
       upwardsRecomputeBuffer = B.fieldNamed "upwards_recompute_buffer",
       approxRideDistanceDiffThreshold = B.fieldNamed "approx_ride_distance_diff_threshold",
+      minimumDriverRatesCount = B.fieldNamed "minimum_driver_rates_count",
       driverPaymentCycleBuffer = B.fieldNamed "driver_payment_cycle_buffer",
       driverPaymentCycleDuration = B.fieldNamed "driver_payment_cycle_duration",
       driverPaymentCycleStartTime = B.fieldNamed "driver_payment_cycle_start_time",
@@ -133,9 +176,10 @@ transporterConfigTMod =
       routeDeviationThreshold = B.fieldNamed "route_deviation_threshold",
       canDowngradeToSedan = B.fieldNamed "can_downgrade_to_sedan",
       canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
+      registryUrl = B.fieldNamed "registry_url",
       canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi"
     }
 
-$(enableKVPG ''TransporterConfigT ['merchantId] [])
+$(enableKVPG ''MerchantConfigT ['merchantId] [])
 
-$(mkTableInstances ''TransporterConfigT "transporter_config" "atlas_driver_offer_bpp")
+$(mkTableInstances ''MerchantConfigT "merchant_config" "atlas_driver_offer_bpp")

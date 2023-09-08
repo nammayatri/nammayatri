@@ -15,7 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.MerchantConfig where
+module Storage.Beam.FraudConfig where
 
 import Data.Serialize
 import qualified Database.Beam as B
@@ -28,7 +28,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
 import Sequelize
 
-data MerchantConfigT f = MerchantConfigT
+data FraudConfigT f = FraudConfigT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
     fraudBookingCancellationCountThreshold :: B.C f Int,
@@ -44,16 +44,16 @@ data MerchantConfigT f = MerchantConfigT
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table MerchantConfigT where
-  data PrimaryKey MerchantConfigT f
+instance B.Table FraudConfigT where
+  data PrimaryKey FraudConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type MerchantConfig = MerchantConfigT Identity
+type FraudConfig = FraudConfigT Identity
 
-merchantConfigTMod :: MerchantConfigT (B.FieldModification (B.TableField MerchantConfigT))
-merchantConfigTMod =
+fraudConfigTMod :: FraudConfigT (B.FieldModification (B.TableField FraudConfigT))
+fraudConfigTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       merchantId = B.fieldNamed "merchant_id",
@@ -69,6 +69,6 @@ merchantConfigTMod =
       enabled = B.fieldNamed "enabled"
     }
 
-$(enableKVPG ''MerchantConfigT ['id] [['merchantId]])
+$(enableKVPG ''FraudConfigT ['id] [['merchantId]])
 
-$(mkTableInstances ''MerchantConfigT "merchant_config" "atlas_app")
+$(mkTableInstances ''FraudConfigT "fraud_config" "atlas_app")

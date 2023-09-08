@@ -223,6 +223,7 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.OnboardingDocumentConfig
       Domain.Types.Merchant.TransporterConfig
+      Domain.Types.MerchantConfig
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
@@ -345,12 +346,12 @@ library
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
       Storage.Beam.Merchant.DriverPoolConfig
       Storage.Beam.Merchant.LeaderBoardConfig
+      Storage.Beam.Merchant.MerchantConfig
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.Merchant.OnboardingDocumentConfig
-      Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
@@ -391,12 +392,12 @@ library
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
       Storage.CachedQueries.Merchant.LeaderBoardConfig
+      Storage.CachedQueries.Merchant.MerchantConfig
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.OnboardingDocumentConfig
-      Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
@@ -467,12 +468,12 @@ library
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.LeaderBoardConfig
+      Storage.Queries.Merchant.MerchantConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.OnboardingDocumentConfig
-      Storage.Queries.Merchant.TransporterConfig
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation

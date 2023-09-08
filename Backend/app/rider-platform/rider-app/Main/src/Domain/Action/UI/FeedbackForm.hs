@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
@@ -44,5 +44,5 @@ submitFeedback req = do
   let rideId = req.rideId
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  merchant <- QMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl req {rideId = cast ride.bppRideId}
+  merchantConfig <- QMCN.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
+  CallBPPInternal.feedbackForm merchantConfig.driverOfferBaseUrl req {rideId = cast ride.bppRideId}

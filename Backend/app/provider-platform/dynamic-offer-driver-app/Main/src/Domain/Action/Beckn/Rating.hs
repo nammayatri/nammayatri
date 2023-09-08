@@ -26,7 +26,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQMC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
@@ -41,7 +41,7 @@ data DRatingReq = DRatingReq
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
 handler merchantId req ride = do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  merchantConfig <- CQMC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
@@ -56,7 +56,7 @@ handler merchantId req ride = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
-  calculateAverageRating driverId merchant.minimumDriverRatesCount
+  calculateAverageRating driverId merchantConfig.minimumDriverRatesCount
 
 calculateAverageRating ::
   (EsqDBFlow m r, EncFlow m r) =>

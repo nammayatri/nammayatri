@@ -26,6 +26,7 @@ import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
@@ -42,7 +43,8 @@ data UpdateBuildReq = PaymentCompletedBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    merchantConfig :: DMC.MerchantConfigNew
   }
 
 buildUpdateReq ::
@@ -52,7 +54,7 @@ buildUpdateReq ::
 buildUpdateReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchantConfig.city res.merchantConfig.country False
   pure $ BecknReq context $ mkUpdateMessage res
 
 mkUpdateMessage ::
