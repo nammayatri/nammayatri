@@ -14,12 +14,6 @@
         android:visibility="gone"
         android:id="@+id/cl_dui_container" />
 
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:visibility="gone"
-        android:layout_height="match_parent" />
-
     <FrameLayout
         android:layout_width="match_parent"
         android:background="#99000000"

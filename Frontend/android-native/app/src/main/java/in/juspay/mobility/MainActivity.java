@@ -307,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
         } else {
-            LottieAnimationView splashLottieView = findViewById(in.juspay.mobility.app.R.id.splash_lottie);
+            LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
             try {
                 if (Settings.Global.getFloat(getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE) == 0f) {
                     isSystemAnimEnabled = false;
@@ -482,9 +482,9 @@ public class MainActivity extends AppCompatActivity {
                         }
                         break;
                     case "show_splash":
-                        View v = findViewById(in.juspay.mobility.app.R.id.splash);
+                        View v = findViewById(R.id.splash);
                         if (v != null) {
-                            findViewById(in.juspay.mobility.app.R.id.splash).setVisibility(View.VISIBLE);
+                            findViewById(R.id.splash).setVisibility(View.VISIBLE);
                         }
                         break;
                     case "reboot":
@@ -730,7 +730,7 @@ public class MainActivity extends AppCompatActivity {
         if (v != null) {
             findViewById(in.juspay.mobility.app.R.id.cl_dui_container).setVisibility(View.VISIBLE);
         }
-        View splashView = findViewById(in.juspay.mobility.app.R.id.splash);
+        View splashView = findViewById(R.id.splash);
         if (splashView != null) {
             splashView.setVisibility(View.GONE);
         }
