@@ -131,10 +131,20 @@ data MandateDetailsEntity = MandateDetails
 -- This API is for listing all the AUTO PAY plans
 planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow PlanListAPIRes
 planList (driverId, merchantId) _mbLimit _mbOffset = do
+  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   plans <- QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
-  plansList <- mapM (convertPlanToPlanEntity driverId now) plans
+  let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
+  plansList <-
+    mapM
+      ( \plan' ->
+          if driverInfo.autoPayStatus == Just DI.ACTIVE
+            then do convertPlanToPlanEntity driverId mandateSetupDate plan'
+            else do convertPlanToPlanEntity driverId now plan'
+      )
+      plans
   return $
     PlanListAPIRes
       { list = plansList,
