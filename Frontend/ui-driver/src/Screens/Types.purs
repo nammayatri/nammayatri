@@ -1655,7 +1655,7 @@ instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
 instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
 instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
 
-data OptionsMenuState = ALL_COLLAPSED | SUPPORT_MENU | PLAN_MENU | CALL_MENU
+data OptionsMenuState = ALL_COLLAPSED | PLAN_MENU  -- SUPPORT_MENU  | CALL_MENU disabled for now.
 
 derive instance genericOptionsMenuState :: Generic OptionsMenuState _
 instance showOptionsMenuState :: Show OptionsMenuState where show = genericShow
