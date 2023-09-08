@@ -41,6 +41,8 @@ instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
             goHomeFromLocationRadius = goHomeFromLocationRadius,
             goHomeWayPointRadius = goHomeWayPointRadius,
             goHomeBatchDelay = Seconds goHomeBatchDelay,
+            ignoreWaypointsTill = Meters ignoreWaypointsTill,
+            addStartWaypointAt = Meters addStartWaypointAt,
             ..
           }
 
@@ -51,5 +53,7 @@ instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
         BeamGHC.goHomeFromLocationRadius = goHomeFromLocationRadius,
         BeamGHC.goHomeWayPointRadius = goHomeWayPointRadius,
         BeamGHC.goHomeBatchDelay = getSeconds goHomeBatchDelay,
+        BeamGHC.ignoreWaypointsTill = getMeters ignoreWaypointsTill,
+        BeamGHC.addStartWaypointAt = getMeters addStartWaypointAt,
         ..
       }

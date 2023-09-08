@@ -491,7 +491,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
             logDebug $ "secondly filtered go home driver pool" <> show (map snd3 res)
             return res
 
-  driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance -- curr locs of driver VERIFY
+  driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance
   let driversRoutes = map (refactorRoutesResp goHomeCfg) driversRoutes'
   let driversOnWayToHome =
         filter
@@ -821,18 +821,24 @@ computeActualDistance orgId pickup driverPoolResults = do
 refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
 refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)
   where
-    tail' [] = []
-    tail' (_ : xs) = xs
-
     newRoute route' =
       RouteInfo
         { distance = route'.distance,
           duration = route'.duration,
-          points = tail' $ refactor [] route'.points,
+          points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
           boundingBox = route'.boundingBox
         }
-    refactor acc (p1 : p2 : ps) = if highPrecMetersToMeters (distanceBetweenInMeters p1 p2) > goHomeCfg.goHomeWayPointRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (goHomeCfg.goHomeWayPointRadius.getMeters)) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
+
+    filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
+    filterInitPoints [x] = [x]
+    filterInitPoints [] = []
+
+    getStartPoint (x1 : x2 : xs) = getPointInBetween x1 x2 (fromIntegral (getMeters goHomeCfg.addStartWaypointAt) / 111000) : x2 : xs -- 1 degree = 111 Km
+    getStartPoint [x] = [x]
+    getStartPoint [] = []
+
+    refactor acc (p1 : p2 : ps) = if highPrecMetersToMeters (distanceBetweenInMeters p1 p2) > goHomeCfg.goHomeWayPointRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (goHomeCfg.goHomeWayPointRadius.getMeters) / 111000) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
     refactor acc [p1] = reverse (p1 : acc)
     refactor _ [] = []
 
