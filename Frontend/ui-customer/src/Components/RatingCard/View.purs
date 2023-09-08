@@ -76,10 +76,20 @@ currentRatingView push state =
   , clickable true
   , adjustViewWithKeyboard "true"
   , onClick push $ const NoAction
-  ][  starRatingView state push
-    , feedbackPillView state push
-    , editTextView state push
-    , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)
+  ][  scrollView 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , scrollBarY false 
+      ][ linearLayout 
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT
+         , orientation VERTICAL
+         ][ starRatingView state push
+          , feedbackPillView state push
+          , editTextView state push
+          ]
+       ]
+      , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)
   ]
 
 
@@ -170,7 +180,7 @@ editTextView state push =
   , cornerRadius 8.0
   , orientation HORIZONTAL
   , margin $ MarginBottom 24
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 16 16 0
   ][  imageView 
       [ imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_message_square.png"
       , height $ V 16 
