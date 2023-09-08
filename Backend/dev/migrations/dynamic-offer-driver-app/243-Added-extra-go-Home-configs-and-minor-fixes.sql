@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN ignore_waypoints_till INTEGER NOT NULL DEFAULT 3000;
+ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN add_start_waypoint_at INTEGER NOT NULL DEFAULT 3000;
