@@ -80,7 +80,9 @@ prepareDriverPoolBatch ::
 prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  prepareDriverPoolBatch' previousBatchesDrivers True
+  poolBatch <- prepareDriverPoolBatch' previousBatchesDrivers True
+  incrementDriverRequestCount (fst poolBatch) searchTry.id
+  pure poolBatch
   where
     getPreviousBatchesDrivers = do
       batches <- previouslyAttemptedDrivers searchTry.id
@@ -104,7 +106,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
             allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
             allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep transporterConfig
             (,False) <$> calculateNormalBatch transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers goHomeConfig
-      incrementDriverRequestCount currentDriverPoolBatch searchTry.id
       cacheBatch currentDriverPoolBatch
       pure (addDistanceSplitConfigBasedDelaysForDriversWithinBatch currentDriverPoolBatch, isGoToPool)
       where
