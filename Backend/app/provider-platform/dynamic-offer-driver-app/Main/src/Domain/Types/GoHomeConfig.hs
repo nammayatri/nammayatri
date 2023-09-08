@@ -37,6 +37,8 @@ data GoHomeConfig = GoHomeConfig
     goHomeWayPointRadius :: Meters,
     numDriversForDirCheck :: Int,
     goHomeBatchDelay :: Seconds,
+    ignoreWaypointsTill :: Meters,
+    addStartWaypointAt :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

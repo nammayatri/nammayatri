@@ -44,6 +44,8 @@ data GoHomeConfigT f = GoHomeConfigT
     goHomeWayPointRadius :: B.C f Meters,
     numDriversForDirCheck :: B.C f Int,
     goHomeBatchDelay :: B.C f Int,
+    ignoreWaypointsTill :: B.C f Int,
+    addStartWaypointAt :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
