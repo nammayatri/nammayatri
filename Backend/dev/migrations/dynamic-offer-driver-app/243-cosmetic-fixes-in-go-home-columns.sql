@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.go_home_config RENAME COLUMN go_home_req_id TO go_home_request_id;
+ALTER TABLE atlas_driver_offer_bpp.go_home_config RENAME COLUMN cancecllation_cnt TO cancellation_cnt;
+ALTER TABLE atlas_driver_offer_bpp.go_home_config RENAME COLUMN dest_radius TO dest_radius_meters;

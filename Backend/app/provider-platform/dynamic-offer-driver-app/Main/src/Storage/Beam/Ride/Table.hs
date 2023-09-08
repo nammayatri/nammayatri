@@ -69,4 +69,4 @@ type Ride = RideT Identity
 
 $(enableKVPG ''RideT ['id] [['bookingId], ['driverId], ['driverGoHomeRequestId]])
 
-$(mkTableInstancesWithTModifier ''RideT "ride" [("driverGoHomeRequestId", "driver_go_home_req_id")])
+$(mkTableInstances ''RideT "ride")
