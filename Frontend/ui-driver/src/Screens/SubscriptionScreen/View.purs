@@ -395,9 +395,9 @@ plansBottomView push state =
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://youtu.be/3I3adSdYeX8"
-                                          "KN_IN" -> "https://youtu.be/3I3adSdYeX8"
-                                          _ -> "https://youtu.be/3I3adSdYeX8"
+                                          "EN_US" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
+                                          "KN_IN" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
+                                          _ -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
                         pure unit
                         ) (const NoAction)
           ][ textView $
@@ -531,21 +531,20 @@ headerView push state =
       ]
     , linearLayout [
         height WRAP_CONTENT
-        , onClick push $ const $ if state.props.subView == JoinPlan then HeaderRightClick SUPPORT_MENU else NoAction
         , padding $ Padding 10 10 10 10
         , gravity CENTER_VERTICAL
         , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
       ][
         imageView [
           imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
-          , height $ V if state.props.subView == JoinPlan then 15 else 24
-          , width $ V if state.props.subView == JoinPlan then 15 else 24
+          , height $ V 24
+          , width $ V 24
           , margin $ MarginRight 3
-          , onClick push $ const $ HeaderRightClick if state.props.subView == JoinPlan then SUPPORT_MENU else CALL_MENU
+          , onClick push $ const $ CallSupport
           ]
         , textView
           $ [ textFromHtml config.actionText
-          , visibility if state.props.subView == JoinPlan then VISIBLE else GONE
+          , visibility GONE -- Not being used now.
           , padding $ PaddingBottom 3
           , color Color.blue800
           ] <> FontStyle.body1 TypoGraphy
@@ -557,13 +556,12 @@ headerView push state =
             , margin $ MarginHorizontal 13 13
           ][]
         , imageView [
-          imageWithFallback if state.props.subView == JoinPlan && state.props.optionsMenuState == SUPPORT_MENU then "ny_ic_chevronup_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevronup_blue.png"
-                            else if state.props.subView == JoinPlan then "ny_ic_chevrondown_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevrondown_blue.png"
-                            else "ny_ic_settings_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_filled_blue.png"
-          , height $ V if state.props.subView == JoinPlan then 15 else 24
-          , width $ V if state.props.subView == JoinPlan then 15 else 24
+          imageWithFallback "ny_ic_settings_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_filled_blue.png"
+          , height $ V 24
+          , width $ V 24
           , margin $ MarginLeft 3
-          , onClick push $ const $ HeaderRightClick if state.props.subView == JoinPlan then SUPPORT_MENU else PLAN_MENU
+          , onClick push $ const $ HeaderRightClick PLAN_MENU
+          , visibility if state.props.subView == MyPlan then VISIBLE else GONE
           ]
       ]
     ]
@@ -609,9 +607,9 @@ myPlanBodyview push state =
                         _ <- pure $ JB.metaLogEvent "ny_driver_myplan_watchvideo_clicked"
                         _ <- pure $ JB.firebaseLogEvent "ny_driver_myplan_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://youtu.be/3I3adSdYeX8"
-                                          "KN_IN" -> "https://youtu.be/3I3adSdYeX8"
-                                          _ -> "https://youtu.be/3I3adSdYeX8"
+                                          "EN_US" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
+                                          "KN_IN" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
+                                          _ -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
                         pure unit
                         ) (const NoAction)
             ]
