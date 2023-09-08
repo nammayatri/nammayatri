@@ -552,7 +552,7 @@ makePlaceNameReq lat lng language = GetPlaceNameReq
       "language" : Just language,
       "getBy" : GetPlaceNameBy {
           "tag" : "ByLatLong",
-          "contents" :LatLongType ( LatLonBody {
+          "contents" :LatLongType ( LatLong {
               "lat" : lat,
               "lon" : lng
           })

@@ -10,7 +10,7 @@ import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (mapWithIndex, length, (!!))
 import Data.Function.Uncurried (runFn1)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -18,48 +18,74 @@ import Font.Style as FontStyle
 import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, (<<<), (==), (>=), (*), (+), (<=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import MerchantConfig.Utils (getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  PrestoAnim.animationSet (if EHC.os == "IOS" then [fadeIn true] 
+  PrestoAnim.animationSet (if EHC.os == "IOS" then [fadeIn true]
   else [ translateYAnimFromTop $ Animation.translateYAnimHomeConfig Animation.BOTTOM_TOP ]) $
   linearLayout
-    [ orientation VERTICAL
-    , height WRAP_CONTENT
-    , width MATCH_PARENT
-    , background Color.white900
-    , margin $ MarginTop 10
-    , clickable true
-    , padding $ PaddingTop 16
-    , stroke $ "1," <> Color.grey900
-    , gravity CENTER
-    , cornerRadii $ Corners 24.0 true true false false
-    , onAnimationEnd push (const NoAction)
-    ]
-    [ textView (
-        [ text (getString CHOOSE_YOUR_RIDE)
-        , color Color.black800
-        , gravity CENTER_HORIZONTAL
-        , height WRAP_CONTENT
-        , width MATCH_PARENT
-        ] <> FontStyle.h1 TypoGraphy)
-    , estimatedTimeAndDistanceView push config
-    , textView $
-        [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
-        , color Color.black650
-        , gravity CENTER_HORIZONTAL
-        , height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , visibility if config.showTollExtraCharges then VISIBLE else GONE
-        ] <> FontStyle.paragraphText TypoGraphy
-    , quoteListView push config
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
-    ]
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      , margin $ MarginRight 15
+      , visibility if (isJust config.nearByDrivers) && (getValueFromConfig "showNearByDrivers") then VISIBLE else GONE
+      , disableClickFeedback true
+      ][ textView
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , gravity RIGHT
+         , stroke $ "1," <> Color.grey900
+         , text $ show (fromMaybe 0 config.nearByDrivers) <> " " <> (getString CABS_AVAILABLE)
+         , padding (Padding 10 5 10 5)
+         , color Color.blue900
+         , background Color.white900
+         , cornerRadius 8.0
+         , fontStyle $ FontStyle.medium LanguageStyle
+         ]
+       ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , margin $ MarginTop 10
+      , clickable true
+      , padding $ PaddingTop 16
+      , stroke $ "1," <> Color.grey900
+      , gravity CENTER
+      , cornerRadii $ Corners 24.0 true true false false
+      , onAnimationEnd push (const NoAction)
+      ]
+      [ textView (
+          [ text (getString CHOOSE_YOUR_RIDE)
+          , color Color.black800
+          , gravity CENTER_HORIZONTAL
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          ] <> FontStyle.h1 TypoGraphy)
+      , estimatedTimeAndDistanceView push config
+      , textView $
+          [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+          , color Color.black650
+          , gravity CENTER_HORIZONTAL
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , visibility if config.showTollExtraCharges then VISIBLE else GONE
+          ] <> FontStyle.paragraphText TypoGraphy
+      , quoteListView push config
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
+      ]
+  ]
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 estimatedTimeAndDistanceView push config =
@@ -130,7 +156,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
     , color = Color.yellow900
 
     }
-  , id = "ConfirmAndBookButton" 
+  , id = "ConfirmAndBookButton"
   , background = Color.black900
   , margin = Margin 16 16 16 15
   }
