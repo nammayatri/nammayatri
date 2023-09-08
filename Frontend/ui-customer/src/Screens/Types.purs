@@ -605,6 +605,7 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , suggestedDestinations :: SuggestedDestinationsObj
+  , nearByDrivers :: Maybe Int
   }
 
 type DisabilityT = 

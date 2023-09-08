@@ -266,7 +266,6 @@ primaryButtonConfirmPickupConfig state =
     primaryButtonConfig'
 
 
-
 cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 cancelRidePopUpConfig state =
   let
