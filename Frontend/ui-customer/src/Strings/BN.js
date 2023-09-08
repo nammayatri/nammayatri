@@ -608,5 +608,6 @@ const bengaliStrings = {
   "GOT_AN_OTP" : "একটি OTP পেয়েছেন?",
   "JUST_ONE_LAST_THING" : "শুধু একটি শেষ জিনিস",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "টোল/পার্কিং চার্জ অতিরিক্ত হবে",
-  "AUTO_RICKSHAW" : "অটো রিক্সা"
+  "AUTO_RICKSHAW" : "অটো রিক্সা",
+  "CABS_AVAILABLE" : "ক্যাব উপলব্ধ"
 }

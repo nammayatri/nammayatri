@@ -1,5 +1,6 @@
 module Components.ChooseYourRide.Controller where
 
+import Data.Maybe (Maybe(..))
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import MerchantConfig.DefaultConfig as DC
@@ -16,6 +17,7 @@ type Config
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
+    , nearByDrivers :: Maybe Int
     }
 
 config :: Config
@@ -25,4 +27,5 @@ config =
   , activeIndex: 0
   , quoteList: []
   , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
+  , nearByDrivers : Nothing
   }
