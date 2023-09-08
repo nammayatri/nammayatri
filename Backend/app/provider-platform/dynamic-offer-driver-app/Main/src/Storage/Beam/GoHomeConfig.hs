@@ -29,7 +29,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters)
 import Lib.Utils ()
 import Sequelize
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstancesWithTModifier)
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,
@@ -72,4 +72,4 @@ goHomeConfigToPSModifiers =
 
 $(enableKVPG ''GoHomeConfigT ['merchantId] [])
 
-$(mkTableInstancesWithTModifier ''GoHomeConfigT "go_home_config" [("destRadiusMeters", "dest_radius"), ("cancellationCnt", "cancecllation_cnt")])
+$(mkTableInstances ''GoHomeConfigT "go_home_config")
