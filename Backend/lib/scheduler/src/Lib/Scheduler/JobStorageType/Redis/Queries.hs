@@ -27,7 +27,7 @@ import Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Tools.Metrics.CoreMetrics.Types (DeploymentVersion)
+import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common (logDebug)
@@ -102,8 +102,8 @@ markAsComplete _ = pure ()
 markAsFailed :: (JobExecutor r m) => Id AnyJob -> m ()
 markAsFailed _ = pure ()
 
-updateErrorCountAndFail :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
-updateErrorCountAndFail _ _ = pure ()
+updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
+updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
 
 udpateKey :: Text -> Text -> Value -> Value
 udpateKey key newString (A.Object obj) =

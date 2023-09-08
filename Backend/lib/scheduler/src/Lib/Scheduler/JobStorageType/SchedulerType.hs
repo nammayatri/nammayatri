@@ -24,7 +24,7 @@ import qualified Data.Map as M
 import Data.Singletons
 import Kernel.Beam.Functions (FromTType'')
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics.Types (DeploymentVersion)
+import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
@@ -172,7 +172,7 @@ markAsFailed jobType id = do
         =<< isLongRunning jobType
     DbBased -> DBQ.markAsFailed id
 
-updateErrorCountAndFail :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool)) => Text -> Id AnyJob -> Int -> m ()
+updateErrorCountAndFail :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool), Forkable m, CoreMetrics m) => Text -> Id AnyJob -> Int -> m ()
 updateErrorCountAndFail jobType id errorCount = do
   schedulerType <- asks (.schedulerType)
   case schedulerType of
