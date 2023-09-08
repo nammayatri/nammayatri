@@ -27,6 +27,7 @@ import Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Metrics.CoreMetrics.Types (DeploymentVersion)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common (logDebug)
@@ -66,7 +67,8 @@ getShardIdKey = "DriverOffer:Jobs:ShardId"
 
 getReadyTasks ::
   ( JobExecutor r m,
-    JobProcessor t
+    JobProcessor t,
+    HasField "version" r DeploymentVersion
   ) =>
   Maybe Int ->
   m [(AnyJob t, BS.ByteString)]
@@ -74,7 +76,8 @@ getReadyTasks _ = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   let lastEntryId :: Text = "$"
-  consumerName <- generateGUIDText
+  version <- asks (.version)
+  let consumerName = version.getDeploymentVersion
   let nextId :: Text = ">"
   isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
   unless isGroupExist $ do

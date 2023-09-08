@@ -24,6 +24,7 @@ import qualified Data.Map as M
 import Data.Singletons
 import Kernel.Beam.Functions (FromTType'')
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics.Types (DeploymentVersion)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
@@ -117,7 +118,7 @@ getTasksById jobs = do
 
 getReadyTasks ::
   forall t m r.
-  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) =>
+  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t, HasField "version" r DeploymentVersion) =>
   Maybe Int ->
   m [(AnyJob t, BS.ByteString)]
 getReadyTasks mbMaxShards = do
