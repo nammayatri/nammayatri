@@ -25,6 +25,7 @@ import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
+import qualified Data.Time as T hiding (getCurrentTime)
 import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -155,6 +156,10 @@ executeTask :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> Sc
 executeTask SchedulerHandle {..} (AnyJob job) = do
   schedulerType <- asks (.schedulerType)
   let jobType' = show (fromSing $ jobType $ jobInfo job)
+  let begTime = job.scheduledAt
+  endTime <- getCurrentTime
+  let diff = T.diffUTCTime endTime begTime
+  fork "" $ addGenericLatency "Job_pickup" $ fromIntegral $ fromEnum diff
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
