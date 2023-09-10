@@ -37,12 +37,29 @@ instance FromBackendRow Postgres Domain.InvoiceStatus
 instance IsString Domain.InvoiceStatus where
   fromString = show
 
+instance FromField Domain.InvoicePaymentMode where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.InvoicePaymentMode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.InvoicePaymentMode
+
+instance FromBackendRow Postgres Domain.InvoicePaymentMode
+
+instance IsString Domain.InvoicePaymentMode where
+  fromString = show
+
 data InvoiceT f = InvoiceT
   { id :: B.C f Text,
     invoiceShortId :: B.C f Text,
     driverFeeId :: B.C f Text,
     invoiceStatus :: B.C f Domain.InvoiceStatus,
+    paymentMode :: B.C f Domain.InvoicePaymentMode,
     maxMandateAmount :: B.C f (Maybe HighPrecMoney),
+    bankErrorMessage :: B.C f (Maybe Text),
+    bankErrorCode :: B.C f (Maybe Text),
+    bankErrorUpdatedAt :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -63,6 +80,7 @@ invoiceTMod =
       invoiceShortId = B.fieldNamed "invoice_short_id",
       driverFeeId = B.fieldNamed "driver_fee_id",
       invoiceStatus = B.fieldNamed "invoice_status",
+      paymentMode = B.fieldNamed "payment_mode",
       maxMandateAmount = B.fieldNamed "max_mandate_amount",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"

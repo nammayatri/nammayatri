@@ -51,6 +51,8 @@ data PaymentStatusResp
         mandateId :: Text,
         mandateMaxAmount :: HighPrecMoney,
         payerVpa :: Maybe Text,
+        bankErrorMessage :: Maybe Text,
+        bankErrorCode :: Maybe Text,
         upi :: Maybe Payment.Upi
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -176,6 +178,8 @@ buildPaymentOrder merchantId personId req resp = do
         mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
         mandateStartDate = posixSecondsToUTCTime . read . T.unpack <$> (resp.sdk_payload.payload.mandateStartDate),
         mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
+        bankErrorCode = Nothing,
+        bankErrorMessage = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -223,7 +227,7 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ PaymentStatus {status = transactionStatus}
+      return $ PaymentStatus {status = transactionStatus, ..}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -236,6 +240,8 @@ data OrderTxn = OrderTxn
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,
     amount :: HighPrecMoney,
+    bankErrorMessage :: Maybe Text,
+    bankErrorCode :: Maybe Text,
     currency :: Payment.Currency,
     dateCreated :: Maybe UTCTime,
     mandateStatus :: Maybe Payment.MandateStatus,
@@ -255,6 +261,8 @@ updateOrderTransaction ::
   Maybe Text ->
   m ()
 updateOrderTransaction order resp respDump = do
+  let errorMessage = resp.bankErrorMessage
+      errorCode = resp.bankErrorCode
   mbTransaction <- do
     case resp.transactionUUID of
       -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
@@ -267,7 +275,7 @@ updateOrderTransaction order resp respDump = do
       transaction <- buildPaymentTransaction order resp respDump
       Esq.runTransaction $ do
         QTransaction.create transaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -290,7 +298,7 @@ updateOrderTransaction order resp respDump = do
       Esq.runTransaction $ do
         -- Avoid updating status if already in CHARGED state to handle race conditions
         when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do
@@ -307,6 +315,8 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         createdAt = now,
         updatedAt = now,
         juspayResponse = respDump,
+        bankErrorCode,
+        bankErrorMessage,
         ..
       }
 

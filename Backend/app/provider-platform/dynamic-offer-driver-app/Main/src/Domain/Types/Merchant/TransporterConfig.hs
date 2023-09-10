@@ -53,6 +53,7 @@ data TransporterConfigD u = TransporterConfig
     driverPaymentReminderInterval :: NominalDiffTime,
     driverAutoPayNotificationTime :: NominalDiffTime,
     driverAutoPayExecutionTime :: NominalDiffTime,
+    bankErrorExpiry :: NominalDiffTime,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,

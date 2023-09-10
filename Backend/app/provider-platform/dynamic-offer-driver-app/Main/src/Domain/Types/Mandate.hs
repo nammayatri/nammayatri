@@ -33,6 +33,7 @@ data Mandate = Mandate
     maxAmount :: HighPrecMoney,
     payerApp :: Maybe Text,
     payerAppName :: Maybe Text,
+    mandatePaymentFlow :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

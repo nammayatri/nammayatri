@@ -97,6 +97,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
             ..
           }
 
@@ -139,6 +140,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
+        BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,

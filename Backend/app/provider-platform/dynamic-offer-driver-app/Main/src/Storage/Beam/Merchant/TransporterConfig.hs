@@ -71,6 +71,7 @@ data TransporterConfigT f = TransporterConfigT
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
     mandateValidity :: B.C f Int,
+    bankErrorExpiry :: B.C f Seconds,
     driverLocationAccuracyBuffer :: B.C f Meters,
     routeDeviationThreshold :: B.C f Meters,
     canDowngradeToSedan :: B.C f Bool,
