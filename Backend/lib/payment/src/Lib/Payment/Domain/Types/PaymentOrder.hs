@@ -46,6 +46,8 @@ data PaymentOrderE e = PaymentOrder
     mandateMaxAmount :: Maybe HighPrecMoney,
     mandateStartDate :: Maybe UTCTime,
     mandateEndDate :: Maybe UTCTime,
+    bankErrorMessage :: Maybe Text,
+    bankErrorCode :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

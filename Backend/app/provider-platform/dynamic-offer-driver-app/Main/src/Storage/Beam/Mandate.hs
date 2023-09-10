@@ -25,6 +25,7 @@ data MandateT f = MandateT
     maxAmount :: B.C f HighPrecMoney,
     payerApp :: B.C f (Maybe Text),
     payerAppName :: B.C f (Maybe Text),
+    mandatePaymentFlow :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

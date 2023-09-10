@@ -44,13 +44,15 @@ findLatestByPersonId personId =
 create :: DOrder.PaymentOrder -> SqlDB ()
 create = Esq.create
 
-updateStatus :: DOrder.PaymentOrder -> SqlDB ()
-updateStatus order = do
+updateStatusAndError :: DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> SqlDB ()
+updateStatusAndError order bankErrorMessage bankErrorCode = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ PaymentOrderStatus =. val order.status,
+        PaymentOrderBankErrorMessage =. val bankErrorMessage,
+        PaymentOrderBankErrorCode =. val bankErrorCode,
         PaymentOrderUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentOrderId ==. val order.id.getId
