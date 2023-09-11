@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -24,6 +25,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
+import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
@@ -32,6 +34,7 @@ import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -156,6 +159,12 @@ handler merchantId req eitherReq = do
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
           _ <- QRB.create booking
+          -- moving route from search request id to booking id
+          routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
+          case routeInfo of
+            Just route -> Redis.setExp (BS.searchRequestKey $ getId booking.id) route 3600
+            Nothing -> logDebug "Unable to get the key"
+
           return (booking, Nothing, Nothing)
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   let paymentMethodInfo = req.paymentMethodInfo
