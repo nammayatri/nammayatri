@@ -8,7 +8,8 @@ type AppConfig =
     languageList :: Array Language,
     popupBackground :: String,
     defaultLanguage :: String,
-    imageUploadOptional :: Boolean
+    imageUploadOptional :: Boolean,
+    leaderBoard :: LeaderBoard
   } 
 
 type Language =  {
@@ -16,3 +17,7 @@ type Language =  {
   value :: String,
   subtitle :: String
  }
+
+type LeaderBoard = {
+  isMaskedName :: Boolean
+}

@@ -557,6 +557,7 @@ type ReferralScreenStateData = {
       }
     }
   , logField :: Object Foreign
+  , config :: AppConfig
 }
 
 type ReferralScreenStateProps = {

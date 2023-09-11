@@ -33,6 +33,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -151,9 +152,9 @@ eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreen
 eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_leaderboard"
   let dataLength = DA.length leaderBoardRes.driverList
-      rankersData = sortWith (_.rank) (transformLeaderBoardList (filter (\(DriversInfo info) -> info.rank <= 10 && info.totalRides > 0 && info.rank > 0) leaderBoardRes.driverList)) <> (replicate (10 - dataLength) RSD.dummyRankData)
+      rankersData = sortWith (_.rank) (transformLeaderBoardList (filter (\(DriversInfo info) -> info.rank <= 10 && info.totalRides > 0 && info.rank > 0) leaderBoardRes.driverList) state.data.config.leaderBoard.isMaskedName) <> (replicate (10 - dataLength) RSD.dummyRankData)
       currentDriverData = case (filter (\(DriversInfo info) -> info.isCurrentDriver && info.rank > 0 && info.totalRides > 0) leaderBoardRes.driverList) !! 0 of
-                            Just driverData -> transformLeaderBoard driverData
+                            Just driverData -> transformLeaderBoard driverData state.data.config.leaderBoard.isMaskedName
                             Nothing         -> RSD.dummyRankData
       lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
   let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
@@ -276,12 +277,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
 eval _ state = continue state
 
 
-transformLeaderBoardList :: (Array DriversInfo) -> Array RankCardData
-transformLeaderBoardList driversList = map (\x -> transformLeaderBoard x) driversList
+transformLeaderBoardList :: (Array DriversInfo) -> Boolean -> Array RankCardData
+transformLeaderBoardList driversList isMaskedName = map (\x -> transformLeaderBoard x isMaskedName) driversList
 
-transformLeaderBoard :: DriversInfo -> RankCardData
-transformLeaderBoard (DriversInfo driversInfo) = {
-    goodName : driversInfo.name
+transformLeaderBoard :: DriversInfo -> Boolean -> RankCardData
+transformLeaderBoard (DriversInfo driversInfo) isMaskedName = {
+    goodName : if isMaskedName then "*******" else driversInfo.name
   , profileUrl : Nothing
   , rank : driversInfo.rank
   , rides : driversInfo.totalRides
