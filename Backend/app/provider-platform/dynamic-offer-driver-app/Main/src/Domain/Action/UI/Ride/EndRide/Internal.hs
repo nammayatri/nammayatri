@@ -40,6 +40,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
+import Domain.Types.Plan (PlanType (DEFAULT))
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (foldr, id, length, null)
@@ -64,10 +65,12 @@ import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverPlan (findByDriverId)
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
@@ -118,7 +121,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
-    createDriverFee merchantId driverId ride.fare newFareParams maxShards
+    driverFeeId <- createDriverFee merchantId driverId ride.fare newFareParams maxShards
+    QRide.updateDriverFeeId ride.id driverFeeId
+    mbDriverPlan <- findByDriverId driverId
+    (planId, paymentMode) <- case mbDriverPlan of
+      Just dp -> pure (dp.planId, dp.planType)
+      Nothing -> do
+        plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
+        case plans of
+          [] -> throwError $ InternalError "No default plan found"
+          [pl] -> pure (pl.id, pl.paymentMode)
+          _ -> throwError $ InternalError "Multiple default plans found"
+    QRide.updatePlan planId paymentMode ride.id
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
@@ -289,7 +303,7 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
+createDriverFee :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m (Id DF.DriverFee)
 createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
@@ -334,6 +348,12 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
             }
         setOverduePaymentCache driverFee.endTime overduePaymentJobTs
       _ -> pure ()
+  case lastDriverFee of
+    Just ldFee ->
+      if now >= ldFee.startTime && now < ldFee.endTime
+        then pure ldFee.id
+        else pure driverFee.id
+    Nothing -> pure driverFee.id
 
 mkDriverFee ::
   ( MonadFlow m

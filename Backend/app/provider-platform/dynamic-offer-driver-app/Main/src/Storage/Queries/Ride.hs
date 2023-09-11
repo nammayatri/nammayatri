@@ -30,9 +30,11 @@ import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Domain.Types.Plan
 import Domain.Types.Ride as DR
 import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
@@ -230,6 +232,25 @@ updateDistance driverId distance snapCalls = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+
+updateDriverFeeId :: MonadFlow m => Id Ride -> Id DriverFee -> m ()
+updateDriverFeeId rideId driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.driverFeeId (Just driverFeeId.getId),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updatePlan :: MonadFlow m => Id Plan -> PaymentMode -> Id Ride -> m ()
+updatePlan planId paymentMode rideId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.planId (Just planId.getId),
+      Se.Set BeamR.paymentMode (Just paymentMode),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 updateAll :: MonadFlow m => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
@@ -459,6 +480,9 @@ instance FromTType' BeamR.Ride Ride where
             fareParametersId = Id <$> fareParametersId,
             driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
             trackingUrl = tUrl,
+            driverFeeId = Id <$> driverFeeId,
+            planId = Id <$> planId,
+            paymentMode = paymentMode,
             ..
           }
 
@@ -493,5 +517,8 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.numberOfDeviation = numberOfDeviation,
         BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
         BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
+        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
+        BeamR.driverFeeId = getId <$> driverFeeId,
+        BeamR.planId = getId <$> planId,
+        BeamR.paymentMode = paymentMode
       }

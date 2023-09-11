@@ -19,6 +19,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import Domain.Types.Plan (PaymentMode)
 import qualified Domain.Types.Ride as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -57,7 +58,10 @@ data RideT f = RideT
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
-    driverGoHomeRequestId :: B.C f (Maybe Text)
+    driverGoHomeRequestId :: B.C f (Maybe Text),
+    planId :: B.C f (Maybe Text),
+    paymentMode :: B.C f (Maybe PaymentMode),
+    driverFeeId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

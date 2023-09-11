@@ -21,9 +21,11 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
+import Domain.Types.DriverFee
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
+import Domain.Types.Plan (PaymentMode, Plan)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
@@ -78,6 +80,9 @@ data Ride = Ride
     numberOfDeviation :: Maybe Bool,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    driverFeeId :: Maybe (Id DriverFee),
+    planId :: Maybe (Id Plan),
+    paymentMode :: Maybe PaymentMode
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

@@ -44,6 +44,9 @@ findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq
 findByMerchantIdAndPaymentMode :: MonadFlow m => Id Merchant -> PaymentMode -> m [Plan]
 findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
+findByMerchantIdAndType :: MonadFlow m => Id Merchant -> PlanType -> m [Plan]
+findByMerchantIdAndType (Id merchantId) planType = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.planType $ Se.Eq planType]]
+
 instance FromTType' BeamP.Plan Plan where
   fromTType' BeamP.PlanT {..} = do
     pure $
