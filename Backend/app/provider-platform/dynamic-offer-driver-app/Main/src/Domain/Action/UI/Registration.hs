@@ -53,6 +53,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -60,6 +61,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
+import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -162,9 +164,10 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CoreMetrics m, HasCacheConfig r, Redis.HedisFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
 createDriverDetails personId merchantId = do
   now <- getCurrentTime
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let driverId = cast personId
   let driverInfo =
         DriverInfo.DriverInformation
@@ -182,9 +185,9 @@ createDriverDetails personId merchantId = do
             autoPayStatus = Nothing,
             referralCode = Nothing,
             lastEnabledOn = Nothing,
-            canDowngradeToSedan = False,
-            canDowngradeToHatchback = False,
-            canDowngradeToTaxi = False,
+            canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
+            canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
+            canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             aadhaarVerified = False,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
@@ -274,7 +277,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CoreMetrics m, HasCacheConfig r, Redis.HedisFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   now <- getCurrentTime
