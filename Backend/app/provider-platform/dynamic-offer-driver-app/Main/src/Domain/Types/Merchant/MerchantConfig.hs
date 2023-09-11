@@ -1,30 +1,38 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+{-# LANGUAGE DerivingStrategies #-}
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+module Domain.Types.Merchant.MerchantConfig where
 
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Domain.Types.Merchant.TransporterConfig where
-
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Aeson
+import Data.OpenApi (ToSchema)
+import Data.Time
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types (FCMConfig)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 
--- ProviderConfig?
-data TransporterConfigD u = TransporterConfig
+data MerchantConfigD (s :: UsageSafety) = MerchantConfig
   { merchantId :: Id Merchant,
+    gstin :: Maybe Text,
+    name :: Text,
+    description :: Maybe Text,
+    city :: Context.City,
+    country :: Context.Country,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    fromTime :: Maybe UTCTime,
+    toTime :: Maybe UTCTime,
+    headCount :: Maybe Int,
+    status :: Status,
+    verified :: Bool,
+    enabled :: Bool,
+    internalApiKey :: Text,
+    geoHashPrecisionValue :: Int,
+    geofencingConfig :: GeofencingConfig,
+    info :: Maybe Text,
     pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
     rideTimeEstimatedThreshold :: Seconds,
@@ -58,21 +66,41 @@ data TransporterConfigD u = TransporterConfig
     subscriptionStartTime :: UTCTime,
     mandateValidity :: Int,
     aadhaarVerificationRequired :: Bool,
+    minimumDriverRatesCount :: Int,
     enableDashboardSms :: Bool,
     driverLocationAccuracyBuffer :: Meters,
     routeDeviationThreshold :: Meters,
+    rcLimit :: Int,
+    automaticRCActivationCutOff :: Seconds,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    rcLimit :: Int,
-    automaticRCActivationCutOff :: Seconds
+    registryUrl :: BaseUrl
   }
   deriving (Generic, Show)
 
-type TransporterConfig = TransporterConfigD 'Safe
+type MerchantConfig = MerchantConfigD 'Safe
 
-instance FromJSON (TransporterConfigD 'Unsafe)
+instance FromJSON (MerchantConfigD 'Unsafe)
 
-instance ToJSON (TransporterConfigD 'Unsafe)
+instance ToJSON (MerchantConfigD 'Unsafe)
+
+data MerchantConfigAPIEntity = MerchantConfigAPIEntity
+  { id :: Id Merchant,
+    name :: Text,
+    description :: Maybe Text,
+    contactNumber :: Text,
+    status :: Status,
+    enabled :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+makeMerchantConfigAPIEntity :: MerchantConfig -> MerchantConfigAPIEntity
+makeMerchantConfigAPIEntity MerchantConfig {..} =
+  MerchantConfigAPIEntity
+    { id = merchantId,
+      contactNumber = fromMaybe "Unknown" $ mobileCountryCode <> mobileNumber,
+      ..
+    }

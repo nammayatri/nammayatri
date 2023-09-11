@@ -29,7 +29,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import Domain.Types.Merchant.MerchantConfig
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -46,7 +46,7 @@ import SharedLogic.DriverPool
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as TC
 import Tools.Maps as Maps
 
 isBatchNumExceedLimit ::
@@ -281,7 +281,7 @@ sortWithDriverScore ::
     MonadFlow m
   ) =>
   Id Merchant ->
-  Maybe TransporterConfig ->
+  Maybe MerchantConfig ->
   DriverIntelligentPoolConfig ->
   DriverPoolConfig ->
   [IntelligentFactors] ->

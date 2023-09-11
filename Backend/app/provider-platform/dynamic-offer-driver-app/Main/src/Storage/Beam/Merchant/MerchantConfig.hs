@@ -12,23 +12,46 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE InstanceSigs #-}
 
-module Storage.Beam.Merchant.TransporterConfig where
+module Storage.Beam.Merchant.MerchantConfig where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Geofencing
 import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 
-data TransporterConfigT f = TransporterConfigT
+data MerchantConfigT f = MerchantConfigT
   { merchantId :: B.C f Text,
+    gstin :: B.C f (Maybe Text),
+    name :: B.C f Text,
+    verified :: B.C f Bool,
+    enabled :: B.C f Bool,
+    description :: B.C f (Maybe Text),
+    mobileNumber :: B.C f (Maybe Text),
+    mobileCountryCode :: B.C f (Maybe Text),
+    fromTime :: B.C f (Maybe Time.UTCTime),
+    toTime :: B.C f (Maybe Time.UTCTime),
+    internalApiKey :: B.C f Text,
+    headCount :: B.C f (Maybe Int),
+    status :: B.C f Domain.Status,
+    info :: B.C f (Maybe Text),
+    originRestriction :: B.C f GeoRestriction,
+    destinationRestriction :: B.C f GeoRestriction,
+    city :: B.C f Context.City,
+    country :: B.C f Context.Country,
+    geoHashPrecisionValue :: B.C f Int,
+    minimumDriverRatesCount :: B.C f Int,
     pickupLocThreshold :: B.C f Meters,
     dropLocThreshold :: B.C f Meters,
     rideTimeEstimatedThreshold :: B.C f Seconds,
@@ -73,18 +96,19 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    registryUrl :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table TransporterConfigT where
-  data PrimaryKey TransporterConfigT f
+instance B.Table MerchantConfigT where
+  data PrimaryKey MerchantConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-type TransporterConfig = TransporterConfigT Identity
+type MerchantConfig = MerchantConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantId] [])
+$(enableKVPG ''MerchantConfigT ['merchantId] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier ''MerchantConfigT "merchant_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])

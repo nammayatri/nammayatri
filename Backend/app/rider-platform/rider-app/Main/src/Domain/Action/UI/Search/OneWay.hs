@@ -28,6 +28,7 @@ import Domain.Types.HotSpot
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
@@ -44,10 +45,11 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.DirectionsCache as SDC
-import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.FraudConfig as SFC
+import qualified Storage.CachedQueries.FraudConfig as QFC
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
-import qualified Storage.CachedQueries.MerchantConfig as QMC
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
 import Storage.Queries.Geometry
@@ -77,6 +79,7 @@ data OneWaySearchRes = OneWaySearchRes
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
     merchant :: DM.Merchant,
+    merchantConfig :: DMC.MerchantConfigNew,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
@@ -138,13 +141,14 @@ oneWaySearch personId req bundleVersion clientVersion device = do
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  merchantConfig <- CQMC.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId req.origin.gps
   HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
 
   when shouldTakeHotSpot do
     _ <- hotSpotUpdate person.merchantId mbFavourite req
     updateForSpecialLocation person.merchantId req
-  validateServiceability merchant.geofencingConfig
+  validateServiceability merchantConfig.geofencingConfig
 
   let sourceLatlong = req.origin.gps
   let destinationLatLong = req.destination.gps
@@ -155,8 +159,8 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             mode = Just Maps.CAR
           }
   routeResponse <- SDC.getRoutes person.merchantId request
-  let durationWeightage = 100 - merchant.distanceWeightage
-  let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
+  let durationWeightage = 100 - merchantConfig.distanceWeightage
+  let shortestRouteInfo = getEfficientRouteInfo routeResponse merchantConfig.distanceWeightage durationWeightage
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
   let shortestRouteDuration = (.duration) =<< shortestRouteInfo
@@ -199,10 +203,10 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             ..
           }
   fork "updating search counters" $ do
-    merchantConfigs <- QMC.findAllByMerchantId person.merchantId
-    SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
+    fraudConfigs <- QFC.findAllByMerchantId person.merchantId
+    SFC.updateSearchFraudCounters personId fraudConfigs
+    mFraudDetected <- SFC.anyFraudDetected personId person.merchantId fraudConfigs
+    whenJust mFraudDetected $ \mc -> SFC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
     validateServiceability geoConfig =

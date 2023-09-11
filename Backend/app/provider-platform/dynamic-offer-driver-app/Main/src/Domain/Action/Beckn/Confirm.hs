@@ -77,6 +77,7 @@ data DConfirmReq = DConfirmReq
     toAddress :: DBL.LocationAddress,
     mbRiderName :: Maybe Text
   }
+  deriving (Show)
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
@@ -134,6 +135,8 @@ handler transporter req quote = do
             Nothing -> logDebug "Unable to get the key"
 
           -- critical updates
+          when isNewRider $ QRD.create riderDetails
+          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QRide.create ride
           DLoc.updateOnRide driver.merchantId driver.id True
@@ -146,8 +149,6 @@ handler transporter req quote = do
           QBL.updateAddress booking.toLocation.id req.toAddress
           QDQ.setInactiveBySTId driverQuote.searchTryId
           QSRD.setInactiveBySTId driverQuote.searchTryId
-          when isNewRider $ QRD.create riderDetails
-          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
 
           QBE.logRideConfirmedEvent booking.id
           QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id

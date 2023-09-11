@@ -54,7 +54,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
 import qualified Storage.Queries.DriverInformation as DInfo

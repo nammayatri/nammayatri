@@ -35,7 +35,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Storage.CachedQueries.Merchant.TransporterConfig
+import Storage.CachedQueries.Merchant.MerchantConfig
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery

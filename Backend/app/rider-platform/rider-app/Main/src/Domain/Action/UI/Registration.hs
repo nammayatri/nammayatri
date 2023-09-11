@@ -61,7 +61,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
-import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.FraudConfig as SFC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
@@ -404,7 +404,7 @@ verify tokenId req = do
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
-    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
+    when merchantConfig.useFraudDetection $ SFC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   void $ RegistrationToken.setVerified tokenId
   void $ Person.updateDeviceToken person.id deviceToken
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken

@@ -28,7 +28,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
-import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
@@ -57,7 +57,7 @@ rating apiKey FeedbackReq {..} = do
   ride <- B.runInReplica $ QRide.findByBPPRideId rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ B.runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  merchantConfig <- QMCN.findByMerchantId person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
   _ <- validateRequest ratingValue ride.status
   unless (Just internalAPIKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
@@ -73,7 +73,7 @@ rating apiKey FeedbackReq {..} = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails
-  calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
+  calculateAverageRating booking.riderId merchantConfig.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 
 calculateAverageRating ::

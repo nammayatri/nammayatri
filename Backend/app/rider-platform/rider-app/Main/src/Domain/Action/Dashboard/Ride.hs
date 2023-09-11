@@ -37,6 +37,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -354,16 +355,17 @@ multipleRideCancel req = do
 ---------------------------------------------------------------------
 rideSync ::
   DM.Merchant ->
+  DMC.MerchantConfigNew ->
   Id Common.Ride ->
   Flow APISuccess
-rideSync merchant reqRideId = do
+rideSync merchant merchantConfig reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
 
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  let dStatusReq = DStatusReq {booking, merchant}
+  let dStatusReq = DStatusReq {booking, merchant, merchantConfig}
   becknStatusReq <- buildStatusReq dStatusReq
   void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
   pure Success

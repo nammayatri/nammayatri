@@ -25,6 +25,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B
@@ -35,6 +36,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -106,9 +108,10 @@ multipleBookingSync ::
 multipleBookingSync merchantShortId req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantConfig <- CQMC.findByMerchantId merchant.id >>= fromMaybeM (MerchantDoesNotExist merchant.id.getId)
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
-      bookingSync merchant reqItem.bookingId
+      bookingSync merchant merchantConfig reqItem.bookingId
       pure Common.SuccessItem
     pure $ Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info}
   logTagInfo "dashboard -> multipleBookingSync: " $ show (req.bookings <&> (.bookingId))
@@ -117,9 +120,10 @@ multipleBookingSync merchantShortId req = do
 ---------------------------------------------------------------------
 bookingSync ::
   DM.Merchant ->
+  DMC.MerchantConfigNew ->
   Id Common.Booking ->
   Flow ()
-bookingSync merchant reqBookingId = do
+bookingSync merchant merchantConfig reqBookingId = do
   let bookingId = cast @Common.Booking @DBooking.Booking reqBookingId
   booking <- B.runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (merchant.id == booking.merchantId) $
@@ -138,7 +142,7 @@ bookingSync merchant reqBookingId = do
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant}
+      let dStatusReq = DStatusReq {booking = updBooking, merchant, merchantConfig}
       becknStatusReq <- buildStatusReq dStatusReq
       void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
     Nothing -> do

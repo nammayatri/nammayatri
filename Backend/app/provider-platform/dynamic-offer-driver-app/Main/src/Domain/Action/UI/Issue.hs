@@ -34,7 +34,7 @@ import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified Storage.CachedQueries.MediaFile as CQMF
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQTC
 import qualified Storage.Queries.Issue.IssueReport as QIR
 import qualified Storage.Queries.MediaFile as QMF
 import qualified Storage.Queries.Person as QP

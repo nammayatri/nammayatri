@@ -48,8 +48,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.MerchantConfig as SMC
-import qualified Storage.CachedQueries.MerchantConfig as CMC
+import qualified SharedLogic.FraudConfig as SFC
+import qualified Storage.CachedQueries.FraudConfig as CFC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -297,9 +297,9 @@ onUpdate ValidatedRideStartedReq {..} = do
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
   frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripEnd
-  SMC.updateTotalRidesCounters booking.riderId
-  merchantConfigs <- CMC.findAllByMerchantId person.merchantId
-  SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
+  SFC.updateTotalRidesCounters booking.riderId
+  merchantConfigs <- CFC.findAllByMerchantId person.merchantId
+  SFC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
 
   rideEndTime <- getCurrentTime
   let updRide =
@@ -355,14 +355,14 @@ onUpdate ValidatedRideCompletedReq {..} = do
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
-  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+  merchantConfigs <- CFC.findAllByMerchantId booking.merchantId
   case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+    SBCR.ByUser -> SFC.updateCustomerFraudCounters booking.riderId merchantConfigs
+    SBCR.ByDriver -> SFC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
   fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+    mFraudDetected <- SFC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+    whenJust mFraudDetected $ \mc -> SFC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}

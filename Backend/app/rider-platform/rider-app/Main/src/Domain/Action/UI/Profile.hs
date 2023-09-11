@@ -49,7 +49,7 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
@@ -193,10 +193,10 @@ validateRefferalCode personId refCode = do
         then throwError (InvalidRequest "Referral Code is not same")
         else return Nothing -- idempotent behaviour
     Nothing -> do
-      merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+      merchantConfig <- QMCN.findByMerchantId person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
       case (person.mobileNumber, person.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) -> do
-          void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+          void $ CallBPPInternal.linkReferee merchantConfig.driverOfferApiKey merchantConfig.driverOfferBaseUrl merchantConfig.driverOfferMerchantId refCode mobileNumber countryCode
           return $ Just refCode
         _ -> throwError (InvalidRequest "Mobile number is null")
 

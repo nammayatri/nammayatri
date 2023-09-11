@@ -30,7 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import Storage.CachedQueries.Merchant.TransporterConfig
+import Storage.CachedQueries.Merchant.MerchantConfig
 
 notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,

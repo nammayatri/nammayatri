@@ -31,7 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as QMCN
 import Storage.Queries.Geometry (someGeometriesContain)
 import Tools.Error
 
@@ -54,8 +54,8 @@ checkServiceability ::
   LatLong ->
   m ServiceabilityRes
 checkServiceability settingAccessor (_, merchantId) location = do
-  let merchId = merchantId
-  geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
+  let merchId = merchantId -- why this?
+  geoConfig <- fmap (.geofencingConfig) $ QMCN.findByMerchantId merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
   DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   case geoRestriction of

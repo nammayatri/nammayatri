@@ -38,7 +38,7 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.Merchant.MerchantConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
@@ -63,7 +63,7 @@ import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
@@ -98,15 +98,17 @@ endRideTransaction ::
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
-  TransporterConfig ->
+  MerchantConfig ->
   Id Merchant ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   DLoc.updateOnRide merchantId ride.driverId False
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
-  QRide.updateAll ride.id ride
   whenJust mbFareParams QFare.create
+  QRide.updateAll ride.id ride
 
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   if driverInfo.active
@@ -118,9 +120,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
     createDriverFee merchantId driverId ride.fare newFareParams maxShards
-
-  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
 
   sendReferralFCM ride mbRiderDetailsId
   updateLeaderboardZScore merchantId ride
@@ -345,7 +344,7 @@ mkDriverFee ::
   Money ->
   HighPrecMoney ->
   HighPrecMoney ->
-  TransporterConfig ->
+  MerchantConfig ->
   m DF.DriverFee
 mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID

@@ -18,61 +18,38 @@
 
 module Storage.Beam.Merchant where
 
-import Data.ByteString.Internal (ByteString)
+-- import Data.ByteString.Internal (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
+-- import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import Database.PostgreSQL.Simple.FromField (fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Merchant as Domain
+-- import Database.PostgreSQL.Simple.FromField (fromField)
+-- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Base64
-import Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Geofencing (GeoRestriction)
-import qualified Kernel.Types.Geofencing as Geo
-import Kernel.Utils.Common (Seconds)
+-- import Kernel.Types.Geofencing (GeoRestriction)
+-- import qualified Kernel.Types.Geofencing as Geo
 import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
-
-fromFieldEnum' ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion GeoRestriction
-fromFieldEnum' f mbValue = case mbValue of
-  Nothing -> pure Geo.Unrestricted
-  Just _ -> Geo.Regions . V.toList <$> fromField f mbValue
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
     shortId :: B.C f Text,
     subscriberId :: B.C f Text,
     name :: B.C f Text,
-    city :: B.C f Context.City,
-    country :: B.C f Context.Country,
     bapId :: B.C f Text,
     bapUniqueKeyId :: B.C f Text,
-    originRestriction :: B.C f GeoRestriction,
-    destinationRestriction :: B.C f GeoRestriction,
     gatewayUrl :: B.C f Text,
     registryUrl :: B.C f Text,
-    driverOfferBaseUrl :: B.C f Text,
-    driverOfferApiKey :: B.C f Text,
-    driverOfferMerchantId :: B.C f Text,
-    geoHashPrecisionValue :: B.C f Int,
     signingPublicKey :: B.C f Base64,
-    minimumDriverRatesCount :: B.C f Int,
     cipherText :: B.C f (Maybe Base64),
     signatureExpiry :: B.C f Int,
-    distanceWeightage :: B.C f Int,
     updatedAt :: B.C f Time.UTCTime,
-    createdAt :: B.C f Time.UTCTime,
-    timeDiffFromUtc :: B.C f Seconds,
-    dirCacheSlot :: B.C f [Domain.Slot]
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -61,8 +61,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import Storage.CachedQueries.Merchant.MerchantConfig as QTC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as SCO
-import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverOnboarding.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery

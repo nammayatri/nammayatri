@@ -62,12 +62,12 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
@@ -397,7 +397,7 @@ data DBUpdateObject
   | MerchantServiceConfigOptions UpdateModel [Set Postgres MerchantServiceConfig.MerchantServiceConfigT] (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigOptions UpdateModel [Set Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT] (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
   | MerchantOnboardingDocumentConfigOptions UpdateModel [Set Postgres MerchantOnboardingDocumentConfig.OnboardingDocumentConfigT] (Where Postgres MerchantOnboardingDocumentConfig.OnboardingDocumentConfigT)
-  | TransporterConfigOptions UpdateModel [Set Postgres TransporterConfig.TransporterConfigT] (Where Postgres TransporterConfig.TransporterConfigT)
+  | TransporterConfigOptions UpdateModel [Set Postgres TransporterConfig.MerchantConfigT] (Where Postgres TransporterConfig.MerchantConfigT)
   | MessageOptions UpdateModel [Set Postgres Message.MessageT] (Where Postgres Message.MessageT)
   | MessageReportOptions UpdateModel [Set Postgres MessageReport.MessageReportT] (Where Postgres MessageReport.MessageReportT)
   | MessageTranslationOptions UpdateModel [Set Postgres MessageTranslation.MessageTranslationT] (Where Postgres MessageTranslation.MessageTranslationT)

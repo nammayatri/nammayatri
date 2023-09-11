@@ -35,7 +35,7 @@ import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.CachedQueries.Merchant.TransporterConfig
+import Storage.CachedQueries.Merchant.MerchantConfig
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Tools.Verification as Verification

@@ -23,6 +23,7 @@ where
 
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfig as DMC
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -31,11 +32,11 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CQMC
 import Tools.Error
 
 newtype TransporterRec = TransporterRec
-  { organization :: DM.MerchantAPIEntity
+  { organization :: DMC.MerchantConfigAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -46,7 +47,7 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, Show, FromJSON, ToSchema)
 
-type UpdateTransporterRes = DM.MerchantAPIEntity
+type UpdateTransporterRes = DMC.MerchantConfigAPIEntity
 
 validateUpdateTransporterReq :: Validate UpdateTransporterReq
 validateUpdateTransporterReq UpdateTransporterReq {..} =
@@ -60,18 +61,18 @@ updateTransporter admin merchantId req = do
   unless (merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
   org <-
-    CQM.findById merchantId
+    CQMC.findByMerchantId merchantId
       >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   let updOrg =
-        org{DM.name = fromMaybe (org.name) (req.name),
-            DM.description = (req.description) <|> (org.description),
-            DM.enabled = fromMaybe (org.enabled) (req.enabled)
+        org{DMC.name = fromMaybe (org.name) (req.name),
+            DMC.description = (req.description) <|> (org.description),
+            DMC.enabled = fromMaybe (org.enabled) (req.enabled)
            }
-  _ <- CQM.update updOrg
-  CQM.clearCache updOrg
+  _ <- CQMC.update updOrg
+  CQMC.clearCache updOrg
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
-  return $ DM.makeMerchantAPIEntity updOrg
+  return $ DMC.makeMerchantConfigAPIEntity updOrg
 
 getTransporter :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant) -> m TransporterRec
 getTransporter (_, merchantId) = do
-  TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))
+  TransporterRec . DMC.makeMerchantConfigAPIEntity <$> (CQMC.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))

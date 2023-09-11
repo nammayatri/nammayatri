@@ -30,7 +30,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import Storage.CachedQueries.Merchant.MerchantConfig as CTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q

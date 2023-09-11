@@ -59,12 +59,12 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
@@ -140,7 +140,7 @@ data DBCreateObject
   | MerchantServiceConfigObject MerchantServiceConfig.MerchantServiceConfig
   | MerchantServiceUsageConfigObject MerchantServiceUsageConfig.MerchantServiceUsageConfig
   | MerchantOnboardingDocumentConfigObject MerchantOnboardingDocumentConfig.OnboardingDocumentConfig
-  | TransporterConfigObject TransporterConfig.TransporterConfig
+  | TransporterConfigObject TransporterConfig.MerchantConfig
   | MessageObject Message.Message
   | MessageReportObject MessageReport.MessageReport
   | MessageTranslationObject MessageTranslation.MessageTranslation

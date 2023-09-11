@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import "sessionizer-metrics" Lib.SessionizerMetrics.Types.Event as E
 import "rider-app" SharedLogic.Person as SP
-import "rider-app" Storage.CachedQueries.Merchant as CQMerchant
+import "rider-app" Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
 import "rider-app" Storage.Queries.Person.PersonStats as QP
 import "rider-app" Tools.Error
@@ -49,8 +49,8 @@ updateCustomerStats event _ = do
               case payload.rs of
                 DDR.COMPLETED -> do
                   let createdAt = payload.cAt
-                  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-                  let minuteDiffFromUTC = (merchant.timeDiffFromUtc.getSeconds) `div` 60
+                  merchantConfig <- CQMC.findByMerchantId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+                  let minuteDiffFromUTC = (merchantConfig.timeDiffFromUtc.getSeconds) `div` 60
                   -- Esq.runNoTransaction $ do
                   if SP.isWeekend createdAt minuteDiffFromUTC
                     then do QP.incrementWeekendRidesCount personId

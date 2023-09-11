@@ -23,7 +23,6 @@ where
 import Domain.Types.Merchant as DOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
@@ -47,8 +46,6 @@ update org = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamM.name org.name,
-      Se.Set BeamM.gatewayUrl (showBaseUrl org.gatewayUrl),
-      Se.Set BeamM.registryUrl (showBaseUrl org.registryUrl),
       Se.Set BeamM.updatedAt now
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
@@ -57,12 +54,6 @@ instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
-    doBaseUrl <- parseBaseUrl driverOfferBaseUrl
-    let geofencingConfig =
-          Geo.GeofencingConfig
-            { origin = originRestriction,
-              destination = destinationRestriction
-            }
     pure $
       Just $
         Merchant
@@ -70,55 +61,31 @@ instance FromTType' BeamM.Merchant Merchant where
             subscriberId = ShortId subscriberId,
             shortId = ShortId shortId,
             name = name,
-            city = city,
-            country = country,
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
-            geofencingConfig = geofencingConfig,
             gatewayUrl = gwUrl,
             registryUrl = regUrl,
-            driverOfferBaseUrl = doBaseUrl,
-            driverOfferApiKey = driverOfferApiKey,
-            driverOfferMerchantId = driverOfferMerchantId,
-            geoHashPrecisionValue = geoHashPrecisionValue,
-            minimumDriverRatesCount = minimumDriverRatesCount,
             signingPublicKey = signingPublicKey,
             cipherText = cipherText,
-            distanceWeightage = distanceWeightage,
             signatureExpiry = signatureExpiry,
             createdAt = createdAt,
-            timeDiffFromUtc = timeDiffFromUtc,
-            updatedAt = updatedAt,
-            dirCacheSlot = dirCacheSlot
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamM.Merchant Merchant where
   toTType' Merchant {..} = do
-    let Geo.GeofencingConfig {..} = geofencingConfig
     BeamM.MerchantT
       { BeamM.id = getId id,
         BeamM.subscriberId = getShortId subscriberId,
         BeamM.shortId = getShortId shortId,
         BeamM.name = name,
-        BeamM.city = city,
-        BeamM.country = country,
         BeamM.bapId = bapId,
         BeamM.bapUniqueKeyId = bapUniqueKeyId,
-        BeamM.originRestriction = origin,
-        BeamM.destinationRestriction = destination,
         BeamM.gatewayUrl = showBaseUrl gatewayUrl,
         BeamM.registryUrl = showBaseUrl registryUrl,
-        BeamM.driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
-        BeamM.driverOfferApiKey = driverOfferApiKey,
-        BeamM.driverOfferMerchantId = driverOfferMerchantId,
-        BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
-        BeamM.minimumDriverRatesCount = minimumDriverRatesCount,
         BeamM.signingPublicKey = signingPublicKey,
         BeamM.cipherText = cipherText,
-        BeamM.distanceWeightage = distanceWeightage,
         BeamM.signatureExpiry = signatureExpiry,
         BeamM.createdAt = createdAt,
-        BeamM.updatedAt = updatedAt,
-        BeamM.timeDiffFromUtc = timeDiffFromUtc,
-        BeamM.dirCacheSlot = dirCacheSlot
+        BeamM.updatedAt = updatedAt
       }

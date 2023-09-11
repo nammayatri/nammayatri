@@ -23,9 +23,6 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude (BaseUrl)
-import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Servant.API
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -52,25 +49,10 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     uniqueKeyId :: Text,
     shortId :: ShortId Merchant,
-    city :: Context.City,
-    country :: Context.Country,
-    mobileNumber :: Maybe Text,
-    mobileCountryCode :: Maybe Text,
-    gstin :: Maybe Text,
-    fromTime :: Maybe UTCTime,
-    toTime :: Maybe UTCTime,
-    headCount :: Maybe Int,
     status :: Status,
-    verified :: Bool,
     enabled :: Bool,
-    internalApiKey :: Text,
-    geoHashPrecisionValue :: Int,
-    minimumDriverRatesCount :: Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    geofencingConfig :: GeofencingConfig,
-    info :: Maybe Text,
-    registryUrl :: BaseUrl
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -84,15 +66,12 @@ data MerchantAPIEntity = MerchantAPIEntity
   { id :: Id Merchant,
     name :: Text,
     description :: Maybe Text,
-    contactNumber :: Text,
-    status :: Status,
-    enabled :: Bool
+    status :: Status
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makeMerchantAPIEntity :: Merchant -> MerchantAPIEntity
 makeMerchantAPIEntity Merchant {..} =
   MerchantAPIEntity
-    { contactNumber = fromMaybe "Unknown" $ mobileCountryCode <> mobileNumber,
-      ..
+    { ..
     }

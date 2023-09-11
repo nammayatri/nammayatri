@@ -19,6 +19,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -37,6 +38,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -67,6 +69,7 @@ data DConfirmRes = DConfirmRes
     riderName :: Maybe Text,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
+    merchantConfig :: DMC.MerchantConfigNew,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
@@ -119,6 +122,7 @@ confirm DConfirmReq {..} = do
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  merchantConfig <- CQMC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
@@ -132,6 +136,7 @@ confirm DConfirmReq {..} = do
   _ <- QRideB.create booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
+
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes

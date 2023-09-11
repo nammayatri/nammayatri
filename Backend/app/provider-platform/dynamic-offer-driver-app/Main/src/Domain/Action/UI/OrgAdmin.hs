@@ -22,14 +22,14 @@ module Domain.Action.UI.OrgAdmin
 where
 
 import Control.Applicative
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfig as DMC
 import qualified Domain.Types.Person as SP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QMC
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -40,7 +40,7 @@ data OrgAdminProfileRes = OrgAdminProfileRes
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCMRecipientToken,
-    organization :: DM.MerchantAPIEntity
+    organization :: DMC.MerchantConfigAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -57,10 +57,10 @@ type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 getProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
   let merchantId = admin.merchantId
-  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  org <- QMC.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
+  return $ makeOrgAdminProfileRes personAPIEntity (DMC.makeMerchantConfigAPIEntity org)
 
 updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
@@ -72,12 +72,12 @@ updateProfile admin req = do
               deviceToken = req.deviceToken <|> admin.deviceToken
              }
   _ <- QPerson.updatePersonRec updAdmin.id updAdmin
-  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  org <- QMC.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
+  return $ makeOrgAdminProfileRes personAPIEntity (DMC.makeMerchantConfigAPIEntity org)
 
-makeOrgAdminProfileRes :: SP.PersonAPIEntity -> DM.MerchantAPIEntity -> OrgAdminProfileRes
+makeOrgAdminProfileRes :: SP.PersonAPIEntity -> DMC.MerchantConfigAPIEntity -> OrgAdminProfileRes
 makeOrgAdminProfileRes SP.PersonAPIEntity {..} org =
   OrgAdminProfileRes
     { organization = org,

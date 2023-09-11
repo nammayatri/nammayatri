@@ -13,7 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Merchant.TransporterConfig
+module Storage.Queries.Merchant.MerchantConfig
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
@@ -21,16 +21,17 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.Merchant.MerchantConfig
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
+import qualified Storage.Beam.Merchant.MerchantConfig as BeamTC
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe MerchantConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
 
 updateFCMConfig :: MonadFlow m => Id Merchant -> BaseUrl -> Text -> m ()
@@ -52,7 +53,7 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
     ]
     [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
-update :: MonadFlow m => TransporterConfig -> m ()
+update :: MonadFlow m => MerchantConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV
@@ -78,12 +79,13 @@ update config = do
     ]
     [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
 
-instance FromTType' BeamTC.TransporterConfig TransporterConfig where
-  fromTType' BeamTC.TransporterConfigT {..} = do
+instance FromTType' BeamTC.MerchantConfig MerchantConfig where
+  fromTType' BeamTC.MerchantConfigT {..} = do
     fcmUrl' <- parseBaseUrl fcmUrl
+    regUrl <- parseBaseUrl registryUrl
     pure $
       Just
-        TransporterConfig
+        MerchantConfig
           { merchantId = Id merchantId,
             fcmConfig =
               FCM.FCMConfig
@@ -91,19 +93,39 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
                   fcmServiceAccount = fcmServiceAccount,
                   fcmTokenKeyPrefix = fcmTokenKeyPrefix
                 },
+            registryUrl = regUrl,
             driverPaymentCycleBuffer = secondsToNominalDiffTime driverPaymentCycleBuffer,
             driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
             driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
             ..
           }
 
-instance ToTType' BeamTC.TransporterConfig TransporterConfig where
-  toTType' TransporterConfig {..} = do
-    BeamTC.TransporterConfigT
+instance ToTType' BeamTC.MerchantConfig MerchantConfig where
+  toTType' MerchantConfig {..} = do
+    BeamTC.MerchantConfigT
       { BeamTC.merchantId = getId merchantId,
+        BeamTC.gstin = gstin,
+        BeamTC.name = name,
+        BeamTC.verified = verified,
+        BeamTC.enabled = enabled,
+        BeamTC.description = description,
+        BeamTC.mobileNumber = mobileNumber,
+        BeamTC.mobileCountryCode = mobileCountryCode,
+        BeamTC.fromTime = fromTime,
+        BeamTC.toTime = toTime,
+        BeamTC.internalApiKey = internalApiKey,
+        BeamTC.headCount = headCount,
+        BeamTC.status = status,
+        BeamTC.info = info,
+        BeamTC.originRestriction = origin geofencingConfig,
+        BeamTC.destinationRestriction = destination geofencingConfig,
+        BeamTC.city = city,
+        BeamTC.country = country,
+        BeamTC.geoHashPrecisionValue = geoHashPrecisionValue,
         BeamTC.pickupLocThreshold = pickupLocThreshold,
         BeamTC.dropLocThreshold = dropLocThreshold,
         BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
@@ -141,6 +163,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
+        BeamTC.registryUrl = showBaseUrl registryUrl,
         BeamTC.rcLimit = rcLimit,
         BeamTC.mandateValidity = mandateValidity,
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
@@ -148,5 +171,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
-        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi
+        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
+        BeamTC.minimumDriverRatesCount = minimumDriverRatesCount
       }

@@ -31,7 +31,7 @@ import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QTC
 import qualified Storage.Queries.Person as QP
 
 create :: MonadFlow m => Image -> m ()

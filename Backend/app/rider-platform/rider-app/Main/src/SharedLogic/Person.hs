@@ -28,7 +28,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantConfigNew as CQMC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Person.PersonStats as QP
@@ -41,8 +41,8 @@ backfillPersonStats personId merchantId = do
   userCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByUser
   driverCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByDriver
   completedRides <- runInReplica QRide.findAllCompletedRides
-  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  let minuteDiffFromUTC = (merchant.timeDiffFromUtc.getSeconds) `div` 60
+  merchantConfig <- CQMC.findByMerchantId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  let minuteDiffFromUTC = (merchantConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedRides
   let (weekendRides, weekdayRides) = countWeekdaysAndWeekendsRide completedRides minuteDiffFromUTC

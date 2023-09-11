@@ -168,6 +168,7 @@ library
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
+      Domain.Types.FraudConfig
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.HotSpotConfig
@@ -176,11 +177,11 @@ library
       Domain.Types.Maps.DirectionsCache
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
+      Domain.Types.Merchant.MerchantConfigNew
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
@@ -207,9 +208,9 @@ library
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
       SharedLogic.DirectionsCache
+      SharedLogic.FraudConfig
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
-      SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.Person
@@ -231,17 +232,18 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.FeedbackForm
+      Storage.Beam.FraudConfig
       Storage.Beam.Geometry
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
       Storage.Beam.Maps.DirectionsCache
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
+      Storage.Beam.Merchant.MerchantConfigNew
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.Payment.PaymentOrder
       Storage.Beam.Payment.PaymentTransaction
@@ -265,16 +267,17 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FraudConfig
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.DirectionsCache
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
+      Storage.CachedQueries.Merchant.MerchantConfigNew
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
-      Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.Queries.AppInstalls
@@ -292,17 +295,18 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
+      Storage.Queries.FraudConfig
       Storage.Queries.Geometry
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
       Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
+      Storage.Queries.Merchant.MerchantConfigNew
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber

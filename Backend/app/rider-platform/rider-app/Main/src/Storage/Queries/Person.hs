@@ -19,8 +19,8 @@ import Control.Applicative ((<|>))
 import qualified Data.Time as T
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.Type as Booking
+import qualified Domain.Types.FraudConfig as DFC
 import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -229,7 +229,7 @@ updateBlockedState (Id personId) isBlocked = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatingEnabledAndBlockedState :: MonadFlow m => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
+updatingEnabledAndBlockedState :: MonadFlow m => Id Person -> Maybe (Id DFC.FraudConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   now <- getCurrentTime
   updateWithKV

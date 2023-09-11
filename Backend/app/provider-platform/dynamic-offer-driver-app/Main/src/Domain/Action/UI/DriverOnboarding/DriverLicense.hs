@@ -49,8 +49,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as QTC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery

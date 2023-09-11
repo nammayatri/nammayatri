@@ -21,7 +21,7 @@ where
 import qualified Control.Monad.Catch as C
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
-import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
+import Domain.Types.Merchant.MerchantConfig
 import Domain.Types.Person
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -34,7 +34,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Log (withLogTag), MonadTime (g
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
@@ -123,5 +123,5 @@ calcDriverFeeAttr driverFeeStatus startTime endTime = do
   -- relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
   return $ zip driverFees relevantDrivers
 
-getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
+getRescheduledTime :: MonadTime m => MerchantConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.driverPaymentReminderInterval <$> getCurrentTime

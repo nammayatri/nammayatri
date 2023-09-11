@@ -31,7 +31,7 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common (CacheFlow, Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
+import qualified Storage.CachedQueries.Merchant.MerchantConfig as CTCQ
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
 import qualified Storage.Queries.DriverInformation as QDI

@@ -25,6 +25,7 @@ import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantConfigNew as DMC
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -49,6 +50,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     customerLanguage
     disabilityTag
     merchant
+    merchantConfig
     (getPoints shortestRouteInfo)
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
@@ -68,6 +70,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     merchant
+    merchantConfig
     Nothing
 
 buildSearchReq ::
@@ -81,13 +84,14 @@ buildSearchReq ::
   Maybe Maps.Language ->
   Maybe Text ->
   DM.Merchant ->
+  DMC.MerchantConfigNew ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant mbPoints = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant merchantConfig mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchantConfig.city merchantConfig.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
   let searchMessage = Search.SearchMessage intent
 
