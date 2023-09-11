@@ -49,6 +49,7 @@ buildSearchReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
+  let disabilityTag = buildDisabilityTag =<< intent.fulfillment.customer
   let messageId = context.message_id
   transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
   pure
@@ -68,7 +69,8 @@ buildSearchReq subscriber req = do
         routeDuration = duration,
         device = Nothing,
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
-        customerLanguage = customerLanguage
+        customerLanguage = customerLanguage,
+        disabilityTag = disabilityTag
       }
 
 getDistance :: Search.TagGroups -> Maybe Meters
@@ -86,6 +88,11 @@ getDuration tagGroups = do
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
   tagValue <- getTag "customer_info" "customer_language" person.tags
+  readMaybe $ T.unpack tagValue
+
+buildDisabilityTag :: Search.Customer -> Maybe Text
+buildDisabilityTag Search.Customer {..} = do
+  tagValue <- getTag "customer_info" "customer_disability" person.tags
   readMaybe $ T.unpack tagValue
 
 buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]

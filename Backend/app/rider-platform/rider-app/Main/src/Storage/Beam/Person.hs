@@ -127,6 +127,7 @@ data PersonT f = PersonT
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
     hasTakenValidRide :: B.C f Bool,
+    hasDisability :: B.C f (Maybe Bool),
     referralCode :: B.C f (Maybe Text),
     referredAt :: B.C f (Maybe Time.UTCTime)
   }
@@ -175,6 +176,7 @@ personTMod =
       bundleVersion = B.fieldNamed "bundle_version",
       clientVersion = B.fieldNamed "client_version",
       hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
+      hasDisability = B.fieldNamed "has_disability",
       referralCode = B.fieldNamed "referral_code",
       referredAt = B.fieldNamed "referred_at"
     }

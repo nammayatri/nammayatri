@@ -172,6 +172,15 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updateHasDisability :: MonadFlow m => Id Person -> Maybe Bool -> m ()
+updateHasDisability (Id personId) mbHasDisability = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.hasDisability mbHasDisability,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updateReferralCodeAndReferredAt :: MonadFlow m => Id Person -> Maybe Text -> m ()
 updateReferralCodeAndReferredAt (Id personId) referralCode = do
   now <- getCurrentTime
@@ -292,6 +301,7 @@ instance FromTType' BeamP.Person Person where
             referralCode = referralCode,
             referredAt = referredAt,
             hasTakenValidRide = hasTakenValidRide,
+            hasDisability = hasDisability,
             blockedAt = T.localTimeToUTC T.utc <$> blockedAt,
             blockedByRuleId = Id <$> blockedByRuleId,
             createdAt = createdAt,
@@ -331,6 +341,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.referralCode = referralCode,
         BeamP.referredAt = referredAt,
         BeamP.hasTakenValidRide = hasTakenValidRide,
+        BeamP.hasDisability = hasDisability,
         BeamP.blockedAt = T.utcToLocalTime T.utc <$> blockedAt,
         BeamP.blockedByRuleId = getId <$> blockedByRuleId,
         BeamP.createdAt = createdAt,

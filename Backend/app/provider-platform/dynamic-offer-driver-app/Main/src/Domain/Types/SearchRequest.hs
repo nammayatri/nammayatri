@@ -42,6 +42,7 @@ data SearchRequest = SearchRequest
     autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)

@@ -27,11 +27,14 @@ module Domain.Action.UI.Profile
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
+import qualified Domain.Types.Person.PersonDisability as PersonDisability
 import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -47,8 +50,10 @@ import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
+import qualified Storage.Queries.Person.PersonDisability as PDisability
 import Tools.Error
 
 type ProfileRes = Person.PersonAPIEntity
@@ -64,11 +69,19 @@ data UpdateProfileReq = UpdateProfileReq
     language :: Maybe Maps.Language,
     gender :: Maybe Person.Gender,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    disability :: Maybe Disability,
+    hasDisability :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type UpdateProfileResp = APISuccess.APISuccess
+
+data Disability = Disability
+  { id :: Id Disability,
+    description :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
 
 newtype UpdateProfileDefaultEmergencyNumbersReq = UpdateProfileDefaultEmergencyNumbersReq
   { defaultEmergencyNumbers :: [PersonDefaultEmergencyNumber]
@@ -106,8 +119,11 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
 getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
 getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  tag <- case person.hasDisability of
+    Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
+    _ -> return Nothing
   decPerson <- decrypt person
-  return $ Person.makePersonAPIEntity decPerson
+  return $ Person.makePersonAPIEntity decPerson tag
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
@@ -116,6 +132,7 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
 
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
+
   void $
     QPerson.updatePersonalInfo
       personId
@@ -130,6 +147,38 @@ updatePerson personId req = do
       req.gender
       req.clientVersion
       req.bundleVersion
+  updateDisability req.hasDisability req.disability personId
+
+updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
+updateDisability hasDisability mbDisability personId = do
+  case (hasDisability, mbDisability) of
+    (Nothing, _) -> logDebug "No Disability"
+    (Just False, _) -> do
+      QPerson.updateHasDisability personId $ Just False
+      PDisability.deleteByPersonId personId
+    (Just True, Nothing) -> throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
+    (Just True, Just selectedDisability) -> do
+      customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+      QPerson.updateHasDisability personId $ Just True
+      let disabilityId = getId $ selectedDisability.id
+      disability <- runInReplica $ QD.findByDisabilityId disabilityId >>= fromMaybeM (DisabilityDoesNotExist disabilityId)
+      let mbDescription = (selectedDisability.description) <|> (Just disability.description)
+      when (isNothing customerDisability) $ do
+        newDisability <- makeDisability selectedDisability disability.tag mbDescription
+        PDisability.create newDisability
+      when (isJust customerDisability) $ do
+        PDisability.updateDisabilityByPersonId personId disabilityId disability.tag mbDescription
+      where
+        makeDisability personDisability tag mbDescription = do
+          now <- getCurrentTime
+          return $
+            PersonDisability.PersonDisability
+              { personId = personId,
+                disabilityId = getId $ personDisability.id,
+                tag = tag,
+                description = mbDescription,
+                updatedAt = now
+              }
   pure APISuccess.Success
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Text -> m (Maybe Text)
