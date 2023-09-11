@@ -64,6 +64,17 @@ broadcastMessageConsumer flowRt appEnv kafkaConsumer =
         generateGUID
           >>= flip withLogTag (BMProcessor.broadcastMessage messagePayload driverId)
 
+testKafkaConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+testKafkaConsumer flowRt appEnv kafkaConsumer =
+  readMessages kafkaConsumer
+    & S.mapM broadcastMessageWithFlow
+    & S.drain
+  where
+    broadcastMessageWithFlow (messagePayload, driverId, _) =
+      runFlowR flowRt appEnv . withLogTag driverId $
+        generateGUID
+          >>= flip withLogTag (BMProcessor.broadcastMessage messagePayload driverId)
+
 availabilityConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 availabilityConsumer flowRt appEnv kafkaConsumer =
   readMessages kafkaConsumer

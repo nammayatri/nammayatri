@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module DBSync.Create where
@@ -6,6 +7,7 @@ import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
@@ -15,6 +17,7 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
+import System.Timeout
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -66,7 +69,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+    |::| pushToKafkaForS3 dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
       let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
@@ -125,6 +128,56 @@ runCreateCommands cmds streamKey = do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" model
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
+
+    pushToKafkaForS3 _ _ _ object = do
+      if null object
+        then pure [Right []]
+        else do
+          let entryIds = map (\(_, _, entryId', _) -> entryId') object
+          Env {..} <- ask
+          _ <- EL.runIO $ streamRiderBecknRequests _kafkaConnection object
+          pure [Right entryIds]
+    -- either (\_ -> pure [Left entryIds]) (\_ -> pure [Right entryIds]) res
+
+    -- streamRiderBecknRequests :: ToJSON a => Producer.KafkaProducer -> [a] -> IO (Either Text ())
+    streamRiderBecknRequests :: ToJSON b1 => KafkaProducer -> [(a, b, L.KVDBStreamEntryID, b1)] -> IO (Either Text ())
+    streamRiderBecknRequests producer object = do
+      let topicName = "rider-beckn-requests"
+          dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
+      -- entryIds = map (\(_, _, entryId', _) -> entryId') object
+      mapM_ (KafkaProd.produceMessage producer . message topicName) object
+      flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
+      case flushResult of
+        Just _ -> do
+          pure $ Right ()
+        Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+      where
+        prodPush producer' = KafkaProd.flushProducer producer' >> pure True
+
+        message :: ToJSON b1 => Text -> (a, b, L.KVDBStreamEntryID, b1) -> ProducerRecord
+        message topicName event =
+          let (entryId', dbObject') = (\(_, _, L.KVDBStreamEntryID id' _, dbObject) -> (id', dbObject)) event
+           in -- entryId' = (\(_, _, L.KVDBStreamEntryID id' _,_) -> id') event in
+              -- let entryId' = map (\(_, _, _, dbObject) -> dbObject) event in
+
+              ProducerRecord
+                { prTopic = TopicName topicName,
+                  prPartition = UnassignedPartition,
+                  -- prKey = Just $ TE.encodeUtf8 (T.pack $ show entryId'),
+                  prKey = Just $ TE.encodeUtf8 (T.pack $ show entryId'),
+                  prValue = Just . LBS.toStrict $ encode dbObject'
+                }
+
+-- let entryId' = map (\(_, _, entryId, _) -> entryId) event
+--     -- dataObjects = map (\(_, _, _, dataObject) -> dataObject) event
+--   in
+-- ProducerRecord
+--   { prTopic = TopicName topicName,
+--     prPartition = UnassignedPartition,
+--     -- prKey = Just $ TE.encodeUtf8 (T.pack $ show entryId'),
+--     prKey = Just $ TE.encodeUtf8 (T.pack $ show "test1"),
+--     prValue = Just . LBS.toStrict $ encode "test"
+--   }
 
 streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
 streamDriverDrainerCreates producer dbObject streamKey = do
