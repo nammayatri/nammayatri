@@ -48,6 +48,13 @@ updateHasTakenValidRide (Id riderId) = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
+updateOtpCode :: MonadFlow m => Id RiderDetails -> Text -> m ()
+updateOtpCode (Id riderId) otpCode = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamRD.otpCode $ Just otpCode, Se.Set BeamRD.updatedAt now]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
 findAllReferredByDriverId :: MonadFlow m => Id Person -> m [RiderDetails]
 findAllReferredByDriverId (Id driverId) = findAllWithDb [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
 
@@ -79,7 +86,8 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             referredAt = referredAt,
             hasTakenValidRide = hasTakenValidRide,
             hasTakenValidRideAt = hasTakenValidRideAt,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            otpCode = otpCode
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -96,5 +104,6 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.referredAt = referredAt,
         BeamRD.hasTakenValidRide = hasTakenValidRide,
         BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
-        BeamRD.merchantId = getId merchantId
+        BeamRD.merchantId = getId merchantId,
+        BeamRD.otpCode = otpCode
       }
