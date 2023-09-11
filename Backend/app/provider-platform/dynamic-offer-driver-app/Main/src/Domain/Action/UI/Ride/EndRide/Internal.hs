@@ -105,8 +105,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DLoc.updateOnRide merchantId ride.driverId False
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
-  QRide.updateAll ride.id ride
   whenJust mbFareParams QFare.create
+  QRide.updateAll ride.id ride
 
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   if driverInfo.active
