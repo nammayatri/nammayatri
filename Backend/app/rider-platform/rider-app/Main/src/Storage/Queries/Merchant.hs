@@ -88,7 +88,8 @@ instance FromTType' BeamM.Merchant Merchant where
             createdAt = createdAt,
             timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
-            dirCacheSlot = dirCacheSlot
+            dirCacheSlot = dirCacheSlot,
+            isAvoidToll = isAvoidToll
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -118,5 +119,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
         BeamM.timeDiffFromUtc = timeDiffFromUtc,
-        BeamM.dirCacheSlot = dirCacheSlot
+        BeamM.dirCacheSlot = dirCacheSlot,
+        BeamM.isAvoidToll = isAvoidToll
       }

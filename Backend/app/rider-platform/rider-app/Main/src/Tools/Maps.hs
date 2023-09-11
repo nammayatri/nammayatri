@@ -44,6 +44,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
@@ -79,13 +80,19 @@ getDistances ::
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 
 getRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
+getRoutes merchantId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getRoutes) merchantId req
 
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes = runWithServiceConfig Maps.getRoutes (.getPickupRoutes)
+getPickupRoutes merchantId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) merchantId req
 
 getTripRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes = runWithServiceConfig Maps.getRoutes (.getTripRoutes)
+getTripRoutes merchantId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId req
 
 snapToRoad ::
   ( ServiceFlow m r,

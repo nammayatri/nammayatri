@@ -47,7 +47,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     distanceWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    timeDiffFromUtc :: Seconds
+    timeDiffFromUtc :: Seconds,
+    isAvoidToll :: Bool
   }
   deriving (Generic, Show)
 
