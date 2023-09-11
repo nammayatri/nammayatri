@@ -124,7 +124,15 @@ handler transporter req quote = do
         Left (driver, driverQuote) -> do
           cfg <- QGHC.findByMerchantId transporter.id
           ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id transporter.id (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
-          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber
+
+          otpCode <- case riderDetails.otpCode of
+            Nothing -> do
+              otpCode <- generateOTPCode
+              QRD.updateOtpCode riderDetails.id otpCode
+              pure otpCode
+            Just otp -> pure otp
+
+          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
@@ -220,10 +228,10 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId customerPhoneNumber = do
+    buildRide driverId booking ghrId _ otp = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
-      let otp = T.takeEnd 4 customerPhoneNumber
+      -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
       return
@@ -272,6 +280,7 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
   where
     buildRiderDetails = do
       id <- generateGUID
+      otp <- generateOTPCode
       return $
         DRD.RiderDetails
           { id = id,
@@ -284,7 +293,8 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
             referredByDriver = Nothing,
             referredAt = Nothing,
             hasTakenValidRide = False,
-            hasTakenValidRideAt = Nothing
+            hasTakenValidRideAt = Nothing,
+            otpCode = Just otp
           }
 
 buildRideDetails ::
