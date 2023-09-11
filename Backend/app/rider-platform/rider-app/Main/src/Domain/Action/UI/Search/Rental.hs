@@ -75,7 +75,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing -- Handle disabilityTag if need for rentals
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
