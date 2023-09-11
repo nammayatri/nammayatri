@@ -41,6 +41,7 @@ data RiderDetailsT f = RiderDetailsT
     referredAt :: B.C f (Maybe Time.UTCTime),
     hasTakenValidRide :: B.C f Bool,
     hasTakenValidRideAt :: B.C f (Maybe Time.UTCTime),
+    otpCode :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -68,7 +69,8 @@ riderDetailsTMod =
       hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
       hasTakenValidRideAt = B.fieldNamed "has_taken_valid_ride_at",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      updatedAt = B.fieldNamed "updated_at",
+      otpCode = B.fieldNamed "otp_code"
     }
 
 $(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
