@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module DBSync.Delete where
 
 import Config.Env
@@ -9,6 +11,9 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Types as KBT
+import Sequelize
+import System.Timeout (timeout)
+import Text.Casing
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -112,3 +117,34 @@ runDeleteCommands (cmd, val) = do
           pure $ Left (x, id)
         (Right _, _) -> do
           pure $ Right id
+
+streamDriverDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
+streamDriverDrainerDeletes producer dbObject dbStreamKey = do
+  let topicName = "driver-drainer"
+  void $ KafkaProd.produceMessage producer (message topicName dbObject)
+  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
+  case flushResult of
+    Just _ -> do
+      pure $ Right ()
+    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  where
+    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
+
+    message topicName event =
+      ProducerRecord
+        { prTopic = TopicName topicName,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 dbStreamKey,
+          prValue = Just . LBS.toStrict $ encode event
+        }
+
+getDbDeleteDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> Where be table -> A.Value
+getDbDeleteDataJson model whereClause =
+  A.object
+    [ "contents"
+        .= A.object
+          [ "where" .= modelEncodeWhere whereClause
+          ],
+      "tag" .= T.pack (pascal (T.unpack model)),
+      "type" .= ("DELETE" :: Text)
+    ]

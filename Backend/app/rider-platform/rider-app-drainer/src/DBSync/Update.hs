@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module DBSync.Update where
 
 import Config.Env
@@ -14,6 +16,7 @@ import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
+import System.Timeout (timeout)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -119,3 +122,35 @@ runUpdateCommands (cmd, val) = do
           pure $ Left (x, id)
         (Right _, _) -> do
           pure $ Right id
+
+streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
+streamDriverDrainerUpdates producer dbObject dbStreamKey = do
+  let topicName = "rider-drainer"
+  void $ KafkaProd.produceMessage producer (message topicName dbObject)
+  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
+  case flushResult of
+    Just _ -> do
+      pure $ Right ()
+    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  where
+    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
+
+    message topicName event =
+      ProducerRecord
+        { prTopic = TopicName topicName,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 dbStreamKey,
+          prValue = Just . LBS.toStrict $ encode event
+        }
+
+getDbUpdateDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> [(Text, A.Value)] -> Where be table -> A.Value
+getDbUpdateDataJson model upd whereClause =
+  A.object
+    [ "contents"
+        .= A.object
+          [ "set" .= A.object [k .= v | (k, v) <- upd],
+            "where" .= modelEncodeWhere whereClause
+          ],
+      "tag" .= T.pack (pascal (T.unpack model)),
+      "type" .= ("UPDATE" :: Text)
+    ]
