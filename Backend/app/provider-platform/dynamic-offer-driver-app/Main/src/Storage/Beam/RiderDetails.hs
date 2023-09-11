@@ -38,6 +38,7 @@ data RiderDetailsT f = RiderDetailsT
     referredAt :: B.C f (Maybe Time.UTCTime),
     hasTakenValidRide :: B.C f Bool,
     hasTakenValidRideAt :: B.C f (Maybe Time.UTCTime),
+    otpCode :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
