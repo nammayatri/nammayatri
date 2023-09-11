@@ -27,6 +27,7 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
@@ -38,6 +39,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideDetails as RD
+import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions
@@ -47,6 +49,7 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -227,6 +230,12 @@ otpRideCreate driver otpCode booking = do
   ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) Nothing <&> (.driverGoHomeRequestId)
   ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
   rideDetails <- buildRideDetails ride
+
+  -- moving route from booking id to ride id
+  routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId booking.id)
+  case routeInfo of
+    Just route -> Redis.setExp (BS.searchRequestKey $ getId ride.id) route 14400
+    Nothing -> logDebug "Unable to get the key"
 
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.create ride
