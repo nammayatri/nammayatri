@@ -147,6 +147,7 @@ handler transporter req quote = do
           DLoc.updateOnRide driver.merchantId driver.id True
 
           -- non-critical updates
+          when isNewRider $ QRD.create riderDetails
           QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
           QRB.updateRiderId booking.id riderDetails.id
           QRideD.create rideDetails
@@ -154,7 +155,6 @@ handler transporter req quote = do
           QBL.updateAddress booking.toLocation.id req.toAddress
           QDQ.setInactiveBySTId driverQuote.searchTryId
           QSRD.setInactiveBySTId driverQuote.searchTryId
-          when isNewRider $ QRD.create riderDetails
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
 
           QBE.logRideConfirmedEvent booking.id

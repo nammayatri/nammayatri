@@ -66,6 +66,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     mkRiderDetailsObj driverId = do
       id <- generateGUID
       now <- getCurrentTime
+      otp <- generateOTPCode
       encPhoneNumber <- encrypt customerMobileNumber
       pure $
         DRD.RiderDetails
@@ -79,5 +80,6 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             referredByDriver = Just driverId,
             referredAt = Just now,
             hasTakenValidRide = False,
-            hasTakenValidRideAt = Nothing
+            hasTakenValidRideAt = Nothing,
+            otpCode = Just otp
           }
