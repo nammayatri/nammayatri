@@ -19,6 +19,7 @@ import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), 
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 
 initData :: ReferralScreenState
 initData =  {
@@ -39,6 +40,7 @@ initData =  {
     }
 }
   , logField : empty
+  , config : DC.config
   }
 ,  props: {
       primarybtnActive :false

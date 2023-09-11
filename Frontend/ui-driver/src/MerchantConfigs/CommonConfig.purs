@@ -34,4 +34,7 @@ commonConfig =
         , showCorporateAddress: false
         , imageUploadOptional: true
         , autoPayBanner: true
+        , leaderBoard:
+            { isMaskedName: false
+            }
         }

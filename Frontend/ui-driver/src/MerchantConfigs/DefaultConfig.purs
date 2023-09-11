@@ -16,4 +16,7 @@ config =
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
   , imageUploadOptional : false
+  , leaderBoard :{
+    isMaskedName : true
+  }
   }
