@@ -2359,17 +2359,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1694170177,
-        "narHash": "sha256-lxe2Vp++Wrejc7qiQwUbS/Y6Vy0tBwqBuOh0Eeye5/M=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "d6e8e8ef47dd533d9fc6df83c9553c95d347b244",
-        "type": "github"
+        "lastModified": 1694439379,
+        "narHash": "sha256-svBzhKu5ak7jwV7gB7G/zaunzcq9mlJCyJ3ubGRAtSc=",
+        "path": "/Users/ashish.saini/Desktop/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/ashish.saini/Desktop/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

@@ -3,7 +3,7 @@
     common.url = "github:nammayatri/common";
 
     # Backend inputs
-    shared-kernel.url = "github:nammayatri/shared-kernel";
+    shared-kernel.url = "path:/Users/ashish.saini/Desktop/shared-kernel";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

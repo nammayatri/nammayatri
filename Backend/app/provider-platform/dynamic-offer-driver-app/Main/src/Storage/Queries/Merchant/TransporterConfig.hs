@@ -146,6 +146,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
         BeamTC.routeDeviationThreshold = routeDeviationThreshold,
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
+        BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi

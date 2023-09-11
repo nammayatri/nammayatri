@@ -60,6 +60,7 @@ data TransporterConfigT f = TransporterConfigT
     driverAutoPayExecutionTime :: B.C f Seconds,
     rcLimit :: B.C f Int,
     automaticRCActivationCutOff :: B.C f Seconds,
+    isAvoidToll :: B.C f Bool,
     timeDiffFromUtc :: B.C f Seconds,
     subscription :: B.C f Bool,
     minLocationAccuracy :: B.C f Double,
