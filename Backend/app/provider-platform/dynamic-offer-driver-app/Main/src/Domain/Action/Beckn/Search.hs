@@ -146,6 +146,7 @@ handler merchant sReq = do
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
+  let routeInfo = RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
 
   allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
   let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
@@ -158,6 +159,7 @@ handler merchant sReq = do
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
         _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
+        Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
         now <- getCurrentTime
         let listOfVehicleVariants = listVehicleVariantHelper farePolicies
         listOfSpecialZoneQuotes <- do
@@ -183,7 +185,7 @@ handler merchant sReq = do
               allFarePoliciesProduct.specialLocationTag
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
+      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
   let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo

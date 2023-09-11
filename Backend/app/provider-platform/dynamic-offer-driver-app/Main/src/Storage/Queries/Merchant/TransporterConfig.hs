@@ -148,5 +148,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
-        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi
+        BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
+        BeamTC.isAvoidToll = isAvoidToll
       }

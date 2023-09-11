@@ -67,7 +67,8 @@ data TransporterConfigD u = TransporterConfig
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rcLimit :: Int,
-    automaticRCActivationCutOff :: Seconds
+    automaticRCActivationCutOff :: Seconds,
+    isAvoidToll :: Bool
   }
   deriving (Generic, Show)
 

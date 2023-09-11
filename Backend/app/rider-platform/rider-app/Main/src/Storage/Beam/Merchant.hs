@@ -121,7 +121,8 @@ data MerchantT f = MerchantT
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime,
     timeDiffFromUtc :: B.C f Seconds,
-    dirCacheSlot :: B.C f [Domain.Slot]
+    dirCacheSlot :: B.C f [Domain.Slot],
+    isAvoidToll :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 
