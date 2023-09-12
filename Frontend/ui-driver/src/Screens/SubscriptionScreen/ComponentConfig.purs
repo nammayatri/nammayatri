@@ -29,6 +29,7 @@ import Data.Int as DI
 import Data.Maybe (isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
+import Engineering.Helpers.Commons (screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
 import Helpers.Utils as HU
@@ -68,13 +69,14 @@ retryPaymentButtonConfig state =
         , height = WRAP_CONTENT
         , color = Color.white900
         , textStyle = Body4
+        , weight = Mb.Just 1.0
         }
       , height = WRAP_CONTENT
-      , width = WRAP_CONTENT
+      , weight = Mb.Just 1.0
       , gravity = CENTER
       , cornerRadius = 24.0
       , padding = Padding 10 7 10 9
-      , margin = MarginLeft 10
+      , margin = MarginLeft 0
       , isSuffixImage = true
       , background = Color.blue800
       , suffixImageConfig
@@ -84,10 +86,11 @@ retryPaymentButtonConfig state =
         , margin = (MarginLeft 5)
         }
       , id = "RetryPaymentPrimaryButton"
+      , enableButtonLayoutId = true
       , enableLoader = JB.getBtnLoader "RetryPaymentPrimaryButton"
       , lottieConfig
-        { width = V $ DI.ceil $ (DI.toNumber layouts.width) * 0.9
-        , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.9
+        { width = V $ DI.ceil $ (DI.toNumber layouts.width) * 0.8
+        , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.8
         , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
         }
       }
