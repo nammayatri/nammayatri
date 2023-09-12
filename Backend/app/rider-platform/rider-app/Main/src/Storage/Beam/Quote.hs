@@ -19,9 +19,9 @@ module Storage.Beam.Quote where
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data QuoteT f = QuoteT
   { id :: B.C f Text,

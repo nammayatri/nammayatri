@@ -17,9 +17,9 @@ module Storage.Beam.BookingCancellationReason where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BookingCancellationReason as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { driverId :: B.C f (Maybe Text),

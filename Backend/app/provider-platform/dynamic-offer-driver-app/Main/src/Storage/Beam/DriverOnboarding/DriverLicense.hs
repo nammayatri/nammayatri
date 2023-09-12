@@ -17,10 +17,10 @@ module Storage.Beam.DriverOnboarding.DriverLicense where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
+import Tools.Beam.UtilsTH
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,

@@ -17,8 +17,8 @@ module Storage.Beam.DriverInformation where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data DriverInformationT f = DriverInformationT
   { driverId :: B.C f Text,

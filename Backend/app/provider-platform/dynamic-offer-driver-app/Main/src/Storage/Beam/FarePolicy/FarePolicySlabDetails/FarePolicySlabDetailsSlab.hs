@@ -18,10 +18,10 @@ module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab w
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import qualified Domain.Types.FarePolicy as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
+import Tools.Beam.UtilsTH
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),

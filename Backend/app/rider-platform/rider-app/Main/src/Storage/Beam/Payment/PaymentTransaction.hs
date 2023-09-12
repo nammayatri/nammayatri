@@ -17,10 +17,10 @@
 module Storage.Beam.Payment.PaymentTransaction where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,

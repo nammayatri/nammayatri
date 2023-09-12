@@ -19,10 +19,10 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
   { id :: B.C f Text,

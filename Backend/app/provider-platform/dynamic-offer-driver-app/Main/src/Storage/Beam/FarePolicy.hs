@@ -17,9 +17,9 @@ module Storage.Beam.FarePolicy where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,

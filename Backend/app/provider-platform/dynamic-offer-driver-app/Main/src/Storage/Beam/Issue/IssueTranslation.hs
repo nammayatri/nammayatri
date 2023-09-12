@@ -17,9 +17,9 @@
 module Storage.Beam.Issue.IssueTranslation where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data IssueTranslationT f = IssueTranslationT
   { id :: B.C f Text,

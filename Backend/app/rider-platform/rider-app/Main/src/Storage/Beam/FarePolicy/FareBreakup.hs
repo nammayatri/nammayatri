@@ -17,9 +17,9 @@
 module Storage.Beam.FarePolicy.FareBreakup where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data FareBreakupT f = FareBreakupT
   { id :: B.C f Text,

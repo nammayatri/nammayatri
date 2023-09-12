@@ -16,9 +16,9 @@
 module Storage.Beam.DriverStats where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,

@@ -16,9 +16,9 @@
 module Storage.Beam.Message.MessageTranslation where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MessageTranslationT f = MessageTranslationT
   { messageId :: B.C f Text,

@@ -17,8 +17,8 @@ module Storage.Beam.MediaFile where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.MediaFile as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,

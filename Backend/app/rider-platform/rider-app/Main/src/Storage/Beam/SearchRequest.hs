@@ -17,10 +17,10 @@
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,

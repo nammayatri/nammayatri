@@ -17,8 +17,8 @@ module Storage.Beam.Merchant.MerchantPaymentMethod where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
   { id :: B.C f Text,

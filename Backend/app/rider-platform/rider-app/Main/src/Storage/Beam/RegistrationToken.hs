@@ -18,8 +18,8 @@ module Storage.Beam.RegistrationToken where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.RegistrationToken as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,

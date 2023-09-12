@@ -18,8 +18,8 @@ module Storage.Beam.BlackListOrg where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BlackListOrg as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data BlackListOrgT f = BlackListOrgT
   { id :: B.C f Text,

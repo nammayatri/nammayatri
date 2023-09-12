@@ -18,7 +18,6 @@ module Storage.Beam.Merchant.MerchantServiceConfig where
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import Tools.Beam.UtilsTH
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -29,6 +28,7 @@ import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,

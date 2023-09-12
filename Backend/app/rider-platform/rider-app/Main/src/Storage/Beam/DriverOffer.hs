@@ -18,9 +18,9 @@ module Storage.Beam.DriverOffer where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOffer as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data DriverOfferT f = DriverOfferT
   { id :: B.C f Text,

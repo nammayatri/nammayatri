@@ -16,9 +16,9 @@
 module Storage.Beam.CallStatus where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,

@@ -18,9 +18,9 @@ module Storage.Beam.Merchant.OnboardingDocumentConfig where
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Utils.Common (encodeToText)
+import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,

@@ -6,9 +6,9 @@ module Storage.Beam.Mandate where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Mandate as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
+import Tools.Beam.UtilsTH
 
 data MandateT f = MandateT
   { id :: B.C f Text,

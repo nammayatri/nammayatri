@@ -17,8 +17,8 @@ module Storage.Beam.Issue.IssueReport where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Issue.IssueReport as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,

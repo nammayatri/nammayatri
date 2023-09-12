@@ -18,8 +18,8 @@ module Storage.Beam.Issue where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Issue as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data IssueT f = IssueT
   { id :: B.C f Text,

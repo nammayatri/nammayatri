@@ -18,10 +18,10 @@ module Storage.Beam.FareParameters.FareParametersSlabDetails where
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import qualified Domain.Types.FareParameters as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KId
+import Tools.Beam.UtilsTH
 
 data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,

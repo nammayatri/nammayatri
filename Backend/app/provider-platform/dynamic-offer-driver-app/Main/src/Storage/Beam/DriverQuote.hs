@@ -18,10 +18,10 @@ module Storage.Beam.DriverQuote where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
+import Tools.Beam.UtilsTH
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,

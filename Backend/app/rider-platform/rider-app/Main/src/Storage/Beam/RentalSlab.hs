@@ -18,9 +18,9 @@
 module Storage.Beam.RentalSlab where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,

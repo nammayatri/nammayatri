@@ -17,9 +17,9 @@ module Storage.Beam.FareParameters where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareParameters as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,

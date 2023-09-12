@@ -17,9 +17,9 @@ module Storage.Beam.FarePolicy.RestrictedExtraFare where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as Vehicle
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,

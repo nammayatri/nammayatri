@@ -21,13 +21,13 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Singletons
 import qualified Data.Text as T
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common as Comon
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
-import Kernel.Beam.Lib.UtilsTH
 
 data JobEntry (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   JobEntry

@@ -16,9 +16,9 @@
 module Storage.Beam.PlanTranslation where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data PlanTranslationT f = PlanTranslationT
   { planId :: B.C f Text,

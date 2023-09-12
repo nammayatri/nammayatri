@@ -18,8 +18,8 @@ module Storage.Beam.Merchant.MerchantMessage where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,

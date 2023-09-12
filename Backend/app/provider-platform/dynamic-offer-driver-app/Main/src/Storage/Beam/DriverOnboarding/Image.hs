@@ -18,8 +18,8 @@ module Storage.Beam.DriverOnboarding.Image where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data ImageT f = ImageT
   { id :: B.C f Text,

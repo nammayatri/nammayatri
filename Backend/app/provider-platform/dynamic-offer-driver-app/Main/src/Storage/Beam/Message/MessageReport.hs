@@ -19,8 +19,8 @@ import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Message.MessageReport as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,

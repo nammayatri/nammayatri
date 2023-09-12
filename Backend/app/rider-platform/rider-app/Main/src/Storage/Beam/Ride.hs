@@ -19,9 +19,9 @@ module Storage.Beam.Ride where
 import qualified Database.Beam as B
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data RideT f = RideT
   { id :: B.C f Text,

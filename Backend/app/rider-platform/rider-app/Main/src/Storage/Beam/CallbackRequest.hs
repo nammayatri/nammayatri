@@ -18,9 +18,9 @@ module Storage.Beam.CallbackRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.CallbackRequest as Domain
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data CallbackRequestT f = CallbackRequestT
   { id :: B.C f Text,

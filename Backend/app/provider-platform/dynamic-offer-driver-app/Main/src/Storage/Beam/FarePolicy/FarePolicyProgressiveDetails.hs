@@ -17,9 +17,9 @@ module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,

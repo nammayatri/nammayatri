@@ -17,10 +17,10 @@ module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareProduct as FareProductD
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 import qualified Tools.Maps as Maps
 
 data SearchRequestT f = SearchRequestT

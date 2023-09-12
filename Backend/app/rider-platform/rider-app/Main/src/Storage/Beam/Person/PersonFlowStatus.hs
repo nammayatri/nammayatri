@@ -19,8 +19,8 @@ module Storage.Beam.Person.PersonFlowStatus where
 import Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data PersonFlowStatusT f = PersonFlowStatusT
   { personId :: B.C f Text,

@@ -18,11 +18,11 @@ module Storage.Beam.Person where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Person as Domain
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { id :: B.C f Text,

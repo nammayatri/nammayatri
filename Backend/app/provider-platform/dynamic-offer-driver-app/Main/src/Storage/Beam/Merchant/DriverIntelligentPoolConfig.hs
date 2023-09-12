@@ -16,10 +16,10 @@
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Tools.Beam.UtilsTH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
