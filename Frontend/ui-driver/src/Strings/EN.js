@@ -738,7 +738,6 @@ const englishStrings = {
   HALFYEARLY : "Half yearly",
   YEARLY : "Yearly",
   ASPRESENTED : "As and when presented",
-  FIRST_FREE_RIDE : "First Free Ride",
   DAILY_PER_RIDE_DESC : "No charges till Sep 19",
   FIRST_FREE_RIDE : "First Ride FREE",
   JOIN_THE_UNLIMITED_PLAN : "Join DAILY UNLIMITED plan now to get special discounts",

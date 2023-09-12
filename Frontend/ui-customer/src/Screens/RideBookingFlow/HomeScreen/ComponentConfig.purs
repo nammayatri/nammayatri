@@ -825,6 +825,7 @@ ratingCardViewState state = {
     textConfig{
       text = getString SUBMIT_FEEDBACK
     },
+    margin = MarginHorizontal 16 16,
     isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true,
     alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
     , id = "RateYourDriverButton"

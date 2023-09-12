@@ -30,7 +30,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String (Pattern(..), split)
@@ -235,7 +235,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
                     _ -> Color.black800),
       riderName : toPropValue $ fromMaybe "" ride.riderName,
       metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing || ride.disabilityTag /= Nothing  || (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing) then "visible" else "gone",
-      specialZoneText : toPropValue $ getRideLabelData "text" ride.specialLocationTag accessibilityTag,
+      specialZoneText : toPropValue $ getRideLabelData "text" (if (isJust accessibilityTag) then Just "Purple_Ride" else ride.specialLocationTag) Nothing,
       specialZoneImage : toPropValue $ getRideLabelData "imageUrl" ride.specialLocationTag accessibilityTag,
       specialZoneLayoutBackground : toPropValue $ getRideLabelData "backgroundColor" ride.specialLocationTag accessibilityTag
 

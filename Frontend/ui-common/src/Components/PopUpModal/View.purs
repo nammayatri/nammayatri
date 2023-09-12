@@ -30,7 +30,7 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, clearTimer, countDown)
-import Data.Array ((!!), mapWithIndex)
+import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
@@ -166,7 +166,7 @@ view push state =
             , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
             , visibility $ state.secondaryText.visibility
             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
-        , listView push state
+        , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT

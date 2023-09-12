@@ -55,6 +55,9 @@ type Config = {
     , showBgColor :: Boolean
     , editTextBgColor :: String
     , defaultText :: String
+    , additionalInfoBg :: String 
+    , additionalInfoText :: String
+    , showAdditionalInfo :: Boolean
 }
 
 type StringConfig = {
@@ -131,4 +134,7 @@ config =
     , showBgColor : false
     , editTextBgColor : Color.grey800
     , defaultText : ""
+    , additionalInfoBg : Color.grey800 
+    , additionalInfoText : ""
+    , showAdditionalInfo : false
 }

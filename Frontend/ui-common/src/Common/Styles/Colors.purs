@@ -135,3 +135,6 @@ blueMagenta = "#9747FF"
 
 darkCharcoal :: Color
 darkCharcoal = "#333333"
+
+pink :: Color 
+pink = "#FEF1E5"
