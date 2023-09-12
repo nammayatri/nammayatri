@@ -39,6 +39,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -78,7 +79,9 @@ data HandlerEnv = HandlerEnv
     maxThreads :: Int,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableLocationTrackingService :: Bool,
+    ltsCfg :: LT.LocationTrackingeServiceConfig
   }
   deriving (Generic)
 

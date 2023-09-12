@@ -90,7 +90,8 @@ endRideTransaction ::
     EventStreamFlow m r,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Id DP.Driver ->
   SRB.Booking ->

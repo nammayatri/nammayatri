@@ -45,8 +45,8 @@ initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ 
   ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
-finalDistanceCalculation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> Meters -> Bool -> m ()
-finalDistanceCalculation ih rideId driverId pt estDist pickupDropOutsideThreshold = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist pickupDropOutsideThreshold $ pt :| []
+finalDistanceCalculation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Bool -> m ()
+finalDistanceCalculation ih rideId driverId pts estDist pickupDropOutsideThreshold = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist pickupDropOutsideThreshold pts
 
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
 getInterpolatedPoints ih = ih.getInterpolatedPoints

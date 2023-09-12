@@ -36,11 +36,14 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
@@ -86,18 +89,18 @@ data CancelRideResp = CancelRideResp
 
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
+driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r, LT.HasLocationService m r, CoreMetrics m) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
-dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r, LT.HasLocationService m r, CoreMetrics m) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
     void $ cancelRideImpl shandle (DashboardRequestorId merchantId) rideId req
     return APISuccess.Success
 
-cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
+cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r, LT.HasLocationService m r, CoreMetrics m) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
@@ -109,7 +112,7 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
           isGoHomeDisabled = isGoToDisabled
         }
 
-cancelRideImpl :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m (Maybe Int, Maybe Bool)
+cancelRideImpl :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r, LT.HasLocationService m r, CoreMetrics m) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m (Maybe Int, Maybe Bool)
 cancelRideImpl ServiceHandle {..} requestorId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
@@ -143,7 +146,13 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
               else do
                 return (Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          mbLocation <- findDriverLocationId driverId
+          enableLocationTrackingService <- asks (.enableLocationTrackingService)
+          mbLocation <- do
+            if enableLocationTrackingService
+              then do
+                driverLocations <- LF.driversLocation [driverId]
+                return $ listToMaybe driverLocations
+              else findDriverLocationId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)

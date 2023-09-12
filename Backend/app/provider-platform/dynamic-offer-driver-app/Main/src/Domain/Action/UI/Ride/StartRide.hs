@@ -44,6 +44,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
@@ -90,7 +92,7 @@ buildStartRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, EsqLocDBFlow m r, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
+type StartRideFlow m r = (MonadThrow m, Log m, EsqLocDBFlow m r, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
 
 driverStartRide ::
   (StartRideFlow m r) =>
@@ -140,6 +142,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
   point <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
@@ -150,11 +153,18 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
+          driverLocation <- do
+            if enableLocationTrackingService
+              then do
+                driverLocations <- LF.driversLocation [driverId]
+                listToMaybe driverLocations & fromMaybeM LocationNotFound
+              else findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
-
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
+    when enableLocationTrackingService $ do
+      ltsRes <- LF.rideStart rideId point.lat point.lon booking.providerId driverId
+      logTagInfo "ltsRes" (show ltsRes)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId

@@ -46,6 +46,7 @@ library
       API.Dashboard.Volunteer
       API.Internal
       API.Internal.Auth
+      API.Internal.BulkLocUpdate
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
       API.UI
@@ -116,6 +117,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
@@ -272,6 +274,14 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
+      SharedLogic.External.LocationTrackingService.API.DriverDetails
+      SharedLogic.External.LocationTrackingService.API.DriversLocation
+      SharedLogic.External.LocationTrackingService.API.EndRide
+      SharedLogic.External.LocationTrackingService.API.NearBy
+      SharedLogic.External.LocationTrackingService.API.RideDetails
+      SharedLogic.External.LocationTrackingService.API.StartRide
+      SharedLogic.External.LocationTrackingService.Flow
+      SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct

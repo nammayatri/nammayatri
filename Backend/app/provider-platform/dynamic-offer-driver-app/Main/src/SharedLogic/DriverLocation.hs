@@ -26,9 +26,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLocation as DLQueries
+import Tools.Error
 
-upsertGpsCoord :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+upsertGpsCoord :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 upsertGpsCoord driverId latLong calculationTime merchantId = do
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  when enableLocationTrackingService $ do
+    throwError InvalidLocationTrackingException
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
     then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
@@ -45,8 +49,11 @@ upsertGpsCoord driverId latLong calculationTime merchantId = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r) => Id Person -> m (Maybe DriverLocation)
-findById id =
+findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> m (Maybe DriverLocation)
+findById id = do
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  when enableLocationTrackingService $ do
+    throwError InvalidLocationTrackingException
   Hedis.safeGet (makeDriverLocationKey id) >>= \case
     Just a -> return $ Just a
     Nothing -> flip whenJust cacheDriverLocation /=<< DLQueries.findById id
@@ -57,21 +64,23 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Merchant -> Id Person.Person -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r, HasField "enableLocationTrackingService" r Bool) => Id Merchant -> Id Person.Person -> Bool -> m ()
 updateOnRide merchantId driverId onRide = do
   QDI.updateOnRide (cast driverId) onRide
-  if onRide
-    then do
-      -- driver coming to ride, update location from db to redis
-      driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-      cacheDriverLocation driverLocation
-    else do
-      -- driver going out of ride, update location from redis to db
-      mDriverLocatation <- findById (cast driverId)
-      maybe
-        (pure ())
-        ( \loc -> do
-            let latLong = LatLong loc.lat loc.lon
-            void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
-        )
-        mDriverLocatation
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  unless enableLocationTrackingService $ do
+    if onRide
+      then do
+        -- driver coming to ride, update location from db to redis
+        driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+        cacheDriverLocation driverLocation
+      else do
+        -- driver going out of ride, update location from redis to db
+        mDriverLocatation <- findById (cast driverId)
+        maybe
+          (pure ())
+          ( \loc -> do
+              let latLong = LatLong loc.lat loc.lon
+              void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+          )
+          mDriverLocatation

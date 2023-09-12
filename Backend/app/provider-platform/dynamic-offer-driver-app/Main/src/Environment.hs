@@ -48,7 +48,8 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator (AllocatorJobType)
-import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import SharedLogic.CallBAPInternal
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
@@ -122,7 +123,9 @@ data AppCfg = AppCfg
     locationTrackingServiceKey :: Text,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
-    jobInfoMapx :: M.Map AllocatorJobType Bool
+    jobInfoMapx :: M.Map AllocatorJobType Bool,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -193,7 +196,9 @@ data AppEnv = AppEnv
     locationTrackingServiceKey :: Text,
     eventRequestCounter :: EventCounterMetric,
     schedulerSetName :: Text,
-    schedulerType :: SchedulerType
+    schedulerType :: SchedulerType,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic)
 

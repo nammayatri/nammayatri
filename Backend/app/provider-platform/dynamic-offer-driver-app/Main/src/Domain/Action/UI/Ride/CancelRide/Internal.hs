@@ -42,6 +42,8 @@ import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -79,7 +81,8 @@ cancelRideImpl ::
     EventStreamFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    LT.HasLocationService m r
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -98,6 +101,9 @@ cancelRideImpl rideId bookingCReason = do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
+    enableLocationTrackingService <- asks (.enableLocationTrackingService)
+    when enableLocationTrackingService $
+      void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
@@ -141,7 +147,8 @@ cancelRideTransaction ::
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r
+    EsqLocRepDBFlow m r,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Id SRB.Booking ->
   DRide.Ride ->
@@ -172,7 +179,8 @@ repeatSearch ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasShortDurationRetryCfg r c,
-    CacheFlow m r
+    CacheFlow m r,
+    LT.HasLocationService m r
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->

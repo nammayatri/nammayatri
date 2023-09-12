@@ -38,6 +38,8 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
@@ -73,7 +75,8 @@ cancel ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    LT.HasLocationService m r
   ) =>
   CancelReq ->
   DM.Merchant ->
@@ -81,7 +84,6 @@ cancel ::
   m ()
 cancel req merchant booking = do
   mbRide <- QRide.findActiveByRBId req.bookingId
-
   whenJust mbRide $ \ride -> do
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     DLoc.updateOnRide booking.providerId ride.driverId False
@@ -95,6 +97,9 @@ cancel req merchant booking = do
   whenJust mbRide $ \ride -> do
     triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+    enableLocationTrackingService <- asks (.enableLocationTrackingService)
+    when enableLocationTrackingService $
+      void $ LF.rideDetails ride.id ride.status merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
