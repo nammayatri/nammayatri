@@ -265,24 +265,7 @@ primaryButtonConfirmPickupConfig state =
   in
     primaryButtonConfig'
 
-rateRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-rateRideButtonConfig state =
-  let
-    config = PrimaryButton.config
-    primaryButtonConfig' =
-      config
-        { textConfig
-          { text = (getString RATE_YOUR_DRIVER)
-          ,  color = state.data.config.primaryTextColor
-          }
-        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
-        , background = state.data.config.rateCardColor
-        , margin = (MarginLeft 12)
-        , id = "RateYourDriverButton"
-        , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
-        }
-  in
-    primaryButtonConfig'
+
 
 cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 cancelRidePopUpConfig state =
@@ -844,6 +827,8 @@ ratingCardViewState state = {
     },
     isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true,
     alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
+    , id = "RateYourDriverButton"
+    , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
   }
   , showProfileImg : true
   , title : getString RATE_YOUR_RIDE_WITH <> state.data.rideRatingState.driverName

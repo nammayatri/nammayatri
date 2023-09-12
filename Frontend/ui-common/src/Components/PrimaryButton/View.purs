@@ -98,10 +98,12 @@ view push config =
                 ]
             ]
         , linearLayout
-            [ height config.lottieConfig.height
-            , width config.lottieConfig.width
+            ([ height config.height
+            , width config.width
             , gravity CENTER
-            ]
+            ] <> (case config.weight of
+                Nothing -> [width config.width]
+                Just value ->  [weight value]))
             [ lottieAnimationView
                 [ id (getNewIDWithTag config.id)
                 , visibility if config.enableLoader then VISIBLE else GONE
