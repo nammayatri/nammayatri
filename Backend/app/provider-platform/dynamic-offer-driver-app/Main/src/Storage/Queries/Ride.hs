@@ -483,5 +483,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.updatedAt = updatedAt,
         BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
         BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.numberOfDeviation = numberOfDeviation,
+        BeamR.distanceCalculation1 = distanceCalculation1,
+        BeamR.distanceCalculation2 = distanceCalculation2
       }
