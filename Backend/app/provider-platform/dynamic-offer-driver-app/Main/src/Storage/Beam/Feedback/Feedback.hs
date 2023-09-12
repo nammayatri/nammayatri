@@ -17,8 +17,8 @@ module Storage.Beam.Feedback.Feedback where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Feedback.Feedback as Domain ()
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data FeedbackT f = FeedbackT
   { id :: B.C f Text,

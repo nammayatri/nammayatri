@@ -18,8 +18,8 @@ module Storage.Beam.Vehicle where
 import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data VehicleT f = VehicleT
   { driverId :: B.C f Text,

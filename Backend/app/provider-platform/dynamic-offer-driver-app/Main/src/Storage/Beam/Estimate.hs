@@ -21,9 +21,9 @@ import qualified Database.Beam as B
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)

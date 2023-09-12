@@ -17,9 +17,9 @@ module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
+import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,

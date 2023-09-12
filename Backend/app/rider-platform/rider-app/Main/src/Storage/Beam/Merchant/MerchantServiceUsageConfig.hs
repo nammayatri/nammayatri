@@ -26,6 +26,7 @@ import Kernel.External.SMS (SmsService)
 import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,

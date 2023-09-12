@@ -17,10 +17,10 @@ module Storage.Beam.QuoteSpecialZone where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
+import Tools.Beam.UtilsTH
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,

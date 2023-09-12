@@ -23,13 +23,13 @@ import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.FromField (fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Utils.Common (Seconds)
+import Tools.Beam.UtilsTH
 
 fromFieldEnum' ::
   DPSF.Field ->

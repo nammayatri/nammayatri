@@ -16,8 +16,8 @@
 module Storage.Beam.Booking.BookingLocation where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data BookingLocationT f = BookingLocationT
   { id :: B.C f Text,

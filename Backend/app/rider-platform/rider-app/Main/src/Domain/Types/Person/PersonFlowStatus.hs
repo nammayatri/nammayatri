@@ -27,10 +27,10 @@ import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
 -- deriving stock instance Ord Maps.LatLong

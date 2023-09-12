@@ -17,9 +17,9 @@
 module Storage.Beam.EstimateBreakup where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data EstimateBreakupT f = EstimateBreakupT
   { id :: B.C f Text,

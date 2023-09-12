@@ -18,8 +18,8 @@ module Storage.Beam.Exophone where
 
 import qualified Database.Beam as B
 import Kernel.External.Call.Types (CallService)
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,

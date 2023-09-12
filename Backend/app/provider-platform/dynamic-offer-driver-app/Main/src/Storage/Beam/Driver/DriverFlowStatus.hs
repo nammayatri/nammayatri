@@ -18,8 +18,8 @@ module Storage.Beam.Driver.DriverFlowStatus where
 import Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,

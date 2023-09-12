@@ -17,11 +17,11 @@
 module Storage.Beam.Payment.PaymentOrder where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data PaymentOrderT f = PaymentOrderT
   { id :: B.C f Text,

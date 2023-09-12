@@ -18,8 +18,8 @@ module Storage.Beam.FareProduct where
 import qualified Database.Beam as B
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data FareProductT f = FareProductT
   { id :: B.C f Text,

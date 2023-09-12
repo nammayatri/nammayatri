@@ -16,8 +16,8 @@
 module Storage.Beam.BapMetadata where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT
   { id :: B.C f Text,

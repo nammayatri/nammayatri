@@ -18,9 +18,9 @@ module Storage.Beam.Maps.DirectionsCache where
 
 import Data.Aeson
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Maps (RouteInfo (..))
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data DirectionsCacheT f = DirectionsCacheT
   { id :: B.C f Text,

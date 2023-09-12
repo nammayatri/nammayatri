@@ -21,9 +21,9 @@ where
 
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.Common
+import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,

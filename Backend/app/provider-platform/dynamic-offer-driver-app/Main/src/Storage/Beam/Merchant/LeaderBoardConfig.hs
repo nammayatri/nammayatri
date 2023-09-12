@@ -17,9 +17,9 @@ module Storage.Beam.Merchant.LeaderBoardConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.LeaderBoardConfig as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data LeaderBoardConfigsT f = LeaderBoardConfigsT
   { id :: B.C f Text,

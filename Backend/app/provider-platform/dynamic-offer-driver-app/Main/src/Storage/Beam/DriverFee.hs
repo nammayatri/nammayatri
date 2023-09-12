@@ -17,9 +17,9 @@ module Storage.Beam.DriverFee where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverFee as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data DriverFeeT f = DriverFeeT
   { id :: B.C f Text,

@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.PlanTranslation where

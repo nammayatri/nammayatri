@@ -18,9 +18,9 @@ module Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,

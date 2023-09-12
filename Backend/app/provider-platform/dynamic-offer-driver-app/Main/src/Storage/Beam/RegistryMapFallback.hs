@@ -16,8 +16,8 @@
 module Storage.Beam.RegistryMapFallback where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data RegistryMapFallbackT f = RegistryMapFallbackT
   { subscriberId :: B.C f Text,

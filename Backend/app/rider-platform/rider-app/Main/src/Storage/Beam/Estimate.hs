@@ -19,10 +19,10 @@ module Storage.Beam.Estimate where
 import qualified Database.Beam as B
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
-import Tools.Beam.UtilsTH
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,

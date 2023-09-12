@@ -17,9 +17,9 @@ module Storage.Beam.RideDetails where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as SV
-import Tools.Beam.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,

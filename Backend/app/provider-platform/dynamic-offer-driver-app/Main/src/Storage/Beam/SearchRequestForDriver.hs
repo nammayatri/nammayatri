@@ -21,9 +21,9 @@ import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Types
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import Tools.Beam.UtilsTH
 
 extractValue :: KVDBAnswer [ByteString] -> [ByteString]
 extractValue (Right value) = value

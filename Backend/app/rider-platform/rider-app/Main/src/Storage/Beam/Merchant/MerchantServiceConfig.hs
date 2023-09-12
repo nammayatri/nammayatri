@@ -31,6 +31,7 @@ import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,

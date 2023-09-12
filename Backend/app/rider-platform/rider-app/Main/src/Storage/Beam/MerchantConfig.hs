@@ -17,9 +17,9 @@
 module Storage.Beam.MerchantConfig where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Tools.Beam.UtilsTH
 
 data MerchantConfigT f = MerchantConfigT
   { id :: B.C f Text,

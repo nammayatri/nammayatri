@@ -17,9 +17,9 @@ module Storage.Beam.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common (Money)
+import Tools.Beam.UtilsTH
 
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,

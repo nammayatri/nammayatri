@@ -20,8 +20,8 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Map as M
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data RatingT f = RatingT
   { id :: B.C f Text,
