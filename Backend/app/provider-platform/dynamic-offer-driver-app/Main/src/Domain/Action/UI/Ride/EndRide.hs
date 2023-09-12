@@ -55,6 +55,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -95,7 +97,7 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> Meters -> Bool -> m (),
+    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
@@ -130,7 +132,7 @@ buildEndRideHandle merchantId = do
         sendDashboardSms = Sms.sendDashboardSms
       }
 
-type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
+type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
 
 driverEndRide ::
   (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -221,7 +223,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     -- here we update the current ride, so below we fetch the updated version
     thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
     pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint booking.estimatedDistance pickupDropOutsideOfThreshold
+    enableLocationTrackingService <- asks (.enableLocationTrackingService)
+    tripEndPoints <-
+      if enableLocationTrackingService
+        then do
+          res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+          pure $ toList res.loc
+        else pure [tripEndPoint]
+    whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
+      withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' booking.estimatedDistance pickupDropOutsideOfThreshold
 
     ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 

@@ -211,7 +211,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
       pure $ zip p di
     Left _ -> pure []
 
-getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- QDL.getDriverLocations before
   driverInfos <- getDriverInfos driverLocations

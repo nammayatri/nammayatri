@@ -63,6 +63,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude (head)
 import qualified Kernel.Randomizer as Rnd
+import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
@@ -76,11 +77,14 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import Storage.Queries.Person
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import Tools.Maps as Maps
 import Tools.Metrics
 
@@ -439,7 +443,9 @@ calculateGoHomeDriverPool ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     MonadIO m,
-    HasCoordinates a
+    HasCoordinates a,
+    LT.HasLocationService m r,
+    CoreMetrics m
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   m [DriverPoolWithActualDistResult]
@@ -559,8 +565,10 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
+    CoreMetrics m,
     MonadFlow m,
-    HasCoordinates a
+    HasCoordinates a,
+    LT.HasLocationService m r
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -576,7 +584,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      QP.getNearestDrivers
+      QPG.getNearestDrivers
         mbVariant
         coord
         radius
@@ -586,7 +594,9 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
-  pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
+  let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
+  logDebug $ "driverPoolResult: " <> show driverPoolResult
+  pure driverPoolResult
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
     getRadius mRadiusStep_ = do
@@ -611,7 +621,9 @@ calculateDriverPoolWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    HasCoordinates a
+    CoreMetrics m,
+    HasCoordinates a,
+    LT.HasLocationService m r
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -642,7 +654,9 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
-    HasCoordinates a
+    HasCoordinates a,
+    LT.HasLocationService m r,
+    CoreMetrics m
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -692,7 +706,9 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    LT.HasLocationService m r,
+    CoreMetrics m
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->

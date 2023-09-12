@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Internal.Auth as Auth
+import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import Environment
@@ -16,6 +17,7 @@ type API =
     :> ( DriverReferee.API
            :<|> FeedbackForm.API
            :<|> Auth.API
+           :<|> BulkLocUpdate.API
        )
 
 handler :: FlowServer API
@@ -23,3 +25,4 @@ handler =
   DriverReferee.handler
     :<|> FeedbackForm.handler
     :<|> Auth.handler
+    :<|> BulkLocUpdate.handler

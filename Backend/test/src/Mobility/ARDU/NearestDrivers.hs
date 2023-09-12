@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
+import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
 import Utils
 
@@ -47,21 +48,21 @@ testOrder :: IO ()
 testOrder = do
   res <-
     runARDUFlow "Test ordering" $
-      Q.getNearestDrivers Nothing pickupPoint 5000 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing pickupPoint 5000 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runARDUFlow "Test radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 800 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing pickupPoint 800 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runARDUFlow "Test outside radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

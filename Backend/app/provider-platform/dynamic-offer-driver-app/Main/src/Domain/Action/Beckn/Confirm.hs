@@ -47,6 +47,8 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
@@ -105,6 +107,7 @@ handler ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    LT.HasLocationService m r,
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r
   ) =>
@@ -134,6 +137,9 @@ handler transporter req quote = do
 
           ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
+          enableLocationTrackingService <- asks (.enableLocationTrackingService)
+          when enableLocationTrackingService $ do
+            void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
@@ -334,7 +340,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -391,7 +398,8 @@ validateRequest ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

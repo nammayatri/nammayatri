@@ -178,6 +178,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       ]
 
+let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -247,4 +249,6 @@ in  { esqDBCfg
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.DbBased
+    , ltsCfg = LocationTrackingeServiceConfig
+    , enableLocationTrackingService = False
     }

@@ -42,10 +42,13 @@ import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import qualified Sequelize as Se
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -153,7 +156,7 @@ getDriverInformations driverLocations =
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
 
-getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- QueriesDL.getDriverLocations before
   driverInfos <- getDriverInformations driverLocations
@@ -167,12 +170,17 @@ data FullDriver = FullDriver
   }
 
 findAllDriversByIdsFirstNameAsc ::
-  (Functor m, MonadFlow m) =>
+  (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
 findAllDriversByIdsFirstNameAsc merchantId driverIds = do
-  driverLocs <- QueriesDL.getDriverLocs driverIds merchantId
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  driverLocs <- do
+    if enableLocationTrackingService
+      then do
+        LF.driversLocation driverIds
+      else QueriesDL.getDriverLocs driverIds merchantId
   driverInfos <- Int.getDriverInfos $ map ((.getId) . DDL.driverId) driverLocs
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle

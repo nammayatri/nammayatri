@@ -13,10 +13,12 @@ import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking.BookingLocation.Internal as Int
 import qualified Storage.Queries.Booking.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
@@ -42,7 +44,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadFlow m, MonadTime m) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m) =>
   Maybe Variant ->
   LatLong ->
   Meters ->

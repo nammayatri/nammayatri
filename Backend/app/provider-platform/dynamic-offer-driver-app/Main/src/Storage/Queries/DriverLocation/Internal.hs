@@ -14,19 +14,27 @@
 
 module Storage.Queries.DriverLocation.Internal where
 
-import Data.Maybe (Maybe)
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant
 import Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverLocation as QueriesDL
 
 getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
   Meters ->
   m [DriverLocation]
-getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters.getMeters merchantId
+getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  if enableLocationTrackingService
+    then do
+      LF.nearBy lat lon Nothing Nothing radiusMeters.getMeters merchantId
+    else QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters.getMeters merchantId
