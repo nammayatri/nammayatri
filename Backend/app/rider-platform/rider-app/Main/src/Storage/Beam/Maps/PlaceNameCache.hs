@@ -13,14 +13,13 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data PlaceNameCacheT f = PlaceNameCacheT
   { id :: B.C f Text,

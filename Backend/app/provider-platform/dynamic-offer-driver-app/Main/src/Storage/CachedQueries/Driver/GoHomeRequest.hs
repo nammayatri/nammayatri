@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-
 module Storage.CachedQueries.Driver.GoHomeRequest where
 
 import Control.Monad

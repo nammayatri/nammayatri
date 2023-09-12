@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Environment
   ( HandlerCfg (..),
@@ -77,7 +76,6 @@ data HandlerEnv = HandlerEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
     version :: DeploymentVersion,
-    maxThreads :: Int,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,

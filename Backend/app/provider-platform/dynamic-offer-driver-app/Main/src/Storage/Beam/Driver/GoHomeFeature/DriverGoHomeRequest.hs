@@ -12,10 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest where
 
@@ -24,29 +21,11 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
-
-instance FromField Domain.DriverGoHomeRequestStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverGoHomeRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverGoHomeRequestStatus
-
-instance FromBackendRow Postgres Domain.DriverGoHomeRequestStatus
-
-instance IsString Domain.DriverGoHomeRequestStatus where
-  fromString = show
 
 toRowExpression reqId driverId lat lon status numCancellation mbReachedHome createdAt updatedAt =
   DriverGoHomeRequestT

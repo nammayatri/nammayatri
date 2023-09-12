@@ -12,14 +12,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.KioskLocationTranslation where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data KioskLocationTranslationT f = KioskLocationTranslationT
   { kioskLocationId :: B.C f Text,
