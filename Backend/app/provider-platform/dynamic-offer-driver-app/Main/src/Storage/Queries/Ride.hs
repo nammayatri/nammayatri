@@ -182,6 +182,16 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateUiDistanceCalculation :: MonadFlow m => Id Ride -> Maybe Int -> Maybe Int -> m ()
+updateUiDistanceCalculation rideId dist1 dist2 = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.uiDistanceCalculationWithAccuracy dist1,
+      Se.Set BeamR.uiDistanceCalculationWithoutAccuracy dist2,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateDriverDeviatedFromRoute :: MonadFlow m => Id Ride -> Bool -> m ()
 updateDriverDeviatedFromRoute rideId deviation = do
   now <- getCurrentTime
@@ -481,5 +491,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
         BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
         BeamR.numberOfDeviation = numberOfDeviation,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
+        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
+        BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
+        BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy
       }

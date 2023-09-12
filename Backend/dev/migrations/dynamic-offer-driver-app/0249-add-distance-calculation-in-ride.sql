@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ui_distance_calculation_with_accuracy Int;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ui_distance_calculation_without_accuracy Int;
