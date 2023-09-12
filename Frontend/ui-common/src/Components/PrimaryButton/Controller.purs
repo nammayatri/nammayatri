@@ -22,6 +22,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Data.Maybe (Maybe(..))
 
 data Action = OnClick | NoAction
 
@@ -49,6 +50,8 @@ type Config =
     , gradient :: Gradient
     , padding :: Padding
     , lottieConfig :: LottieConfig
+    , weight :: Maybe Number
+    , enableButtonLayoutId :: Boolean
   }
 
 type TextConfig =
@@ -60,6 +63,7 @@ type TextConfig =
   , height :: Length
   , width :: Length
   , accessibilityHint :: String
+  , weight :: Maybe Number
   }
 
 
@@ -89,6 +93,7 @@ config =   {
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , accessibilityHint : ""
+    , weight : Nothing
     }
   , width: MATCH_PARENT
   , height: V 50
@@ -101,6 +106,8 @@ config =   {
   , background : Color.black900
   , gravity : CENTER
   , isSuffixImage : false
+  , weight : Nothing
+  , enableButtonLayoutId : false
   , suffixImageConfig :
     {
       height : V 20
