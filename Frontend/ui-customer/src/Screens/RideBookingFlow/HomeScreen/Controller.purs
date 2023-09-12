@@ -681,11 +681,8 @@ eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
     state
       { props { currentStage = RideRating }
       , data
-        { rideRatingState =
-          dummyRideRatingState
-            { driverName = state.data.driverInfoCardState.driverName
-            , rideId = state.data.driverInfoCardState.rideId
-            , rating = index
+        { rideRatingState 
+            { rating = index
             , feedbackList = state.data.rideRatingState.feedbackList
             }
           , ratingViewState { selectedRating = index }
