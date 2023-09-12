@@ -267,13 +267,14 @@ countDrivers merchantID =
     func (active, inactive) (activity, counter) =
       if activity then (active + counter, inactive) else (active, inactive + counter)
 
-updateDowngradingOptions :: MonadFlow m => Id Person -> Bool -> Bool -> Bool -> m ()
-updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
+updateDriverInformation :: MonadFlow m => Id Person -> Bool -> Bool -> Bool -> Maybe Text -> m ()
+updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi availableUpiApps = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
       Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
+      Se.Set BeamDI.availableUpiApps availableUpiApps,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]

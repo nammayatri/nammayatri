@@ -52,7 +52,8 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             autoPayStatus = autoPayStatus,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            compAadhaarImagePath = compAadhaarImagePath
+            compAadhaarImagePath = compAadhaarImagePath,
+            availableUpiApps = availableUpiApps
           }
 
 instance ToTType' BeamDI.DriverInformation DriverInformation where
@@ -81,5 +82,6 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt,
-        BeamDI.compAadhaarImagePath = compAadhaarImagePath
+        BeamDI.compAadhaarImagePath = compAadhaarImagePath,
+        BeamDI.availableUpiApps = availableUpiApps
       }
