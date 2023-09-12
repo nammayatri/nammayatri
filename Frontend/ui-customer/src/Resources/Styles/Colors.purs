@@ -414,9 +414,6 @@ elfGreen = "#269574"
 transparentBlue :: Color
 transparentBlue = "#100066FF"
 
-pink :: Color
-pink = "#FEF1E5"
-
 aliceBlue :: Color 
 aliceBlue = "#F1F3F4"
 

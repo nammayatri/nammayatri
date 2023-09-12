@@ -123,6 +123,9 @@ accessibilityListConfig disabilityData config =
         , showBgColor = true
         , editTextBgColor = Color.white900
         , defaultText = Mb.fromMaybe "" disabilityData.otherDisabilityReason
+        , showAdditionalInfo = true 
+        , additionalInfoBg = Color.pink 
+        , additionalInfoText = (getString DISABILITY_CLAIMER_TEXT)
         }
 
 getDisabilityList :: Array ST.DisabilityT ->  Array Common.OptionButtonList
