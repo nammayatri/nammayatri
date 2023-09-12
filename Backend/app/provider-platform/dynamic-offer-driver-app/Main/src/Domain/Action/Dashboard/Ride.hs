@@ -53,6 +53,7 @@ import qualified Kernel.Storage.Clickhouse.Types as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Queries.Booking as QBooking
@@ -214,7 +215,14 @@ rideInfo merchantShortId reqRideId = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  mDriverLocation <- QDrLoc.findById driverId
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  mDriverLocation <- do
+    if enableLocationTrackingService
+      then do
+        driverLocations <- LF.driversLocation [driverId]
+        return $ listToMaybe driverLocations
+      else QDrLoc.findById driverId
+
   mbBCReason <-
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user

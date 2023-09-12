@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
@@ -70,7 +71,8 @@ prepareDriverPoolBatch ::
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    LT.HasLocationService m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -421,7 +423,8 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    LT.HasLocationService m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

@@ -60,6 +60,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
@@ -237,6 +238,9 @@ otpRideCreate driver otpCode booking = do
     Just route -> Redis.setExp (BS.searchRequestKey $ getId ride.id) route 14400
     Nothing -> logDebug "Unable to get the key"
 
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  when enableLocationTrackingService $
+    void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.create ride
   DLoc.updateOnRide driver.merchantId driver.id True
