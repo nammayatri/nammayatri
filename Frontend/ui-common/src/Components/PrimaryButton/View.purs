@@ -17,13 +17,14 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -43,12 +44,10 @@ view push config =
         ]
         [ linearLayout
             ([ height config.height
-            , width config.width
             , cornerRadius config.cornerRadius
             , background config.background
             , padding config.padding
             , gravity config.gravity
-            , id $ getNewIDWithTag (config.id <> "_buttonLayout")
             , clickable if config.enableLoader then false else config.isClickable
             , onClick
                 ( \action -> do
@@ -66,7 +65,11 @@ view push config =
                 (const NoAction)
             , alpha if config.enableLoader then 0.5 else config.alpha
             , stroke config.stroke
-            ]  <> if config.isGradient then [gradient config.gradient] else [background config.background])
+            ]  <> (if config.isGradient then [gradient config.gradient] else [background config.background])
+              <> (case config.weight of
+                Nothing -> [width config.width]
+                Just value ->  [weight value])
+              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else []))
             [ linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -79,21 +82,24 @@ view push config =
                 [ prefixImageLayout config
                 , textView
                     $ [ height config.textConfig.height
-                      , width config.textConfig.width
                       , accessibilityHint config.textConfig.accessibilityHint
                       , accessibility ENABLE
                       , text config.textConfig.text
                       , color config.textConfig.color
                       , gravity config.textConfig.gravity
                       , lineHeight "20"
+                      , weight 1.0
                       ]
                     <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
+                    <> (case config.textConfig.weight of
+                          Nothing -> [width config.textConfig.width]
+                          Just val -> [weight val])
                 , suffixImageLayout config
                 ]
             ]
         , linearLayout
-            [ height config.height
-            , width config.width
+            [ height config.lottieConfig.height
+            , width config.lottieConfig.width
             , gravity CENTER
             ]
             [ lottieAnimationView

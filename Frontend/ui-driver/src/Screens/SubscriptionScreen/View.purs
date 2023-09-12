@@ -55,7 +55,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -294,34 +294,48 @@ paymentPendingView push state =
       , color Color.red
       ]
     , linearLayout
-      [ width MATCH_PARENT
+      [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , margin $ MarginTop 10
-      ][ linearLayout
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , stroke $ "1," <> Color.blue900
-          , cornerRadius 24.0
-          , padding $ Padding 10 5 10 5
-          , onClick push $ const CheckPaymentStatus
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , weight 1.0
           , gravity CENTER
-          ][ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
-              $ imageView
-              [ width $ V 16
-              , height $ V 16
-              , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
-              ]
-            , textView $ 
+          , margin $ MarginRight 6
+          ]
+          [ linearLayout
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ getString REFRESH_STR
-              , color Color.blue900
-              , margin $ MarginLeft 5
-              , padding $ PaddingBottom 4
-              ] <> FontStyle.body4 TypoGraphy
-          ]
-        , PrimaryButton.view (push <<< RetryPaymentAC) (retryPaymentButtonConfig state)
-      ]
+              , stroke $ "1," <> Color.blue900
+              , cornerRadius 24.0
+              , padding $ Padding 10 5 10 5
+              , onClick push $ const CheckPaymentStatus
+              , gravity CENTER
+              ]
+              [ PrestoAnim.animationSet [ Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus) ]
+                  $ imageView
+                      [ width $ V 16
+                      , height $ V 16
+                      , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
+                      ]
+              , textView
+                    $ [ height WRAP_CONTENT
+                      , text $ getString REFRESH_STR
+                      , color Color.blue900
+                      , margin $ MarginLeft 5
+                      , padding $ PaddingBottom 4
+                      , weight 1.0
+                      ]
+                    <> FontStyle.body4 TypoGraphy
+                ]
+            ]
+        , linearLayout
+            [ margin $ MarginLeft 6
+            , weight 1.0
+            ]
+            [ PrimaryButton.view (push <<< RetryPaymentAC) (retryPaymentButtonConfig state) ]
+        ]
       , linearLayout [
           width MATCH_PARENT
           , height $ V 1
