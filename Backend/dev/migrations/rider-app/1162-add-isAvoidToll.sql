@@ -1,1 +1,1 @@
-ALTER TABLE atlas_app.transporter_config ADD COLUMN is_avoid_toll BOOLEAN NOT NULL DEFAULT true ;
+ALTER TABLE atlas_app.merchant ADD COLUMN is_avoid_toll BOOLEAN NOT NULL DEFAULT true ;
