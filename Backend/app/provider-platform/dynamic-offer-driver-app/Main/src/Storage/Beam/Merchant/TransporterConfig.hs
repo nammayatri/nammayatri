@@ -137,7 +137,8 @@ transporterConfigTMod =
       routeDeviationThreshold = B.fieldNamed "route_deviation_threshold",
       canDowngradeToSedan = B.fieldNamed "can_downgrade_to_sedan",
       canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
-      canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi"
+      canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi",
+      isAvoidToll = B.fieldNamed "is_avoid_toll"
     }
 
 $(enableKVPG ''TransporterConfigT ['merchantId] [])

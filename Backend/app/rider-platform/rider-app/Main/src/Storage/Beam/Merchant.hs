@@ -196,7 +196,8 @@ merchantTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at",
       timeDiffFromUtc = B.fieldNamed "time_diff_from_utc",
-      dirCacheSlot = B.fieldNamed "dir_cache_slot"
+      dirCacheSlot = B.fieldNamed "dir_cache_slot",
+      isAvoidToll = B.fieldNamed "is_avoid_toll"
     }
 
 $(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
