@@ -370,32 +370,39 @@ currentActiveRide _ vehicleNumber = do
 
 bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId req = do
-  merchant <- findMerchantByShortId merchantShortId
-  phoneNumberHash <- getDbHash req.phoneNumber
-  person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
-  mblinkedVehicle <- VQuery.findById person.id
-  mbRecentRide :: Maybe Text <- Redis.safeGet $ SRide.makeStartRideIdKey person.id
-  when (isJust mbRecentRide) $ throwError RecentActiveRide
-  when req.endRideForVehicle do
-    mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
-    whenJust mbvehicle $ \vehicle -> do
-      activeRideId <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId
-      whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
-  when req.endRideForDriver do
-    activeRideId <- runInReplica $ QRide.getActiveByDriverId person.id
-    whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
-  now <- getCurrentTime
-  case mblinkedVehicle of
-    Just vehicle -> do
-      unless (vehicle.registrationNo == req.vehicleNumber) $ do
-        tryLinkinRC person.id merchant.id now
-    Nothing -> do
-      tryLinkinRC person.id merchant.id now
-  return
-    Common.BookingWithVehicleAndPhoneRes
-      { driverId = person.id.getId
-      }
+  alreadyInProcess :: Maybe Bool <- Redis.safeGet apiProcessKey
+  if isJust alreadyInProcess
+    then do
+      Redis.setExp apiProcessKey True 60
+      merchant <- findMerchantByShortId merchantShortId
+      phoneNumberHash <- getDbHash req.phoneNumber
+      person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
+      mblinkedVehicle <- VQuery.findById person.id
+      mbRecentRide :: Maybe Text <- Redis.safeGet $ SRide.makeStartRideIdKey person.id
+      when (isJust mbRecentRide) $ throwError RecentActiveRide
+      when req.endRideForVehicle do
+        mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
+        whenJust mbvehicle $ \vehicle -> do
+          activeRideId <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId
+          whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
+      when req.endRideForDriver do
+        activeRideId <- runInReplica $ QRide.getActiveByDriverId person.id
+        whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
+      now <- getCurrentTime
+      case mblinkedVehicle of
+        Just vehicle -> do
+          unless (vehicle.registrationNo == req.vehicleNumber) $ do
+            tryLinkinRC person.id merchant.id now
+        Nothing -> do
+          tryLinkinRC person.id merchant.id now
+      Redis.del apiProcessKey
+      return
+        Common.BookingWithVehicleAndPhoneRes
+          { driverId = person.id.getId
+          }
+    else throwError $ InvalidRequest "Multiple call for same API"
   where
+    apiProcessKey = "bookingWithVehicleNumberAndPhone:phoneNumber-" <> (show req.phoneNumber)
     tryLinkinRC personId merchantId now = do
       vehicleRC <- RCQuery.findLastVehicleRCWrapper req.vehicleNumber >>= fromMaybeM VehicleIsNotRegistered
       mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id personId
