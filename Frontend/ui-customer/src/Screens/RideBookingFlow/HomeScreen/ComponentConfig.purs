@@ -1157,7 +1157,7 @@ rideCompletedCardConfig state = let
           bottomText =  getString RIDE_DETAILS
         },
         customerBottomCard {
-          title = (getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName,
+          title = (getString RATE_YOUR_RIDE_WITH) <> state.data.rideRatingState.driverName,
           subTitle = (getString YOUR_FEEDBACK_HELPS_US),
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true
