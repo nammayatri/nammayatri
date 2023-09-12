@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.Issue.IssueCategory where
 

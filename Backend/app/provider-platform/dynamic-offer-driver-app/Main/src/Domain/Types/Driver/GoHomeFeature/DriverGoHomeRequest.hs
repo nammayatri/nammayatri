@@ -19,9 +19,12 @@ import Domain.Types.Person
 import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH
 
 data DriverGoHomeRequestStatus = ACTIVE | SUCCESS | FAILED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''DriverGoHomeRequestStatus)
 
 data DriverGoHomeRequest = DriverGoHomeRequest
   { id :: Id DriverGoHomeRequest,

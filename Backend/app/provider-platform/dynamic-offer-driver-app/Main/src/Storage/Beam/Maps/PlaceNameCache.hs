@@ -12,7 +12,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 

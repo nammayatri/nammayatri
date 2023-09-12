@@ -17,10 +17,8 @@ module Storage.Beam.OnboardingDocumentConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
--- import Kernel.Types.Common hiding (id)
-
-import Tools.Beam.UtilsTH
 import Kernel.Prelude
+import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,

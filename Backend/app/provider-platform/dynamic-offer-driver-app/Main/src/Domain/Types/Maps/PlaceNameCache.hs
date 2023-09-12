@@ -12,13 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Maps.PlaceNameCache where
 
-import Tools.Beam.UtilsTH (mkBeamInstancesForList)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForList)
 
 data PlaceNameCache = PlaceNameCache
   { id :: Id PlaceNameCache,

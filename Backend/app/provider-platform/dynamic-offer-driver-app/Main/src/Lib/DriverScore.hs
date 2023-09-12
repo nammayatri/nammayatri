@@ -11,9 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use maybe" #-}
 
 module Lib.DriverScore
   ( driverScoreEventHandler,

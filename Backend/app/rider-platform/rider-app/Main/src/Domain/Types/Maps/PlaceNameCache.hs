@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Maps.PlaceNameCache where
 
-import Tools.Beam.UtilsTH (mkBeamInstancesForList)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForList)
 
 data PlaceNameCache = PlaceNameCache
   { id :: Id PlaceNameCache,
