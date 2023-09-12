@@ -515,7 +515,6 @@ disabilityOptionView state push =
     , margin $ MarginBottom 16
     ] <> FontStyle.body3 TypoGraphy
   ] <> (mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
-  , if state.data.editedDisabilityOptions.activeIndex == 1 then disabilityClaimerView state push  else textView[]
   ]
 
 
@@ -528,22 +527,3 @@ specialAssistanceView state push =
   , background Color.transparent
   ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)]
 
-disabilityClaimerView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-disabilityClaimerView state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , padding $ Padding 20 16 20 16
-  , cornerRadius 12.0 
-  , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
-  , background Color.pink
-  , alignParentBottom "true,-1"
-  , gravity CENTER 
-  ][  textView
-      ([ text (getString DISABILITY_CLAIMER_TEXT)
-      , accessibility ENABLE
-      , accessibilityHint (getString DISABILITY_CLAIMER_TEXT)
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      ] <> FontStyle.body3 TypoGraphy)
-  ]

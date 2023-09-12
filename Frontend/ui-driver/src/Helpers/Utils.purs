@@ -258,6 +258,9 @@ getRequiredTag prop tag accessibilityTag = do
     "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
+    "Purple_Ride" -> case (runFn4 getRideLabelConfig Just Nothing prop ("PURPLE")) of
+                                Nothing -> Nothing
+                                Just val -> Just val
     tag' -> do
         let arr = DS.split (DS.Pattern "_") tag'
         let pickup = fromMaybe "" (arr DA.!! 0)

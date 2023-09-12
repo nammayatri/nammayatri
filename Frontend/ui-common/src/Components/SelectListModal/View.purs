@@ -72,7 +72,7 @@ view push config =
           , orientation VERTICAL
           , background Color.white900
           , padding (PaddingTop 20)
-          , margin $ MarginBottom 40
+          , margin $ MarginBottom 50
           ][  headingText config push ,
               optionListView push config
            ]
@@ -172,25 +172,42 @@ optionListView push config =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , padding (Padding 20 0 20 24)
+    , padding (Padding 20 0 20 30)
     , orientation VERTICAL
-    ][ linearLayout
+    ][ (if os == "IOS" then linearLayout else scrollView )
+  ([height $ MATCH_PARENT
+  , width MATCH_PARENT])[linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][dataListOptions config push]
+        ]([  dataListOptions config push
+        ] <> if config.showAdditionalInfo then [claimerView config push] else [])]
     ]
 
+claimerView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+claimerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 20 16 20 16
+  , cornerRadius 12.0 
+  , background state.additionalInfoBg
+  , alignParentBottom "true,-1"
+  , gravity CENTER 
+  ][  textView
+      ([ text state.additionalInfoText
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]
 
 dataListOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 dataListOptions config push =
-  (if os == "IOS" then linearLayout else scrollView )
-  ([height $ MATCH_PARENT
-  , width MATCH_PARENT])[linearLayout
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding (PaddingVertical 12 24)
+  , padding (PaddingTop 12)
   ] (mapWithIndex (\index item ->
       linearLayout
       [ width MATCH_PARENT
@@ -234,7 +251,7 @@ dataListOptions config push =
             -- , technicalGlitchDescription config push index
           ]
         ]
-      ) config.selectionOptions)]
+      ) config.selectionOptions)
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w

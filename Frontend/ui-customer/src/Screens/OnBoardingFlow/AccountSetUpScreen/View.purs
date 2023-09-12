@@ -112,7 +112,6 @@ view push state =
                         , weight 1.0
                         , orientation VERTICAL
                         ][]
-                    , if state.data.editedDisabilityOptions.activeIndex == 1 && (isJust state.data.disabilityOptions.selectedDisability) then disabilityClaimerView state push  else textView[]
                     ]
                 ]
             ]
@@ -356,23 +355,6 @@ disabilityOptionView state push =
 specialAssistanceView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 specialAssistanceView state push = do 
   SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)
-
-disabilityClaimerView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-disabilityClaimerView state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , padding $ Padding 20 16 20 16
-  , cornerRadius 12.0 
-  , background Color.pink
-  , alignParentBottom "true,-1"
-  , gravity CENTER 
-  ][  textView
-      ([ text (getString DISABILITY_CLAIMER_TEXT)
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      ] <> FontStyle.body3 TypoGraphy)
-  ]
 
 getRadioButtonConfig :: Int -> String -> ST.AccountSetUpScreenState -> GenericRadioButton.Config
 getRadioButtonConfig index item state = GenericRadioButton.config {

@@ -55,7 +55,7 @@ view push state =
     , linearLayout
       [height WRAP_CONTENT
       , width MATCH_PARENT
-      , padding $ Padding 16 0 16 16
+      , padding $ PaddingBottom 16
       , alignParentBottom "true,-1"
       , adjustViewWithKeyboard "true"
       , background Color.white900
@@ -69,7 +69,7 @@ currentRatingView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 16 24 16 30
+  , padding $ Padding 16 24 16 57
   , margin (MarginBottom if os == "IOS" then 30 else 0)
   , background Color.white900
   , cornerRadii $ Corners 20.0 true true false false
@@ -100,7 +100,6 @@ feedbackPillView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
-    , margin $ MarginBottom 26
     , padding (PaddingVertical 16 16)
     ](map  
       (\list1 ->  
@@ -195,7 +194,7 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , padding (PaddingVertical 16 16)
+    , padding (PaddingTop 16)
     , cornerRadius 8.0
     ][ imageView [
         imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall)<>"ny_ic_driver_avatar.png"
