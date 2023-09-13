@@ -2043,7 +2043,6 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       _ <- paymentPageUI sdkPayload
-      liftFlowBT killPP
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
       setValueToLocalStore DISABLE_WIDGET "false"
@@ -2095,7 +2094,6 @@ ysPaymentFlow = do
       setValueToLocalStore DISABLE_WIDGET "true"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       paymentPageOutput <- paymentPageUI listResp.sdk_payload
-      liftFlowBT killPP
       pure $ toggleBtnLoader "" false
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
