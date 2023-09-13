@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getPlanPrice, getAllFareFromArray)
+import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), GlobalProps, KioskLocation(..), MyPlanData, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
 import Services.Backend as Remote
@@ -294,42 +294,16 @@ paymentPendingView push state =
       , color Color.red
       ]
     , linearLayout
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       ]
-      [ linearLayout
-          [ height WRAP_CONTENT
-          , weight 1.0
-          , gravity CENTER
-          , margin $ MarginRight 6
-          ]
-          [ linearLayout
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , stroke $ "1," <> Color.blue900
-              , cornerRadius 24.0
-              , padding $ Padding 10 5 10 5
-              , onClick push $ const CheckPaymentStatus
-              , gravity CENTER
-              ]
-              [ PrestoAnim.animationSet [ Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus) ]
-                  $ imageView
-                      [ width $ V 16
-                      , height $ V 16
-                      , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
-                      ]
-              , textView
-                    $ [ height WRAP_CONTENT
-                      , text $ getString REFRESH_STR
-                      , color Color.blue900
-                      , margin $ MarginLeft 5
-                      , padding $ PaddingBottom 4
-                      , weight 1.0
-                      ]
-                    <> FontStyle.body4 TypoGraphy
-                ]
+      [
+        linearLayout
+            [ margin $ MarginRight 6
+            , weight 1.0
             ]
+            [ PrimaryButton.view (push <<< CheckPaymentStatusButton) (checkStatusButtonConfig state) ]
         , linearLayout
             [ margin $ MarginLeft 6
             , weight 1.0

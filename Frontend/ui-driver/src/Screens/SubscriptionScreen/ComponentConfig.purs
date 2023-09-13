@@ -18,6 +18,8 @@ module Screens.SubscriptionScreen.ComponentConfig where
 import Language.Strings
 import PrestoDOM
 
+import Animation as Anim
+import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (PaymentStatus(..))
 import Components.OptionsMenu as OptionsMenuConfig
@@ -67,20 +69,17 @@ retryPaymentButtonConfig state =
         , width = WRAP_CONTENT
         , gravity = LEFT
         , height = WRAP_CONTENT
-        , color = Color.white900
         , textStyle = Body4
         , weight = Mb.Just 1.0
         }
       , height = WRAP_CONTENT
-      , weight = Mb.Just 1.0
       , gravity = CENTER
-      , cornerRadius = 24.0
+      , cornerRadius = 8.0
       , padding = Padding 10 7 10 9
       , margin = MarginLeft 0
       , isSuffixImage = true
-      , background = Color.blue800
       , suffixImageConfig
-        { imageUrl = "ic_right_arrow," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
+        { imageUrl = "ny_ic_arrow_right_yellow," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_arrow_right_yellow.png"
         , height = V 16
         , width = V 16
         , margin = (MarginLeft 5)
@@ -93,6 +92,35 @@ retryPaymentButtonConfig state =
         , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.8
         , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
         }
+      }
+
+checkStatusButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+checkStatusButtonConfig state = 
+    PrimaryButton.config
+      { textConfig
+        { text = getString REFRESH_STR
+        , gravity = LEFT
+        , height = WRAP_CONTENT
+        , textStyle = Body4
+        , weight = Mb.Just 1.0
+        , color = Color.black900
+        }
+      , height = WRAP_CONTENT
+      , gravity = CENTER
+      , cornerRadius = 8.0
+      , padding = Padding 10 7 10 9
+      , margin = MarginLeft 0
+      , isPrefixImage = true
+      , stroke = "1," <> Color.black900
+      , background = Color.yellow800
+      , prefixImageConfig
+        { imageUrl = "ny_ic_refresh_unfilled," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh_unfilled.png"
+        , height = V 16
+        , width = V 16
+        , margin = (Margin 0 2 5 0)
+        , animation = [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
+        }
+      , id = "CheckStatusButtonLayout"
       }
 
 switchPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config

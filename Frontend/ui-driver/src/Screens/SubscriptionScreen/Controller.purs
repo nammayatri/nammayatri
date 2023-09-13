@@ -78,6 +78,7 @@ data Action = BackPressed
             | CallSupport
             | CallHelpCenter String
             | OpenGoogleMap Number Number
+            | CheckPaymentStatusButton PrimaryButton.Action
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -300,6 +301,8 @@ eval CallSupport state = do
 eval (CallHelpCenter phone) state = do
   _ <- pure $ showDialer phone false
   continue state
+
+eval (CheckPaymentStatusButton PrimaryButton.OnClick) state = continueWithCmd state [pure CheckPaymentStatus] 
 
 eval _ state = continue state
 
