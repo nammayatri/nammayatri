@@ -57,7 +57,8 @@ config = {
       padding :  Padding 16 12 16 12,
       margin : MarginVertical 10 20,
       alpha : 1.0,
-      fontStyle : Tags
+      fontStyle : Tags,
+      visible : VISIBLE
     },
     bottomText : ""
   },
@@ -135,7 +136,8 @@ type InfoPill = {
   padding ::  Padding,
   margin :: Margin,
   alpha :: Number,
-  fontStyle :: Style
+  fontStyle :: Style,
+  visible :: Visibility
 }
 
 type CustomerBottomCard = {
