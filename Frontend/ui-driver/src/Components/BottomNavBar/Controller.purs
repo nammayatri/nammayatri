@@ -24,6 +24,7 @@ import Prelude (unit, (<>), (==), negate)
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
+import Data.Array (elem)
 
 data Action = OnNavigate String
 
@@ -46,7 +47,8 @@ navData screenName = {
       activeIcon: "ny_ic_join_active,https://assets.juspay.in/nammayatri/images/driver/ic_profile_active.png",
       defaultIcon: "ny_ic_join_inactive,https://assets.juspay.in/nammayatri/images/driver/ic_profile_inactive.png",
       text: "Join"
-    },
+    }]
+    else if ((getMerchant FunctionCall `elem` [NAMMAYATRI,YATRISATHI])) then [
     {
       activeIcon: "ic_referral_active,https://assets.juspay.in/nammayatri/images/driver/ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
