@@ -52,7 +52,7 @@ data DriverFee = DriverFee
     stageUpdatedAt :: Maybe UTCTime,
     feeWithoutDiscount :: Maybe HighPrecMoney
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 data PlatformFee = PlatformFee
   { fee :: HighPrecMoney,
