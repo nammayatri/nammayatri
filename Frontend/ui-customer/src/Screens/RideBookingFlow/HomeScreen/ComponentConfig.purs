@@ -341,9 +341,10 @@ reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let
     reportIssueConfig = CancelRidePopUpConfig.config
+    lastIndex = if state.props.isNightTime then ((DA.length (safetyIssueOptions)) - 1) else ((DA.length (reportIssueOptions)) - 1)
     reportIssueConfig' =
       reportIssueConfig
-        { selectionOptions = reportIssueOptions state
+        { selectionOptions = if state.props.isNightTime then (safetyIssueOptions) else (reportIssueOptions)
         , primaryButtonTextConfig
           { firstText = getString GO_BACK_
           , secondText = getString SUBMIT
@@ -1090,8 +1091,8 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
-reportIssueOptions state =
+reportIssueOptions :: Array OptionButtonList 
+reportIssueOptions =
   [ { reasonCode: "DRIVER_WAS_NOT_READY_TO_GO"
     , description: getString DRIVER_WAS_NOT_READY_TO_GO
     , textBoxRequired : false
@@ -1223,3 +1224,21 @@ getFareUpdatedString diffInDist = do
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
                                                         _       -> "your ride was " <> dist <> " km longer")
+safetyIssueOptions :: Array OptionButtonList 
+safetyIssueOptions =
+  [ { reasonCode: "DRIVER_BEHAVED_INAPPROPRIATELY"
+    , description: getString DRIVER_BEHAVED_INAPPROPRIATELY
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "I_DID_NOT_FEEL_SAFE"
+    , description: getString I_DID_NOT_FEEL_SAFE
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "OTHER"
+    , description: getString OTHER
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  ]

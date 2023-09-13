@@ -101,7 +101,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, safetyIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -529,7 +529,7 @@ data Action = NoAction
             | GetRideConfirmation RideBookingRes
             | GetQuotesList SelectListRes
             | MAPREADY String String String
-            | AfterRender
+            | AfterRender 
             | UpdateSource Number Number String
             | Restart ErrorResponse
             | CurrentLocation String String
@@ -625,6 +625,13 @@ data Action = NoAction
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
+eval AfterRender state = do 
+  if (not state.props.isNightTime) then do
+    let nightSafetyView = (state.props.isNightTime && state.data.ratingViewState.selectedYesNoButton == 1) || (not state.props.isNightTime && state.data.ratingViewState.selectedYesNoButton == 0)
+    let nightTime = (withinTimeRange "22:00:00" "06:00:00" (convertUTCtoISC(state.data.rideRatingState.rideStartTime) "HH:mm:ss")) || state.data.rateCard.nightCharges || (withinTimeRange "22:00:00" "06:00:00" (convertUTCtoISC(state.data.rideRatingState.rideEndTime) "HH:mm:ss"))
+    continue state {data {ratingViewState {issueFacedView = nightTime}}, props {nightRideSafetyPopUpVisibility = nightSafetyView, isNightTime = nightTime}}
+  else
+    continue state
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
@@ -674,6 +681,9 @@ eval OnResumeCallback state =
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
 eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}}
+eval (SelectButton index) state = do 
+  let nightSafetyVisibility = (state.props.isNightTime && index == 1) || (not state.props.isNightTime && index == 0)
+  continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}, props{nightRideSafetyPopUpVisibility = nightSafetyVisibility}}
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
   _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
@@ -1068,6 +1078,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
   case state.data.ratingViewState.issueFacedView of
     true -> do
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+            void $ pure $ firebaseLogEvent "ny_user_post_ride_safety_felt_safe"
             continue
               state
                 { props { currentStage = RideRating }
@@ -1271,7 +1282,15 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.On
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
-  let issue = (reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+  let issue = (reportIssueOptions)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+  let reason = (fromMaybe dummyCancelReason issue).description
+  exit $ ReportIssue state { data {
+    ratingViewState { issueReason = Just reason, issueDescription = reason},
+    rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
+    }}
+
+eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+  let issue = (if state.props.isNightTime then safetyIssueOptions else reportIssueOptions)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
   exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason, issueDescription = reason},
@@ -2214,6 +2233,7 @@ estimatesFlow estimatedQuotes state = do
           state
             { data  { suggestedAmount = estimatedPrice,
                       currentSearchResultType = ESTIMATES,
+                      ratingViewState {issueFacedView = state.data.ratingViewState.issueFacedView ||nightCharges},
                       rateCard =  { additionalFare: additionalFare
                                   , nightShiftMultiplier: nightShiftMultiplier
                                   , nightCharges: nightCharges
@@ -2240,7 +2260,8 @@ estimatesFlow estimatedQuotes state = do
                             , onFirstPage: false
                             , baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges
                             , vehicleVariant : ""
-                            }
+                            }, 
+                  ratingViewState {issueFacedView = state.data.ratingViewState.issueFacedView || nightCharges }
                 }
         }
 

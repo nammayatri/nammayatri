@@ -613,5 +613,9 @@ const englishStrings = {
   "LEARN_HOW_TEXT" : "Learn how Namma Yatri caters to your needs",
   "UPDATE_PROFILE" : "Update Profile",
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
-  "CLEAN_CAB" : "Clean Cab"
+  "CLEAN_CAB" : "Clean Cab",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "Did you have a safe journey",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "We would like to ensure that your trip was safe and worry free.",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "The driver behaved inappropriately",
+  "I_DID_NOT_FEEL_SAFE" : "I did not feel safe"
 }

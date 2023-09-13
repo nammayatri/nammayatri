@@ -613,5 +613,10 @@ const hindiStrings = {
   "LEARN_HOW_TEXT" : "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है", 
   "UPDATE_PROFILE" : "प्रोफ़ाइल अपडेट करें",
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
-  "CLEAN_CAB" : "क्लीन कैब"
+  "CLEAN_CAB" : "क्लीन कैब",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "क्या आपकी यात्रा सुरक्षित रही ?",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "हम यह सुनिश्चित करना चाहेंगे कि आपकी यात्रा सुरक्षित और चिंता मुक्त हो।",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "ड्राइवर ने अनुचित व्यवहार किया",
+  "I_DID_NOT_FEEL_SAFE" : "मैं सुरक्षित महसूस नहीं कर रहा था"
+
 }

@@ -629,5 +629,9 @@ const bengaliStrings = {
   "LEARN_HOW_TEXT" : "নম্মা যাত্রী কীভাবে আপনার প্রয়োজন মেটায় তা জানুন",
   "UPDATE_PROFILE" : "প্রফাইল হালনাগাদ",
   "NOW_GET_ASSISTED_RIDES" : "আপনি যদি প্রতিবন্ধী ব্যক্তি হন তবে এখন সহায়ক রাইড পান" ,
-  "CLEAN_CAB" : "ক্লিন ক্যাব"
+  "CLEAN_CAB" : "ক্লিন ক্যাব",
+  "DID_YOU_HAVE_A_SAFE_JOURNEY" : "আপনি একটি নিরাপদ যাত্রা আছে",
+  "TRIP_WAS_SAFE_AND_WORRY_FREE" : "আমরা নিশ্চিত করতে চাই যে আপনার ভ্রমণ নিরাপদ এবং দুশ্চিন্তামুক্ত।",
+  "DRIVER_BEHAVED_INAPPROPRIATELY" : "চালক অশালীন আচরণ করেন",
+  "I_DID_NOT_FEEL_SAFE" : "আমি নিরাপদ বোধ করিনি"
 }

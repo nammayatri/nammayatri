@@ -455,11 +455,12 @@ rideFeedbackBT payload = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeFeedBackReq :: Int -> String -> String -> FeedbackReq
-makeFeedBackReq rating rideId feedback = FeedbackReq
+makeFeedBackReq :: Int -> String -> String -> String -> FeedbackReq
+makeFeedBackReq rating rideId feedback issueId = FeedbackReq
     {   "rating" : rating
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
+    ,   "issueId" : issueId
     }
 
 
@@ -763,10 +764,11 @@ normalRoute _ = {
 }
 
 
-makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> SendIssueReq
-makeSendIssueReq email bookingId reason description= SendIssueReq {
+makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> Maybe String  -> SendIssueReq
+makeSendIssueReq email bookingId reason description rideId = SendIssueReq {
     "contactEmail" : email ,
     "rideBookingId" : bookingId ,
+    "rideId" : rideId,
     "issue" : Issue {
             "reason" : reason,
             "description" : description

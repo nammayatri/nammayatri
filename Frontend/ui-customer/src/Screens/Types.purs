@@ -695,6 +695,8 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , nightRideSafetyPopUpVisibility :: Boolean
+  , isNightTime :: Boolean 
   }
 
 type RouteEndPoints = {
@@ -724,7 +726,8 @@ type RatingViewState = {
     doneButtonVisibility :: Boolean,
     issueReason :: Maybe String,
     issueDescription :: String,
-    rideBookingRes :: RideBookingRes
+    rideBookingRes :: RideBookingRes,
+    issueId :: String 
 }
 
 type CustomerTipProps = {

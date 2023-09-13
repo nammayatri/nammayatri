@@ -56,7 +56,8 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, flowRunner)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
@@ -185,6 +186,11 @@ screen initialState =
                 pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
+                pure unit
+              RideCompleted -> do 
+                void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+                 $ do 
+                 lift $ lift $ doAff do liftEffect $ push $ AfterRender
                 pure unit
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
@@ -1065,6 +1071,258 @@ rideRatingCardView state push =
     ]
     [ RatingCard.view (push <<< RatingCardAC) $ ratingCardViewState state
     ]
+
+rateExperienceView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rateExperienceView state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , cornerRadius 8.0
+  , stroke $ "1,"<>Color.grey800
+  , padding $ Padding 10 10 10 10
+  , gravity CENTER
+  ][ imageView [
+      imageWithFallback "ny_ic_driver_avatar,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_avatar.png"
+      , height $ V 56
+      , width $ V 56
+      , cornerRadius 50.0
+    ]
+    , commonTextView state push ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName) Color.black800 (FontStyle.h3 TypoGraphy) 10
+    , commonTextView state push (getString YOUR_FEEDBACK_HELPS_US) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 15
+      ](mapWithIndex (\_ item ->
+          linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , margin $ MarginHorizontal 5 5
+          , onClick push $ const $ RateClick item
+          ][imageView
+              [ height $ V 30
+              , width $ V 30
+              , accessibilityHint $ (show item <> "star" ) <> if item <= state.data.ratingViewState.selectedRating then " : Selected " else " : Un Selected "
+              , accessibility if state.props.currentStage == RideRating then DISABLE else ENABLE
+              , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+                                      else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+              ]
+          ]) [1,2,3,4,5])
+  ]
+
+didYouFaceIssue :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+didYouFaceIssue state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 8.0
+  , stroke $ "1,"<>Color.grey800
+  , orientation VERTICAL
+  , padding $ Padding 10 10 10 10
+  ][  commonTextView state push (if state.props.isNightTime then (getString DID_YOU_HAVE_A_SAFE_JOURNEY) else (getString DID_YOU_FACE_ANY_ISSUE)) Color.black800 (FontStyle.h3 TypoGraphy) 0
+    , commonTextView state push (if state.props.isNightTime then (getString TRIP_WAS_SAFE_AND_WORRY_FREE) else (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY)) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
+    , yesNoRadioButton state push
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 15
+      , orientation VERTICAL
+      , visibility if state.props.nightRideSafetyPopUpVisibility then VISIBLE else GONE
+      ](mapWithIndex (\ index item -> 
+          linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ PaddingHorizontal 10 10
+          , orientation VERTICAL
+          , onClick push $ const $ IssueReportIndex index
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , margin $ MarginBottom 15
+              ][  textView
+                  [ height WRAP_CONTENT
+                  , text item
+                  , color Color.black900
+                  , weight 1.0
+                  , textSize FontSize.a_14
+                  , fontStyle $ FontStyle.medium TypoGraphy
+                  ]
+                , imageView
+                  [ width $ V 15
+                  , height $ V 15
+                  , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                  ]
+              ]
+            , linearLayout
+              [ width MATCH_PARENT
+              , height $ V 1
+              , background Color.grey900
+              , margin $ MarginBottom 15
+              , visibility if index == 0 then VISIBLE else GONE
+              ][]
+          ]) [getString REPORT_ISSUE_, getString GET_CALLBACK_FROM_US])
+  ]
+
+
+completedRideDetails :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+completedRideDetails state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ V ((screenHeight unit)/ 2)
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
+  , gravity CENTER
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      , layoutGravity "right"
+      , padding $ PaddingTop safeMarginTop
+      ][  imageView
+          [ height $ V 40
+          , width $ V 40
+          , accessibility if state.props.currentStage == RideRating then DISABLE else ENABLE
+          , accessibilityHint "Contact Support : Button"
+          , imageWithFallback $ "ny_ic_headphone_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_headphone_white.png"
+          , onClick push $ const Support
+          ]
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , weight 1.0
+      , orientation VERTICAL
+      , gravity CENTER
+      , accessibility DISABLE
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString RIDE_COMPLETED
+          , color Color.grey900
+          ] <> FontStyle.h1 TypoGraphy
+        , linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ textView
+              [ text $ "₹" <> show state.data.finalAmount
+              , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> show state.data.finalAmount
+              , accessibility ENABLE
+              , color Color.white900
+              , textSize FontSize.a_72
+              , width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , fontStyle $ FontStyle.bold LanguageStyle
+              ]
+          , textView
+              [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> show state.data.driverInfoCardState.price <> " To ₹" <> show state.data.finalAmount
+              , accessibility ENABLE
+              , color Color.white900
+              , textSize FontSize.a_28
+              , margin $ Margin 8 5 0 0
+              , accessibility DISABLE
+              , width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , fontStyle $ FontStyle.medium LanguageStyle
+              , lineHeight "40"
+              , color Color.black600
+              , visibility if state.data.finalAmount /= state.data.driverInfoCardState.price then VISIBLE else GONE
+              ]
+          ]
+       -- , fareUpdatedView state push
+
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height $ V 1
+      , background Color.black800
+      ][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      , gravity CENTER_VERTICAL
+      , onClick push $ const RideDetails
+      , accessibility if state.props.currentStage == RideRating then DISABLE else ENABLE
+      , accessibilityHint "Ride Details : Button"
+      ][  textView
+          [ height WRAP_CONTENT
+          , text $ getString RIDE_DETAILS
+          , color Color.white900
+          , weight 1.0
+          , textSize FontSize.a_14
+          , fontStyle $ FontStyle.medium TypoGraphy
+          ]
+        , imageView
+          [ width $ V 18
+          , height $ V 18
+          , imageWithFallback "ny_ic_chevron_right_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right_white.png"
+          ]
+      ]
+  ]
+
+
+
+reportIssueView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+reportIssueView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (reportIssuePopUpConfig state)]
+
+yesNoRadioButton :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+yesNoRadioButton state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ PaddingHorizontal 10 10
+  , margin $ MarginVertical 15 10
+  , gravity CENTER
+  ](mapWithIndex (\index item ->
+      linearLayout
+      [ weight 1.0
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 8.0
+      , stroke $ "1,"<> if state.data.ratingViewState.selectedYesNoButton == index then Color.blue900 else Color.grey800
+      , background if state.data.ratingViewState.selectedYesNoButton == index then Color.blue600 else Color.white900
+      , gravity CENTER
+      , onClick push $ const $ SelectButton index
+      , margin $ MarginLeft if index == 0 then 0 else 10
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text item
+          , color Color.black800
+          , padding $ Padding 10 12 10 12
+          ] <> FontStyle.subHeading1 TypoGraphy
+      ]
+    ) [(getString YES), (getString NO)])
+
+issueFacedAndRateView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+issueFacedAndRateView state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , weight 1.0
+  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push
+        else rateExperienceView state push
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , weight 1.0
+      , gravity BOTTOM
+      , visibility if (not state.data.ratingViewState.issueFacedView || state.data.ratingViewState.doneButtonVisibility || (state.props.isNightTime && state.data.ratingViewState.selectedYesNoButton == 0)) && not (state.data.ratingViewState.selectedYesNoButton == 1 && state.props.isNightTime) then VISIBLE else GONE
+      , padding $ PaddingBottom safeMarginBottom
+      ][ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)]
+  ]
 
 commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
 commonTextView state push text' color' fontStyle marginTop =

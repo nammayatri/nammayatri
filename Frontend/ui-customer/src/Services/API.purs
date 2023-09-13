@@ -1191,6 +1191,7 @@ newtype FeedbackReq = FeedbackReq
   { rating :: Int
   , rideId :: String
   , feedbackDetails :: String
+  , issueId :: String 
   }
 
 newtype FeedbackRes = FeedbackRes
@@ -1552,6 +1553,7 @@ newtype SendIssueReq = SendIssueReq
     contactEmail :: Maybe String
   , rideBookingId :: Maybe String
   , issue :: Issue
+  , rideId :: Maybe String
   }
 
 newtype Issue = Issue
@@ -1561,7 +1563,7 @@ newtype Issue = Issue
   }
 
 newtype SendIssueRes = SendIssueRes {
-    result :: String
+    issueId :: String
   }
 
 instance makeSendIssueReq :: RestEndpoint SendIssueReq SendIssueRes where

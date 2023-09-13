@@ -121,6 +121,7 @@ initData = {
         issueFacedView : false,
         issueReason : Nothing,
         issueDescription : "",
+        issueId : "",
         rideBookingRes : dummyRideBooking
     }
     , config : DC.config
@@ -130,6 +131,8 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    ,  nightRideSafetyPopUpVisibility : false
+    ,  isNightTime : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false
