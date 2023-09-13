@@ -837,6 +837,7 @@ ratingCardViewState state = {
   , showFeedbackPill : true
   , overallFeedbackArray : [(getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE),(getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING)]
   , accessibility : ENABLE
+  , closeImgVisible : GONE
 }
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
