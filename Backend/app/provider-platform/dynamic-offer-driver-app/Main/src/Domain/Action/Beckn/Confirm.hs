@@ -266,6 +266,8 @@ handler transporter req quote = do
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
+            uiDistanceCalculationWithAccuracy = Nothing,
+            uiDistanceCalculationWithoutAccuracy = Nothing,
             driverGoHomeRequestId = ghrId
           }
 
