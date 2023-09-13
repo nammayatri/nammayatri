@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek, DisabilityType(..))
+import Screens.Types (AllocationData, YoutubeData, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex) as DA
@@ -28,7 +28,7 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 
 import MerchantConfig.Utils
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), fold) as DA
@@ -47,7 +47,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -61,7 +61,6 @@ import Prelude (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
 import Effect.Uncurried (EffectFn1(..))
-import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Services.API(PaymentPagePayload)
@@ -119,8 +118,6 @@ foreign import isYesterday :: String -> Boolean
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
-foreign import getPastDays :: Int -> Array LeaderBoardDay
-foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
 foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int

@@ -226,7 +226,6 @@ foreign import methodArgumentCount :: String -> Int
 foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
-foreign import getAllDates :: Fn1 Int (Array DateObj)
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
