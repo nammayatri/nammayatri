@@ -58,6 +58,8 @@ mkPersist
       mandateMaxAmount HighPrecMoney Maybe
       mandateStartDate UTCTime Maybe
       mandateEndDate UTCTime Maybe
+      bankErrorCode Text Maybe
+      bankErrorMessage Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

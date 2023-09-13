@@ -17,6 +17,10 @@ data Invoice = Invoice
     invoiceShortId :: Text,
     driverFeeId :: Id DF.DriverFee,
     invoiceStatus :: InvoiceStatus,
+    paymentMode :: InvoicePaymentMode,
+    bankErrorMessage :: Maybe Text,
+    bankErrorCode :: Maybe Text,
+    bankErrorUpdatedAt :: Maybe UTCTime,
     maxMandateAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -25,7 +29,10 @@ data Invoice = Invoice
 
 data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
 
+data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
+
 $(mkBeamInstancesForEnum ''InvoiceStatus)
+$(mkBeamInstancesForEnum ''InvoicePaymentMode)
 
 instance FromHttpApiData InvoiceStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -33,6 +40,16 @@ instance FromHttpApiData InvoiceStatus where
   parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
 
 instance ToHttpApiData InvoiceStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance FromHttpApiData InvoicePaymentMode where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData InvoicePaymentMode where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode

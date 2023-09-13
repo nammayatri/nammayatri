@@ -127,6 +127,10 @@ groupDriverFeeByInvoices driverFees_ = do
           driverFeeId = driverFee.id,
           invoiceStatus = INV.ACTIVE_INVOICE,
           maxMandateAmount = Nothing,
+          paymentMode = INV.MANUAL_INVOICE, -- critical point :- should we pass the manual here or hardcode ---,
+          bankErrorCode = Nothing,
+          bankErrorMessage = Nothing,
+          bankErrorUpdatedAt = Nothing,
           updatedAt = now,
           createdAt = now
         }

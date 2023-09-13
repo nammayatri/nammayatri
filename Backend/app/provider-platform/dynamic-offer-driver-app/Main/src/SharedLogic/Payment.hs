@@ -54,9 +54,10 @@ createOrder ::
   (Id DP.Person, Id DM.Merchant) ->
   [DriverFee] ->
   Maybe MandateOrder ->
+  INV.InvoicePaymentMode ->
   Maybe (Id INV.Invoice, Text) ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = do
+createOrder (driverId, merchantId) driverFees mbMandateOrder invoicePaymentMode existingInvoice = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -68,7 +69,7 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
-      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) <$> driverFees
+      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
         CreateOrderReq
@@ -94,16 +95,20 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId) driverFees mbMandateOrder Nothing -- call same function with no existing order
+      createOrder (driverId, merchantId) driverFees mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
 
-mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> DriverFee -> INV.Invoice
-mkInvoiceAgainstDriverFee id shortId now maxMandateAmount driverFee =
+mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
+mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
   INV.Invoice
     { id = Id id,
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
       invoiceStatus = INV.ACTIVE_INVOICE,
       maxMandateAmount,
+      paymentMode,
+      bankErrorCode = Nothing,
+      bankErrorMessage = Nothing,
+      bankErrorUpdatedAt = Nothing,
       updatedAt = now,
       createdAt = now
     }
