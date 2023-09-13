@@ -36,6 +36,7 @@ library
       Dashboard.ProviderPlatform.Issue
       Dashboard.ProviderPlatform.Merchant
       Dashboard.ProviderPlatform.Message
+      Dashboard.ProviderPlatform.Revenue
       Dashboard.ProviderPlatform.Ride
       Dashboard.ProviderPlatform.Volunteer
       Dashboard.RiderPlatform.Customer
