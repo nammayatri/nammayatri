@@ -920,7 +920,7 @@ callSupportConfig state = let
     }
   , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
-    , margin = (Margin 24 12 24 32)
+    , margin = (Margin 24 12 24 12)
     , color = Color.black700
     }
   , option1 {
@@ -1138,7 +1138,8 @@ rideCompletedCardConfig state = let
           infoPill {
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
             image = "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png",
-            imageVis = VISIBLE
+            imageVis = VISIBLE,
+            visible = if state.data.rideRatingState.distanceDifference == 0 then GONE else VISIBLE
           },
           bottomText =  getString RIDE_DETAILS
         },
