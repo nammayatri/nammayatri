@@ -1,6 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-
 module DBSync.DBSync where
 
 import qualified Config.Env as Env
@@ -78,13 +75,13 @@ parseDBCommand dbStreamKey entries =
 
     getActionAndModelName dbCommandByteString = do
       case A.decode $ BL.fromStrict dbCommandByteString of
-        Just decodedDBCommandObject@(A.Object o) ->
+        Just _decodedDBCommandObject@(A.Object o) ->
           let mbAction = case HM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
               mbModel = case HM.lookup "contents" o of
-                Just commandArray@(A.Array a) -> case V.last a of
-                  commandObject@(A.Object command) -> case HM.lookup "tag" command of
+                Just _commandArray@(A.Array a) -> case V.last a of
+                  _commandObject@(A.Object command) -> case HM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing
@@ -109,7 +106,7 @@ runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(Upda
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
-  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
+  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
@@ -133,7 +130,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc)
       else pure (length cSucc)
   {- run updates parallel -}
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -156,7 +153,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
   {- run deletes parallel -}
-  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
+  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) dbStreamKey deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
   void $
     if null dSucc
@@ -188,7 +185,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 process :: Text -> Integer -> Flow Int
 process dbStreamKey count = do
   {- TODO: Need To write CPU Latencies -}
-  beforeProcess <- EL.getCurrentDateInMillis
+  _beforeProcess <- EL.getCurrentDateInMillis
   {- read command if available from stream -}
   commands <- peekDBCommand dbStreamKey count
   case commands of
@@ -281,7 +278,7 @@ startDBSync = do
     rateLimit config history count = do
       time <- EL.getCurrentDateInMillis
       let (history', waitTime) = tryRateLimiter (_rateLimitN config) (_rateLimitWindow config) history time count
-      EL.runIO $ delay 20000
+      EL.runIO $ delay =<< Env.getDrainerExecutionDelay
       void $
         if waitTime == 0
           then pure ()

@@ -96,6 +96,7 @@ library
     , http-client
     , http-client-tls
     , http-types
+    , hw-kafka-client
     , juspay-extra
     , lens
     , mobility-core
@@ -179,6 +180,7 @@ executable rider-app-drainer-exe
     , http-client
     , http-client-tls
     , http-types
+    , hw-kafka-client
     , juspay-extra
     , lens
     , mobility-core

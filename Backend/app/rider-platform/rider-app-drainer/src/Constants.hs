@@ -53,3 +53,12 @@ drainerFailureRetryDelayEnvKey = "DRAINER_FAILURE_RETRY_DELAY"
 
 maxDbFailureRetries :: String
 maxDbFailureRetries = "MAX_DB_FAILURE_RETRIES"
+
+drainerExecutionDelayEnvKey :: String
+drainerExecutionDelayEnvKey = "DRAINER_EXECUTION_DELAY"
+
+threadPerPodCount :: String
+threadPerPodCount = "THREAD_PER_POD_COUNT"
+
+pushToKafkaEnvKey :: String
+pushToKafkaEnvKey = "PUSH_TO_KAFKA"

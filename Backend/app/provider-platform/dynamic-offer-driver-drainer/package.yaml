@@ -91,6 +91,7 @@ dependencies:
   - wai-middleware-prometheus
   - warp
   - warp-tls
+  - hw-kafka-client
 
 ghc-options:
   - -fwrite-ide-info

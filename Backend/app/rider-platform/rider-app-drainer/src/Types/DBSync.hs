@@ -20,6 +20,7 @@ where
 import EulerHS.KVConnector.DBSync
 import EulerHS.Language as EL
 import EulerHS.Prelude
+import Kafka.Producer as Producer
 import Types.DBSync.Create as X
 import Types.DBSync.Delete as X
 import Types.DBSync.Update as X
@@ -34,7 +35,8 @@ data DBSyncConfig = DBSyncConfig
 
 data Env = Env
   { _streamRedisInfo :: Text,
-    _counterHandles :: Event.DBSyncCounterHandler
+    _counterHandles :: Event.DBSyncCounterHandler,
+    _kafkaConnection :: Producer.KafkaProducer
   }
 
 type Flow = EL.ReaderFlow Env
