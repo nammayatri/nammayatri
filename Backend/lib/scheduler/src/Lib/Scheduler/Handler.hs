@@ -21,6 +21,7 @@ where
 import qualified Control.Monad.Catch as C
 import Control.Monad.Trans.Cont
 import Data.Singletons (fromSing)
+import qualified Data.Time as T hiding (getCurrentTime)
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
@@ -136,6 +137,10 @@ releaseLock jobId = Hedis.unlockRedis jobId.getId
 
 executeTask :: SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
 executeTask SchedulerHandle {..} (AnyJob job) = do
+  let begTime = job.scheduledAt
+  endTime <- getCurrentTime
+  let diff = T.diffUTCTime endTime begTime
+  logDebug $ "diffTime in picking up the job : " <> show (nominalDiffTimeToSeconds diff)
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution $ "No handler function found for the job type = " <> show (fromSing $ jobType $ jobInfo job)
     Just handlerFunc_ -> do
