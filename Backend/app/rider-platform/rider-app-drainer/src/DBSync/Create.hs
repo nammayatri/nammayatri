@@ -77,7 +77,7 @@ runCreateCommands cmds streamKey = do
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       maxRetries <- EL.runIO getMaxRetries
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
-
+    -- If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
     runCreateInKafka dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -90,8 +90,15 @@ runCreateCommands cmds streamKey = do
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
               res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
-              either (\_ -> pure [Left entryIds]) (\_ -> pure [Right entryIds]) res
-
+              either
+                ( \_ -> do
+                    void $ publishDBSyncMetric Event.KafkaPushFailure
+                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                    pure [Left entryIds]
+                )
+                (\_ -> pure [Right entryIds])
+                res
+    -- Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
     runCreateInKafkaAndDb dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'

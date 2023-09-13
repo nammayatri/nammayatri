@@ -114,7 +114,7 @@ runUpdateCommands (cmd, val) streamKey = do
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
       runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
-
+    -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
     runUpdateInKafka id value streamKey' setClause whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -123,8 +123,15 @@ runUpdateCommands (cmd, val) streamKey = do
           let setAndWhere = getDbUpdateDataJson model (jsonKeyValueUpdates setClause) whereClause
           Env {..} <- ask
           res <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection setAndWhere streamKey'
-          either (\err -> pure $ Left (UnexpectedError err, id)) (\_ -> pure $ Right id) res
-
+          either
+            ( \err -> do
+                void $ publishDBSyncMetric Event.KafkaPushFailure
+                EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                pure $ Left (UnexpectedError err, id)
+            )
+            (\_ -> pure $ Right id)
+            res
+    -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
     runUpdateInKafkaAndDb id value streamKey' setClause whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -133,7 +140,7 @@ runUpdateCommands (cmd, val) streamKey = do
           res <- runUpdateInKafka id value streamKey' setClause whereClause model dbConf
           case res of
             Left (err, id') -> pure $ Left (err, id')
-            Right id' -> pure $ Right id'
+            Right _ -> runUpdate id value streamKey' setClause whereClause model dbConf
 
     runUpdateWithRetries id value setClause whereClause model dbConf retryIndex maxRetries = do
       res <- updateDB dbConf Nothing setClause whereClause value
