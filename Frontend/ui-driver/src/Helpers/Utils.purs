@@ -258,7 +258,7 @@ getRequiredTag prop tag accessibilityTag = do
     "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
-    "Purple_Ride" -> case (runFn4 getRideLabelConfig Just Nothing prop ("PURPLE")) of
+    "Purple_Ride" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Purple_Ride")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
     tag' -> do

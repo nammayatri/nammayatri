@@ -100,7 +100,7 @@ feedbackPillView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
-    , padding (PaddingVertical 16 16)
+    , padding (PaddingBottom 16)
     ](map  
       (\list1 ->  
         linearLayout
@@ -194,7 +194,7 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , padding (PaddingTop 16)
+    , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
     ][ imageView [
         imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall)<>"ny_ic_driver_avatar.png"
@@ -224,6 +224,7 @@ starRatingView state push =
       , imageView [
           width $ V 16 
         , height $ V 16 
+        , accessibility DISABLE
         , onClick push $ const BackPressed
         , gravity CENTER
         , imageWithFallback $ "ny_ic_cancel_unfilled," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel_unfilled.png"

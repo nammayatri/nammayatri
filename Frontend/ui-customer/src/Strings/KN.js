@@ -214,7 +214,7 @@ const kannadaStrings = {
   "METERS_AWAY_FROM_YOUR_DESTINATION": " ಮೀ ದೂರದಲ್ಲಿದ್ದೀರಿ!",
   "BOOK_RIDE_": "ರೈಡ್ ಬುಕ್ ಮಾಡಿ",
   "LOCATION_UNSERVICEABLE": "ಸ್ಥಳವು ಸೇವೆಗೆ ಅರ್ಹವಲ್ಲ",
-  "CURRENTLY_WE_ARE_LIVE_IN_": "ನಾವು ಇನ್ನೂ ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ವಾಸಿಸುತ್ತಿಲ್ಲ!\n\n ನೀವು ಮೆನುವಿನಿಂದ ಸವಾರಿ ಇತಿಹಾಸ ಮತ್ತು ಇತರ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಪ್ರವೇಶಿಸಬಹುದು",
+  "CURRENTLY_WE_ARE_LIVE_IN_": "ನಾವು ಇನ್ನೂ ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ವಾಸಿಸುತ್ತಿಲ್ಲ!\nನೀವು ಮೆನುವಿನಿಂದ ಸವಾರಿ ಇತಿಹಾಸ ಮತ್ತು ಇತರ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಪ್ರವೇಶಿಸಬಹುದು",
   "CHANGE_LOCATION": "ಸ್ಥಳವನ್ನು ಬದಲಾಯಿಸಿ",
   "IF_YOU_STILL_WANNA_BOOK_RIDE_CLICK_CONTINUE_AND_START_BOOKING_THE_RIDE": "ನೀವು ಇನ್ನೂ ರೈಡ್ ಅನ್ನು ಬುಕ್ ಮಾಡಲು ಬಯಸಿದರೆ ಮುಂದುವರಿಸಿ ಕ್ಲಿಕ್ ಮಾಡಿ ಮತ್ತು ರೈಡ್ ಅನ್ನು ಬುಕ್ ಮಾಡಲು ಪ್ರಾರಂಭಿಸಿ",
   "THE_TRIP_IS_VERY_SHORT_AND_JUST_TAKE": "ಪ್ರವಾಸವು ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ ಮತ್ತು ಪೂರ್ಣಗೊಳಿಸಲು ಕೇವಲ ",

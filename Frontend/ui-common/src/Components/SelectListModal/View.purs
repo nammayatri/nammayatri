@@ -290,7 +290,7 @@ someOtherReason config push index =
               , singleLine false
               , textSize FontSize.a_14
               , padding $ PaddingBottom 0
-              , pattern "[A-Za-z0-9 ]*,100"
+              , pattern "[A-Za-z0-9.,' ]*,100"
               , id (getNewIDWithTag "OtherReasonEditText")  
               , onChange push (TextChanged ( getNewIDWithTag "OtherReasonEditText") )
               ]
@@ -338,7 +338,7 @@ technicalGlitchDescription config push index =
               , cornerRadius 4.0
               , singleLine false
               , onChange push (TextChanged ( getNewIDWithTag "TechGlitchEditText") )
-              , pattern "[A-Za-z0-9 ]*,100"
+              , pattern "[A-Za-z0-9.,' ]*,100"
               ] <> (FontStyle.body1 LanguageStyle)
                 <> (if os == "ANDROID" then [id (getNewIDWithTag "TechGlitchEditText")] else []))
             ]

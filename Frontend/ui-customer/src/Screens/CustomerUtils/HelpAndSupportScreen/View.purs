@@ -140,11 +140,11 @@ recentRideView state push=
   , width MATCH_PARENT
   , orientation VERTICAL
   , stroke ("1," <> Color.greyLight)
-  , height $ V 174
+  , height WRAP_CONTENT
   , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
   ][
     linearLayout
-    [ height $ V 134
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
     ][  imageView

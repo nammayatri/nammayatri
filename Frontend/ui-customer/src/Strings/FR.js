@@ -222,7 +222,7 @@ export function getStringValue(key) {
     "BOOK_RIDE_" : "Book Ride",
     "CANCEL_AUTO_ASSIGNING" : "Annuler l'attribution automatique",
     "LOCATION_UNSERVICEABLE" : "Emplacement inutilisable",
-    "CURRENTLY_WE_ARE_LIVE_IN_" : "Nous ne sommes pas encore en ligne dans votre région !\n\n Vous pouvez accéder à l'historique des trajets et à d'autres paramètres à partir du menu",
+    "CURRENTLY_WE_ARE_LIVE_IN_" : "Nous ne sommes pas encore en ligne dans votre région !\n Vous pouvez accéder à l'historique des trajets et à d'autres paramètres à partir du menu",
     "CHANGE_LOCATION" : "Changer de lieu",
     "AUTO_ACCEPTING_SELECTED_RIDE" : "Auto acceptant dans",
     "THE_TRIP_IS_VERY_SHORT_AND_JUST_TAKE" : "Le voyage est très court et prend juste",
