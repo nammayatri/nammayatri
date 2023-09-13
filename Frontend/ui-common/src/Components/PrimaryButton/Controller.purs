@@ -23,6 +23,7 @@ import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
+import PrestoDOM.Animation (Animation(..))
 
 data Action = OnClick | NoAction
 
@@ -74,6 +75,7 @@ type ImageConfig =
   , margin :: Margin
   , padding :: Padding
   , gravity :: Gravity
+  , animation :: Array Animation
   }
 
 type LottieConfig = 
@@ -116,6 +118,7 @@ config =   {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
     , gravity : LEFT
+    , animation : []
     }
   , isPrefixImage : false
   , prefixImageConfig :
@@ -125,6 +128,7 @@ config =   {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
     , gravity : LEFT
+    , animation : []
     }
   , id : ""
   , enableLoader : false

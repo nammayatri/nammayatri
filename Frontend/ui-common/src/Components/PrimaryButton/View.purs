@@ -25,6 +25,7 @@ import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
+import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -116,7 +117,7 @@ view push config =
 
 prefixImageLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 prefixImageLayout config =
-  imageView
+  PrestoAnim.animationSet config.prefixImageConfig.animation $ imageView
     [ height config.prefixImageConfig.height
     , width $ if config.isPrefixImage then config.prefixImageConfig.width else V 0
     , imageWithFallback config.prefixImageConfig.imageUrl
@@ -127,7 +128,7 @@ prefixImageLayout config =
 
 suffixImageLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 suffixImageLayout config =
-  imageView
+  PrestoAnim.animationSet config.suffixImageConfig.animation $  imageView
     [ height config.suffixImageConfig.height
     , width $ if config.isSuffixImage then config.suffixImageConfig.width else V 0
     , imageWithFallback config.suffixImageConfig.imageUrl
