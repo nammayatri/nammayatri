@@ -629,7 +629,13 @@ activateGoHomeFeature (driverId, merchantId) driverHomeLocationId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
-  driverLocation <- QDriverLocation.findById driverId >>= fromMaybeM LocationNotFound
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  driverLocation <- do
+    if enableLocationTrackingService
+      then do
+        mbDriverLocation <- LF.driversLocation [driverId]
+        listToMaybe mbDriverLocation & fromMaybeM LocationNotFound
+      else QDriverLocation.findById driverId >>= fromMaybeM LocationNotFound
   let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
