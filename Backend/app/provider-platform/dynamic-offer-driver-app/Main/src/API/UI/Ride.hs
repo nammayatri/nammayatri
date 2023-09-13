@@ -96,8 +96,10 @@ data StartRideReq = StartRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-newtype EndRideReq = EndRideReq
-  { point :: LatLong
+data EndRideReq = EndRideReq
+  { point :: LatLong,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -140,9 +142,9 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
   return ride
 
 endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
-endRide (requestorId, merchantId) rideId EndRideReq {point} = withFlowHandlerAPI $ do
+endRide (requestorId, merchantId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {point, requestor}
+  let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 

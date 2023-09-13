@@ -250,8 +250,8 @@ handler transporter req quote = do
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
-            distanceCalculation1 = Nothing,
-            distanceCalculation2 = Nothing
+            uiDistanceCalculationWithAccuracy = Nothing,
+            uiDistanceCalculationWithoutAccuracy = Nothing
           }
 
     buildTrackingUrl rideId = do
