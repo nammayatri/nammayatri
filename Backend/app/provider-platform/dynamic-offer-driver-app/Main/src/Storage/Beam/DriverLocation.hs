@@ -12,7 +12,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.DriverLocation where
 
@@ -22,8 +21,9 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+import qualified Database.Beam.Postgres as B
 import qualified Database.Beam.Schema.Tables as B
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
@@ -43,6 +43,7 @@ data DriverLocationT f = DriverLocationT
   }
   deriving (Generic, B.Beamable)
 
+-- FIXME we can't use templates here because of unsafePerformIO in getLocationSchemaName
 driverLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
 driverLocationTable =
   B.setEntitySchema (Just getLocationSchemaName)
@@ -92,17 +93,18 @@ driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
   M.empty
 
--- FIXME add signature
+toRowExpression :: Text -> LatLong -> UTCTime -> UTCTime -> Text -> DriverLocationT (B.QExpr B.Postgres s)
 toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
-    (B.val_ personId)
-    (B.val_ latLong.lat)
-    (B.val_ latLong.lon)
-    (getPoint (latLong.lat, latLong.lon))
-    (B.val_ updateTime)
-    (B.val_ now)
-    (B.val_ now)
-    (B.val_ merchantId)
+    { driverId = B.val_ personId,
+      lat = B.val_ latLong.lat,
+      lon = B.val_ latLong.lon,
+      point = getPoint (latLong.lat, latLong.lon),
+      coordinatesCalculatedAt = B.val_ updateTime,
+      createdAt = B.val_ now,
+      updatedAt = B.val_ now,
+      merchantId = B.val_ merchantId
+    }
 
 instance Serialize DriverLocation where
   put = error "undefined"

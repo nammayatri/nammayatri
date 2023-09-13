@@ -16,19 +16,15 @@
 
 module Storage.Beam.Notification where
 
-import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils ()
-import Sequelize
 import Tools.Beam.UtilsTH
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.NotificationStatus where

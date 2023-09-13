@@ -17,7 +17,6 @@
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
 import qualified Database.Beam as B
-import Tools.Beam.UtilsTH
 import Kernel.External.AadhaarVerification
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types

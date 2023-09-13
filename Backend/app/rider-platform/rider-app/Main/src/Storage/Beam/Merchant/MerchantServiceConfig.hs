@@ -19,7 +19,6 @@ module Storage.Beam.Merchant.MerchantServiceConfig where
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import Tools.Beam.UtilsTH
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps

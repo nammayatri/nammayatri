@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as M
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstancesWithTModifier, mkTableInstances)
+import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,
