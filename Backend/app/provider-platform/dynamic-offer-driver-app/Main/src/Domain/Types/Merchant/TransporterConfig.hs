@@ -76,7 +76,8 @@ data TransporterConfigD u = TransporterConfig
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     isAvoidToll :: Bool,
-    aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig
+    aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
+    specialZoneBookingOtpExpiry :: Int
   }
   deriving (Generic, Show)
 
