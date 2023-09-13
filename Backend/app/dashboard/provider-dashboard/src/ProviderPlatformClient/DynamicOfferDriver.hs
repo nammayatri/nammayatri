@@ -29,6 +29,7 @@ import qualified Dashboard.ProviderPlatform.Issue as Issue
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Message
+import qualified Dashboard.ProviderPlatform.Revenue as Revenue
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
@@ -56,6 +57,7 @@ data DriverOfferAPIs = DriverOfferAPIs
     driverReferral :: DriverReferralAPIs,
     driverRegistration :: DriverRegistrationAPIs,
     issue :: IssueAPIs,
+    revenue :: RevenueAPIs,
     subscription :: SubscriptionAPIs
   }
 
@@ -169,6 +171,11 @@ data VolunteerAPIs = VolunteerAPIs
     assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
   }
 
+data RevenueAPIs = RevenueAPIs
+  { getCashCollectionHistory :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Euler.EulerClient Revenue.CashCollectionListRes,
+    getAllDriverFeeHistory :: Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.AllDriverFeeRes
+  }
+
 data IssueAPIs = IssueAPIs
   { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
     issueList :: Maybe Int -> Maybe Int -> Maybe Issue.IssueStatus -> Maybe (Id Issue.IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
@@ -199,6 +206,7 @@ mkDriverOfferAPIs merchantId token = do
   let message = MessageAPIs {..}
   let volunteer = VolunteerAPIs {..}
   let issue = IssueAPIs {..}
+  let revenue = RevenueAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
@@ -210,7 +218,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverReferralClient
       :<|> driverRegistrationClient
       :<|> volunteerClient
-      :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> issueClient
+      :<|> revenueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     planList
       :<|> planSelect
@@ -319,6 +328,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueAddComment
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack = issueClient
+
+    getCashCollectionHistory
+      :<|> getAllDriverFeeHistory = revenueClient
 
 callDriverOfferBPP ::
   forall m r b c.
