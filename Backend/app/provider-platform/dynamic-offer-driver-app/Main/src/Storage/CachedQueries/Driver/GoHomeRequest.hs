@@ -11,6 +11,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow)
+import Kernel.Storage.Hedis (withCrossAppRedis)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.App (MonadFlow)
 import Kernel.Types.CacheFlow
@@ -18,6 +19,7 @@ import Kernel.Types.Common (MonadTime (getCurrentTime), generateGUID)
 import Kernel.Types.Id (Id)
 import Kernel.Types.SlidingWindowCounters (PeriodType (Days))
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, getLocalCurrentTime)
+import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.SlidingWindowCounters (incrementPeriod)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -35,15 +37,17 @@ getDriverGoHomeRequestInfo driverId merchantId goHomeCfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let ghkey = makeGoHomeReqKey driverId
   currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantId merchantId >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
-  Hedis.safeGet ghkey >>= \case
-    Just ghrData -> do
-      if maybe False (\validTill -> validTill > currTime || ghrData.isOnRide) ghrData.validTill
-        then return ghrData
-        else checkInvalidReqData ghrData currTime ghkey driverId merchantId ghCfg expTime
-    Nothing -> do
-      flip whenJust (flip QDGR.finishWithStatus DDGR.FAILED . (.id)) =<< QDGR.findActive driverId
-      Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
-      return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
+  withCrossAppRedis $
+    Hedis.safeGet ghkey >>= \case
+      Just ghrData -> do
+        if maybe False (\validTill -> validTill > currTime || ghrData.isOnRide) ghrData.validTill
+          then return ghrData
+          else checkInvalidReqData ghrData currTime ghkey driverId merchantId ghCfg expTime
+      Nothing -> do
+        logDebug $ "Setting new CachedGoHomeRequest data as old data not found for driverId :" <> show driverId
+        flip whenJust (flip QDGR.finishWithStatus DDGR.FAILED . (.id)) =<< QDGR.findActive driverId
+        withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
+        return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
 checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id Merchant -> GoHomeConfig -> Int -> m CachedGoHomeRequest
 checkInvalidReqData ghrData currTime ghkey driverId merchantId goHomeCfg expTime = do
@@ -63,8 +67,9 @@ checkInvalidReqData ghrData currTime ghkey driverId merchantId goHomeCfg expTime
       Nothing -> do
         return ghrData
     else do
+      logDebug $ "Setting new CachedGoHomeRequest data as old data is expired for driverId :" <> show driverId
       whenJust (ghrData.driverGoHomeRequestId) $ flip QDGR.finishWithStatus DDGR.FAILED --Failing it as a default case as it's already a new day and old count does not matter.
-      Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
+      withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
 templateGoHomeData :: Maybe DriverGoHomeRequestStatus -> Int -> Maybe UTCTime -> Maybe (Id DriverGoHomeRequest) -> Bool -> Maybe UTCTime -> UTCTime -> CachedGoHomeRequest
@@ -87,7 +92,7 @@ activateDriverGoHomeRequest merchantId driverId driverHomeLoc goHomeConfig ghInf
   guId <- generateGUID
   _ <- QDGR.create =<< buildDriverGoHomeRequest guId driverHomeLoc
   let vTill = addUTCTime (fromIntegral activeTime) currTime
-  Hedis.setExp ghKey (templateGoHomeData (Just DDGR.ACTIVE) ghInfo.cnt (Just vTill) (Just guId) False (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData (Just DDGR.ACTIVE) ghInfo.cnt (Just vTill) (Just guId) False (Just ghInfo.goHomeReferenceTime) currTime) expTime
   where
     buildDriverGoHomeRequest guId driverHomeLocation = do
       let id = guId
@@ -110,14 +115,14 @@ deactivateDriverGoHomeRequest merchantId driverId stat ghInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   driverGoHomeReqId <- fromMaybeM (InternalError "Could not Find DriverGoHomeRequestId") ghInfo.driverGoHomeRequestId
   QDGR.finishWithStatus driverGoHomeReqId stat
-  Hedis.setExp ghKey (templateGoHomeData Nothing (bool ghInfo.cnt (ghInfo.cnt - 1) (stat == DDGR.SUCCESS)) Nothing Nothing False (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData Nothing (bool ghInfo.cnt (ghInfo.cnt - 1) (stat == DDGR.SUCCESS)) Nothing Nothing False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
 resetDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> GoHomeConfig -> CachedGoHomeRequest -> m ()
 resetDriverGoHomeRequest merchantId driverId goHomeConfig ghInfo = do
   currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantId merchantId >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime (fromIntegral goHomeConfig.activeTime) currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime (fromIntegral goHomeConfig.activeTime) currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
 increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> m ()
 increaseDriverGoHomeRequestCount merchantId driverId = do
@@ -125,7 +130,7 @@ increaseDriverGoHomeRequestCount merchantId driverId = do
   let ghKey = makeGoHomeReqKey driverId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantId Nothing
-  Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
 setDriverGoHomeIsOnRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Driver -> Id Merchant -> m ()
 setDriverGoHomeIsOnRide driverId merchantId = do
@@ -133,4 +138,4 @@ setDriverGoHomeIsOnRide driverId merchantId = do
   let ghKey = makeGoHomeReqKey driverId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantId Nothing
-  Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt ghInfo.validTill ghInfo.driverGoHomeRequestId True (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt ghInfo.validTill ghInfo.driverGoHomeRequestId True (Just ghInfo.goHomeReferenceTime) currTime) expTime

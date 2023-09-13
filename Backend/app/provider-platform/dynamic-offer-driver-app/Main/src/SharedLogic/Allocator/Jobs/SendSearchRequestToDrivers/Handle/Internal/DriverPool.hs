@@ -134,7 +134,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
               logDebug $ "NormalDriverPoolBatch-" <> show normalDriverPoolBatch
               if length normalDriverPoolBatch < batchSize
                 then do
-                  filledBatch <- fillBatch searchReq.providerId normalDriverPool normalDriverPoolBatch intelligentPoolConfig goHomeConfig
+                  filledBatch <- fillBatch searchReq.providerId normalDriverPool normalDriverPoolBatch intelligentPoolConfig goHomeConfig blockListedDrivers
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure filledBatch
                 else do
@@ -208,11 +208,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1)
             else pure []
-        fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig goHomeConfig = do
+        fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig goHomeConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTry.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
           nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
+          let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
           transporterConfig <- TC.findByMerchantId merchantId
           (batch <>)
@@ -221,11 +222,11 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
                 let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
                   bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
-                    =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+                    =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
                 let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
-              Random -> pure $ take fillSize nonGoHomeDriversWithValidReqCount
+              Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCount
         cacheBatch batch = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id
