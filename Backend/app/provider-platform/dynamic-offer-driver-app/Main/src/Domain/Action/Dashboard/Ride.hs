@@ -371,7 +371,7 @@ currentActiveRide _ vehicleNumber = do
 bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId req = do
   alreadyInProcess :: Maybe Bool <- Redis.safeGet apiProcessKey
-  if isJust alreadyInProcess
+  if isNothing alreadyInProcess
     then do
       Redis.setExp apiProcessKey True 60
       merchant <- findMerchantByShortId merchantShortId
