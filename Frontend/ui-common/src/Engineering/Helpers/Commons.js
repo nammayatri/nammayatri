@@ -366,15 +366,68 @@ export const getDateFromObj = function (obj){
   return  yyyy + '-' + mm + '-' + dd;
 }
 
-
-export const getFormattedDate = function (obj) {
-  var date = getDateFromObj(obj);
-  return formatDates(new Date(date),"MMMM Do, YYYY");
+function getFormattedLanguage(language){
+  if (language == "EN_US") return "en-us";
+  else if (language == "HI_IN") return "hi-in";
+  else if (language == "KN_IN") return "kn-in";
+  else if (language == "TA_IN") return "ta-in";
+  else if (language == "BN_IN") return "bn-in";
+  else if (language == "ML_IN") return "ml-in";
+  else return "en-us";
 }
+
+export const getFormattedDate = function (str) {
+  var date = new Date(str);
+  const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+  return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
+}
+
+export const getPastDays = function (count) {
+  try {
+    let result = [];
+    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    for (var i = 0; i < count; i++) {
+      let d = new Date();
+      d.setDate(d.getDate() - i);
+      let obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: 'short' }), year: d.getFullYear() };
+      result.push(obj);
+    }
+    console.log(language, getFormattedLanguage(language))
+    console.log(result);
+    return result.reverse();
+  } catch (e) {
+    console.log("error in getPastDays", e);
+  }
+};
+
+export const getPastWeeks = function (count) {
+  try {
+    let result = []
+    var currentDate = new Date();
+    while (currentDate.getDay() != 0) {
+        currentDate.setDate(currentDate.getDate() - 1);
+    }
+    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    currentDate.setDate(currentDate.getDate() + 7);
+    for (var i = 0; i < count; i++) {
+      let dStart = new Date(currentDate);
+      let dEnd = new Date(currentDate);
+      dStart.setDate(dStart.getDate() - 7 * (i + 1));
+      dEnd.setDate(dEnd.getDate() - (7 * i + 1));
+      let obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
+                  startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: 'short' }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: 'short' }) }
+      result.push(obj)
+    }
+    console.log(result);
+    return result.reverse();
+  } catch (e) {
+    console.log("error in getPastWeeks", e);
+  }
+};
 
 // ---------------------------------- moment ---------------------------------------------
 
-function formatDates(date, format) {
+function formatDates(date, format, language) {
   const mappings = {
     'h': () => {
       var hours = date.getHours();
@@ -439,11 +492,11 @@ function formatDates(date, format) {
       return `${day}${daySuffix}`;
     },
     'MMM': () => {
-      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const month = date.toLocaleDateString(language, { month: 'short' });
       return `${month}`;
     },
     'MMMM': () => {
-      const month = date.toLocaleDateString('en-US', { month: 'long' });
+      const month = date.toLocaleDateString(language, { month: 'long' });
       return `${month}`;
     },
     'ddd': () => {

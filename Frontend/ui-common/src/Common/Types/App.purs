@@ -254,6 +254,22 @@ type DateObj = {
 , year :: Int
 }
 
+type CalendarDate = {
+    date :: Int
+  , utcDate :: String
+  , month :: String
+  , year :: Int
+}
+
+type CalendarWeek = {
+    startDate :: Int
+  , utcStartDate :: String
+  , endDate :: Int
+  , utcEndDate :: String
+  , startMonth :: String
+  , endMonth :: String
+}
+
 type CountryCodeObj = {
   countryName :: String 
   , countryCode :: String 

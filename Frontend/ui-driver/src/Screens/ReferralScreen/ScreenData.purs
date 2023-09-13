@@ -15,11 +15,12 @@
 
 module Screens.ReferralScreen.ScreenData where
 
-import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), LeaderBoardDay, LeaderBoardWeek, RankCardData)
+import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), RankCardData)
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
+import Common.Types.App (CalendarDate, CalendarWeek)
 
 initData :: ReferralScreenState
 initData =  {
@@ -72,7 +73,7 @@ dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 }
 dummyCurrentDriverData :: RankCardData
 dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155}
 
-dummyDay :: LeaderBoardDay
+dummyDay :: CalendarDate
 dummyDay = {
     date : 0
   , utcDate : ""
@@ -80,7 +81,7 @@ dummyDay = {
   , year : 0
 }
 
-dummyWeek :: LeaderBoardWeek
+dummyWeek :: CalendarWeek
 dummyWeek = {
     startDate : 0
   , utcStartDate : ""
