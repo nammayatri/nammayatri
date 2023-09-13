@@ -308,6 +308,8 @@ otpRideCreate driver otpCode booking = do
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
+            uiDistanceCalculationWithAccuracy = Nothing,
+            uiDistanceCalculationWithoutAccuracy = Nothing,
             driverGoHomeRequestId = ghrId
           }
 
