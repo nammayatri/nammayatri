@@ -41,6 +41,7 @@ getDriverGoHomeRequestInfo driverId merchantId goHomeCfg = do
         then return ghrData
         else checkInvalidReqData ghrData currTime ghkey driverId merchantId ghCfg expTime
     Nothing -> do
+      flip whenJust (flip QDGR.finishWithStatus DDGR.FAILED . (.id)) =<< QDGR.findActive driverId
       Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
