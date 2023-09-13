@@ -352,6 +352,11 @@ findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [S
 findAllPendingRegistrationDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
+-- add fee collection time later if req'd
+findAllByCollectorId :: MonadFlow m => Id Merchant -> Text -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
+findAllByCollectorId (Id merchantId) collectorId from to limit offset = do
+  findAllWithOptionsKV [Se.And [Se.Is BeamDF.merchantId $ Se.Eq merchantId, Se.Is BeamDF.collectedBy $ Se.Eq (Just collectorId), Se.Is BeamDF.updatedAt $ Se.GreaterThanOrEq from, Se.Is BeamDF.updatedAt $ Se.LessThanOrEq to]] (Se.Desc BeamDF.updatedAt) (Just limit) (Just offset)
+
 findAllByDriverFeeIds :: MonadFlow m => [Id DriverFee] -> m [DriverFee]
 findAllByDriverFeeIds driverFeeIds = do
   findAllWithKV
@@ -371,8 +376,20 @@ findLatestByFeeTypeAndStatus feeType status driverId = do
     Nothing
     <&> listToMaybe
 
-updateStatus :: MonadFlow m => DriverFeeStatus -> UTCTime -> Id DriverFee -> m ()
-updateStatus status now (Id driverFeeId) = do
+-- TODO : Merge relevant queries
+findAllByTimeMerchantAndStatus :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> [Domain.DriverFeeStatus] -> m [DriverFee]
+findAllByTimeMerchantAndStatus (Id merchantId) startTime endTime status = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.startTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.In status
+        ]
+    ]
+
+updateStatus :: MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
+updateStatus status (Id driverFeeId) now = do
   updateOneWithKV
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
