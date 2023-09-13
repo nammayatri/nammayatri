@@ -100,7 +100,7 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (RiderDetailsDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RiderDetails" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchReqLocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchReqLocation" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (SearchRequestForDriverDeleteOptions _ whereClause) -> runDeleteInKafka id val dbStreamKey whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (SearchRequestForDriverDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchRequestSpecialZoneDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchTryDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchTry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VehicleDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Vehicle" :: Text) =<< dbConf
@@ -116,7 +116,7 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
       runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
-
+    -- If KAFKA_PUSH is false then entry will be there in DB Else Delete entry in Kafka only.
     runDeleteInKafka id value dbstremKey whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -124,8 +124,15 @@ runDeleteCommands (cmd, val) dbStreamKey = do
         else do
           Env {..} <- ask
           res <- EL.runIO $ streamDriverDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
-          either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> pure $ Right id) res
-
+          either
+            ( \_ -> do
+                void $ publishDBSyncMetric Event.KafkaPushFailure
+                EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                pure $ Left (UnexpectedError "Kafka Error", id)
+            )
+            (\_ -> pure $ Right id)
+            res
+    -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
     runDeleteInKafkaAndDb id value dbStreamKey' whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
