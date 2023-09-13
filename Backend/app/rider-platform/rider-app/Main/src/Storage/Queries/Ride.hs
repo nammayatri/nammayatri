@@ -196,10 +196,10 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                   booking.merchantId B.==?. B.val_ (getId merchantID)
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
-                    B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ (driverMobileNumber)) mbDriverPhone)
-                    B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (defaultFrom)) mbFrom)
-                    B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (defaultTo)) mbTo)
-                    B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ (bookingStatus)) mbBookingStatus)
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
@@ -210,23 +210,22 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
     Right x -> do
       let rides = snd' <$> x
           persons = thd' <$> x
-      r <- catMaybes <$> (mapM fromTType' (rides))
-      p <- catMaybes <$> (mapM fromTType' (persons))
+      r <- catMaybes <$> mapM fromTType' rides
+      p <- catMaybes <$> mapM fromTType' persons
       pure $ zip3 p r (mkBookingStatus now <$> r)
     Left _ -> pure []
   pure $ mkRideItem <$> res'
   where
     mkBookingStatusVal ride =
-      ( B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.RCOMPLETED) $
-          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING) $
-            B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING_6HRS) $
-              B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.rideStartTime B.<=. (B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.ONGOING) $
-                B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.RCANCELLED) (B.val_ Common.ONGOING_6HRS)
-      )
+      B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.RCOMPLETED) $
+        B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
+          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
+            B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.rideStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
+              B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.RCANCELLED) (B.val_ Common.ONGOING_6HRS)
     mkBookingStatus now' ride
       | ride.status == Ride.COMPLETED = Common.RCOMPLETED
-      | ride.status == Ride.NEW && not (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING
-      | ride.status == Ride.NEW && (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING_6HRS
+      | ride.status == Ride.NEW && not (ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.UPCOMING
+      | ride.status == Ride.NEW && (ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.UPCOMING_6HRS
       | ride.status == Ride.INPROGRESS && not (ride.rideStartTime <= Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.RCANCELLED
       | otherwise = Common.ONGOING_6HRS
@@ -260,7 +259,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
 
   rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) Nothing Nothing
   let filteredBookings = matchBookingsWithRides bookings rides
-  let filteredB = (filterBookingsWithConditions filteredBookings)
+  let filteredB = filterBookingsWithConditions filteredBookings
   pure $ take limit' filteredB
   where
     matchBookingsWithRides :: [Booking] -> [Ride.Ride] -> [(Booking, Maybe Ride.Ride)]
@@ -280,7 +279,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 case bookingDetails of
                   DRB.OneWaySpecialZoneDetails details -> details.otpCode
                   _ -> Nothing
-           in isJust maybeRide || (isJust (otpCode) && isNothing maybeRide)
+           in isJust maybeRide || (isJust otpCode && isNothing maybeRide)
 
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
