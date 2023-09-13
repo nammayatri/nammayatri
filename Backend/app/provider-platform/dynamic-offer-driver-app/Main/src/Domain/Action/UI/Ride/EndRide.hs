@@ -219,6 +219,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         whenJust mbDriverGoHomeReq $ \driverGoHomeReq -> do
           let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
           routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
+          logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
           let driverHomeDists = mapMaybe (.distance) routesResp
           if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
             then CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo
