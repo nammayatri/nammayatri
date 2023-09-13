@@ -824,5 +824,5 @@ const hindiStrings = {
   SUBMIT_FEEDBACK : "प्रतिपुष्टि दें",
   BADGE_EARNED : "बैज अर्जित",
   PURPLE_RIDE_CHAMPION : "पर्पल राइड चैंपियन",
-  PURPLE_RIDE : "बैंगनी सवारी"
+  PURPLE_RIDE : "पर्पल राइड"
 }

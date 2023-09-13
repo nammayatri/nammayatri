@@ -214,7 +214,7 @@ const hindiStrings = {
   "METERS_AWAY_FROM_YOUR_DESTINATION": " मीटर दूर हैं!",
   "BOOK_RIDE_": "सवारी बुक करें",
   "LOCATION_UNSERVICEABLE": "स्थान अनुपयोगी",
-  "CURRENTLY_WE_ARE_LIVE_IN_": "हम अभी तक आपके क्षेत्र में नहीं हैं!\n\n आप मेनू से सवारी इतिहास और अन्य सेटिंग्स तक पहुंच सकते हैं",
+  "CURRENTLY_WE_ARE_LIVE_IN_": "हम अभी तक आपके क्षेत्र में नहीं हैं!\nआप मेनू से सवारी इतिहास और अन्य सेटिंग्स तक पहुंच सकते हैं",
   "CHANGE_LOCATION": "स्थान बदलें",
   "IF_YOU_STILL_WANNA_BOOK_RIDE_CLICK_CONTINUE_AND_START_BOOKING_THE_RIDE": "यदि आप अभी भी सवारी बुक करना चाहते हैं तो जारी रखें पर क्लिक करें और सवारी की बुकिंग शुरू करें",
   "THE_TRIP_IS_VERY_SHORT_AND_JUST_TAKE": "यात्रा बहुत छोटी है और इसे पूरा करने के लिए केवल ",

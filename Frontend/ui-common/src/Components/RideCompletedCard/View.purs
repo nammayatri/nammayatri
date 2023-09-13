@@ -120,6 +120,7 @@ topCardView config push =
         , imageView
           [ width $ V 18
           , height $ V 18
+          , accessibility DISABLE
           , imageWithFallback $ "ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png"
           ]
       ]

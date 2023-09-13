@@ -216,7 +216,7 @@ const englishStrings = {
   "BOOK_RIDE_": "Book Ride",
   "CANCEL_AUTO_ASSIGNING": "Cancel Auto Assigning",
   "LOCATION_UNSERVICEABLE": "Location unserviceable",
-  "CURRENTLY_WE_ARE_LIVE_IN_": "We are not live in your area yet!\n\n You can access ride history and other settings from the menu",
+  "CURRENTLY_WE_ARE_LIVE_IN_": "We are not live in your area yet!\nYou can access ride history and other settings from the menu",
   "CHANGE_LOCATION": "Change Location",
   "AUTO_ACCEPTING_SELECTED_RIDE": "Auto accepting in",
   "THE_TRIP_IS_VERY_SHORT_AND_JUST_TAKE": "The trip is very short and just take",

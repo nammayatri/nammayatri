@@ -355,7 +355,7 @@ view push state =
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
-            , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then RideCompletedCard.view (rideCompletedCardConfig state) (push <<< RideCompletedAC) else emptyTextView state
+            , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
@@ -364,7 +364,15 @@ view push state =
             ]
         ]
     ] 
-    
+
+rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideCompletedCardView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility if state.props.currentStage == RideRating then DISABLE_DESCENDANT else DISABLE
+  ][  RideCompletedCard.view (rideCompletedCardConfig state) (push <<< RideCompletedAC)]
+
 disabilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 disabilityPopUpView push state = 
   PopUpModal.view (push <<< DisabilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disability)
@@ -886,6 +894,7 @@ homeScreenTopIconView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , accessibility if (any (_ == state.props.currentStage) ) [RideRating, RideCompleted] then DISABLE_DESCENDANT else DISABLE
         ]
         [ linearLayout
             [ width MATCH_PARENT

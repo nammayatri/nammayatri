@@ -100,7 +100,6 @@ view push config =
             ]
         , linearLayout
             ([ height config.height
-            , width config.width
             , gravity CENTER
             ] <> (case config.weight of
                 Nothing -> [width config.width]
