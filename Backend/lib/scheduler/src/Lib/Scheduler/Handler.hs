@@ -159,6 +159,7 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   let begTime = job.scheduledAt
   endTime <- getCurrentTime
   let diff = T.diffUTCTime endTime begTime
+  logDebug $ "diffTime in picking up the job : " <> show (nominalDiffTimeToSeconds diff)
   fork "" $ addGenericLatency "Job_pickup" $ fromIntegral $ fromEnum diff
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
