@@ -20,7 +20,11 @@ data InvoiceT f = InvoiceT
     invoiceShortId :: B.C f Text,
     driverFeeId :: B.C f Text,
     invoiceStatus :: B.C f Domain.InvoiceStatus,
+    paymentMode :: B.C f Domain.InvoicePaymentMode,
     maxMandateAmount :: B.C f (Maybe HighPrecMoney),
+    bankErrorMessage :: B.C f (Maybe Text),
+    bankErrorCode :: B.C f (Maybe Text),
+    bankErrorUpdatedAt :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

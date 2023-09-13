@@ -52,6 +52,8 @@ mkPersist
       mandateId Text Maybe
       mandateFrequency Payment.MandateFrequency Maybe
       mandateMaxAmount HighPrecMoney Maybe
+      bankErrorCode Text Maybe
+      bankErrorMessage Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

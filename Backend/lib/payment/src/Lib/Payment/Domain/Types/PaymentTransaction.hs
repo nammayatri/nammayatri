@@ -41,6 +41,8 @@ data PaymentTransaction = PaymentTransaction
     mandateStartDate :: Maybe UTCTime,
     mandateEndDate :: Maybe UTCTime,
     mandateId :: Maybe Text,
+    bankErrorMessage :: Maybe Text,
+    bankErrorCode :: Maybe Text,
     mandateFrequency :: Maybe Payment.MandateFrequency,
     mandateMaxAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,

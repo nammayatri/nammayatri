@@ -99,6 +99,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
             aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
+            bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
             ..
           }
     where
@@ -146,6 +147,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
+        BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
