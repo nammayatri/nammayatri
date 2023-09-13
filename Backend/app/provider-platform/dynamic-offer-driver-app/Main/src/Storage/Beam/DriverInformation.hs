@@ -51,7 +51,8 @@ data DriverInformationT f = DriverInformationT
     autoPayStatus :: B.C f (Maybe Domain.DriverAutoPayStatus),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
-    compAadhaarImagePath :: B.C f (Maybe Text)
+    compAadhaarImagePath :: B.C f (Maybe Text),
+    availableUpiApps :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

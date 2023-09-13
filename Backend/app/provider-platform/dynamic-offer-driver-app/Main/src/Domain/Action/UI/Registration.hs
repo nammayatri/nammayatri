@@ -194,7 +194,8 @@ createDriverDetails personId merchantId = do
             mode = Just DriverInfo.OFFLINE,
             createdAt = now,
             updatedAt = now,
-            compAadhaarImagePath = Nothing
+            compAadhaarImagePath = Nothing,
+            availableUpiApps = Nothing
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

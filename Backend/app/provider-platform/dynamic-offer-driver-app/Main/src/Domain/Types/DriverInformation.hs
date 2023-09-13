@@ -101,7 +101,8 @@ data DriverInformationE e = DriverInformation
     blockExpiryTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    compAadhaarImagePath :: Maybe Text
+    compAadhaarImagePath :: Maybe Text,
+    availableUpiApps :: Maybe Text
   }
   deriving (Generic)
 

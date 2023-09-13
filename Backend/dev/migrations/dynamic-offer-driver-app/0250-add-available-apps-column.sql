@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN available_upi_apps text;

@@ -334,7 +334,8 @@ data UpdateDriverReq = UpdateDriverReq
     gender :: Maybe SP.Gender,
     languagesSpoken :: Maybe [Text],
     hometown :: Maybe Text,
-    vehicleName :: Maybe Text
+    vehicleName :: Maybe Text,
+    availableUpiApps :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -567,7 +568,8 @@ createDriverDetails personId adminId merchantId = do
             createdAt = now,
             updatedAt = now,
             autoPayStatus = Nothing,
-            compAadhaarImagePath = Nothing
+            compAadhaarImagePath = Nothing,
+            availableUpiApps = Nothing
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -855,12 +857,13 @@ updateDriver (personId, _) req = do
   let updDriverInfo =
         driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
                    canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback,
-                   canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
+                   canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi,
+                   availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
                   }
 
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
-  QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
+  QDriverInformation.updateDriverInformation person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.availableUpiApps
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
