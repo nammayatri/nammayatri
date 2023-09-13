@@ -93,4 +93,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ALTER COLUMN short_id DROP NOT NUL
 ALTER TABLE atlas_driver_offer_bpp.driver_fee DROP COLUMN IF EXISTS short_id;
 
 UPDATE atlas_driver_offer_bpp.driver_plan as dp
-SET mandate_setup_date = (SELECT updated_at FROM atlas_driver_offer_bpp.driver_fee as df WHERE df.driver_id = dp.driver_id AND df.fee_type = "MANDATE_REGISTRATION" AND df.status = "CLEARED" order by updated_at desc limit 1)
+SET mandate_setup_date = (SELECT updated_at FROM atlas_driver_offer_bpp.driver_fee as df WHERE df.driver_id = dp.driver_id AND df.fee_type = 'MANDATE_REGISTRATION' AND df.status = 'CLEARED' order by updated_at desc limit 1)
