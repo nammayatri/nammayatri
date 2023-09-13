@@ -422,7 +422,7 @@ eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) sta
 ------------------------------- ChatService - Start --------------------------
 
 eval (OpenChatScreen) state = do
-  if not state.props.chatcallbackInitiated then continue state else do
+  if not state.props.chatcallbackInitiated || state.data.activeRide.disabilityTag == Just ST.BLIND_AND_LOW_VISION then continue state else do
     continueWithCmd state{props{openChatScreen = false}} [do
       pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
     ]

@@ -816,7 +816,7 @@ const hindiStrings = {
   COLLECT_VIA_CASE_UPI : "नकद/यूपीआई के माध्यम से एकत्र करें",
   FARE_COLLECTED :  "किराया एकत्र किया गया",
   RATE_YOUR_RIDE_WITH1 : "",
-  RATE_YOUR_RIDE_WITH2 : "के साथ अपनी सवारी को रेटिंग दें" ,
+  RATE_YOUR_RIDE_WITH2 : "के साथ अपनी राइड को रेट करें" ,
   HELP_US_WITH_YOUR_FEEDBACK : "आपकी प्रतिक्रिया से हमें सहायता मिलती है (वैकल्पिक)",
   COLLECT_CASH : "नकद इकट्ठा करें",
   ONLINE_PAYMENT : "ऑनलाइन भुगतान",
