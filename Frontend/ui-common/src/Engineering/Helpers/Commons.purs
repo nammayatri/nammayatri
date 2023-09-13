@@ -21,7 +21,7 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj)
+import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Int as INT
@@ -80,9 +80,11 @@ foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
 foreign import getDateFromObj :: Fn1 DateObj String
-foreign import getFormattedDate :: Fn1 DateObj String
+foreign import getFormattedDate :: Fn1 String String
 foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
+foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastWeeks :: Int -> Array CalendarWeek
 
 os :: String
 os = getOs unit

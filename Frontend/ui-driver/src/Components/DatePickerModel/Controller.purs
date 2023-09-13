@@ -1,15 +1,15 @@
 module Components.DatePickerModel.Controller where
 
-import Common.Types.App (DateObj)
+import Common.Types.App (CalendarDate)
 
 data Action = 
-    OnDateSelect Int DateObj 
+    OnDateSelect Int CalendarDate
   | NoAction
 
 
 type Config = {
     activeIndex :: Int
-  , dates :: Array DateObj
+  , dates :: Array CalendarDate
   , id :: String
   }
 config :: Config

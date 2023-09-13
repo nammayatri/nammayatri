@@ -491,7 +491,7 @@ type RideHistoryScreenState =
   }
 type DatePickerState = {
   activeIndex :: Int
-, selectedItem :: Common.DateObj
+, selectedItem :: Common.CalendarDate
 }
 type RideHistoryScreenStateProps = {
     showDatePicker :: Boolean
@@ -572,10 +572,10 @@ type ReferralScreenStateProps = {
   , firstTime :: Boolean
   , leaderBoardType :: LeaderBoardType
   , showDateSelector :: Boolean
-  , days :: Array LeaderBoardDay
-  , weeks :: Array LeaderBoardWeek
-  , selectedDay :: LeaderBoardDay
-  , selectedWeek :: LeaderBoardWeek
+  , days :: Array Common.CalendarDate
+  , weeks :: Array Common.CalendarWeek
+  , selectedDay :: Common.CalendarDate
+  , selectedWeek :: Common.CalendarWeek
   , rankersData :: Array RankCardData
   , currentDriverData :: RankCardData
   , showShimmer :: Boolean
@@ -1441,23 +1441,8 @@ data LeaderBoardType = Daily | Weekly
 derive instance genericLeaderBoardType :: Generic LeaderBoardType _
 instance eqLeaderBoardType :: Eq LeaderBoardType where eq = genericEq
 
-type LeaderBoardDay = {
-    date :: Int
-  , utcDate :: String
-  , month :: String
-  , year :: Int
-}
 
-type LeaderBoardWeek = {
-    startDate :: Int
-  , utcStartDate :: String
-  , endDate :: Int
-  , utcEndDate :: String
-  , startMonth :: String
-  , endMonth :: String
-}
-
-data DateSelector = DaySelector LeaderBoardDay | WeekSelector LeaderBoardWeek
+data DateSelector = DaySelector Common.CalendarDate | WeekSelector Common.CalendarWeek
 
 type RankCardData = {
     goodName :: String

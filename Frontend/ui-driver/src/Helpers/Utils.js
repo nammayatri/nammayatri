@@ -672,46 +672,6 @@ function rideLabelConfig(){
   }
 }
 
-export const getPastDays = function (count) {
-  try {
-    let result = [];
-    for (var i = 0; i < count; i++) {
-      let d = new Date();
-      d.setDate(d.getDate() - i);
-      let obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear() };
-      result.push(obj);
-    }
-    console.log(result);
-    return result.reverse();
-  } catch (e) {
-    console.log("error in getPastDays", e);
-  }
-};
-
-export const getPastWeeks = function (count) {
-  try {
-    let result = []
-    var currentDate = new Date();
-    while (currentDate.getDay() != 0) {
-        currentDate.setDate(currentDate.getDate() - 1);
-    }
-    currentDate.setDate(currentDate.getDate() + 7);
-    for (var i = 0; i < count; i++) {
-      let dStart = new Date(currentDate);
-      let dEnd = new Date(currentDate);
-      dStart.setDate(dStart.getDate() - 7 * (i + 1));
-      dEnd.setDate(dEnd.getDate() - (7 * i + 1));
-      let obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
-                  startMonth: dStart.toLocaleString('default', { month: 'short' }), endMonth: dEnd.toLocaleString('default', { month: 'short' }) }
-      result.push(obj)
-    }
-    console.log(result);
-    return result.reverse();
-  } catch (e) {
-    console.log("error in getPastWeeks", e);
-  }
-};
-
 export const getPeriod = function(date) {
   var currentDate = new Date();
   var pastDate = new Date(date);

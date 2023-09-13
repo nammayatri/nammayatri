@@ -43,8 +43,8 @@ import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getcurrentdate)
-import JBridge (getAllDates, horizontalScrollToPos)
+import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC)
+import JBridge (horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
@@ -79,7 +79,7 @@ screen initialState rideListItem =
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
             _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              let date = if initialState.datePickerState.selectedItem.date == 0 then getcurrentdate "" else runFn1 getDateFromObj initialState.datePickerState.selectedItem
+              let date = if initialState.datePickerState.selectedItem.date == 0 then getcurrentdate "" else (convertUTCtoISC initialState.datePickerState.selectedItem.utcDate "YYYY-MM-DD" )
               if initialState.currentTab == "COMPLETED" then do
                 (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED" date
                 lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
@@ -270,7 +270,7 @@ calendarView push state =
           ][ textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY else runFn1 getFormattedDate state.datePickerState.selectedItem
+              , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY else runFn1 getFormattedDate state.datePickerState.selectedItem.utcDate
               , color Color.black800
               , margin $ MarginRight 12
               ]
@@ -405,7 +405,7 @@ ridesView rideListItem push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
-      ][DatePickerModel.view (push <<< DatePickerAC) (DatePickerModel.config{activeIndex = state.datePickerState.activeIndex, dates = getAllDates tripDatesCount, id = "DatePickerScrollView"})]
+      ][DatePickerModel.view (push <<< DatePickerAC) (datePickerConfig state)]
     ]] else []
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w

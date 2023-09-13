@@ -26,9 +26,11 @@ import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPastDays)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Components.DatePickerModel as DatePickerModel
+import Resource.Constants (tripDatesCount)
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -58,3 +60,13 @@ errorModalConfig state = let
       }
     }
   in errorModalConfig' 
+
+datePickerConfig :: ST.RideHistoryScreenState -> DatePickerModel.Config
+datePickerConfig state = let
+  config = DatePickerModel.config
+  datePickerConfig' = config
+    { activeIndex = state.datePickerState.activeIndex
+    , dates = getPastDays tripDatesCount
+    , id = "DatePickerScrollView"
+    }
+  in datePickerConfig'

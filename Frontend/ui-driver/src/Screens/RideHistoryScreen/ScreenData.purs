@@ -57,6 +57,7 @@ initData = {
       date : 0
     , month : ""
     , year : 0
+    , utcDate : ""
   }
   }
   , data : {
