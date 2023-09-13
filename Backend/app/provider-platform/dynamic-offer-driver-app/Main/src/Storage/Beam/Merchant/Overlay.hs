@@ -16,16 +16,12 @@
 module Storage.Beam.Merchant.Overlay where
 
 import Data.Aeson
-import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
-import Lib.Utils ()
-import Sequelize
 import Tools.Beam.UtilsTH
 
 data OverlayT f = OverlayT

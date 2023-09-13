@@ -43,7 +43,7 @@ data DriverInformationT f = DriverInformationT
     mode :: B.C f (Maybe Domain.DriverMode),
     autoPayStatus :: B.C f (Maybe Domain.DriverAutoPayStatus),
     payerVpa :: B.C f (Maybe Text),
-    enabledAt :: B.C f (Maybe Time.UTCTime),
+    enabledAt :: B.C f (Maybe UTCTime),
     compAadhaarImagePath :: B.C f (Maybe Text),
     availableUpiApps :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,

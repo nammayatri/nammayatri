@@ -12,7 +12,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest where
 
@@ -21,24 +20,27 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import qualified Database.Beam.Postgres as B
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
+toRowExpression :: Text -> Text -> Double -> Double -> Domain.DriverGoHomeRequestStatus -> Int -> Maybe Bool -> UTCTime -> UTCTime -> DriverGoHomeRequestT (B.QExpr B.Postgres s)
 toRowExpression reqId driverId lat lon status numCancellation mbReachedHome createdAt updatedAt =
   DriverGoHomeRequestT
-    (B.val_ reqId)
-    (B.val_ driverId)
-    (B.val_ lat)
-    (B.val_ lon)
-    (getPoint (lat, lon))
-    (B.val_ status)
-    (B.val_ numCancellation)
-    (B.val_ mbReachedHome)
-    (B.val_ createdAt)
-    (B.val_ updatedAt)
+    { id = B.val_ reqId,
+      driverId = B.val_ driverId,
+      lat = B.val_ lat,
+      lon = B.val_ lon,
+      point = getPoint (lat, lon),
+      status = B.val_ status,
+      numCancellation = B.val_ numCancellation,
+      reachedHome = B.val_ mbReachedHome,
+      createdAt = B.val_ createdAt,
+      updatedAt = B.val_ updatedAt
+    }
 
 data DriverGoHomeRequestT f = DriverGoHomeRequestT
   { id :: B.C f Text,
