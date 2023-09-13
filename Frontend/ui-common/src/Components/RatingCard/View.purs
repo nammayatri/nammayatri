@@ -227,6 +227,7 @@ starRatingView state push =
         , accessibility DISABLE
         , onClick push $ const BackPressed
         , gravity CENTER
+        , visibility state.closeImgVisible
         , imageWithFallback $ "ny_ic_cancel_unfilled," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel_unfilled.png"
         ]
       ]

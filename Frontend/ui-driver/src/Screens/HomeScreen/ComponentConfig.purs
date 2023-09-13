@@ -866,6 +866,7 @@ getRatingCardConfig state = let
       id = "RatingCardPrimayButton"
     },
     title = getString RATE_YOUR_RIDE_WITH1 <> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
-    feedbackPlaceHolder = getString HELP_US_WITH_YOUR_FEEDBACK
+    feedbackPlaceHolder = getString HELP_US_WITH_YOUR_FEEDBACK,
+    closeImgVisible = VISIBLE
   }
   in config'
