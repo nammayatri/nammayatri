@@ -76,6 +76,8 @@ data Ride = Ride
     driverDeviatedFromRoute :: Maybe Bool,
     numberOfSnapToRoadCalls :: Maybe Int,
     numberOfDeviation :: Maybe Bool,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

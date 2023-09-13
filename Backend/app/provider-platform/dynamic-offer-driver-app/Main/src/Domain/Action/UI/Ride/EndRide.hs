@@ -74,7 +74,9 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
-    requestor :: DP.Person
+    requestor :: DP.Person,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -104,7 +106,8 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod),
-    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m ()
+    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
+    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -129,7 +132,8 @@ buildEndRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId,
-        sendDashboardSms = Sms.sendDashboardSms
+        sendDashboardSms = Sms.sendDashboardSms,
+        uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
 
 type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
@@ -177,6 +181,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
+      uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
