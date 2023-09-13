@@ -95,7 +95,7 @@ foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> N
 foreign import removeMarker :: String -> Effect Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Unit -> Effect Unit
+foreign import uploadFile :: Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
@@ -185,6 +185,8 @@ foreign import startLottieProcess :: String -> String -> Boolean -> Number -> St
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
 
+foreign import onFocused :: forall action. (action) -> (String) -> Effect Unit
+foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
 foreign import launchInAppRatingPopup :: Unit -> Effect Unit

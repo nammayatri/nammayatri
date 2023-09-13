@@ -21,13 +21,16 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 initData :: PermissionsScreenState
 initData = {
-    data:{ },
+    data:{ 
+      driverMobileNumber : ""
+    },
     props:{
       isLocationPermissionChecked : false
     , isOverlayPermissionChecked : false
     , isAutoStartPermissionChecked : false
     , isBatteryOptimizationChecked : false
     , androidVersion : 0
+    , logoutModalView : false
     }
 }
 

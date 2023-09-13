@@ -17,12 +17,13 @@ module Screens.EnterMobileNumberScreen.Controller where
 import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Screens.Types (EnterMobileNumberScreenState)
-import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.PrimaryEditText.Controller as PrimaryEditText
 import Components.PrimaryButton.Controller as PrimaryButton
 import PrestoDOM.Types.Core (class Loggable)
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Maybe (Maybe(..))
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import JBridge (requestKeyboardShow,hideKeyboardOnNavigation)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
@@ -39,9 +40,10 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
       trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
     PrimaryEditTextAction act -> case act of
-      PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "on_click"
+      --PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "on_click"
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobile_number_text_changed" "primary_edit_text"
-      PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
+      PrimaryEditText.FocusChanged id -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobile_number_text_focus_changed" "primary_edit_text"
+      --PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "next_on_click"
@@ -50,7 +52,9 @@ instance loggableAction :: Loggable Action where
     NonDisclosureAgreementAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_discloure_agreement"
     CheckBoxClicked -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "checkbox_clicked"
     CheckClickability -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "check_clickability"
+    -- StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
+    _ -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
 data Action = BackPressed 
@@ -61,12 +65,17 @@ data Action = BackPressed
             | CheckClickability
             | AfterRender
             | NonDisclosureAgreementAction
+            | StepsHeaderModelAC StepsHeaderModelController.Action
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit GoBack
-eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
+eval BackPressed state = do 
+  _ <- pure $ hideKeyboardOnNavigation true
+  exit GoBack
+--eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
+eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+eval (PrimaryEditTextAction (PrimaryEditText.FocusChanged val)) state = continue state{props {mobileNumberEditFocused = true}}
 eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 
@@ -78,6 +87,6 @@ eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = 
                                                         else true 
                                     Nothing -> true 
   continue state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
-                                        , isValid = not isValidMobileNumber }
+                                        , isValid = isValidMobileNumber}
                                         , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
 eval _ state = continue state

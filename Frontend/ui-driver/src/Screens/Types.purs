@@ -128,7 +128,8 @@ type AddVehicleDetailsScreenData =  {
   rcImageID :: String,
   errorMessage :: String,
   dateOfRegistration :: Maybe String,
-  dateOfRegistrationView :: String
+  dateOfRegistrationView :: String,
+  driverMobileNumber :: String
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -148,7 +149,13 @@ type AddVehicleDetailsScreenProps =  {
   isValidState :: Boolean,
   limitExceedModal :: Boolean,
   errorVisibility :: Boolean,
-  openRegistrationDateManual :: Boolean
+  openRegistrationDateManual :: Boolean,
+  openHowToUploadManual :: Boolean,
+  logoutModalView :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageCaptureLayoutView :: Boolean,
+  fileCameraOption :: Boolean,
+  fileCameraPopupModal :: Boolean
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
@@ -182,6 +189,7 @@ type UploadDrivingLicenseStateData = {
   , dateOfIssue :: Maybe String
   , dateOfIssueView :: String
   , imageFrontUrl :: String
+  , mobileNumber :: String
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -192,6 +200,12 @@ type UploadDrivingLicenseStateProps = {
   , openGenericMessageModal :: Boolean
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
+  , openHowToUploadManual :: Boolean
+  , logoutPopupModal :: Boolean
+  , validateProfilePicturePopUp :: Boolean
+  , imageCaptureLayoutView :: Boolean 
+  , fileCameraPopupModal :: Boolean
+  , fileCameraOption :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -199,7 +213,10 @@ type RegistrationScreenState = {
   data :: RegistrationScreenData,
   props :: RegistrationScreenProps
 }
-type RegistrationScreenData = {}
+type RegistrationScreenData = {
+  activeIndex :: Int,
+  stepsArray :: Array String
+}
 type RegistrationScreenProps = {}
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
@@ -273,8 +290,10 @@ type ApplicationStatusScreenState = {
 type ApplicationStatusScreenData =  {
   rcVerificationStatus :: String,
   dlVerificationStatus :: String,
-  mobileNumber :: String,
-  otpValue :: String
+  mobileNumber ::  String,
+  otpValue :: String,
+  activeIndex :: Int,
+  stepsArray :: Array String
 }
 type ApplicationStatusScreenProps =  {
   isSelected :: Boolean,
@@ -287,7 +306,10 @@ type ApplicationStatusScreenProps =  {
   buttonVisibilty :: Boolean,
   enterOtp :: Boolean,
   isValidOtp :: Boolean,
-  isAlternateMobileNumberExists :: Boolean
+  isAlternateMobileNumberExists :: Boolean,
+  isPermissionGranted :: Boolean,
+  logoutModalView :: Boolean,
+  lottieStatus :: Boolean
 }
 
 --------------------------------------------------------------- EnterMobileNumberScreenState -----------------------------------------------------------------------------
@@ -297,12 +319,15 @@ type EnterMobileNumberScreenState = {
 }
 
 type EnterMobileNumberScreenStateData = {
-    mobileNumber :: String
+    mobileNumber :: String,
+    stepsArray :: Array String,
+    activeIndex :: Int
 }
 
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
-  isValid :: Boolean
+  isValid :: Boolean,
+  mobileNumberEditFocused :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -334,13 +359,16 @@ type EnterOTPScreenStateData = {
   attemptCount :: Int,
   mobileNo :: String,
   timer :: String,
-  capturedOtp :: String
+  capturedOtp :: String,
+  focusedIndex :: Int,
+  editTextId :: String
 }
 
 type EnterOTPScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  resendEnabled :: Boolean
+  resendEnabled :: Boolean,
+  otpTmp :: Boolean
 }
 
 ---------------------PrimaryButtonState----------------------------------------
@@ -888,7 +916,7 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
-
+    driverMobileNumber :: String
 }
 
 type PermissionsScreenProps = {
@@ -897,6 +925,7 @@ type PermissionsScreenProps = {
   , isAutoStartPermissionChecked :: Boolean
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
+  , logoutModalView :: Boolean
 }
 --------------------------------------------- RideDetailScreenState ---------------------------------------------
 
@@ -970,6 +999,27 @@ type InvoiceScreenProps =
     paymentMode :: String
   }
 
+---------------------------------------------DriverWelcomeScreen -------------------------------
+type CarouselModel = {
+  image :: String,
+  title :: String,
+  description :: String
+}
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  carouselModel :: Array CarouselModel
+}
+
+type StepsHeaderModelState = {
+  activeIndex :: Int,
+  textArray :: Array String,
+  backArrowVisibility :: Boolean
+}
+
 --------------------------------------------- PopUpScreenState ---------------------------
 type PopUpScreenState = {
   data :: PopUpScreenData,
@@ -1029,7 +1079,10 @@ type RegCardDetails =  {
   verificationStatus :: String,
   visibility :: String,
   docType :: String,
-  status :: String
+  status :: String,
+  titleImage :: String,
+  backgroundColor :: String,
+  strokeColor :: String
 }
 
 

@@ -1256,9 +1256,9 @@ export const factoryResetApp = function (str) {
   JBridge.factoryResetApp()
 }
 
-export const uploadFile = function (unit) {
+export const uploadFile = function (considerCamera) {
   return function () {
-    return JBridge.uploadFile();
+    return JBridge.uploadFile(considerCamera);
   };
 };
 
@@ -1273,6 +1273,7 @@ export const renderBase64Image = function (image) {
     return function (fitCenter) {
       try {
         if (JBridge.renderBase64Image) {
+          console.log("my name");
           return JBridge.renderBase64Image(image, id, fitCenter);
         }
       } catch (err) {
@@ -1616,4 +1617,33 @@ export const launchDateSettings = function (res) {
   if(JBridge.launchDateSettings){
     return JBridge.launchDateSettings();
   }
+};
+
+export const onFocused = function(callback){
+   // console.log ("See You");
+  //return function(elementId) {
+    return function(elementId) {
+      console.log(elementId);
+      return function (){
+     const element = document.getElementById(elementId);
+     console.log (element);
+  if (element) {
+    element.addEventListener('focus', () => {
+      console.log ("See You");
+      callback(element.value);
+    });
+  } else {
+    console.error(`Element with ID '${elementId}' not found.`);
+  }
+//}
+      }
+    }
+
+};
+
+
+export const renderCameraProfilePicture = function (id) {
+  return function () {
+      return JBridge.renderCameraProfilePicture(id);
+  };
 };

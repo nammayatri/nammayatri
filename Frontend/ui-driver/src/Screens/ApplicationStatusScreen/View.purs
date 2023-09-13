@@ -27,10 +27,10 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void)
+import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void,(>=),(+),show)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
-import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout,clickable,alpha, lottieAnimationView)
+import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval,isClickable,completePercentage)
 import Screens.Types as ST
 import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend (driverRegistrationStatusBT)
@@ -42,7 +42,10 @@ import Components.PopUpModal as PopUpModal
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
+import Data.Array (mapWithIndex,length) as DA
 import Data.String (length)
+import PrestoDOM.Animation as PrestoAnim
+import Components.StepsHeaderModel as StepsHeaderModel
 import Screens.ApplicationStatusScreen.ComponentConfig
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
@@ -81,24 +84,18 @@ view screenType push state =
     , background Color.white900
     , afterRender push (const AfterRender)
     , onBackPressed push (const BackPressed)
-    ]([ textView (
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity RIGHT
-      , margin (Margin 0 30 20 0)
-      , text (getString LOGOUT)
-      , onClick push (const Logout)
-      , alignParentRight "true,-1"
-      , color Color.blueBtn
-      ] <> FontStyle.body1 TypoGraphy
-      )
+    ]([ PrestoAnim.animationSet
+          [ Anim.fadeIn true
+          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state) 
     , if screenType == "ApprovedScreen" then applicationApprovedView state push else applicationStatusView state push
-    , if (state.props.isVerificationFailed) || (not state.props.onBoardingFailure && state.props.alternateNumberAdded) then textView[] else completeOnboardingView state push
-    , supportTextView state push
+  --  , if (state.props.isVerificationFailed) || (not state.props.onBoardingFailure && state.props.alternateNumberAdded) then textView[] else completeOnboardingView state push
+    , uploadStatus state push
+  --  , completeLottieStatusView state push 
     ]
     )
   ] <> if state.props.popupview then [popupmodal push state] else []
     <> if state.props.enterMobileNumberView then [alternateNumber push state] else []
+    <> if state.props.logoutModalView then [logoutPopupModal push state] else []
     )
 
 
@@ -110,18 +107,13 @@ applicationStatusView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER
-  ][  imageView
-      [ width (V 136)
-      , height (V 123)
-      , layoutGravity "center_horizontal"
-      , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
-      , margin (MarginBottom 32)
-      ]
-    , textView
+  ][  
+      textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
       , padding (PaddingHorizontal 16 16)
+      , visibility GONE
       , text if state.data.dlVerificationStatus == "PENDING" || state.data.rcVerificationStatus == "PENDING" then (getString YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION) else if (state.data.dlVerificationStatus == "FAILED" || state.data.rcVerificationStatus == "FAILED") then (getString OOPS_YOUR_APPLICATION_HAS_BEEN_REJECTED) else ""
       , fontStyle $ FontStyle.medium LanguageStyle
       , textSize FontSize.a_16
@@ -137,17 +129,79 @@ applicationStatus state push =
   [ orientation VERTICAL
   , width MATCH_PARENT
   , padding (Padding 16 0 16 24)
-  , margin (MarginTop 50)
-  , height WRAP_CONTENT
-  ][  textView
-      [ text (getString APPLICATION_STATUS)
-      , textSize FontSize.a_14
-      , visibility if state.data.dlVerificationStatus == "PENDING" && state.data.rcVerificationStatus == "PENDING" then GONE else VISIBLE
-      , color Color.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+  , margin (MarginTop 30)
+  , height MATCH_PARENT
+  ][  linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , margin $ MarginBottom 20
+            ][
+               textView
+              [   width WRAP_CONTENT
+               , height WRAP_CONTENT
+               , text ("Start earning in 3 simple step")--"Start earning in 3 simple step"
+               , textSize FontSize.a_14
+               , fontStyle $ FontStyle.medium LanguageStyle
+              ]
+              ,  textView
+              [  width MATCH_PARENT
+               , height WRAP_CONTENT
+               , gravity RIGHT
+               , text (show (completePercentage state) <> " % " <> ("Complete"))
+               , textSize FontSize.a_14
+               , fontStyle $ FontStyle.medium LanguageStyle
+              ]
+            ]
+          , linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , margin $ MarginBottom 20
+            , weight 1.0
+            ](DA.mapWithIndex (\index item -> 
+              linearLayout
+              [ height $ V 5
+              , weight 1.0
+              , cornerRadius 2.0
+              , background  case item of 
+                                "DL" -> case state.data.dlVerificationStatus of
+                                                 "VALID"   -> Color.green900
+                                                 "NO_DOC_AVAILABLE"  -> Color.grey900
+                                                 "PENDING" -> Color.yellow900
+                                                 _ -> Color.red
+
+                                "RC" ->  case state.data.rcVerificationStatus of
+                                                 "VALID"   -> Color.green900
+                                                 "NO_DOC_AVAILABLE"  -> Color.grey900
+                                                 "PENDING" -> Color.yellow900
+                                                 _         -> Color.red
+
+                                "GP" ->   case state.props.isPermissionGranted of
+                                                 true  -> Color.green900
+                                                 false -> Color.grey900
+                                _    ->  Color.grey900 
+
+              , margin $ if ((index + 1) /= DA.length state.data.stepsArray  ) then (MarginRight 15) else (MarginRight 0)
+              ][]) (state.data.stepsArray))
+  --     , textView
+  --     [ text (getString APPLICATION_STATUS)
+  --     , textSize FontSize.a_14
+  --     , visibility if state.data.dlVerificationStatus == "PENDING" && state.data.rcVerificationStatus == "PENDING" then GONE else VISIBLE
+  --     , color Color.black800
+  --     , fontStyle $ FontStyle.regular LanguageStyle
+  --     ]
     , detailsView state (drivingLicenseCardDetails state) push
     , detailsView state (vehicleCardDetails state) push
+    , detailsView state (grantPermissionsStatus state) push
+    , linearLayout
+      [ orientation HORIZONTAL
+      , width    MATCH_PARENT
+      , height $ WRAP_CONTENT
+      , gravity BOTTOM
+      , margin (MarginTop 220) 
+      , visibility $ if (state.data.rcVerificationStatus == "VALID" && state.data.dlVerificationStatus == "VALID" && state.props.isPermissionGranted) then VISIBLE else GONE
+      ][
+        PrimaryButton.view (push <<< PrimaryButtonCompleteRegistrationAC ) (primaryButtonRegistrationConfig state)
+      ]
     ]
 
 detailsView :: ST.ApplicationStatusScreenState -> ST.RegCardDetails -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -158,27 +212,55 @@ detailsView state config push =
   , width MATCH_PARENT
   , gravity BOTTOM
   , margin (Margin 0 16 0 0)
-  , padding (Padding 16 16 16 16)
-  , stroke $ "1,"<>Color.grey900
-  , cornerRadius 4.0
+  , padding (Padding 10 8 16 8)
+  , stroke $ "1,"<>config.strokeColor
+  , cornerRadius 6.0
+  , background $ config.backgroundColor
+  , clickable $ (isClickable state config.docType)
+  , onClick push (const $ ReTry config.docType)
   ][  linearLayout
       [ orientation HORIZONTAL
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
       , height WRAP_CONTENT
-      ][ textView
+      ][
+        imageView
+              [ imageWithFallback config.titleImage
+              , height $ V 60
+              , width $ V 60
+              , padding (PaddingRight 15)
+              ]
+         , 
+         linearLayout
+         [   orientation VERTICAL
+           , width WRAP_CONTENT
+           , gravity CENTER_VERTICAL
+           , height WRAP_CONTENT
+         ][
+         textView
           [ text config.title
-          , textSize FontSize.a_14
+          , textSize FontSize.a_18
           , color Color.black800
           , lineHeight "18"
           ]
-        , textView
-          [ text $ " (" <> config.verificationStatus <> ")"
-          , textSize FontSize.a_12
-          , visibility $ if config.verificationStatus /= "" then VISIBLE else GONE
-          , color if config.verificationStatus == "FAILED" then Color.red else Color.black800
-          , lineHeight "18"
-          ]
+          , textView
+          [ text ("Retry Upload")--"Retry Upload"--(getString TRY_AGAIN)
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , textSize FontSize.a_16
+            , color Color.blue900
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , visibility if ((config.status == "FAILED" || config.status == "INVALID" ) && config.docType /= "GP" ) then VISIBLE else GONE -- $ if (config.verificationStatus == "PENDING") then GONE  else VISIBLE
+            , lineHeight "18"
+      ]
+         ]
+        -- , textView
+        --   [ text $ " (" <> config.verificationStatus <> ")"
+        --   , textSize FontSize.a_12
+        --   , visibility $ if config.verificationStatus /= "" then VISIBLE else GONE
+        --   , color if config.verificationStatus == "FAILED" then Color.red else Color.black800
+        --   , lineHeight "18"
+        --   ]
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -186,8 +268,8 @@ detailsView state config push =
           , orientation HORIZONTAL
           ][  imageView
               [ imageWithFallback config.image
-              , height $ V 16
-              , width $ V 16
+              , height $ V 20
+              , width $ V 20
               ]
             ]
           ]
@@ -199,18 +281,6 @@ detailsView state config push =
       , fontStyle $ FontStyle.regular LanguageStyle
       , visibility $ if config.reason /= "" then VISIBLE else GONE
       , lineHeight "16"
-      ]
-    , textView
-      [ text (getString TRY_AGAIN)
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , textSize FontSize.a_14
-      , color Color.blue900
-      , margin (MarginTop 8)
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , onClick push (const $ ReTry config.docType)
-      , visibility if (config.status == "PENDING" || config.status == "VALID" || config.status == "INVALID") then GONE else VISIBLE -- $ if (config.verificationStatus == "PENDING") then GONE  else VISIBLE
-      , lineHeight "18"
       ]
     ]
 -- ----------------------------------------- supportTextView -----------------------
@@ -248,11 +318,12 @@ supportTextView state push =
 drivingLicenseCardDetails state =
   {
     "title" : (getString DRIVING_LICENSE),
+    "titleImage" : "ny_ic_dl_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_dl_blue.png",
     "image" : case state.data.dlVerificationStatus of
                 "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
                 "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
                 "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
+                "NO_DOC_AVAILABLE"  -> "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right"
                 "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
                 "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
                 _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
@@ -264,6 +335,16 @@ drivingLicenseCardDetails state =
                 "INVALID" -> (getString INVALID_DRIVING_LICENSE)
                 "LIMIT_EXCEED" -> (getString LIMIT_EXCEEDED_FOR_DL_UPLOAD)
                 _ -> (getString VERIFICATION_FAILED),
+    "backgroundColor" : case state.data.dlVerificationStatus of
+                       "VALID"   -> Color.green200
+                       "PENDING" -> Color.yellow200
+                       "NO_DOC_AVAILABLE"  -> Color.white900
+                       _         -> Color.lightRed,
+    "strokeColor" :  case state.data.dlVerificationStatus of
+                     "VALID"   -> Color.green900
+                     "PENDING" -> Color.yellow900 
+                     "NO_DOC_AVAILABLE"  -> Color.grey900
+                     _         -> Color.red,
     "reason" : "",
     "visibility" : if state.data.dlVerificationStatus == "PENDING"  && state.data.rcVerificationStatus == "PENDING" then "GONE" else "VISIBLE",
     "docType" : "DL",
@@ -272,12 +353,13 @@ drivingLicenseCardDetails state =
 
 vehicleCardDetails state=
   {
-    "title" : (getString VEHICLE_DETAILS),
+    "title" : "Vehicle Registration Certificate",--(--getString VEHICLE_DETAILS),
+    "titleImage" : "ny_ic_vehicle_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png",
     "image" : case state.data.rcVerificationStatus of
                 "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
                 "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
                 "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
+                "NO_DOC_AVAILABLE" -> "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right"
                 "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
                 "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
                 _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
@@ -289,6 +371,16 @@ vehicleCardDetails state=
                 "INVALID" -> (getString INVALID_VEHICLE_REGISTRATION_CERTIFICATE)
                 "LIMIT_EXCEED" -> (getString LIMIT_EXCEEDED_FOR_RC_UPLOAD)
                 _ -> (getString VERIFICATION_FAILED),
+    "backgroundColor" : case state.data.rcVerificationStatus of
+                       "VALID"   -> Color.green900
+                       "PENDING" -> Color.yellow200
+                       "NO_DOC_AVAILABLE"  -> Color.white900
+                       _         -> Color.lightRed,
+    "strokeColor" :  case state.data.rcVerificationStatus of
+                     "VALID"   -> Color.green900
+                     "PENDING" -> Color.yellow900
+                     "NO_DOC_AVAILABLE"  -> Color.grey900
+                     _         -> Color.red,
     "reason" : "",
     "visibility" : if state.data.dlVerificationStatus == "PENDING"  && state.data.rcVerificationStatus == "PENDING" then "GONE" else "VISIBLE",
     "docType" : "RC",
@@ -296,7 +388,28 @@ vehicleCardDetails state=
   }
 
 
-
+grantPermissionsStatus state=
+  {
+    "title" : "Grant Permissions",--(getString VEHICLE_DETAILS),
+    "titleImage" : "ny_ic_vehicle_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png",
+    "image" : case state.props.isPermissionGranted of
+                true  -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
+                _     -> "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right",
+               
+    "verificationStatus" :  case state.props.isPermissionGranted of
+                true  -> ""
+                _     -> "",
+    "backgroundColor" : case state.props.isPermissionGranted of
+                        true   -> Color.green200
+                        _      -> Color.white900,
+    "strokeColor" :  case state.props.isPermissionGranted of
+                        true   -> Color.green900
+                        _      -> Color.grey900,
+    "reason" : "",
+    "visibility" : if state.data.dlVerificationStatus == "PENDING"  && state.data.rcVerificationStatus == "PENDING" then "GONE" else "VISIBLE",
+    "docType" : "GP",
+    "status" : state.data.rcVerificationStatus
+  }
 
 
 ----------------------------------------- applicationApprovedView -----------------------
@@ -367,6 +480,16 @@ popupmodal push state =
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalAction) (completeOnboardingConfig state )]
 
+
+logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
+logoutPopupModal push state =
+       linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.blackLessTrans
+        , visibility if state.props.logoutModalView == true then VISIBLE else GONE
+        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp state) ]
+
 alternateNumber :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
 alternateNumber push state =
   linearLayout
@@ -374,3 +497,84 @@ alternateNumber push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][ReferralMobileNumber.view (push <<< AlternateMobileNumberAction) (alternateMobileNumberConfig state )]
+
+-- ----------------------------------------- uploadFailedTextView -----------------------
+uploadStatus state push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity BOTTOM
+  , visibility if (state.props.isVerificationFailed || state.data.dlVerificationStatus == "PENDING" || state.data.rcVerificationStatus == "PENDING") then VISIBLE else GONE 
+  ][ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    --, gravity CENTER
+    , orientation HORIZONTAL
+    , stroke $ "1,"<>Color.grey900
+    , margin (Margin 15 0 15 30)
+    , cornerRadius 8.0
+    , padding (Padding 15 10 15 10 )
+    ][ textView
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text if state.props.isVerificationFailed then (if state.data.dlVerificationStatus == "FAILED" then "DL" else "RC") <> " " <> ("Upload Failed.") else ("Last updated at")  -- Upload Failed.  -- Last updated at
+      , textSize FontSize.a_14
+      , color Color.black700
+      , fontStyle $ FontStyle.regular LanguageStyle
+      ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text if state.props.isVerificationFailed then ("Please retry and upload again.") else ("02:52")         ---"Please retry and upload again."
+      , color Color.black900
+      , margin (MarginLeft 5)
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , textSize FontSize.a_14
+      ]
+
+   ,linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity RIGHT
+  , onClick push (const RefreshScreen)
+  , visibility if (state.data.rcVerificationStatus == "PENDING" || state.data.dlVerificationStatus == "PENDING") then VISIBLE else GONE
+  ][
+     imageView
+           [
+             imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
+            , height $ V 20
+            , width $ V 20
+           ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin (MarginLeft 5)
+      , text ("Refrsh")--getString REFRESH)
+      , color Color.blue900
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , textSize FontSize.a_14
+      ] 
+   ]
+    ]
+  ]
+
+
+-- completeLottieStatusView :: forall w. ST.ApplicationStatusScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- completeLottieStatusView state push =
+--   linearLayout
+--   [ width (V 25)
+--   , height (V 25)
+--   , visibility if state.props.lottieStatus then VISIBLE else GONE
+--   ][ lottieAnimationView
+--     [ height (V 25)
+--     , width (V 25)
+--    -- , id (getIdForScreenIndex activeIndex)
+--     , afterRender
+--         ( \action -> do
+--             _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default"
+--             pure unit
+--         )
+--         (const AfterRender)
+--     ]
+    
+--   ]

@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, UpdatePopupType(..))
+import Screens.Types (AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, UpdatePopupType(..),WelcomeScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
@@ -50,6 +50,7 @@ import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -88,6 +89,7 @@ newtype GlobalState = GlobalState {
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
+  , welcomeScreen :: WelcomeScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -125,6 +127,7 @@ defaultGlobalState = GlobalState{
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData
+, welcomeScreen : WelcomeScreenData.initData
 }
 
 data ScreenType =
@@ -223,7 +226,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
 data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE
 
-data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = ADD_VEHICLE_DETAILS_SCREEN UploadDrivingLicenseState | VALIDATE_IMAGE_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
+data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = ADD_VEHICLE_DETAILS_SCREEN UploadDrivingLicenseState | VALIDATE_IMAGE_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW | GO_TO_APPLICATION_SCREEN_FLOW UploadDrivingLicenseState
 
 data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
@@ -233,7 +236,7 @@ data ADD_VEHICLE_DETAILS_SCREENOUTPUT = GO_TO_APPLICATION_SCREEN AddVehicleDetai
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN | OPEN_HELP_AND_SUPPORT
 
-data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN
+data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN | LOG_OUT
 
 data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDES_SCREEN
@@ -260,11 +263,13 @@ data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE Rep
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
 data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
                                       | LOGOUT_ACCOUT
-                                      | GO_TO_UPLOAD_DL_SCREEN
-                                      | GO_TO_VEHICLE_DETAIL_SCREEN
+                                      | GO_TO_UPLOAD_DL_SCREEN ApplicationStatusScreenState
+                                      | GO_TO_VEHICLE_DETAIL_SCREEN ApplicationStatusScreenState
                                       | VALIDATE_NUMBER ApplicationStatusScreenState
                                       | VALIDATE_OTP ApplicationStatusScreenState
                                       | RESEND_OTP_TO_ALTERNATE_NUMBER ApplicationStatusScreenState
+                                      | GO_TO_GRANT_PERMISSION_SCREEN ApplicationStatusScreenState
+                                      | REGISTRATION_REFRESH
 data EDIT_BANK_DETAILS_SCREEN_OUTPUT = EDIT_BANK_DETAILS
 data EDIT_AADHAAR_DETAILS_SCREEN_OUTPUT = EDIT_AADHAAR_DETAILS
 data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT = GO_TO_ENTER_OTP EnterMobileNumberScreenState
@@ -281,3 +286,5 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState | GO_TO_PROFILE
+
+data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen

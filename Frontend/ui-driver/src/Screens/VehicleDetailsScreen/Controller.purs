@@ -89,7 +89,7 @@ eval (PreviewImage) state = continueWithCmd state [do
   pure NoAction]
 
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile unit
+  _ <- liftEffect $ uploadFile true
   pure NoAction]
 
 eval (CallBackImageUpload base_64 imageName imagePath) state = do

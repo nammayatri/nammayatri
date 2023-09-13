@@ -16,12 +16,17 @@
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
+import Language.Strings (getString)
 
 initData :: EnterMobileNumberScreenState
 initData =  {
-  data:  { mobileNumber : "" },
+  data:  { mobileNumber : "" ,
+           stepsArray : ["Driving Licence", "Vehicle Registration","Grant Permission"],
+           activeIndex : 1
+  },
   props: {
     btnActive :false,
-    isValid : false
+    isValid : true,
+    mobileNumberEditFocused : false
     }
 }

@@ -27,6 +27,8 @@ import Language.Strings(getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Components.PopUpModal.Controller as PopUpModal
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 
 instance showAction :: Show Action where
     show _ = ""
@@ -51,8 +53,20 @@ instance loggableAction :: Loggable Action where
         BatteryUsagePermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_usage_permission_callback"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
+        PopUpModalLogoutAction act -> case act of
+             PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "on_goback"
+             PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "tip_button_click"
+             PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "dismiss_popup"
+             PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "call_support"
+             PopUpModal.NoAction -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"
+             PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "image"
+             PopUpModal.ETextController act -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "primary_edit_text"
+             PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "countdown_updated"
+        StepsHeaderModelAC act -> case act of
+           StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_on_click"
+           StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_logout"
 
-data ScreenOutput =  GoBack | GoToHome
+data ScreenOutput =  GoBack | GoToHome | LogoutAccount
 
 data Action = BackPressed
             | NoAction
@@ -66,6 +80,8 @@ data Action = BackPressed
             | UpdateBatteryPermissionState
             | AfterRender
             | UpdateAllChecks PermissionsScreenState
+            | StepsHeaderModelAC StepsHeaderModelController.Action
+            | PopUpModalLogoutAction PopUpModal.Action
 
 eval :: Action -> PermissionsScreenState -> Eval Action ScreenOutput PermissionsScreenState
 eval AfterRender state = continueWithCmd state [ do 
@@ -147,6 +163,14 @@ eval (ItemClick itemType) state =
                     pure NoAction
                 ]
             else continue state
+eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = continue $ (state {props{logoutModalView = true}})
+
+eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
 eval _ state = continue state
 
 getTitle :: Permissions -> String
@@ -160,7 +184,7 @@ getTitle permission =
 getDescription :: Permissions -> String
 getDescription permission = 
    case permission of
-      Overlay -> (getString NEED_IT_TO_SHOW_YOU_INCOMING_RIDE_REQUEST)
+      Overlay ->  (getString NEED_IT_TO_SHOW_YOU_INCOMING_RIDE_REQUEST)
       Battery -> (getString NEED_IT_TO_DISABLE_BATTERY_OPTIMIZATION_FOR_THE_APP)
       AutoStart -> (getString NEED_IT_TO_AUTOSTART_YOUR_APP)
-      Location -> (getString NEED_IT_TO_ENABLE_LOCATION)
+      Location -> ("Required to start receiving ride requests")--(getString NEED_IT_TO_ENABLE_LOCATION)

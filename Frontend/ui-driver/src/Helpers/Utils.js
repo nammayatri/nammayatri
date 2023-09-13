@@ -537,10 +537,12 @@ export const stopAudioRecording = function (id) {
 export const renderBase64ImageFile = function (base64Image) {
     return function(id) {
         return function (fitCenter) {
+          return function (resize) {
             return function () {
-                return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
+                return JBridge.renderBase64ImageFile(base64Image, id, fitCenter,resize);
             }
         }
+      }
     }
 }
 
@@ -648,4 +650,13 @@ export const getPastWeeks = function (count) {
   } catch (e) {
     console.log("error in getPastWeeks", e);
   }
+};
+
+export const addCarousel = function (modelArray) {
+  return function (id) {
+    var stringifyModelArray = JSON.stringify(modelArray)
+    if(JBridge.addCarousel){
+      return JBridge.addCarousel(stringifyModelArray, id);
+    }
+  };
 };

@@ -18,7 +18,7 @@ module Screens.ChooseLanguageScreen.Controller where
 import Components.SelectMenuButton.Controller (Action(..)) as MenuButton
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Prelude (class Show, bind, discard, pure, ($), unit)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, continue, exit,toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (ChooseLanguageScreenState)
 import Components.PrimaryButton.Controller as PrimaryButton
@@ -45,13 +45,12 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen CHOOSE_LANGUAGE_SCREEN)
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "no_action"
 
-data ScreenOutput = GoToEnterMobileScreen ChooseLanguageScreenState
+data ScreenOutput = GoToEnterMobileScreen ChooseLanguageScreenState | GoBack
 
-data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButton.Action | AfterRender
+data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButton.Action | AfterRender 
 eval :: Action -> ChooseLanguageScreenState -> Eval Action ScreenOutput ChooseLanguageScreenState
 eval BackPressed state = do
-  _ <- pure $ minimizeApp ""
-  continue state
+  exit GoBack 
 eval AfterRender state = continue state
 eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do

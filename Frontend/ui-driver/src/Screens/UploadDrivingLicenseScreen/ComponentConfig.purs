@@ -29,20 +29,25 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude
 import PrestoDOM
+import Components.PopUpModal as PopUpModal
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Components.PopUpModal.Controller as PopUpModalConfig
+import Components.StepsHeaderModel as StepsHeaderModel
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT), textSize = FontSize.a_16}
+      { textConfig{ text = if (state.props.openHowToUploadManual) then ("Upload Photo") else ("Upload Driving License")--getString NEXT)
+      , textSize = FontSize.a_16}
       , width = MATCH_PARENT
       , background = Color.black900
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , height = (V 60)
-      , isClickable = state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "")
-      , alpha = if (state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "") then 1.0 else 0.8
+      , margin = (Margin 15 0 15 30)
+      , cornerRadius = 6.0
+      , height = (V 50)
+      , isClickable =  state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "")
+      , alpha = if (state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "") then 1.0 else 0.8
       }
   in primaryButtonConfig'
 
@@ -95,3 +100,66 @@ primaryEditTextConfigReEnterDl state = let
       , id = (EHC.getNewIDWithTag "ReEnterDrivingLicenseEditText")
       }
     in primaryEditTextConfig'
+
+stepsHeaderModelConfig :: ST.UploadDrivingLicenseState ->Int -> StepsHeaderModel.Config
+stepsHeaderModelConfig state headerValue = let
+    config = StepsHeaderModel.config headerValue
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      driverMobileNumber = Just state.data.mobileNumber
+     }
+  in stepsHeaderConfig'
+
+logoutPopUp :: ST.UploadDrivingLicenseState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    option1 {text = (getString LOGOUT)},
+    option2 {text = (getString CANCEL)},
+    onBoardingButtonVisibility = true
+  }
+  in popUpConfig'
+
+fileCameraLayoutConfig:: ST.UploadDrivingLicenseState -> PopUpModalConfig.Config
+fileCameraLayoutConfig state = let
+    config = PopUpModalConfig.config
+    popUpConf' = config {
+      cornerRadius = (Corners 15.0 true true true true),
+      margin = (Margin 16 290 16 200) ,
+      gravity = CENTER,
+      onBoardingButtonVisibility = true
+    ,primaryText {
+        text = ("Upload Photo")
+      , margin = (Margin 24 24 24 12)
+      , visibility = VISIBLE
+     },
+      secondaryText {
+        text = (getString OTP_LIMIT_EXCEEDED_MESSAGE)
+      , color = Color.black600
+      , margin = (Margin 24 0 24 32)
+      , visibility = GONE
+        },
+      option1 {
+        text = ("Take a Photo")
+      , fontSize = FontSize.a_16
+      , color = Color.white900
+      , strokeColor = Color.black700
+      , fontStyle = FontStyle.semiBold LanguageStyle
+      , visibility = true
+
+      },
+      option2 {text = ("Gallery")
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , fontSize = FontSize.a_16
+      , margin = (Margin 16 0 16 0 )
+      , fontStyle = FontStyle.semiBold LanguageStyle
+      , width = (V 50)
+
+      , background = Color.black900
+      }
+    }
+  in popUpConf'

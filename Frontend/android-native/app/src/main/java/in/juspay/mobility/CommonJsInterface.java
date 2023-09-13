@@ -92,6 +92,14 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
+import android.os.Looper;
+import android.view.View.OnClickListener;
+import android.content.ContentValues;
+import android.graphics.BitmapShader;
+import android.graphics.Shader;
+import android.graphics.Matrix;
+import android.widget.Button;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -103,6 +111,14 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.location.LocationManagerCompat;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
 
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -112,6 +128,7 @@ import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
+import androidx.lifecycle.LifecycleOwner;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.facebook.appevents.AppEventsConstants;
@@ -175,6 +192,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.You
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -237,6 +255,9 @@ import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.utils.network.JuspayHttpResponse;
 import in.juspay.hypersdk.utils.network.NetUtils;
 import in.juspay.hypersdk.core.DuiCallback;
+import in.juspay.hypersdk.core.JSI;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static androidx.core.app.ActivityCompat.startActivityForResult;
@@ -286,6 +307,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static Calendar current = Calendar.getInstance();
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int IMAGE_PERMISSION_REQ_CODE_PROFILE = 1243;
     public static final int REQUEST_CALL = 8;
     public static final int REQUEST_CONTACTS = 7;
     public static String phoneNumber;
@@ -315,6 +337,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private String zoneName = "";
     private float zoom = 17.0f;
     public static String detectPhoneNumbersCallBack = null;
+    private PreviewView previewView;
+    private ImageCapture imageCapture;
+    private Button bCapture;
+    public static Runnable cameraPermissionCallback;
+    public static Boolean considerCameraOption = true;
+
 
 
     public CommonJsInterface() {
@@ -324,6 +352,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public CommonJsInterface(Activity activity, JuspayServices juspayServices, HyperFragment fragment) {
         super(juspayServices, activity, fragment);
         this.context = activity;
+        this.context=context;
         this.dynamicUI = juspayServices.getDuiCallback();
         this.activity = activity;
         this.juspayServices = juspayServices;
@@ -2099,14 +2128,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter) {
+    public void renderBase64Image(String url, String id, boolean fitCenter, boolean resize) {
         if (url.contains("http"))
             url = getAPIResponse(url);
-        renderBase64ImageFile(url, id, fitCenter);
+        renderBase64ImageFile(url, id, fitCenter, resize);
     }
 
     @JavascriptInterface
-    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter) {
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, boolean resize) {
         activity.runOnUiThread(() -> {
             try {
                 if (!base64Image.equals("") && base64Image != null && id != null) {
@@ -2114,10 +2143,32 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                     Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
                     ImageView imageView = new ImageView(context);
-                    imageView.setImageBitmap(decodedByte);
-                    if (fitCenter) {
+                    if (resize) 
+                    {
+                    int cropTop = 170;    
+                    int cropBottom = 0; 
+                    int cropLeft = 700;  
+                    int cropRight = 700; 
+                    int newWidth = decodedByte.getWidth() - cropLeft - cropRight;
+                    int newHeight = decodedByte.getHeight() - cropTop - cropBottom;
+                    Bitmap croppedBitmap = Bitmap.createBitmap(decodedByte, cropLeft, cropTop, newWidth, newHeight);
+                    float scaleWidth = ((float) (1500)) / croppedBitmap.getWidth();
+                    Matrix matrix = new Matrix();
+                    matrix.postScale(scaleWidth, 1);
+                    Bitmap resizedBitmap = Bitmap.createBitmap(croppedBitmap, 0, 0, croppedBitmap.getWidth(), croppedBitmap.getHeight(), matrix, false);
+                    imageView.setImageBitmap(croppedBitmap);
+                    imageView.setRotation(90);
+                    }
+                    else
+                    {
+                     imageView.setImageBitmap(decodedByte);
+                    }
+                    if (fitCenter) 
+                    {
                         imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                    } else {
+                    } 
+                    else 
+                    {
                         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     }
                     imageView.setAdjustViewBounds(true);
@@ -2131,6 +2182,34 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         });
     }
 
+// if (!base64Image.equals("") && base64Image != null && id != null) {
+//                 Toast.makeText(activity, id, Toast.LENGTH_SHORT).show();
+//                 LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+
+//                 byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+//                 Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+
+//                 int desiredHeight =  // Calculate your desired height after cropping
+//                 int startY =  // Calculate the start Y position for cropping (from top)
+
+//                 Bitmap croppedBitmap = Bitmap.createBitmap(decodedByte, 0, startY, decodedByte.getWidth(), desiredHeight);
+
+//                 ImageView imageView = new ImageView(context);
+//                 imageView.setImageBitmap(croppedBitmap);
+                
+//                 if (fitCenter) {
+//                     imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+//                 } else {
+//                     imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+//                 }
+                
+//                 imageView.setAdjustViewBounds(true);
+//                 imageView.setClipToOutline(true);
+//                 imageView.setRotation(90);
+                
+//                 layout.removeAllViews();
+//                 layout.addView(imageView);
+//             }
     /*
      * This function is deprecated on 22 May - 2023
      * Added only for Backward Compatibility
@@ -2160,6 +2239,100 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 }
             });
         }
+    }
+
+
+@JavascriptInterface
+    public void renderCameraProfilePicture(String id) {
+         if(activity!=null)
+         {
+        activity.runOnUiThread(() -> {
+             if (isCameraPermissionGranted()) 
+            {
+            View profilePictureLayout = LayoutInflater.from(context).inflate(R.layout.validate_documents_preview, null, false);
+            previewView = profilePictureLayout.findViewById(R.id.previewView);
+            bCapture = profilePictureLayout.findViewById(R.id.bCapture);
+            bCapture.setOnClickListener(view -> capturePhoto());
+            ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
+            cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                startCameraX(cameraProvider);
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+                return ;
+            }
+            }, ContextCompat.getMainExecutor(activity));
+             LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+             layout.removeAllViews();
+             layout.addView(profilePictureLayout);
+           } else 
+              {
+            requestCameraPermission(() -> renderCameraProfilePicture(id));   
+              }    
+            });
+        }
+    }
+
+private boolean isCameraPermissionGranted() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        int cameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA);
+        return cameraPermission == PackageManager.PERMISSION_GRANTED;
+    }
+    return true;
+}
+
+private void requestCameraPermission(Runnable callback) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, IMAGE_PERMISSION_REQ_CODE_PROFILE);
+        cameraPermissionCallback = callback;
+    }
+}
+
+@SuppressLint("RestrictedApi")
+    private void startCameraX(ProcessCameraProvider cameraProvider) {
+        cameraProvider.unbindAll();
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build();
+        Preview preview = new Preview.Builder()
+                .build();
+        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        imageCapture = new ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build();
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build();
+        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(activity), this::analyze);
+        cameraProvider.bindToLifecycle((LifecycleOwner) activity, cameraSelector, preview, imageCapture);
+    }
+
+    public void analyze(@NonNull ImageProxy image) {
+        Log.d("TAG", "analyze: got the frame at: " + image.getImageInfo().getTimestamp());
+        image.close();
+    }
+
+private void capturePhoto() {
+        long timestamp = System.currentTimeMillis();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timestamp);
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        imageCapture.takePicture(
+                new ImageCapture.OutputFileOptions.Builder(context.getContentResolver(), MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues).build(),
+                ContextCompat.getMainExecutor(activity),
+                new ImageCapture.OnImageSavedCallback() {
+                    @Override
+                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                        Uri imageUri = outputFileResults.getSavedUri();
+                        MainActivity.getInstance().encodeImageToBase64(null,imageUri);
+                    }
+                    @Override
+                    public void onError(@NonNull ImageCaptureException exception) {
+                        Toast.makeText(activity, "error", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     @JavascriptInterface
@@ -4045,7 +4218,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
 
     @JavascriptInterface
-    public void uploadFile() {
+    public void uploadFile(boolean considerCamera) {
         if (!isUploadPopupOpen)
             activity.runOnUiThread(() -> {
                 if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
@@ -4057,8 +4230,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                     Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                     chooseFromFile.setType("image/*");
-                    Intent chooser = Intent.createChooser(takePicture, "Upload Image");
-                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                    Intent chooser = Intent.createChooser(chooseFromFile, "Upload Image");
+                    considerCameraOption = considerCamera;
+                    if(considerCamera)
+                    {
+                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{takePicture});
+                    }
                     isUploadPopupOpen = true;
                     startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
                 } else {

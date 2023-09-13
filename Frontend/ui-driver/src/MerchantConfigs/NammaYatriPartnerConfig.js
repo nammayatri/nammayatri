@@ -68,7 +68,7 @@ const nammaYatriConfigs = {
 }
 
 const kannadaStrings = {
-    WELCOME_TEXT : "Welcome to the Namma Yatri Driver",
+    WELCOME_TEXT : "Dear Driver,\nWelcome to Namma Yatri",
     ABOUT_TEXT : "Namma Yatri partner ಪ್ರಯಾಣಿಕರೊಂದಿಗೆ ಚಾಲಕರನ್ನು ಸಂಪರ್ಕಿಸಲು ಮುಕ್ತ ವೇದಿಕೆಯಾಗಿದೆ. ಅಪ್ಲಿಕೇಶನ್ ಚಾಲಕರು ಪ್ರಯಾಣಿಕರನ್ನು ಹುಡುಕಲು ಅನುಕೂಲವಾಗುವಂತೆ ಮಾಡುತ್ತದೆ. ಮತ್ತು ಅವುಗಳನ್ನು ಸೇವಾ ಪೂರೈಕೆದಾರರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುವ ಮೂಲಕ ಈ ಆಯ್ಕೆಗಳನ್ನು ಪಡೆದುಕೊಳ್ಳಿ",
     NEED_IT_TO_ENABLE_LOCATION : "ಅಪ್ಲಿಕೇಶನ್ ಮುಚ್ಚಿದಾಗ ಅಥವಾ ಬಳಕೆಯಲ್ಲಿಲ್ಲದಿದ್ದರೂ ಸಹ ಚಾಲಕ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಲು ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಕ್ರಿಯಗೊಳಿಸಲು ನಮ್ಮ ಯಾತ್ರಿ ಪಾಲುದಾರರು ಸ್ಥಳ ಡೇಟಾವನ್ನು ಸಂಗ್ರಹಿಸುತ್ತಾರೆ.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "ಪ್ರಸ್ತುತ, ನಾವು ಕರ್ನಾಟಕ ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯನ್ನು ಮಾತ್ರ ಅನುಮತಿಸುತ್ತೇವೆ",
@@ -78,7 +78,7 @@ const kannadaStrings = {
 }
 
 const hindiStrings = {
-    WELCOME_TEXT : "Welcome to the Namma Yatri Driver",
+    WELCOME_TEXT : "Dear Driver,\nWelcome to Namma Yatri",
     ABOUT_TEXT : "Namma Yatri partner चालकों को सवारियों से जोड़ने का एक खुला मंच है। ऐप ड्राइवरों के लिए प्रस्तावित वांछित दरों के साथ सवारियों को ढूंढना सुविधाजनक बनाता है। कोई सवारी आधारित कमीशन नहीं, बस मासिक सदस्यता के रूप में छोटी राशि का भुगतान करें",
     NEED_IT_TO_ENABLE_LOCATION : "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "वर्तमान में, हम केवल कर्नाटक पंजीकृत संख्या की अनुमति देते हैं",
@@ -88,7 +88,7 @@ const hindiStrings = {
 }
 
 const englishStrings = {
-    WELCOME_TEXT : "Welcome to the Namma Yatri Driver",
+    WELCOME_TEXT : "Dear Driver,\nWelcome to Namma Yatri",
     ABOUT_TEXT : "Namma Yatri partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
     NEED_IT_TO_ENABLE_LOCATION : "Namma Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only Karnataka registered number",
@@ -98,7 +98,7 @@ const englishStrings = {
 }
 
 const tamilStrings = {
-    WELCOME_TEXT : "Welcome to the Namma Yatri Driver",
+    WELCOME_TEXT : "Dear Driver,\nWelcome to Namma Yatri",
     ABOUT_TEXT : "நம்மா யாத்திரி கூட்டாளர் இயக்கிகளை ரைடர்ஸுடன் இணைக்க ஒரு திறந்த தளமாகும். முன்மொழியப்பட்ட விரும்பிய விகிதங்களைக் கொண்ட ரைடர்ஸைக் கண்டுபிடிப்பதை ஓட்டுநர்களுக்கு பயன்பாடு வசதியாக ஆக்குகிறது. சவாரி அடிப்படையிலான கமிஷன் இல்லை, மாதாந்திர சந்தா வடிவத்தில் சிறிய தொகையை செலுத்துங்கள்",
     NEED_IT_TO_ENABLE_LOCATION : "பயன்பாடு மூடப்பட்டிருந்தாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தை கண்காணிக்க உங்கள் இருப்பிடத்தைப் பகிர்வதற்கு நம்மா யாத்ரி கூட்டாளர் இருப்பிடத் தரவை சேகரிக்கவும்",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "தற்போது, ​​கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்",

@@ -31,3 +31,4 @@ permissions = do
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
+        LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOG_OUT

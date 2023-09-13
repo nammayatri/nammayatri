@@ -69,7 +69,7 @@ view push state =
                       , margin (MarginBottom 16)
                       , gravity CENTER_VERTICAL
                       , afterRender (\action -> do
-                                      renderBase64ImageFile image.image (getNewIDWithTag "add_image_component_image" <> (show index)) false
+                                      renderBase64ImageFile image.image (getNewIDWithTag "add_image_component_image" <> (show index)) false false
                                     ) (const NoAction)
                       , padding (Padding 16 16 16 16)
                       ][ linearLayout

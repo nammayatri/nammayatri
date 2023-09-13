@@ -24,20 +24,45 @@ import Prelude
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import Data.Maybe (Maybe(..))
+import Components.StepsHeaderModel as StepsHeaderModel
+import Components.PopUpModal as PopUpModal
 
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig
-      { text = (getString ALLOW_ACCESS)
+      { text = (getString CONTINUE)
       , color = Color.primaryButtonColor
       , textSize = FontSize.a_18}
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
+      , margin = (Margin 15 0 15 30)
+      , cornerRadius = 8.0
       , background = Color.black900
-      , height = (V 60)
+      , height = (V 50)
       , alpha = if(state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked) then 1.0 else 0.7
       , isClickable = (state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
       }
   in primaryButtonConfig'
+
+stepsHeaderModelConfig ::ST.PermissionsScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 7
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false
+    , driverMobileNumber = Just state.data.driverMobileNumber
+     }
+  in stepsHeaderConfig'
+
+logoutPopUp :: ST.PermissionsScreenState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    option1 {text = (getString LOGOUT)},
+    option2 {text = (getString CANCEL)},
+    onBoardingButtonVisibility = true
+  }
+  in popUpConfig'

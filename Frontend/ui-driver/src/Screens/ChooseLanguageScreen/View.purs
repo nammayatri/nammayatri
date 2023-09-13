@@ -54,7 +54,7 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.white900
+    , background "#FFFAED"
     , clickable true
     , gravity BOTTOM
     , onBackPressed push (const BackPressed)
@@ -137,7 +137,7 @@ menuButtonDriver state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ Margin 0 0 1 5
-  , background Color.white900
+  , background "#FFFAED"
   ](DA.mapWithIndex
       (\ index language ->
       PrestoAnim.animationSet 

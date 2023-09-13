@@ -30,7 +30,8 @@ initData = {
       rcImageID : "",
       errorMessage : "",
       dateOfRegistration : Nothing,
-      dateOfRegistrationView : ""
+      dateOfRegistrationView : "",
+      driverMobileNumber : ""
     },
     props: {
       rcAvailable : false,
@@ -49,6 +50,12 @@ initData = {
       isValid : false,
       limitExceedModal : false,
       errorVisibility : false,
-      openRegistrationDateManual : false
+      openRegistrationDateManual : false,
+      openHowToUploadManual : false,
+      logoutModalView : false,
+      validateProfilePicturePopUp : false,
+      imageCaptureLayoutView : false,
+      fileCameraOption : false,
+      fileCameraPopupModal : false
     }
 }

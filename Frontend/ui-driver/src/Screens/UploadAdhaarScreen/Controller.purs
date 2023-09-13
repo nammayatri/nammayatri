@@ -77,7 +77,7 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = exit (GoToBankDetails
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile unit
+  _ <- liftEffect $ uploadFile true
   pure NoAction]
 eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
                                             else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}

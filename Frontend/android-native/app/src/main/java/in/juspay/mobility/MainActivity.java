@@ -159,6 +159,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int STORAGE_PERMISSION = 67;
+    private static final int IMAGE_PERMISSION_REQ_CODE_PROFILE = 1243;
     private HyperServices hyperServices;
     private ConnectionStateMonitor stateMonitor;
     private WebView webView;
@@ -1053,7 +1054,7 @@ public class MainActivity extends AppCompatActivity {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            encodeImageToBase64 (data);
+                            encodeImageToBase64 (data,null);
                         }
                     }).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
@@ -1087,8 +1088,11 @@ public class MainActivity extends AppCompatActivity {
                   takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                   Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                   chooseFromFile.setType("image/*");
-                  Intent chooser = Intent.createChooser(takePicture, getString(R.string.upload_image));
-                  chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
+                  Intent chooser = Intent.createChooser(chooseFromFile, getString(R.string.upload_image));
+                  if(CommonJsInterface.considerCamera)
+                  {
+                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{takePicture});
+                  }
                   this.startActivityForResult(chooser,IMAGE_CAPTURE_REQ_CODE);
               } else {
                   Toast.makeText(this, getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
@@ -1144,6 +1148,20 @@ public class MainActivity extends AppCompatActivity {
                   e.printStackTrace();
               }
               break;
+          case IMAGE_PERMISSION_REQ_CODE_PROFILE:
+              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+              if (CommonJsInterface.cameraPermissionCallback != null)
+               {
+                CommonJsInterface.cameraPermissionCallback.run();
+                CommonJsInterface.cameraPermissionCallback = null;
+               }
+               } 
+               else 
+                {
+                    Toast.makeText(activity, R.string.need_permission_to_access_the_camera, Toast.LENGTH_SHORT).show();
+                    CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), "", "", "");
+
+                }
           default: return;
       }
   }
@@ -1287,10 +1305,17 @@ public class MainActivity extends AppCompatActivity {
                 .start(this);
     }
 
-    private void encodeImageToBase64(@Nullable Intent data) {
-        try {
-            CropImage.ActivityResult result = CropImage.getActivityResult(data);
-            Uri fileUri = result.getUri();
+    public void encodeImageToBase64(@Nullable Intent data,@Nullable Uri imageData) {
+        try {Uri fileUri;
+             String path="";
+            if(imageData == null) {
+                CropImage.ActivityResult result = CropImage.getActivityResult(data);
+                fileUri = result.getUri();
+                path = result.getUri().getPath();
+            }
+            else {
+                 fileUri = imageData;
+            }
             InputStream imageStream = getContentResolver().openInputStream(fileUri);
             Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1324,7 +1349,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "encoded image size camera : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
             if (juspayServicesGlobal.getDynamicUI() != null) {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
-                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
+                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg", path);
             }
         }
         catch (Exception e){

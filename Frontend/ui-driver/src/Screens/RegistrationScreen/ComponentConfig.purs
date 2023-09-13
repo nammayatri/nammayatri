@@ -20,6 +20,7 @@ import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
+import Components.StepsHeaderModel as StepsHeaderModel
 import Styles.Colors as Color
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
@@ -34,3 +35,12 @@ primaryButtonConfig state = let
       , height = (V 60)
       }
   in primaryButtonConfig'
+
+stepsHeaderModelConfig :: ST.RegistrationScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 0
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false
+     }
+  in stepsHeaderConfig'

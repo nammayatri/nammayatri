@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek)
+import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek,CarouselModel)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!)) as DA
@@ -110,8 +110,9 @@ foreign import clearFocus :: String -> Effect Unit
 foreign import uploadMultiPartData :: String -> String -> String -> Effect String
 foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
-foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Unit
+foreign import renderBase64ImageFile :: String -> String -> Boolean -> Boolean -> Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
+foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String

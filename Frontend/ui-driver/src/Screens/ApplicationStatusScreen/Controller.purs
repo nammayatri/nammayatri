@@ -14,7 +14,7 @@
 -}
 
 module Screens.ApplicationStatusScreen.Controller where
-import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&),(||),not,(<=),(>=),(/))
+import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&),(||),not,(<=),(>=),(/),(/=),(+))
 import PrestoDOM (Eval, continue, exit,continueWithCmd,updateAndExit)
 import Screens.Types (ApplicationStatusScreenState)
 import PrestoDOM.Types.Core (class Loggable)
@@ -28,6 +28,7 @@ import Data.Array (any)
 import Components.PopUpModal.Controller as PopUpModal
 import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Maybe(Maybe(..))
@@ -77,8 +78,25 @@ instance loggableAction :: Loggable Action where
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
       ReferralMobileNumberController.OnSubTextClick ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "otpResent"
+    StepsHeaderModelAC act -> case act of
+      StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_on_click"
+      StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_logout"
+    PrimaryButtonCompleteRegistrationAC act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "primary_button" "onclick"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "primary_button" "no_action"
+    PopUpModalLogoutAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "on_goback"
+      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "tip_button_click"
+      PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "dismiss_popup"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_support"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "countdown_updated"
+    RefreshScreen -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "Resfresh"
+    
 
-data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen | GoToVehicleDetailScreen | GoToEnterOtp ApplicationStatusScreenState | AddMobileNumber ApplicationStatusScreenState | ResendOtp ApplicationStatusScreenState
+data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen ApplicationStatusScreenState| GoToVehicleDetailScreen ApplicationStatusScreenState | GoToEnterOtp ApplicationStatusScreenState | AddMobileNumber ApplicationStatusScreenState | ResendOtp ApplicationStatusScreenState | GrantPermissionScreen ApplicationStatusScreenState | Refresh
 data Action = BackPressed
               | PrimaryButtonActionController
               | Logout
@@ -91,6 +109,10 @@ data Action = BackPressed
               | CompleteOnBoardingAction PrimaryButtonController.Action
               | AlternateMobileNumberAction ReferralMobileNumberController.Action
               | ExitGoToEnterOtp
+              | StepsHeaderModelAC StepsHeaderModelController.Action
+              | PrimaryButtonCompleteRegistrationAC PrimaryButtonController.Action
+              | PopUpModalLogoutAction PopUpModal.Action
+              | RefreshScreen
 
 
 
@@ -109,8 +131,9 @@ eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do
       pure Dummy
     ]
 eval (ReTry docType) state = case docType of
-                                "DL" -> exit GoToDlScreen
-                                "RC" -> exit GoToVehicleDetailScreen
+                                "DL" -> exit (GoToDlScreen state)
+                                "RC" -> exit (GoToVehicleDetailScreen state)
+                                "GP" -> exit (GrantPermissionScreen state)
                                 _ -> continue state
 eval Logout state = exit LogoutAccount
 eval SupportCall  state = continueWithCmd state [do
@@ -167,4 +190,40 @@ eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryEditTex
       else continue state {props{isValidAlternateNumber =  not isValidMobileNumber,buttonVisibilty = false,isAlternateMobileNumberExists=false}
       }
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnSubTextClick)) state = exit $ ResendOtp state
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView = false}})
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = continue $ (state {props{logoutModalView = true}})
+
+eval RefreshScreen state = exit $ Refresh
 eval _ state = continue state
+
+isClickable :: ApplicationStatusScreenState -> String -> Boolean
+isClickable state docType = 
+       if (docType == "DL") 
+           then if (state.data.dlVerificationStatus == "VALID" || state.data.dlVerificationStatus == "PENDING" || state.data.dlVerificationStatus == "LIMIT_EXCEED" ) then false else true
+       --else if (docType == "RC")
+         --  then if ((state.data.dlVerificationStatus /= "VALID" && state.data.dlVerificationStatus /= "PENDING") || state.data.rcVerificationStatus == "VALID" || state.data.rcVerificationStatus == "PENDING" || state.data.rcVerificationStatus == "LIMIT_EXCEED" ) then false else true
+       else if (docType == "GP")
+           then if (state.props.isPermissionGranted == false) then true else false-- && state.data.dlVerificationStatus == "VALID" && state.data.rcVerificationStatus == "VALID" ) then true else false
+       else 
+           true
+
+countPercentage :: Boolean  -> Int
+countPercentage val = 
+   case val of 
+      true -> 33
+      _ -> 0
+
+completePercentage :: ApplicationStatusScreenState -> Int
+completePercentage state = 
+           if (state.data.dlVerificationStatus /= "VALID" && state.data.dlVerificationStatus /= "PENDING") then
+                 (countPercentage (state.data.rcVerificationStatus == "VALID" || state.data.rcVerificationStatus == "PENDING")) + (countPercentage (state.props.isPermissionGranted))
+           else if (state.data.rcVerificationStatus /= "VALID" && state.data.rcVerificationStatus /= "PENDING") then
+                 (countPercentage (state.data.dlVerificationStatus == "VALID" || state.data.dlVerificationStatus == "PENDING")) + (countPercentage (state.props.isPermissionGranted))
+           else if (not state.props.isPermissionGranted) then
+                 (countPercentage (state.data.dlVerificationStatus == "VALID" || state.data.dlVerificationStatus == "PENDING")) + (countPercentage (state.data.rcVerificationStatus == "VALID" || state.data.rcVerificationStatus == "PENDING"))
+           else 100
+       

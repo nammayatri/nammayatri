@@ -16,6 +16,7 @@
 module Screens.ApplicationStatusScreen.ScreenData where
 
 import Screens.Types
+import Data.Maybe (Maybe(..)) 
 
 initData :: ApplicationStatusScreenState
 initData = {
@@ -23,7 +24,9 @@ initData = {
     dlVerificationStatus : "",
     rcVerificationStatus : "",
     mobileNumber : "",
-    otpValue : ""
+    otpValue : "",
+    activeIndex : 1,
+    stepsArray : ["DL", "RC","GP"]
     },
   props : {
       isSelected : true,
@@ -36,6 +39,9 @@ initData = {
       alternateNumberAdded : false,
       isValidAlternateNumber : false,
       isValidOtp : false,
-      isAlternateMobileNumberExists : false
+      isAlternateMobileNumberExists : false,
+      isPermissionGranted : false,
+      logoutModalView : false,
+      lottieStatus : false
   }
 }

@@ -64,7 +64,7 @@ view push state =
             clearTheTimer state
             pure unit
         )
-        if state.backgroundClickable && state.dismissPopup then const DismissPopup else if state.backgroundClickable then const OnButton1Click else const NoAction
+        if state.backgroundClickable && state.dismissPopup then const DismissPopup else if (state.backgroundClickable && not state.onBoardingButtonVisibility) then const OnButton1Click else if state.onBoardingButtonVisibility then const OnButton2Click else const NoAction
     , gravity state.gravity
     ][ linearLayout
         [ width MATCH_PARENT
@@ -161,6 +161,7 @@ view push state =
             , visibility state.editTextVisibility
             ]
             [ PrimaryEditText.view (push <<< ETextController) (state.eTextConfig) ]
+        , onBoardingLogoutView push state
         , tipsView push state
         , linearLayout
             [ width MATCH_PARENT
@@ -179,7 +180,7 @@ view push state =
                     , background state.option1.background
                     , height $ V 48
                     , cornerRadius 8.0
-                    , visibility $ if state.option1.visibility then VISIBLE else GONE
+                    , visibility $ if state.option1.visibility && not state.onBoardingButtonVisibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
                     , clickable state.option1.isClickable
                     , alpha $ if state.option1.isClickable then 1.0 else 0.5
@@ -209,7 +210,7 @@ view push state =
                     , height state.option2.height
                     , background state.option2.background
                     , cornerRadius 8.0
-                    , visibility if state.option2.visibility then VISIBLE else GONE
+                    , visibility if state.option2.visibility && not state.onBoardingButtonVisibility then VISIBLE else GONE
                     , stroke ("1," <> state.option2.strokeColor)
                     , margin state.option2.margin
                     , gravity CENTER
@@ -401,3 +402,53 @@ contactView push state =
             ]
         ]
     ]
+
+onBoardingLogoutView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+onBoardingLogoutView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding (PaddingHorizontal 20 20)
+    , orientation VERTICAL
+    , visibility if state.onBoardingButtonVisibility then VISIBLE else GONE
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , cornerRadius 8.0
+        , background Color.blue600
+        , gravity CENTER_HORIZONTAL
+        , padding (PaddingVertical 13 13)
+        , margin (MarginTop 15)
+        , onClick push (const OnButton1Click)
+       
+        ]
+        [
+            textView
+                [ text state.option1.text
+                , color Color.black700
+                , textSize FontSize.a_16
+                , lineHeight "20"
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+        ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , cornerRadius 8.0
+            , gravity CENTER_HORIZONTAL
+            , padding (PaddingVertical 13 13)
+            , background Color.blue600
+            , margin (MarginTop 15)
+            , onClick push (const OnButton2Click)
+            ]
+            [ textView
+                [ text state.option2.text
+                , color Color.black700
+                , textSize FontSize.a_16
+                , lineHeight "20"
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+            ]
+    ]
+    

@@ -31,10 +31,10 @@ enterMobileNumber = do
   act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
   case act of
     GoBack -> do 
-      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → enterMobileNumber { data { mobileNumber = ""}, props{btnActive = false}})
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → enterMobileNumber { data { mobileNumber = ""}, props{btnActive = false, mobileNumberEditFocused = false}})
       App.BackT $ pure App.GoBack
     GoToNextScreen updatedState -> do
       _ <- setValueToLocalStore MOBILE_NUMBER_KEY updatedState.data.mobileNumber
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data {mobileNo = updatedState.data.mobileNumber}})
-      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreenScreen → updatedState)
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreenScreen → updatedState { props {mobileNumberEditFocused = false}})
       App.BackT $ App.BackPoint <$> pure (GO_TO_ENTER_OTP updatedState)

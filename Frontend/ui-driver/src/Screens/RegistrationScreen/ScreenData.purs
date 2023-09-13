@@ -19,16 +19,20 @@ import Screens.Types (RegistrationScreenState)
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import Language.Strings (getString)
 
-data ListOptions = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION
+data ListOptions = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION
 derive instance genericListOptions :: Generic ListOptions _
 instance eqListOptions :: Eq ListOptions where eq = genericEq
 
 initData :: RegistrationScreenState
 initData = {
-      data: {},
+      data: {
+        activeIndex : 1,
+        stepsArray : ["Driving Licence", "Vehicle Registration","Grant Permission"]
+      },
       props: {}
     }
 
 optionList :: Array ListOptions
-optionList = [ DRIVING_LICENSE_OPTION, VEHICLE_DETAILS_OPTION ]
+optionList = [ DRIVING_LICENSE_OPTION, VEHICLE_DETAILS_OPTION, GRANT_PERMISSION ]

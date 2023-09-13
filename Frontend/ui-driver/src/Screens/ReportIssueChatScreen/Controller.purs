@@ -231,7 +231,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
     _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
-    _ <- liftEffect $ uploadFile unit
+    _ <- liftEffect $ uploadFile true
     pure NoAction
   ]
 
@@ -252,7 +252,7 @@ eval (AddImagesModelAction (ImageModel.OnClickDelete index)) state = do
   let imageIds' = fromMaybe state.data.addImagesState.imageMediaIds $ deleteAt index state.data.addImagesState.imageMediaIds
   continueWithCmd state { data { addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' } } } [do
     _ <- forWithIndex images' \i x -> do
-      _ <- renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false
+      _ <- renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false false
       pure NoAction
     pure NoAction
   ]

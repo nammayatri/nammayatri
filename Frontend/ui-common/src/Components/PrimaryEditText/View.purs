@@ -18,6 +18,12 @@ module Components.PrimaryEditText.View where
 import Prelude (Unit, ($), (<>), (==), (&&), not)
 import Effect (Effect)
 import Data.Maybe (Maybe(..))
+import Data.Array (mapWithIndex)
+--import Data.String ()
+import Common.Types.App
+import Styles.Colors as Color
+import Font.Size as FontSize
+import Font.Style as FontStyle
 import Engineering.Helpers.Commons (os)
 import Components.PrimaryEditText.Controller (Action(..), Config)
 import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable)
@@ -61,8 +67,9 @@ editTextLayout push config =
     , gravity CENTER_VERTICAL
     , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
     ](  if config.showConstantField then 
-          [constantField push config, editTextView push config ] 
-          else [editTextView push config])
+          [constantField push config, editTextView push config]
+          else [editTextView push config]
+          )
 
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -152,3 +159,27 @@ errorLabelLayout config =
         , alpha config.errorLabel.alpha
         ]
     ]
+
+textBoxes :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+textBoxes push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity LEFT
+  --, margin (Margin 0 20 0 20)
+  , clickable false
+  ](mapWithIndex (\index item ->
+      textView
+      [ width (V 20)
+      , height (V 20)
+      , color Color.blue600--Color.greyTextColor
+      --, text ( DS.take 1 (DS.drop index state.data.otp) )
+      , textSize FontSize.a_14
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , gravity CENTER
+      , cornerRadius 4.0
+      , stroke ("1," <> Color.borderColorLight) --if (state.props.isValid ) then Color.textDanger else if state.data.focusedIndex == index then Color.highlightBorderColor else Color.borderColorLight )
+      --, margin (Margin ((EHC.screenWidth unit)/30) 0 ((EHC.screenWidth unit)/30) 0)
+      --, onClick push (const (OnclickTextBox index))
+      ]) [1,2,3,4])

@@ -1,4 +1,12 @@
-module Screens.ApplicationStatusScreen.ComponentConfig where
+module Screens.ApplicationStatusScreen.ComponentConfig
+  ( alternateMobileNumberConfig
+  , completeOnboardingConfig
+  , logoutPopUp
+  , primaryButtonConfig
+  , primaryButtonRegistrationConfig
+  , stepsHeaderModelConfig
+  )
+  where
 import Screens.Types as ST
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import Components.PrimaryButton as PrimaryButton
@@ -11,6 +19,7 @@ import Language.Strings (getString)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Data.Maybe
+import Components.StepsHeaderModel as StepsHeaderModel
 
 primaryButtonConfig :: ST.ApplicationStatusScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
@@ -63,5 +72,45 @@ completeOnboardingConfig state = let
   , option2 {
       text =  getString CALL_SUPPORT
     }
+  }
+  in popUpConfig'
+
+
+stepsHeaderModelConfig ::ST.ApplicationStatusScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 2
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      backArrowVisibility = false,
+      driverMobileNumber = Just state.data.mobileNumber
+     }
+  in stepsHeaderConfig'
+
+
+primaryButtonRegistrationConfig :: ST.ApplicationStatusScreenState -> PrimaryButton.Config
+primaryButtonRegistrationConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = "Complete Registration"
+      , color = Color.primaryButtonColor
+      , textSize = FontSize.a_18}
+      , cornerRadius = 8.0
+      , background = Color.black900
+      , height = (V 48)
+      }
+  in primaryButtonConfig'
+
+
+logoutPopUp :: ST.ApplicationStatusScreenState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    option1 {text = (getString LOGOUT)},
+    option2 {text = (getString CANCEL)},
+    onBoardingButtonVisibility = true
   }
   in popUpConfig'

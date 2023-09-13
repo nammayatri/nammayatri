@@ -492,5 +492,6 @@ const tamilStrings = {
   YOU : " (நீங்கள்)",
   DAILY : "தினசரி",
   WEEKLY : "வாரந்தோறும்",
-  ACCEPT_RIDES_TO_ENTER_RANKINGS : "தரவரிசையில் நுழைய சவாரிகளை ஏற்கவும்!"
+  ACCEPT_RIDES_TO_ENTER_RANKINGS : "தரவரிசையில் நுழைய சவாரிகளை ஏற்கவும்!",
+  WELCOME_TEXT_LANGUAGE_SCREEN : ""
 }

@@ -23,11 +23,9 @@ primaryButtonViewConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = "Next" }
+      { textConfig{ text = "Next"}--(getString NEXT) }
       , id = "PrimaryButtonLanguage"
       , isClickable = true
-      , height = (V 60)
-      , cornerRadius = 0.0
-      , margin = (Margin 0 0 0 0)
+      , margin = (Margin 8 0 8 22)
       }
   in primaryButtonConfig'

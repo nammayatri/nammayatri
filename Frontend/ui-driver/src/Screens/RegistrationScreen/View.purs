@@ -15,7 +15,7 @@
 
 module Screens.RegistrationScreen.View where
 
-import Prelude (Unit, bind, const, map, pure, unit, ($), (<>), (<<<))
+import Prelude (Unit, bind, const, map, pure, unit, ($), (<>), (<<<),(>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import Animation as Anim
 import Effect (Effect)
@@ -29,6 +29,9 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Data.Array (mapWithIndex)
+import PrestoDOM.Animation as PrestoAnim
+import Components.StepsHeaderModel as StepsHeaderModel
 import Screens.RegistrationScreen.ComponentConfig
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
@@ -58,13 +61,17 @@ view push state =
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
-  ][ 
-    linearLayout
+    
+  ][
+    PrestoAnim.animationSet
+          [ Anim.fadeIn true
+          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state) 
+      
+    ,linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 16 16 16 0)
-    , margin (MarginTop 20)
     , visibility VISIBLE
     , onClick push (const BackPressed)
     , weight 1.0
@@ -78,9 +85,43 @@ view push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][ registrationHeader state
+        ][ 
+           linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , margin $ MarginBottom 20
+            ][
+               textView
+              [   width WRAP_CONTENT
+               , height WRAP_CONTENT
+               , text "Start earning in 3 simple step"
+               , textSize FontSize.a_14
+               , fontStyle $ FontStyle.medium LanguageStyle
+              ]
+              ,  textView
+              [  width MATCH_PARENT
+               , height WRAP_CONTENT
+               , gravity RIGHT
+               , text "0% Complete"
+               , textSize FontSize.a_14
+               , fontStyle $ FontStyle.medium LanguageStyle
+              ]
+            ]
+          , linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , margin $ MarginBottom 20
+            , weight 1.0
+            ](mapWithIndex (\index item -> 
+              linearLayout
+              [ height $ V 5
+              , weight 1.0
+              , background if state.data.activeIndex >= index then Color.green900 else Color.grey900
+              , margin $ MarginRight 15
+              ][]) (state.data.stepsArray))
+          -- , registrationHeader state
           -- , tutorialView state
-          , cardItemView state
+          ,cardItemView push state
         ]
     ]
   , linearLayout
@@ -140,8 +181,8 @@ tutorialView state =
   ]
 
 
-cardItemView :: ST.RegistrationScreenState -> forall w . PrestoDOM (Effect Unit) w
-cardItemView state = 
+cardItemView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+cardItemView push state = 
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -153,12 +194,16 @@ cardItemView state =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , padding (Padding 0 20 15 15)
-          , cornerRadius 3.0
+          , padding (Padding 10 20 0 15)
+          , cornerRadius 8.0
+          , stroke $ "1,"<> Color.black500
+          , onClick push (const (RegistrationAction item))
+          , margin (MarginBottom 20)
           ][ imageView
               [ imageWithFallback case item of
                   DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_dl_blue.png"
                   VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png"
+                  GRANT_PERMISSION -> "ny_ic_vehicle_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png"
               , width (V 50)
               , height (V 50)
               , margin (MarginRight 14)
@@ -167,19 +212,29 @@ cardItemView state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , orientation VERTICAL
+              , margin (MarginTop 10)
               , padding (PaddingRight 10)
               ][ textView
                   ([ text case item of
                             DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
-                            VEHICLE_DETAILS_OPTION -> (getString VEHICLE_DETAILS)
+                            VEHICLE_DETAILS_OPTION -> ("Vehicle Registration Certificate")--(getString VEHICLE_DETAILS)
+                            GRANT_PERMISSION -> "Grant Permissions"
                   , color Color.black800
-                  ] <> FontStyle.subHeading1 TypoGraphy)
-                  , textView
-                  ([ text case item of
-                            DRIVING_LICENSE_OPTION -> (getString UPLOAD_FRONT_SIDE)
-                            VEHICLE_DETAILS_OPTION -> (getString FILL_VEHICLE_DETAILS)
-                  , color Color.black700
-                  ] <> FontStyle.body1 TypoGraphy)
+                  , textSize FontSize.a_18
+                  ])
+              ]
+              , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , gravity RIGHT
+              , margin (MarginTop 7)
+              ][ imageView
+              [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right"
+              , width (V 30)
+              , height (V 30)
+              , margin (MarginRight 14)
+              ]
               ]
           ]
       ) optionList

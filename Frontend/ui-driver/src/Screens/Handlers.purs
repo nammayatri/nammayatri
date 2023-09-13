@@ -48,3 +48,4 @@ import Screens.NotificationsScreen.Handler (notifications) as UI
 import Screens.BookingOptionsScreen.Handler (bookingOptions) as UI
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Screens.WelcomeScreen.Handler (welcomeScreen) as UI

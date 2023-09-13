@@ -63,8 +63,10 @@ type Config = {
     fareEstimate :: String,
     tipSelected :: String,
     fareEstimateText :: String,
-    tipSelectedText :: String
+    tipSelectedText :: String,
+    onBoardingButtonVisibility :: Boolean
 }
+
 
 type ContactViewConfig = {
   visibility :: Visibility,
@@ -242,4 +244,5 @@ config = {
     , tipSelected : ""
     , fareEstimateText : ""
     , tipSelectedText : ""
+    , onBoardingButtonVisibility : false
 }

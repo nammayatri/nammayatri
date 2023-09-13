@@ -22,6 +22,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButtonController
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Screens.RegistrationScreen.ScreenData (ListOptions(..))
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -38,17 +40,30 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "primary_button" "no_action"
     NoAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "no_action"
+    StepsHeaderModelAC act -> case act of
+      StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_on_click"
+      StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_logout"
+    RegistrationAction value -> trackAppScreenRender appId "screen" (getScreen REGISTRATION_SCREEN)
+
     
 data ScreenOutput = GoBack | GoToUploadDriverLicense
 data Action = BackPressed 
             | NoAction
             | AfterRender
             | PrimaryButtonAction PrimaryButtonController.Action
+            | StepsHeaderModelAC StepsHeaderModelController.Action
+            | RegistrationAction ListOptions
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
 eval BackPressed state = continue state
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit (GoToUploadDriverLicense)
+eval (RegistrationAction item ) state = 
+       case item of 
+          DRIVING_LICENSE_OPTION -> exit (GoToUploadDriverLicense)
+          VEHICLE_DETAILS_OPTION -> continue state
+          GRANT_PERMISSION -> continue state
+
 eval _ state = continue state
 
 

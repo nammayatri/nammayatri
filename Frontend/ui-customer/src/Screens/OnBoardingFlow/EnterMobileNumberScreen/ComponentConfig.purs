@@ -52,7 +52,7 @@ verifyOTPButtonConfig state = let
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
-      , margin = (Margin 0 0 0 0 )
+      , margin = (Margin 0 0 0 0)
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
       }
   in primaryButtonConfig'
