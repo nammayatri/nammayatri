@@ -56,7 +56,7 @@ topCardView config push =
           , width $ V 40
           , accessibility config.accessibility
           , accessibilityHint "Contact Support : Button"
-          , imageWithFallback $ "ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_headphone.png"
+          , imageWithFallback $ "ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png"
           , onClick push $ const Support
           ]
       ]
@@ -259,10 +259,9 @@ customerBottomCardView config push =
   , padding $ Padding 10 10 10 10
   , gravity CENTER
   ][ imageView [
-      imageWithFallback $ "ny_ic_driver_avatar,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_driver_avatar.png"
+      imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_avatar.png"
       , height $ V 56
       , width $ V 56
-      , cornerRadius 50.0
     ]
     , commonTextView config push ( config.customerBottomCard.title) Color.black800 (FontStyle.h3 TypoGraphy) 10
     , commonTextView config push config.customerBottomCard.subTitle Color.black800 (FontStyle.paragraphText TypoGraphy) 10
@@ -308,6 +307,7 @@ pillView config push =
     , cornerRadius config.topCard.infoPill.cornerRadius
     , gravity CENTER
     , stroke config.topCard.infoPill.stroke
+    , visibility config.topCard.infoPill.visible
     ]
     [ imageView
         [ width $ V 20
