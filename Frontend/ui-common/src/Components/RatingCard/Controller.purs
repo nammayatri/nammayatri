@@ -22,7 +22,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types
 import Components.PrimaryButton as PrimaryButto
-import PrestoDOM (Accessiblity(..))
+import PrestoDOM (Accessiblity(..), Visibility(..))
 
 data Action = NoAction
             | BackPressed
@@ -41,6 +41,7 @@ type RatingCardConfig =
   , showFeedbackPill :: Boolean
   , overallFeedbackArray :: Array String
   , accessibility :: Accessiblity
+  , closeImgVisible :: Visibility
   }
 
 type RatingCardData =
@@ -81,7 +82,8 @@ ratingCardConfig = {
   feedbackPlaceHolder : "", 
   showFeedbackPill : false,
   overallFeedbackArray : [],
-  accessibility : DISABLE
+  accessibility : DISABLE,
+  closeImgVisible : GONE
 }
 
 
