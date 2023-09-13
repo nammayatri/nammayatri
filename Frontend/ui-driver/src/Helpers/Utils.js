@@ -621,8 +621,9 @@ export const getImageUrl = function (url) {
 };
 
 export const getRideLabelConfig = function (just, nothing, key, zoneType){
-  if (zoneType in rideLabelConfig){
-    var zoneOb = rideLabelConfig[zoneType];
+  const rideLabel = rideLabelConfig() 
+  if (zoneType in rideLabel ){
+    var zoneOb = rideLabel[zoneType];
     if(key in zoneOb){
       var prop = zoneOb[key]
       return just(prop);
@@ -633,40 +634,42 @@ export const getRideLabelConfig = function (just, nothing, key, zoneType){
   return nothing;
 }
 
-const rideLabelConfig = {
-  SureMetro_Pickup : {
-    "backgroundColor" : "#2194FF",
-    "text" : "Metro Pickup",
-    "secondaryText" : "",
-    "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-    "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
-    "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
-  },
-  SureMetro_Drop : {
-    "backgroundColor" : "#2194FF",
-    "text" : "Metro Drop",
-    "secondaryText" : "",
-    "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-    "cancelText" : "ZONE_CANCEL_TEXT_DROP",
-    "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
-  },
-  Accessibility : {
-    "backgroundColor" : "#9747FF",
-    "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
-    "secondaryText" : getStringFromCommon("LEARN_MORE"), //"Learn More",
-    "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-    "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-    "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
-  },
-  Purple_Ride : {
-    "backgroundColor" : "#9747FF",
-    "text" : getStringFromCommon("PURPLE_RIDE"),
-    "secondaryText" : "", //"Learn More",
-    "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-    "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-    "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+function rideLabelConfig(){
+  return  {
+    SureMetro_Pickup : {
+      "backgroundColor" : "#2194FF",
+      "text" : "Metro Pickup",
+      "secondaryText" : "",
+      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
+      "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+    },
+    SureMetro_Drop : {
+      "backgroundColor" : "#2194FF",
+      "text" : "Metro Drop",
+      "secondaryText" : "",
+      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      "cancelText" : "ZONE_CANCEL_TEXT_DROP",
+      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    },
+    Accessibility : {
+      "backgroundColor" : "#9747FF",
+      "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
+      "secondaryText" : getStringFromCommon("LEARN_MORE"), //"Learn More",
+      "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    },
+    Purple_Ride : {
+      "backgroundColor" : "#9747FF",
+      "text" : getStringFromCommon("PURPLE_RIDE"),
+      "secondaryText" : "", //"Learn More",
+      "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    }
+    //More rideLabelConfigs can be added
   }
-   //More rideLabelConfigs can be added
 }
 
 export const getPastDays = function (count) {
