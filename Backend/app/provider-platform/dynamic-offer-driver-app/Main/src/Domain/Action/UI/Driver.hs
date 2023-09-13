@@ -622,7 +622,7 @@ setActivity (personId, _) isActive mode = do
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
-activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, HasField "enableLocationTrackingService" r Bool) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId) driverHomeLocationId = do
   goHomeConfig <- CQGHC.findByMerchantId merchantId
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
