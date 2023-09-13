@@ -75,7 +75,7 @@ retryPaymentButtonConfig state =
       , height = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 8.0
-      , padding = Padding 10 7 10 9
+      , padding = Padding 10 8 10 10
       , margin = MarginLeft 0
       , isSuffixImage = true
       , suffixImageConfig
@@ -90,7 +90,7 @@ retryPaymentButtonConfig state =
       , lottieConfig
         { width = V $ DI.ceil $ (DI.toNumber layouts.width) * 0.8
         , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.8
-        , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
+        , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
         }
       }
 
