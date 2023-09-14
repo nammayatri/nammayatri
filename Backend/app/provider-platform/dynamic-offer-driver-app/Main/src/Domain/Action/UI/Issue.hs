@@ -3,6 +3,7 @@
 module Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import qualified Data.ByteString as BS
 import Data.Text as T hiding (map, null)
 import Data.Time.Format.ISO8601 (iso8601Show)
@@ -236,23 +237,12 @@ createIssueReport (driverId, merchantId) Common.IssueReportReq {..} = do
             vehicleNo = res.vehicleNo,
             status = show res.bookingStatus,
             rideCreatedAt = ride.createdAt,
-            pickupLocation = mkAddress res.customerPickupLocation,
-            dropLocation = mkAddress <$> res.customerDropLocation,
+            pickupLocation = mkLocation res.customerPickupLocation,
+            dropLocation = mkLocation <$> res.customerDropLocation,
             fare = res.actualFare
           }
 
-    fromMaybeEmpty = fromMaybe ""
-
-    mkAddress details =
-      T.unwords
-        [ fromMaybeEmpty details.street,
-          fromMaybeEmpty details.building,
-          fromMaybeEmpty details.area,
-          fromMaybeEmpty details.city,
-          fromMaybeEmpty details.state,
-          fromMaybeEmpty details.country,
-          fromMaybeEmpty details.areaCode
-        ]
+    mkLocation Common.LocationAPIEntity {..} = TIT.Location {..}
 
 issueInfo :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueInfoRes
 issueInfo issueReportId (driverId, _) mbLanguage = do
