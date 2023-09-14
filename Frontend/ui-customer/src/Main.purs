@@ -37,6 +37,7 @@ import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
+import Screens.Types(PermissionScreenStage(..))
 
 main :: Event -> Effect Unit
 main event = do
@@ -78,11 +79,16 @@ onConnectivityEvent triggertype = do
           _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
             Nothing -> pure unit
             Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
-          _ ← runExceptT $ runBackT $ case triggertype of 
-              "LOCATION_DISABLED" -> Flow.permissionScreenFlow triggertype
-              "INTERNET_ACTION" -> Flow.permissionScreenFlow triggertype
-              "REFRESH" -> Flow.baseAppFlow payload' true
-              _ -> Flow.baseAppFlow payload' true
+          _ ← runExceptT $ runBackT do 
+              case triggertype of 
+                "LOCATION_DISABLED" -> do 
+                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
+                  Flow.permissionScreenFlow
+                "INTERNET_ACTION" -> do 
+                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+                  Flow.permissionScreenFlow
+                "REFRESH" -> Flow.baseAppFlow payload' true
+                _ -> Flow.baseAppFlow payload' true
           pure unit
         JBridge.storeMainFiberOb mainFiber
         pure unit

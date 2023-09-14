@@ -615,5 +615,7 @@ const hindiStrings = {
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
   "CLEAN_CAB" : "क्लीन कैब",
   "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
-  "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS"
+  "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
+  "ENABLE_LOCATION_PERMISSION_TO" : "सवारी खोजने के लिए स्थान अनुमति सक्षम करें",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।"
 }

@@ -221,7 +221,9 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 0 16 5 ,
-    topTitle = Just ob.heading,
+    topTitle {
+      text = ob.heading
+    },
     primaryText {
       text = ob.title
     , margin = Margin 16 24 16 4 },

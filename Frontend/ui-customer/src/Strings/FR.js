@@ -502,5 +502,7 @@ export function getStringValue(key) {
     "AUTO_RICKSHAW" : "Pousse-pousse automatique",
     "CABS_AVAILABLE" : "cabines disponibles",
     "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
-    "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS"
+    "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
+    "ENABLE_LOCATION_PERMISSION_TO": "Activer l'autorisation de localisation pour rechercher des courses",
+   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets."
   }

@@ -299,6 +299,21 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const getLocationPermissionStatus = function (unit) {
+  try{
+    if(window.__OS == "IOS"){
+      let resp = window.JBridge.getLocationPermissionStatus();
+      if(resp == "3" || resp == "4" || resp == "5") return "ENABLED"
+      else if(resp == "0") return "DISABLED"
+      else return "DENIED"
+    }else{
+      return window.JBridge.getLocationPermissionStatus();
+    }
+  } catch (e){
+    return "ENABLED";
+  }
+}
+
 export const isMicrophonePermissionEnabled = function (unit) {
     return window.JBridge.isMicrophonePermissionEnabled();
 };
@@ -1295,7 +1310,10 @@ export const storeCallBackDriverLocationPermission = function (cb) {
           if (window.onResumeListeners){
             window.onResumeListeners.push(locationCallBack);
           };
-          window.JBridge.storeCallBackDriverLocationPermission(callback);
+
+          if(window.__OS == "ANDROID"){
+            window.JBridge.storeCallBackDriverLocationPermission(callback);
+          }
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
       }
   }}

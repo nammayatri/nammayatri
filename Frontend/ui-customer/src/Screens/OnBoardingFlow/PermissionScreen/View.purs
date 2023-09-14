@@ -18,6 +18,7 @@ module Screens.PermissionScreen.View where
 import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PopUpModal as PopUpModal
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -28,39 +29,47 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility)
-import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig)
+import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig, getLocationBlockerPopUpConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 
-screen :: ST.PermissionScreenState -> String -> Screen Action ST.PermissionScreenState ScreenOutput
-screen initialState triggertype = 
+screen :: ST.PermissionScreenState -> Screen Action ST.PermissionScreenState ScreenOutput
+screen initialState  = 
   { initialState
-  , view : view triggertype
+  , view : view 
   , name : "PermissionScreen"
   , globalEvents : [(\ push -> do
-    _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
-    _ <- JB.storeCallBackInternetAction push InternetCallBackCustomer
-    pure $ pure unit
+    if EHC.os == "IOS" && (JB.getLocationPermissionStatus unit) == "DENIED" then do 
+      _ <- push (LocationPermissionCallBackCustomer false)
+      pure $ pure unit
+    else do 
+      _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
+      _ <- JB.storeCallBackInternetAction push InternetCallBackCustomer
+      pure $ pure unit
   )]
   , eval
   }
 
-view :: forall w . String -> (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
-view triggertype push state =
+view :: forall w . (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
+view push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , clickable true
-  , visibility if (EHC.os == "IOS" && triggertype == "LOCATION_DISABLED") then GONE else VISIBLE
+  , visibility if (EHC.os == "IOS" && state.stage == ST.LOCATION_DISABLED) then GONE else VISIBLE
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
-     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
+     ]([] <> (case state.stage of
+                ST.INTERNET_ACTION -> [ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
+                ST.LOCATION_DENIED -> [iosEnableLocationView push state]
+                ST.LOCATION_DISABLED -> [locationAccessPermissionView push state]
+                _ ->  [textView[]]))
    ]
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -128,3 +137,12 @@ buttonView push state  =
   --     , gravity CENTER
   --     ] <> FontStyle.subHeading1 TypoGraphy
   ]
+
+
+iosEnableLocationView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w  
+iosEnableLocationView push state = 
+  linearLayout
+  [
+    height MATCH_PARENT,
+    width MATCH_PARENT
+  ][PopUpModal.view (push <<< LocationBlockerPopUpAC) (getLocationBlockerPopUpConfig state)]

@@ -628,5 +628,7 @@ const malayalamStrings = {
   "NOW_GET_ASSISTED_RIDES" : "നിങ്ങൾ വൈകല്യമുള്ള ആളാണെങ്കിൽ ഇപ്പോൾ അസിസ്റ്റന്റ് റൈഡുകൾ നേടൂ",
   "CLEAN_CAB" : "ക്ലീൻ ക്യാബ്",
   "SENT_OTP_VIA_WHATSAPP" : "ഒടിപി വാട്ട്‌സ്ആപ്പ് വഴി അയച്ചു", 
-  "SENT_OTP_VIA_SMS" : "എസ്എംഎസ് വഴി OTP അയച്ചു"
+  "SENT_OTP_VIA_SMS" : "എസ്എംഎസ് വഴി OTP അയച്ചു",
+  "ENABLE_LOCATION_PERMISSION_TO" : "റൈഡുകൾക്കായി തിരയാൻ ലൊക്കേഷൻ അനുമതി പ്രവർത്തനക്ഷമമാക്കുക",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "സവാരികൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് നമ്മ യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്‌തമാക്കുക."
 }

@@ -500,8 +500,14 @@ type ItemState =
 
 type PermissionScreenState = {
     appConfig :: AppConfig,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    stage :: PermissionScreenStage
 }
+
+data PermissionScreenStage = NORMAL | LOCATION_DISABLED | INTERNET_ACTION | LOCATION_DENIED 
+derive instance genericPermissionScreenStage :: Generic PermissionScreenStage _
+instance eqPermissionScreenStage :: Eq PermissionScreenStage where eq = genericEq
+instance showPermissionScreenStage :: Show PermissionScreenStage where show = genericShow
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen

@@ -70,7 +70,7 @@ type Config = {
     tipSelectedText :: String,
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
-    topTitle :: Mb.Maybe String,
+    topTitle :: TopTitle,
     listViewArray :: Array String
 }
 
@@ -145,6 +145,16 @@ type OptionWithHtmlConfig = {
   cornerRadius :: Number
 }
 
+type TopTitle = {
+    text :: String
+  , visibility :: Visibility
+  , width :: Length
+  , height :: Length 
+  , margin :: Margin
+  , color :: String
+  , gravity :: Gravity
+}
+
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
@@ -161,7 +171,15 @@ config = {
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
-  , topTitle : Mb.Nothing
+  , topTitle : {
+      text : "title"
+    , visibility : VISIBLE
+    , width : WRAP_CONTENT
+    , height : WRAP_CONTENT 
+    , margin : MarginVertical 10 10
+    , color : Color.black800
+    , gravity : LEFT
+    }
   , primaryText : {
       text : "Text1",
       color : Color.black800,

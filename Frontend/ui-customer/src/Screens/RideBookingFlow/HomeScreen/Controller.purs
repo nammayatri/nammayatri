@@ -102,7 +102,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
@@ -510,7 +510,7 @@ data ScreenOutput = LogoutUser
                   | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
-                  | ExitToPermissionFlow String
+                  | ExitToPermissionFlow PermissionScreenStage
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
@@ -606,7 +606,7 @@ data Action = NoAction
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
             | CancelSearchAction PopUpModal.Action
-            | TriggerPermissionFlow String
+            | TriggerPermissionFlow PermissionScreenStage
             | PopUpModalCancelConfirmationAction PopUpModal.Action
             | ScrollToBottom
             | SelectButton Int
@@ -1881,8 +1881,8 @@ eval MapReadyAction state = continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
       internetCondition <- isInternetAvailable unit
-      let action =  if( not internetCondition) then TriggerPermissionFlow "INTERNET_ACTION"
-                    else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow "LOCATION_DISABLED"
+      let action =  if( not internetCondition) then TriggerPermissionFlow INTERNET_ACTION
+                    else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow LOCATION_DISABLED
                     else NoAction
       pure action
     ]

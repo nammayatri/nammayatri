@@ -591,7 +591,7 @@ const englishStrings = {
   "GOT_AN_OTP" : "Got an OTP?",
   "JUST_ONE_LAST_THING" : "Just one last thing",
   "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
-"TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
   "AUTO_RICKSHAW" : "Auto Rickshaw",
   "CABS_AVAILABLE" : "cabs available",
   "PI_POINTER_1" : "Drivers will be prompted to come to your exact location for pickup.",
@@ -615,5 +615,7 @@ const englishStrings = {
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
   "CLEAN_CAB" : "Clean Cab",
   "SENT_OTP_VIA_WHATSAPP" : "OTP Sent via Whatsapp", 
-  "SENT_OTP_VIA_SMS" : "OTP Sent via SMS"
+  "SENT_OTP_VIA_SMS" : "OTP Sent via SMS",
+  "ENABLE_LOCATION_PERMISSION_TO" : "Enable Location Permission to Search for Rides", 
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides."
 }

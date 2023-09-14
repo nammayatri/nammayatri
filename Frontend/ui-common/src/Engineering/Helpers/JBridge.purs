@@ -230,6 +230,7 @@ foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
 foreign import scrollViewFocus :: String -> Int -> Boolean
+foreign import getLocationPermissionStatus :: Fn1 Unit String 
 
 type LottieAnimationConfig = {
     rawJson :: String

@@ -631,5 +631,7 @@ const bengaliStrings = {
   "NOW_GET_ASSISTED_RIDES" : "আপনি যদি প্রতিবন্ধী ব্যক্তি হন তবে এখন সহায়ক রাইড পান" ,
   "CLEAN_CAB" : "ক্লিন ক্যাব",
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
-  "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে"
+  "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
+  "ENABLE_LOCATION_PERMISSION_TO" : "রাইড অনুসন্ধান করার জন্য অবস্থানের অনুমতি সক্ষম করুন",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।"
 }
