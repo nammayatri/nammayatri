@@ -17,10 +17,12 @@ module Domain.Action.UI.Ride.EndRide
     DriverEndRideReq (..),
     CallBasedEndRideReq (..),
     DashboardEndRideReq (..),
+    ScheduledBasedEndRideReq (..),
     callBasedEndRide,
     buildEndRideHandle,
     driverEndRide,
     dashboardEndRide,
+    scheduleBasedEndRide,
   )
 where
 
@@ -36,6 +38,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
+import Domain.Types.Ride
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
@@ -68,7 +71,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
 
-data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq
+data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | ScheduledBasedReq ScheduledBasedEndRideReq
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
@@ -82,6 +85,10 @@ data DashboardEndRideReq = DashboardEndRideReq
 
 newtype CallBasedEndRideReq = CallBasedEndRideReq
   { requestor :: DP.Person
+  }
+
+newtype ScheduledBasedEndRideReq = ScheduledBasedEndRideReq
+  { rideId :: Id Ride
   }
 
 data ServiceHandle m = ServiceHandle
@@ -162,6 +169,14 @@ dashboardEndRide handle rideId req =
     . endRide handle rideId
     $ DashboardReq req
 
+scheduleBasedEndRide ::
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  ServiceHandle m ->
+  Id DRide.Ride ->
+  ScheduledBasedEndRideReq ->
+  m APISuccess.APISuccess
+scheduleBasedEndRide handle rideId = endRide handle rideId . ScheduledBasedReq
+
 endRide ::
   (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
@@ -185,6 +200,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
+    ScheduledBasedReq _ -> pure ()
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
@@ -199,6 +215,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         Nothing -> do
           pure $ getCoordinates booking.toLocation
     CallBasedReq _ -> do
+      pure $ getCoordinates booking.toLocation
+    ScheduledBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
 
   goHomeConfig <- CQGHC.findByMerchantId booking.providerId

@@ -18,7 +18,9 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import Domain.Types.Ride (Ride)
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -26,7 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver
+data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver | EndRideAfterThresholdTimePassed
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -38,6 +40,17 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendPaymentReminderToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPaymentReminderToDriver jobData
   restoreAnyJobInfo SUnsubscribeDriverForPaymentOverdue jobData = AnyJobInfo <$> restoreJobInfo SUnsubscribeDriverForPaymentOverdue jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SEndRideAfterThresholdTimePassed jobData = AnyJobInfo <$> restoreJobInfo SEndRideAfterThresholdTimePassed jobData
+
+data EndRideAfterThresholdTimePassedJobData = EndRideAfterThresholdTimePassedJobData
+  { rideId :: Id Ride,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'EndRideAfterThresholdTimePassed
+
+type instance JobContent 'EndRideAfterThresholdTimePassed = EndRideAfterThresholdTimePassedJobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,

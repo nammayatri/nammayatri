@@ -33,6 +33,7 @@ import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
+import Kernel.Prelude (NominalDiffTime)
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -43,6 +44,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Scheduler.Types
+import SharedLogic.Allocator (AllocatorJobType (EndRideAfterThresholdTimePassed), EndRideAfterThresholdTimePassedJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
@@ -93,7 +97,7 @@ buildStartRideHandle merchantId = do
 type StartRideFlow m r = (MonadThrow m, Log m, EsqLocDBFlow m r, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
 
 driverStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, HasField "jobInfoMap" r (Map Text Bool), HasField "schedulerSetName" r Text, HasField "schedulerType" r Lib.Scheduler.Types.SchedulerType, HasField "maxShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -104,7 +108,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, HasField "jobInfoMap" r (Map Text Bool), HasField "schedulerSetName" r Text, HasField "schedulerType" r Lib.Scheduler.Types.SchedulerType, HasField "maxShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -115,7 +119,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, HasField "jobInfoMap" r (Map Text Bool), HasField "schedulerSetName" r Text, HasField "schedulerType" r Lib.Scheduler.Types.SchedulerType, HasField "maxShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -152,8 +156,10 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         Nothing -> do
           driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
-
   whenWithLocationUpdatesLock driverId $ do
+    let inTime :: NominalDiffTime = fromIntegral $ max 3600 (booking.estimatedDuration * 3)
+    maxShards <- asks (.maxShards)
+    withTimeAPI "startRide" "createdEndJob" $ createJobIn @_ @'EndRideAfterThresholdTimePassed inTime maxShards (EndRideAfterThresholdTimePassedJobData rideId booking.providerId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride

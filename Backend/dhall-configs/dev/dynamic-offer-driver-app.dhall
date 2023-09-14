@@ -163,6 +163,7 @@ let AllocatorJobType =
       | SendPaymentReminderToDriver
       | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
+      | EndRideAfterThresholdTimePassed
       >
 
 let jobInfoMapx =
@@ -176,6 +177,9 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.EndRideAfterThresholdTimePassed
+        , mapValue = False
+        }
       ]
 
 in  { esqDBCfg
