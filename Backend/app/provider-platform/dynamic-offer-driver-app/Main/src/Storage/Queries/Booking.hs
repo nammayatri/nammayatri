@@ -96,7 +96,7 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
 
 findBookingIdBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe (Id Booking))
 findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now bookingOtpExpiry = do
-  let otpExpiryCondition = addUTCTime (- (bookingOtpExpiry * 60) :: NominalDiffTime) now
+  let otpExpiryCondition = addUTCTime (fromIntegral (- (bookingOtpExpiry * 60)) :: NominalDiffTime) now
   (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
 cancelBookings :: MonadFlow m => [Id Booking] -> UTCTime -> m ()
