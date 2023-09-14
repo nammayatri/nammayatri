@@ -2052,40 +2052,37 @@ export const scrollViewFocus = function (parentID) {
   }
 }
 
-export const setYoutubePlayer = function (json) {
-  return function (viewId) {
-    return function (videoStatus) {
-      if (JBridge.setYoutubePlayer) {
-        try {
-          console.log("Inside setYoutubePlayer ------------");
-          return JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
-        } catch (err) {
-          console.log("error in setYoutubePlayer " + err);
-        }
-      }
-    };
-  };
+export const setYoutubePlayer = function (json, viewId, videoStatus) {
+  if (JBridge.setYoutubePlayer) {
+    try {
+      console.log("Inside setYoutubePlayer ------------");
+      return JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
+    } catch (err) {
+      console.log("error in setYoutubePlayer");
+    }
+  }
 };
 
-export const getVideoID = function (url) {
-  try {
-    let ID = "";
-    const updatedURL = url.replace(/(>|<)/gi, "").split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
-    if (updatedURL[2] !== undefined) {
-      ID = updatedURL[2].split(/[^0-9a-z_-]/i);
-      ID = ID[0];
-    } else {
-      if (updatedURL[1] == /shorts/) {
-        ID = updatedURL[2];
-      } else {
-        ID = updatedURL;
-      }
-    }
-    return ID;
-  } catch (e) {
-    console.log("error in getVideoID " + e);
-  }
+export const supportsInbuildYoutubePlayer = function () {
+  return JBridge.setYoutubePlayer ;
 }
+
+export const addCarouselWithVideoExists = function () {
+  return JBridge.addCarouselWithVideo;
+}
+
+export const addCarousel = function (carouselModalJson, id) {
+    var carouselJson = JSON.stringify(carouselModalJson);
+    var data = JSON.parse(carouselJson);
+    var originalArray = data.carouselData;
+    if(JBridge.addCarouselWithVideo){
+      return JBridge.addCarouselWithVideo(carouselJson, id);
+    }
+    else if(JBridge.addCarousel){
+      const modifiedArray = originalArray.map(item => JSON.stringify({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
+      return JBridge.addCarousel(modifiedArray, id);
+    }
+  };
 
 export const storeCallBackLocateOnMap = function (cb) {
   return function (action) {

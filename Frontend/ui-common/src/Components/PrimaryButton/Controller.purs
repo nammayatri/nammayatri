@@ -65,6 +65,7 @@ type TextConfig =
   , width :: Length
   , accessibilityHint :: String
   , weight :: Maybe Number
+  , textFromHtml :: Maybe String
   }
 
 
@@ -97,6 +98,7 @@ config =   {
     , width : WRAP_CONTENT
     , accessibilityHint : ""
     , weight : Nothing
+    , textFromHtml : Nothing
     }
   , width: MATCH_PARENT
   , height: V 50

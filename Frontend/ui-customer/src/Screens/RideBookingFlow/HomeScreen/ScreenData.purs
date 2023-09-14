@@ -226,6 +226,7 @@ initData = {
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
+    , showEducationalCarousel : false
     }
 }
 

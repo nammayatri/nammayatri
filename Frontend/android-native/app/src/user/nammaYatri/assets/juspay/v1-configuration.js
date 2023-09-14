@@ -186,6 +186,9 @@ window.getMerchantConfig = function () {
       "query" : "google.navigation:q=%f,%f"
     , "packageName" : "com.google.android.apps.maps"
   }
+  , "purpleRideConfig" : {
+        "genericVideoUrl" : "https://www.youtube.com/watch?v=tzrf2Rdpkc4"  
+  }
   , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , "callOptions" : ["ANONYMOUS", "DIRECT"]

@@ -28,11 +28,11 @@ import Data.String (length, trim)
 import Data.String.CodeUnits (charAt)
 import Effect (Effect)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (addMediaPlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, getVideoID)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
@@ -43,6 +43,7 @@ import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
+import Data.Function.Uncurried (runFn3)
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -105,8 +106,8 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show PLAY)
-                                            PortraitVideoLink -> pure $ setYoutubePlayer (youtubeData state "PORTRAIT_VIDEO") id (show PLAY)
+                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
+                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 ) id (show PLAY)
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
@@ -373,13 +374,3 @@ addCommentModelConfig state =
   in
     popUpConfig'
 
-youtubeData :: NotificationDetailModelState -> String -> YoutubeData
-youtubeData state mediaType =
-  { videoTitle: "title"
-  , setVideoTitle: false
-  , showMenuButton: false
-  , showDuration: true
-  , showSeekBar: true
-  , videoId: getVideoID state.mediaUrl
-  , videoType: mediaType
-  }

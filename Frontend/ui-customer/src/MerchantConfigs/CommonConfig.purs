@@ -102,6 +102,9 @@ commonConfig =
               gradient : "#29334A"
             } 
           }
+        , purpleRideConfig : {
+            genericVideoUrl : ""
+          }
         , showDisabilityBanner : false
         , searchLocationConfig : {
           showAdditionalChargesText : false

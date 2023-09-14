@@ -83,7 +83,8 @@ type CoverVideoConfig = {
   margin :: Margin ,
   padding :: Padding ,
   mediaUrl :: String ,
-  mediaType :: String 
+  mediaType :: String ,
+  id :: String
 }
 
 type ContactViewConfig = {
@@ -404,7 +405,8 @@ config = {
         margin : (Margin 0 0 0 0) ,
         padding : (Padding 0 0 0 0) ,
         mediaType : "",
-        mediaUrl : ""
+        mediaUrl : "",
+        id : ""
     }
 }
 

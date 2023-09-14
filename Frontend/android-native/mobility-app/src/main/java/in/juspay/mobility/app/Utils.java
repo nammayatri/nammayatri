@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Gravity;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
@@ -182,4 +183,13 @@ public class Utils {
     }
 
     public static enum VariantType { AC, NON_AC }
+
+    public static int getGravity(String gravity){
+        switch (gravity){
+            case "LEFT": return Gravity.LEFT;
+            case "RIGHT" : return Gravity.RIGHT;
+            case "TOP" :  return Gravity.TOP;
+            case "BOTTOM" : return Gravity.BOTTOM;
+            default: return Gravity.CENTER;}
+    }
 }

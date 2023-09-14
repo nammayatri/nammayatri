@@ -3,7 +3,6 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_marginHorizontal="16dp"
     android:orientation="vertical">
 
     <ScrollView
@@ -13,35 +12,39 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:id="@+id/parentLinearLayout"
             android:orientation="vertical">
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
-                android:id="@+id/ivimage" />
+                android:id="@+id/carouselImageView" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:id = "@+id/videoViewLinearLayout"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvHeading"
                 android:layout_marginTop="25dp"
-                android:layout_marginHorizontal="30dp"
                 android:text="heading"
                 android:textColor="@color/Black900"
                 android:gravity="center"
                 android:textSize="26dp"
                 android:fontFamily="@font/plus_jakarta_sans_bold"/>
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvDesc"
                 android:gravity="center"
                 android:layout_marginTop="25dp"
-                android:layout_marginBottom="30dp"
-                android:layout_marginHorizontal="30dp"
                 android:textColor="@color/Black700"
                 android:textSize="16dp"
                 android:lineHeight="24dp"
+                android:minHeight="70dp"
                 android:fontFamily="@font/plus_jakartasans_medium"
                 android:layout_below="@id/tvHeading"
                 android:text="desc"/>

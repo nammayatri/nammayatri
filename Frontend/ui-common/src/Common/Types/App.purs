@@ -316,6 +316,7 @@ type YoutubeData = {
   , showSeekBar :: Boolean
   , videoId :: String
   , videoType :: String
+  , videoHeight :: Int
 }
 
 type FCMBundleUpdate = {
@@ -351,4 +352,49 @@ type PolylineAnimationConfig = {
   , draw :: Int
   , fade :: Int
   , delay ::Int
+}
+
+
+data YoutubeVideoStatus = PLAY | PAUSE
+
+derive instance genericYoutubeVideoStatus:: Generic YoutubeVideoStatus _
+instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where show = genericShow
+instance eqYoutubeVideoStatus :: Eq YoutubeVideoStatus where eq = genericEq
+
+type CarouselModal = {
+  carouselData ::  Array CarouselData,
+  gravity :: String 
+}
+
+type CarouselData = {
+  imageConfig :: CarouselImageConfig,
+  titleConfig :: CarouselTextConfig,
+  youtubeConfig :: YoutubeData,
+  contentType :: String,
+  gravity :: Int, 
+  descriptionConfig :: CarouselTextConfig,
+  backgroundColor :: String
+}
+
+type CarouselImageConfig = {
+  height :: Int,
+  width :: Int,
+  bgColor :: String,
+  cornerRadius :: Number,
+  image :: String
+}
+
+type CarouselTextConfig = {
+  textSize :: Int,
+  textColor :: String,
+  gravity :: String,
+  margin :: MarginConfig,
+  text :: String
+}
+
+type MarginConfig = {
+  top :: Int ,
+  right :: Int,
+  bottom :: Int,
+  left :: Int
 }

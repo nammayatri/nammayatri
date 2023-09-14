@@ -58,13 +58,18 @@ config =
   rideActionModelConfig : {
     showVehicleVariant : true
   }
-  , enablePurpleRideBanner : false
   , profileVerification : {
       aadharVerificationRequired : false
     } 
   , gotoConfig : {
     enableGoto : false,
-    maxGotoLocations : 5
+    maxGotoLocations : 5}
+  , purpleRideConfig : {
+      showPurpleVideos : false,
+      visualImpairmentVideo : "",
+      physicalImpairmentVideo : "",
+      hearingImpairmentVideo : "",
+      genericAccessibilityVideo : ""
   }
   , profile : { 
     bookingOptionMenuForTaxi : false

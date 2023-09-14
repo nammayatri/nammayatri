@@ -159,4 +159,7 @@ config =
       , labelTextSize : 30
       , animationDuration : 400
       }
+  , purpleRideConfig : {
+      genericVideoUrl : "" 
+  }
   }

@@ -91,7 +91,13 @@ commonConfig =
         , profile :
             { bookingOptionMenuForTaxi : false
             }
-        , enablePurpleRideBanner : false
+        , purpleRideConfig : {
+            showPurpleVideos : false,
+            visualImpairmentVideo : "",
+            physicalImpairmentVideo : "",
+            hearingImpairmentVideo : "",
+            genericAccessibilityVideo : ""
+          }
         , showPaymentDetails : true
         , gotoConfig : {
             maxGotoLocations : 5,

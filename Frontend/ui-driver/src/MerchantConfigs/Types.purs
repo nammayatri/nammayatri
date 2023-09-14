@@ -14,12 +14,20 @@ type AppConfig =
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
     profile :: ProfileConfig,
-    enablePurpleRideBanner :: Boolean,
     showPaymentDetails :: Boolean,
     gotoConfig :: GotoConfig,
     profileVerification :: ProfileVerificationConfig,
-    bottomNavConfig :: BottomNavConfig
+    bottomNavConfig :: BottomNavConfig,
+    purpleRideConfig :: PurpleRideConfig
   } 
+
+type PurpleRideConfig = {
+  showPurpleVideos :: Boolean,
+  visualImpairmentVideo :: String,
+  physicalImpairmentVideo :: String,
+  hearingImpairmentVideo :: String,
+  genericAccessibilityVideo :: String
+  }
 
 type Language =  {
   name :: String,
