@@ -1,12 +1,15 @@
 package in.juspay.mobility.app.carousel;
 
+import org.json.JSONObject;
+
 public class ViewPagerItem {
     int imageID;
-    String heading, description;
+    JSONObject imageConfig, descriptionConfig, titleConfig;
 
-    public ViewPagerItem(int imageID, String heading, String description) {
+    public ViewPagerItem(int imageID, JSONObject imageConfig, JSONObject descriptionConfig, JSONObject titleConfig) {
         this.imageID = imageID;
-        this.heading = heading;
-        this.description = description;
+        this.imageConfig =  imageConfig;
+        this.descriptionConfig = descriptionConfig;
+        this.titleConfig = titleConfig;
     }
 }

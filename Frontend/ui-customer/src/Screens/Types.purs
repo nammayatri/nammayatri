@@ -124,10 +124,34 @@ type SplashScreenData =  {
 
 -- ############################################################# WelcomeScreen ################################################################################
 
-type CarouselModel = {
-  image :: String,
-  title :: String,
-  description :: String
+type CarouselModal = {
+  imageConfig :: CarouselImageConfig,
+  titleConfig :: CarouselTextConfig,
+  descriptionConfig :: CarouselTextConfig,
+  backgroundColor :: String
+}
+
+type CarouselImageConfig = {
+  height :: Int,
+  width :: Int,
+  bgColor :: String,
+  cornerRadius :: Number,
+  image :: String
+}
+
+type CarouselTextConfig = {
+  textSize :: Int,
+  textColor :: String,
+  gravity :: String, -------- CENTER | LEFT | RIGHT | TOP | BOTTOM
+  margin :: Margin,
+  text :: String
+}
+
+type Margin = {
+  top :: Int ,
+  right :: Int,
+  bottom :: Int,
+  left :: Int
 }
 
 type WelcomeScreenState = {
@@ -135,7 +159,7 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  carouselModel :: Array CarouselModel,
+  carouselModal :: Array CarouselModal,
   logField :: Object Foreign
 }
 
@@ -694,6 +718,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , showEducationalCarousel :: Boolean
   }
 
 type RouteEndPoints = {

@@ -197,6 +197,46 @@ skipButtonConfig state =
   in
     primaryButtonConfig'
 
+maybeLaterConfig :: ST.HomeScreenState -> PrimaryButton.Config
+maybeLaterConfig state =
+  let
+    issueFaced =  state.data.ratingViewState.issueFacedView
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = ""
+          , textFromHtml =  ("<u>" <> (getString MAYBE_LATER) <> "<u>")
+          , accessibilityHint = "Maybe Later : Button"
+          , color = Color.black650
+          }
+        , background = Color.white900
+        , id = "MaybeLaterButton"
+        , margin = (Margin 0 0 0 0)
+        }
+  in
+    primaryButtonConfig'
+
+updateProfileConfig :: ST.HomeScreenState -> PrimaryButton.Config
+updateProfileConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = getString UPDATE_PROFILE
+          , accessibilityHint = "Update Profile : Button"
+          , color = state.data.config.primaryTextColor
+          }
+        , background = Color.black900
+        , margin = MarginTop 8
+        , id = "UpdateProfile"
+        }
+  in
+    primaryButtonConfig'
+
+
+
 whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let

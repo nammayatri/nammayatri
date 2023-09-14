@@ -80,7 +80,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), CarouselModal(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -91,6 +91,8 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
+import Helpers.Utils (addCarousel)
+import Resources.Constants as Constants
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -266,7 +268,7 @@ view push state =
             )
             (const MapReadyAction)
         ]
-        [ relativeLayout
+       [ relativeLayout
             [ width MATCH_PARENT
             , weight 1.0
             , orientation VERTICAL
@@ -274,7 +276,7 @@ view push state =
             , accessibility DISABLE
             , height MATCH_PARENT
             ]
-            [ frameLayout
+            ([ frameLayout
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 , accessibility DISABLE
@@ -366,7 +368,13 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            ]
+            ] <> if state.props.showEducationalCarousel then [linearLayout
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , gravity CENTER
+                    , onClick push $ const NoAction
+                    , background Color.black9000
+                    ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] else [])
         ]
     ] 
 
@@ -2259,3 +2267,72 @@ genderBanner push state =
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
 isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
+
+carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+carouselView state push = 
+  PrestoAnim.animationSet [ fadeIn true ] $ 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , cornerRadius 16.0
+  , gravity CENTER
+  , orientation VERTICAL
+  , margin $ MarginHorizontal 16 16
+  ][  textView(
+      [ text "Inclusive and Accessible, for everyone!"
+      , margin $ MarginBottom 20
+      , color Color.black800
+      ] <> FontStyle.body7 TypoGraphy) 
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , stroke $ "1," <> Color.grey900
+      , background Color.grey700
+      , margin $ MarginBottom 16
+      , orientation VERTICAL
+      , cornerRadius 8.0
+      ][  linearLayout
+          [ height $ V 360
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , id $ getNewIDWithTag "AccessibilityCarouselView"
+          , accessibility DISABLE
+          , gravity CENTER    
+          , afterRender (\action -> do
+              _ <- push action
+              _ <- addCarousel ([
+                  getAccessibilityCarouselData "carousel_4" 250 Color.grey700  (getString EDUCATIONAL_POP_UP_SLIDE_1_TITLE) (getString EDUCATIONAL_POP_UP_SLIDE_1_SUBTITLE) 14 Color.grey700,
+                  getAccessibilityCarouselData "ny_ic_blind_pickup" 160 Color.blue600  (getString EDUCATIONAL_POP_UP_SLIDE_2_TITLE) (getString EDUCATIONAL_POP_UP_SLIDE_2_SUBTITLE) 12 Color.grey700,
+                  getAccessibilityCarouselData "ny_ic_deaf_pickup" 160 Color.blue600  (getString EDUCATIONAL_POP_UP_SLIDE_3_TITLE) (getString EDUCATIONAL_POP_UP_SLIDE_3_SUBTITLE) 12 Color.grey700,
+                  getAccessibilityCarouselData "ny_ic_locomotor_arrival" 160 Color.blue600  (getString EDUCATIONAL_POP_UP_SLIDE_4_TITLE) (getString EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE) 12 Color.grey700,
+                  getAccessibilityCarouselData "ny_ic_disability_illustration" 160 Color.white900  (getString EDUCATIONAL_POP_UP_SLIDE_5_TITLE) (getString EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE) 12 Color.grey700
+                ]) (getNewIDWithTag "AccessibilityCarouselView") 48
+              pure unit
+            ) (const AfterRender)
+          ][]
+        ]
+    , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
+    , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterConfig state)]
+
+
+getAccessibilityCarouselData :: String -> Int -> String -> String -> String -> Int -> String -> CarouselModal
+getAccessibilityCarouselData image imageHeight imageBgColor title description descTextSize carouselBgColor = {
+    imageConfig : { image : image , height : imageHeight , width : 200, bgColor : imageBgColor, cornerRadius : 8.0 },
+    backgroundColor : carouselBgColor,
+    titleConfig : {
+      text : title,
+      textSize : 16,
+      textColor : Color.black800,
+      gravity : "CENTER",
+      margin : { top : 16 , bottom : 0 , right : 16 , left : 16 }
+    }, 
+    descriptionConfig : {
+      text : description, 
+      textSize : descTextSize,
+      textColor : Color.black700,
+      gravity : "LEFT",
+      margin : { top : 0 , bottom : 0 , right : 16 , left : 16 }
+    }
+}

@@ -615,5 +615,16 @@ const englishStrings = {
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
   "CLEAN_CAB" : "Clean Cab",
   "SENT_OTP_VIA_WHATSAPP" : "OTP Sent via Whatsapp", 
-  "SENT_OTP_VIA_SMS" : "OTP Sent via SMS"
+  "SENT_OTP_VIA_SMS" : "OTP Sent via SMS",
+  "EDUCATIONAL_POP_UP_SLIDE_1_TITLE" : "We strive to provide all our users \nan even & equal experience",
+  "EDUCATIONAL_POP_UP_SLIDE_2_TITLE" : "For users with poor vision",
+  "EDUCATIONAL_POP_UP_SLIDE_3_TITLE" : "For users with poor hearing",
+  "EDUCATIONAL_POP_UP_SLIDE_4_TITLE" : "For users with locomotor disability",
+  "EDUCATIONAL_POP_UP_SLIDE_5_TITLE" : "For users with other special needs",
+  "EDUCATIONAL_POP_UP_SLIDE_1_SUBTITLE" : "",
+  "EDUCATIONAL_POP_UP_SLIDE_2_SUBTITLE" : "&#8226; Drivers will be prompted to call instead <br> &ensp; of texting. <br> &#8226; Drivers will be prompted to sound horn <br> &ensp;  once at the pickup. <br> &#8226; Drivers will be sensitised to help them with <br> &ensp;  their needs and requests.",
+  "EDUCATIONAL_POP_UP_SLIDE_3_SUBTITLE" : "&#8226; Drivers will be prompted to text instead <br> &ensp;  of calling. <br> &#8226; Drivers will be prompted to message them <br> &ensp;  once at the pickup. <br> &#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
+  "EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE" : "&#8226; Drivers will be prompted to come to their <br> &ensp;  exact location for pickup. <br> &#8226; Drivers will be prompted to help them <br> &ensp;  with their mobility aid. <br>&#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
+  "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; Drivers will be sensitised to help with <br> &ensp; their needs and requests.",
+  "INCLUSIVE_AND_ACCESSIBLE" : "Inclusive and Accessible, for everyone!"
 }

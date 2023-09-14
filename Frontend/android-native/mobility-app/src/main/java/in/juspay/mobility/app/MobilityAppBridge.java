@@ -11,6 +11,8 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
@@ -315,7 +317,7 @@ public class MobilityAppBridge extends HyperBridge {
     // endregion
 
     @JavascriptInterface
-    public void addCarousel(String stringifyArray, String id) {
+    public void addCarousel(String stringifyArray, String id, int gravity) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         LinearLayout parentLayout = null;
@@ -325,16 +327,20 @@ public class MobilityAppBridge extends HyperBridge {
         if (activity == null || parentLayout == null) return;
         LinearLayout finalParentLayout = parentLayout;
         activity.runOnUiThread(() -> {
+
             ViewPager2 viewPager2 = new ViewPager2(context);
+
             LinearLayout sliderDotsPanel = new LinearLayout(context);
             LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+
+            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, finalParentLayout.getHeight());
+            ScrollView scrollView = new ScrollView(context);
+            scrollView.setLayoutParams(scrollViewParams);
+
+            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,  finalParentLayout.getHeight());
             LinearLayout linearLayout = new LinearLayout(context);
             linearLayout.setOrientation(LinearLayout.VERTICAL);
             linearLayout.setLayoutParams(linearLayoutParams);
-            ScrollView scrollView = new ScrollView(context);
-            scrollView.setLayoutParams(scrollViewParams);
 
             //adding data in array list
             ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
@@ -342,8 +348,13 @@ public class MobilityAppBridge extends HyperBridge {
                 JSONArray jsonArray = new JSONArray(stringifyArray);
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    int imageID = Utils.getResIdentifier(context,jsonObject.getString("image"), "drawable");
-                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, jsonObject.getString("title"), jsonObject.getString("description"));
+                    JSONObject imageConfig = jsonObject.getJSONObject("imageConfig");
+                    JSONObject titleConfig = jsonObject.getJSONObject("titleConfig");
+                    JSONObject descriptionConfig = jsonObject.getJSONObject("descriptionConfig");
+
+                    int imageID = Utils.getResIdentifier(context,imageConfig.getString("image"), "drawable");
+                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, imageConfig, descriptionConfig, titleConfig);
+
                     viewPagerItemArrayList.add(viewPagerItem);
                 }
             } catch (Exception e) {
@@ -393,7 +404,7 @@ public class MobilityAppBridge extends HyperBridge {
                 }
             });
             linearLayout.addView(viewPager2);
-            linearLayout.setGravity(Gravity.BOTTOM);
+            linearLayout.setGravity(gravity);
             linearLayout.addView(sliderDotsPanel);
             linearLayout.setWeightSum(2);
             scrollView.addView(linearLayout);

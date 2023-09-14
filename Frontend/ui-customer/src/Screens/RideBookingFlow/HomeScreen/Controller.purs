@@ -622,6 +622,8 @@ data Action = NoAction
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
             | NotifyDriverStatusCountDown Int String String String
+            | UpdateProfileButtonAC PrimaryButtonController.Action 
+            | SkipAccessibilityUpdateAC PrimaryButtonController.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1768,7 +1770,11 @@ eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
 
-eval (DisabilityBannerAC Banner.OnClick) state = exit $ GoToMyProfile state true
+eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = updateAndExit state{props{showEducationalCarousel = false}} $ GoToMyProfile state{props{showEducationalCarousel = false}} true
+
+eval (DisabilityBannerAC Banner.OnClick) state = continue state{props{showEducationalCarousel = true}}
+
+eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = continue state{props{showEducationalCarousel = false}}
 
 eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = continue state{props{showDisabilityPopUp = false}}
 

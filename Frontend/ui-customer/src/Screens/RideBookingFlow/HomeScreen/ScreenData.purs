@@ -222,6 +222,7 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , showEducationalCarousel : false
     }
 }
 
