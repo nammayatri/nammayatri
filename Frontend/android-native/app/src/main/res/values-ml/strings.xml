@@ -44,5 +44,6 @@
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
+    <string name="go_to">ഗോ റ്റു</string>
 
 </resources>

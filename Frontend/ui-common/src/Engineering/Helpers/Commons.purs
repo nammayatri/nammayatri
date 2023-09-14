@@ -217,3 +217,12 @@ stringToVersion reqVersion =
   }
   in
     madeVersion
+
+getMapsLanguageFormat :: String -> String
+getMapsLanguageFormat key = 
+  case key of 
+    "HI_IN" -> "HINDI"
+    "KN_IN" -> "KANNADA"
+    "BN_IN" -> "BENGALI"
+    "ML_IN" -> "MALAYALAM"
+    _       -> "ENGLISH"

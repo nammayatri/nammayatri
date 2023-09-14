@@ -27,7 +27,6 @@ import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (unit, (/=), (<>), (==))
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), Listtype)
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle

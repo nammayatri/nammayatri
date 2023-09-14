@@ -64,10 +64,9 @@ import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import Screens.Types (AutoPayStatus(..))
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
+import Screens.Types(MenuOptions(..), AutoPayStatus(..))
+import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
@@ -75,6 +74,7 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils as HU
 import Resource.Constants as Const
+import Data.Either (Either (..))
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -113,7 +113,7 @@ view push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][  linearLayout
+    ][  relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -1096,9 +1096,9 @@ profileOptionsLayout state push =
                         ]
                     ]
                 ]
-                , if (index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+                , if (index == length (optionList state) - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
               ]
-            ) (optionList "")
+            ) (optionList state)
       )
   ]
 

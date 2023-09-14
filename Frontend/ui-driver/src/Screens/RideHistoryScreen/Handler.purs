@@ -69,27 +69,3 @@ rideHistory = do
     SubscriptionScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ (RIDE_HISTORY_NAV GoToSubscription))
-
-rideHistoryItem :: IndividualRideCardState
-rideHistoryItem = {
-    date : "31/05/2022",
-    time : "7:35pm",
-    total_amount : 0,
-    card_visibility : "gone",
-    shimmer_visibility : "visible",
-    rideDistance : "",
-    status : "COMPLETED",
-    vehicleModel : "",
-    shortRideId : "",
-    vehicleNumber : "",
-    driverName : "",
-    driverSelectedFare : 0,
-    vehicleColor : "",
-    id : "",
-    updatedAt : "",
-    source : "",
-    destination : "",
-    vehicleType : "",
-    riderName : ""
-}
-

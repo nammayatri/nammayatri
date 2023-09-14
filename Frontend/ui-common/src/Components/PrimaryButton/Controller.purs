@@ -82,6 +82,7 @@ type LottieConfig =
   { height :: Length
   , width :: Length
   , lottieURL :: String
+  , autoDisableLoader :: Boolean
   }
 
 config :: Config
@@ -139,5 +140,6 @@ config =   {
     height : V 30
   , width : V 150
   , lottieURL : getValueFromConfig "apiLoaderLottie"
+  , autoDisableLoader : true
   }
   }

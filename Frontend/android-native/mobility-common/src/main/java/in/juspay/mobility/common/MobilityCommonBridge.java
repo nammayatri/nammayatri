@@ -298,6 +298,11 @@ public class MobilityCommonBridge extends HyperBridge {
     public void storeCallBackDriverLocationPermission(String callback) {
         receivers.storeLocationCallBack = callback;
     }
+
+    @JavascriptInterface
+    public void storeCallBackLocateOnMap(String callback) {
+        storeLocateOnMapCallBack = callback;
+    }
     // endregion
 
     // region Location
@@ -448,6 +453,106 @@ public class MobilityCommonBridge extends HyperBridge {
                             }
                         })
                         .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
+        }
+    }
+
+    @JavascriptInterface
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
+        try {
+            final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
+            final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
+            final double dottedLineRange = dottedLineConfig != null ? dottedLineConfig.optDouble("range", 100.0f) : 100.0f;
+            final boolean dottedLineVisible = dottedLineConfig != null && dottedLineConfig.optBoolean("visible", false);
+            ExecutorManager.runOnMainThread(() -> {
+                removeMarker("ny_ic_customer_current_location");
+                LatLng position = new LatLng(0.0, 0.0);
+                boolean moveToCurrentPosition = goToCurrentLocation;
+                try {
+                    position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    moveToCurrentPosition = true;
+                }
+                if (moveToCurrentPosition) {
+                    LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                } else {
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                }
+
+                googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                    @Override
+                    public void onCameraMove() {
+                        dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
+                    }
+                });
+
+                googleMap.setOnCameraIdleListener(() -> {
+                    double lat1 = (googleMap.getCameraPosition().target.latitude);
+                    double lng = (googleMap.getCameraPosition().target.longitude);
+                    if (storeLocateOnMapCallBack != null) {
+                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, "LatLon", lat1, lng);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
+                    LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    if (googleMap != null)
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                } else {
+                    if (googleMap != null) {
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            Log.i(MAPS, "LocateOnMap error for ", e);
+        }
+    }
+
+    @JavascriptInterface
+    public void exitLocateOnMap(String str) {
+        try {
+            storeLocateOnMapCallBack = null;
+            ExecutorManager.runOnMainThread(() -> {
+                if (googleMap != null) {
+                    googleMap.setOnCameraMoveListener(null);
+                    googleMap.setOnCameraIdleListener(null);
+                }
+                if (pickupPointsZoneMarkers != null) {
+                    for (Marker m : pickupPointsZoneMarkers) {
+                        m.setVisible(false);
+                    }
+                }
+                if (layer != null) {
+                    layer.removeLayerFromMap();
+                }
+            });
+        } catch (Exception e) {
+            Log.i(MAPS, "LocateOnMap Exit Error for ", e);
+        }
+    }
+
+    protected void dottedLineFromCurrentPosition(Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor) {
+        if (googleMap != null && dottedLineVisible) {
+            if (polyline != null) {
+                polyline.remove();
+                polyline = null;
+            }
+            if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(lastLatitudeValue, lastLongitudeValue)) < dottedLineRange)
+                drawDottedLine(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, lastLatitudeValue, lastLongitudeValue, dottedLineColor);
+        }
+    }
+
+    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon, String color) {
+        if (googleMap != null) {
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.add(new LatLng(srcLat, srcLon));
+            polylineOptions.add(new LatLng(destLat, destLon));
+            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8);
         }
     }
 

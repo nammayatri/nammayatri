@@ -38,6 +38,8 @@ import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
 import Styles.Types (FontSize)
+import Presto.Core.Types.API (class StandardEncode, standardEncode)
+import Components.GoToLocationModal.Controller as GoToModal
 
 type EditTextInLabelState =
  {
@@ -359,7 +361,8 @@ type DriverProfileScreenProps = {
   btnActive :: Boolean,
   showBookingOptionForTaxi :: Boolean,
   upiQrView :: Boolean,
-  paymentInfoView :: Boolean
+  paymentInfoView :: Boolean,
+  hideGoto :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -612,7 +615,14 @@ type IndividualRideCardState =
     source :: String,
     destination :: String,
     vehicleType :: String,
-    riderName :: String
+    riderName :: String,
+    customerExtraFee :: Maybe Int,
+    purpleTagVisibility :: Boolean,
+    gotoTagVisibility :: Boolean,
+    specialZoneLayoutBackground :: String,
+    specialZoneImage :: String,
+    specialZoneText :: String,
+    spLocTagVisibility :: Boolean
   }
 
 
@@ -637,11 +647,13 @@ type ItemState =
     destination :: PropValue,
     amountColor :: PropValue,
     riderName :: PropValue,
-    metroTagVisibility :: PropValue,
-    accessibilityTagVisibility :: PropValue,
+    spLocTagVisibility :: PropValue,
     specialZoneText :: PropValue,
     specialZoneImage :: PropValue,
-    specialZoneLayoutBackground :: PropValue
+    specialZoneLayoutBackground :: PropValue,
+    gotoTagVisibility :: PropValue,
+    purpleTagVisibility :: PropValue,
+    tipTagVisibility :: PropValue
   }
 -----------------------------------------------ApplicationStatusScreen -------------------
 
@@ -774,8 +786,27 @@ type HomeScreenData =  {
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
-  peekHeight :: Int
+  peekHeight :: Int,
+  driverGotoState :: DriverGoToState
 }
+
+type DriverGoToState = {
+  gotoCount :: Int,
+  goToInfo :: Boolean,
+  selectedGoTo :: String,
+  showGoto :: Boolean,
+  savedLocationsArray :: Array GoToLocation,
+  gotoValidTill :: String,
+  timerInMinutes :: String,
+  isGotoEnabled :: Boolean,
+  timerId :: String,
+  gotoReducedCount :: Maybe Int,
+  gotoLocInRange :: Boolean,
+  goToPopUpType :: GoToPopUpType,
+  gotoEnabledForMerchant :: Boolean,
+  confirmGotoCancel :: Boolean
+}
+
 
 type EndRideData = {
     rideId :: String,
@@ -1031,7 +1062,14 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     distance :: String,
     status :: String,
-    vehicleType :: String
+    vehicleType :: String,
+    customerExtraFee :: Maybe Int,
+    purpleTagVisibility :: Boolean,
+    gotoTagVisibility :: Boolean,
+    spLocTagVisibility :: Boolean,
+    specialZoneLayoutBackground :: String,
+    specialZoneImage :: String,
+    specialZoneText :: String
   }
 
 type TripDetailsScreenProps =
@@ -1572,7 +1610,8 @@ type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
   driverInformation :: GetDriverInfoResp,
   driverRideStats :: DriverProfileStatsResp,
-  callScreen :: ScreenName
+  callScreen :: ScreenName,
+  gotoPopupType :: GoToPopUpType
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
@@ -1848,3 +1887,96 @@ type UpiApps
     , appName :: String
     }
 
+type DriverSavedLocationScreenState = {
+  data :: DriverSavedLocationScreenData,
+  props :: DriverSavedLocationScreenProps
+}
+
+type DriverSavedLocationScreenData = {
+  address :: String,
+  currentLat :: Maybe String,
+  currentLon :: Maybe String,
+  savedLocationsArray :: Array GoToLocation,
+  predictions :: Array PredictionItem,
+  saveLocationObject :: SaveLocationObject,
+  maxGotoLocations :: Int
+}
+
+type GoToLocation = {
+  id :: String,
+  lat :: Number,
+  lon :: Number,
+  address :: String,
+  tag :: String,
+  disabled :: Boolean
+}
+
+type PredictionItem = {
+ description :: String,
+ title :: String,
+ placeId :: Maybe String,
+ distance :: Maybe Int
+}
+
+
+type DriverSavedLocationScreenProps = {
+  viewType :: SavedLocationScreenType,
+  selectedPrediction :: PredictionItem,
+  confirmDelete :: Boolean,
+  selectedLocation :: GoToModal.GoToModalConfig,
+  fromEditButton :: Maybe GoToScrEntryType,
+  gotBackToHomeScreen :: Boolean,
+  errorText :: Maybe String,
+  defTag :: String
+}
+
+data GoToScrEntryType = FromEdit | FromPrediction
+
+derive instance genericGoToScrEntryType :: Generic GoToScrEntryType _
+instance eqGoToScrEntryType :: Eq GoToScrEntryType where eq = genericEq
+
+data SavedLocationScreenType = GoToList | SearchLocation | LOCATE_ON_MAP | ConfirmLocation
+
+derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
+instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
+
+data GoToPopUpType = REDUCED Int | MORE_GOTO_RIDES | VALIDITY_EXPIRED | REACHED_HOME | NO_POPUP_VIEW
+
+derive instance genericGoToPopUpType :: Generic GoToPopUpType _
+instance showGoToPopUpType :: Show GoToPopUpType where show = genericShow
+instance eqGoToPopUpType :: Eq GoToPopUpType where eq = genericEq
+instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where standardEncode _ = standardEncode {}
+instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
+instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
+
+data GoToNoImgPopUpType = KnowMore | DisableGotoPopup | LocInRange
+
+derive instance genericGoToNoImgPopUpType :: Generic GoToNoImgPopUpType _
+instance showGoToNoImgPopUpType :: Show GoToNoImgPopUpType where show = genericShow
+instance eqGoToNoImgPopUpType :: Eq GoToNoImgPopUpType where eq = genericEq
+instance standardEncodeGoToNoImgPopUpType :: StandardEncode GoToNoImgPopUpType where standardEncode _ = standardEncode {}
+instance decodeGoToNoImgPopUpType :: Decode GoToNoImgPopUpType where decode = defaultDecode
+instance encodeGoToNoImgPopUpType  :: Encode GoToNoImgPopUpType where encode = defaultEncode
+
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
+derive instance genericMenuoptions :: Generic MenuOptions _
+instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
+
+type Listtype =
+    { icon :: String,
+      menuOptions :: MenuOptions
+    }
+
+type SaveLocationObject = {
+  position :: Location,
+  address :: String,
+  tag :: String
+}
+
+type Tag = {
+  background :: String, 
+  image :: String, 
+  visibility :: Boolean, 
+  text :: String, 
+  textColor :: String
+}

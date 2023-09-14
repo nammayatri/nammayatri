@@ -118,10 +118,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+        Log.e("onMessageReceived", remoteMessage.getData().toString());
         firebaseLogEventWithParams("notification_received", "type", remoteMessage.getData().get("notification_type"));
 
         super.onMessageReceived(remoteMessage);
-        Log.e("onMessageReceived", remoteMessage.getData().toString());
         JSONObject payload = new JSONObject();
         JSONObject notification_payload = new JSONObject();
         JSONObject entity_payload = new JSONObject();

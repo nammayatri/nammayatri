@@ -337,3 +337,9 @@ scaleYAnimWithDelay delay =
     , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
     , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0
     ] true
+
+triggerOnAnimationEnd :: Boolean -> PrestoAnim.Animation
+triggerOnAnimationEnd ifAnim =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 250
+    ] ifAnim

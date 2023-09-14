@@ -292,11 +292,13 @@ shimmerData i =
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   amountColor: toPropValue "",
   riderName : toPropValue "",
-  metroTagVisibility : toPropValue "",
-  accessibilityTagVisibility : toPropValue "",
+  spLocTagVisibility : toPropValue "",
+  gotoTagVisibility : toPropValue "",
   specialZoneText : toPropValue "",
   specialZoneImage : toPropValue "",
-  specialZoneLayoutBackground : toPropValue ""
+  specialZoneLayoutBackground : toPropValue "",
+  purpleTagVisibility : toPropValue "",
+  tipTagVisibility : toPropValue ""
   }
 
 getCategoryName :: String -> String

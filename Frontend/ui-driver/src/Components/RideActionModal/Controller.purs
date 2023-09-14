@@ -53,7 +53,8 @@ type Config = {
   isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
   accessibilityTag :: Mb.Maybe DisabilityType,
-  appConfig :: AppConfig
+  appConfig :: AppConfig,
+  gotoTag :: Boolean
   }
 
 type AddressConfig = {
@@ -86,5 +87,6 @@ config = {
   isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
-  appConfig : DC.config
+  appConfig : DC.config,
+  gotoTag : false
 }

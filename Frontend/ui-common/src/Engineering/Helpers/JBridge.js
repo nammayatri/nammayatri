@@ -5,6 +5,8 @@ var mainFiber = null;
 var timer;
 let locationPollingTimer;
 const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
+var timerIdDebounce = null;
+var inputForDebounce;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -1695,7 +1697,8 @@ export const toggleBtnLoader = function(id){
       if (val == true) {
         btnLoaderState.set(id,true);
       } else {
-        btnLoaderState.clear();
+        if (id == "") btnLoaderState.clear();
+        else btnLoaderState.set(id,false)
       }
   };
 };
@@ -2027,4 +2030,48 @@ export const getVideoID = function (url) {
   }catch (e) {
     console.log("error in getVideoID " + e);
   }
+}
+
+export const storeCallBackLocateOnMap = function (cb) {
+  try {
+  return function (action) {
+      return function () {
+        var callback = callbackMapper.map(function (key, lat, lon) {
+          if(timerIdDebounce){
+            clearTimeout(timerIdDebounce);
+          }
+          timerIdDebounce = setTimeout(() => {
+            cb(action (key) (lat) (lon))();
+          }, 200);
+        });
+          window.JBridge.storeCallBackLocateOnMap(callback);
+      }
+  }}
+  catch (error){
+      console.log("Error occurred ", error);
+  }
+}
+
+export const debounceFunction = function (delay) {
+  return function (cb) {
+    return function (action) {
+      return function (isSource) {
+        return function () {
+          var callback = callbackMapper.map(function () {
+            if (timerIdDebounce) clearTimeout(timerIdDebounce);
+            timerIdDebounce = setTimeout(() => {
+              timerIdDebounce = "MAKEAPICALL";
+              cb(action(inputForDebounce)(isSource))();
+            }, delay);
+          });
+          window.callUICallback(callback);
+        }
+      }
+    }
+  }
+}
+
+export const updateInputString = function (a){
+  console.log("UPDATED STRING " + a);
+  inputForDebounce = a;
 }

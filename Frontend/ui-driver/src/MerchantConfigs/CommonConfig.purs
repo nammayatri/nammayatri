@@ -75,4 +75,7 @@ commonConfig =
             }
         , enablePurpleRideBanner : false
         , showPaymentDetails : true
+        , gotoConfig : {
+            maxGotoLocations : 5
+        }
         }

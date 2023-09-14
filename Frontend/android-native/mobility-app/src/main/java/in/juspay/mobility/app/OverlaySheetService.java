@@ -18,6 +18,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
@@ -123,20 +124,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateTipView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
+    private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
-                holder.customerTipBlock.setVisibility(View.VISIBLE);
-                if (model.getDisabilityTag()) {
-                    holder.accessibilityTag.setVisibility(View.VISIBLE);
-                    holder.accessibilityTagText.setText(getString(R.string.assistance_required));
-                }  else{
-                    holder.accessibilityTag.setVisibility(View.GONE);
-                }
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+                String pickupChargesText = model.getCustomerTip() > 0 ?
+                        getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                        getString(R.string.includes_pickup_charges_10);
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+                holder.textIncludesCharges.setText(pickupChargesText);
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
+                holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
+                        ColorStateList.valueOf(getColor(R.color.Black900)) :
+                        ColorStateList.valueOf(getColor(R.color.green900)));
 
                 if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (getVariantType(variant).equals(VariantType.AC)) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
                         holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
                         holder.rideTypeTag.setVisibility(View.VISIBLE);
                     } else {
@@ -146,21 +153,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     holder.rideTypeText.setText(variant);
                 }
-                
-                if(model.getCustomerTip() > 0){
-                    holder.customerTipTag.setVisibility(View.VISIBLE);
-                    holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
-                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
-                }
             } else {
-                holder.customerTipBlock.setVisibility(View.GONE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
+                holder.tagsBlock.setVisibility(View.GONE);
             }
         });
     }
 
     private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
+            holder.buttonIncreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
+            holder.buttonDecreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
             holder.buttonDecreasePrice.setAlpha(model.getButtonDecreasePriceAlpha());
             holder.buttonDecreasePrice.setClickable(model.isButtonDecreasePriceClickable());
             holder.buttonIncreasePrice.setAlpha(model.getButtonIncreasePriceAlpha());
@@ -199,7 +201,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
-                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
+                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
                     updateProgressBars(true);
                     return;
             }
@@ -241,24 +243,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
-            if (model.getDriverMaxExtraFee() == 0) {
-                holder.buttonIncreasePrice.setVisibility(View.GONE);
-                holder.buttonDecreasePrice.setVisibility(View.GONE);
-            } else {
-                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
-                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
-            }
-
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", null);
-            if (useMLKit != null && useMLKit.equals("true")) updateViewFromMlTranslation(holder, model);
-            updateTipView(holder, model);
+            String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
+            if (useMLKit.equals("true")) updateViewFromMlTranslation(holder, model);
 
-            if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
+            if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
-            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
+            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
+            updateTagsView(holder, model);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
@@ -316,7 +310,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             Utils.logEvent (logEvent, getApplicationContext());
                             removeCard(position);
                             executor.shutdown();
-                            Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
                         });
                     } catch (Exception e) {
                         firebaseLogEventWithParams("exception", "reject_button_click", e.toString());
@@ -543,6 +537,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
+                    boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -568,7 +563,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             sourcePinCode,
                             destinationPinCode,
                             requestedVehicleVariant,
-                            disabilityTag);
+                            disabilityTag,
+                            gotoTag);
+
                     if (floatyView == null) {
                         startTimer();
                         showOverLayPopup();
@@ -738,7 +735,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))) {
                     handler.post(() -> {
                         try {
-                            Toast.makeText(getApplicationContext(), errorPayload.getString(getResources().getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -1044,14 +1041,5 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             return OverlaySheetService.this;
         }
     }
-
-    private VariantType getVariantType(String variant) {
-        if (variant.equals("Non AC Taxi")) {
-            return VariantType.NON_AC;
-        }
-        return VariantType.AC;
-    }
-
-    private enum VariantType { AC, NON_AC }
 
 }

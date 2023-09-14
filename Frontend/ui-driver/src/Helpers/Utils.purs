@@ -127,6 +127,8 @@ foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) St
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
+foreign import countDownInMinutes :: forall action. EffectFn3 Int (action -> Effect Unit) (String -> String -> Int -> action) Unit
+foreign import istToUtcDate :: String -> String
 
 foreign import preFetch :: Effect (Array RenewFile)
 
@@ -262,23 +264,23 @@ getVehicleType vehicleType =
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
 
-getRideLabelData :: String -> Maybe String -> Maybe DisabilityType -> String
-getRideLabelData prop tag accessibilityTag = do
-  case getRequiredTag prop tag accessibilityTag of
+getRideLabelData :: String -> Maybe String -> String
+getRideLabelData prop tag = do
+  case getRequiredTag prop tag of
     Nothing -> ""
     Just tag' -> tag'
 
-getRequiredTag :: String -> Maybe String -> Maybe DisabilityType -> Maybe String
-getRequiredTag prop tag accessibilityTag = do
-  let rideType = if (isJust accessibilityTag) then "Accessibility" else fromMaybe "" tag 
-  case rideType of
-    "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
+getRequiredTag :: String -> Maybe String -> Maybe String
+getRequiredTag prop tag = do
+  case tag of
+    Just "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
                                 Nothing -> Nothing
                                 Just val -> Just val
-    "Purple_Ride" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Purple_Ride")) of
+                                
+    Just "GOTO" -> case (runFn4 getRideLabelConfig Just Nothing prop "GOTO") of
                                 Nothing -> Nothing
                                 Just val -> Just val
-    tag' -> do
+    Just tag' -> do
         let arr = DS.split (DS.Pattern "_") tag'
         let pickup = fromMaybe "" (arr DA.!! 0)
         let drop = fromMaybe "" (arr DA.!! 1)
@@ -291,6 +293,7 @@ getRequiredTag prop tag accessibilityTag = do
                                 Nothing -> Nothing
                                 Just val -> Just val
           _ -> Nothing
+    _ -> Nothing
 
 getGenderIndex :: String -> Array OptionButtonList -> Maybe Int
 getGenderIndex req arr = do

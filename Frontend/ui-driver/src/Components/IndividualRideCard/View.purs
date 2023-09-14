@@ -17,6 +17,7 @@ module Components.IndividualRideCard.View where
 
 import Common.Types.App
 
+import Common.Styles.Colors as Colors
 import Components.IndividualRideCard.Controller (Action(..))
 import Components.SeparatorView.View as SeparatorView
 import Effect (Effect)
@@ -37,7 +38,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
-import Screens.Types (IndividualRideCardState)
+import Screens.Types (IndividualRideCardState, Tag)
 import Styles.Colors as Color
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
@@ -109,55 +110,49 @@ cardView push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background Color.blue800
-      , cornerRadii $ Corners 7.0 true true false false
-      , padding $ PaddingVertical 5 5
-      , PrestoList.visibilityHolder "metroTagVisibility"
-      , gravity CENTER
-      ][ specialZoneView push]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , background Color.purple
-      , padding $ PaddingVertical 5 5
-      , cornerRadii $ Corners 7.0 true true false false
-      , PrestoList.visibilityHolder "accessibilityTagVisibility"
-      , gravity CENTER
-      ][ specialZoneView push]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
       , padding $ PaddingHorizontal 16 16
       ][ rideDetails false
         , separator
         , sourceAndDestination
-        , distanceAndCustomerName
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , margin $ MarginBottom 10   
+          ][  tagView $ tagList FunctionCall
+            , distanceAndCustomerName
+          ]
       ]
    ]
 
-
-specialZoneView :: forall w. (RideHistoryScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-specialZoneView push = 
-  linearLayout
-  [ width MATCH_PARENT
+tagView :: forall w. (Array Tag) -> PrestoDOM (Effect Unit) w 
+tagView config =
+  linearLayout 
+  [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , gravity CENTER
-  ][ imageView
-      [ width $ V 18
-      , height $ V 18
-      , PrestoList.imageUrlHolder "specialZoneImage"
-      ]
-    , textView $
+  ](map (\item ->
+      linearLayout
       [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , PrestoList.textHolder "specialZoneText"
-      , gravity CENTER_VERTICAL
-      , color Color.white900
-      , margin $ MarginLeft 5
-      ] <> FontStyle.tags TypoGraphy
-  ]
+      , height WRAP_CONTENT
+      , cornerRadius 26.0
+      , background item.background
+      , PrestoList.visibilityHolder item.text
+      , padding $ Padding 10 4 10 4
+      , margin $ MarginRight 5
+      ][  imageView
+          [ imageWithFallback $ item.image <> ","
+          , height $ V 14
+          , width $ V 14
+          ]
+      ]) config)
+
+tagList :: LazyCheck -> Array Tag
+tagList _ = [
+  {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : true, text : "tipTagVisibility", textColor : ""},
+  {background : Colors.black200, image : "ny_ic_loc_black", visibility : true, text : "gotoTagVisibility", textColor : ""},
+  {background : Colors.purple100, image : "ny_ic_disability_purple", visibility : true, text : "purpleTagVisibility", textColor : ""},
+  {background : Colors.blue100, image : "ny_ic_star", visibility : true, text : "spLocTagVisibility", textColor : ""}
+]
 
 selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 selectCardView push =
@@ -175,42 +170,19 @@ selectCardView push =
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , cornerRadii $ Corners 7.0 true true false false
-      , orientation VERTICAL
-      , PrestoList.backgroundHolder "specialZoneLayoutBackground"
-      , padding $ PaddingVertical 5 5
-      , PrestoList.visibilityHolder "metroTagVisibility"
-      , gravity CENTER
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER
-          ][ imageView
-              [ width $ V 18
-              , height $ V 18
-              , PrestoList.imageUrlHolder "specialZoneImage"
-              ]
-            , textView 
-              [ width WRAP_CONTENT
-              , height MATCH_PARENT
-              , PrestoList.textHolder "specialZoneText"
-              , gravity CENTER_VERTICAL
-              , color Color.white900
-              , margin $ MarginLeft 5
-              , textSize FontSize.a_12
-              , fontStyle $ FontStyle.medium TypoGraphy
-              ]
-          ]
-        ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
       , orientation VERTICAL
       , padding $ PaddingHorizontal 16 16
       ][ rideDetails false
         , separator
         , sourceAndDestination
-        , distanceAndCustomerName
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , margin $ MarginBottom 10   
+          ][  tagView $ tagList FunctionCall
+            , distanceAndCustomerName
+          ]
       ]
    ]
 
@@ -344,7 +316,6 @@ distanceAndCustomerName =
     [ PrestoList.textHolder "rideDistance"
     , height WRAP_CONTENT
     , color Color.black700
-    , margin $ MarginBottom 10    
     ] <> FontStyle.paragraphText LanguageStyle
 
 separator :: forall w. PrestoDOM (Effect Unit) w 
@@ -488,9 +459,9 @@ separatorConfig :: SeparatorView.Config
 separatorConfig = 
   {
     orientation : VERTICAL
-  , count : 4
+  , count : 2
   , height : V 4
   , width : V 2
-  , layoutWidth : V 14
-  , layoutHeight : V 16
+  , layoutWidth : V 12
+  , layoutHeight : V 12
   }

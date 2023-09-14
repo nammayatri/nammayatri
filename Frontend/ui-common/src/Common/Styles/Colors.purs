@@ -170,3 +170,18 @@ redOpacity16 = "#29E55454"
 
 fadedPurple :: Color 
 fadedPurple = "#339747FF"
+
+red900 :: Color
+red900 = "#E55454"
+
+yellow200 :: Color
+yellow200 = "#33FCC32C"
+
+black200 :: Color
+black200 = "#1A2C2F3A"
+
+purple100 :: Color 
+purple100 = "#1A9747FF"
+
+blue100 :: Color
+blue100 = "#1A2194FF"

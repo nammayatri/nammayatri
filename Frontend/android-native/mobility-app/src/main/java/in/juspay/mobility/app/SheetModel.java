@@ -24,7 +24,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag;
 
     public SheetModel(String pickUpDistance,
                       String distanceToBeCovered,
@@ -47,7 +47,9 @@ public class SheetModel {
                       String sourcePinCode,
                       String destinationPinCode,
                       String requestedVehicleVariant,
-                      Boolean disabilityTag){
+                      Boolean disabilityTag,
+                      Boolean gotoTag){
+
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -76,6 +78,11 @@ public class SheetModel {
         this.requestedVehicleVariant = requestedVehicleVariant;
         this.disabilityTag = disabilityTag;
         this.durationToPickup = durationToPickup;
+        this.gotoTag = gotoTag;
+    }
+
+    public boolean isGotoTag() {
+        return gotoTag;
     }
 
     public String getRequestedVehicleVariant() {

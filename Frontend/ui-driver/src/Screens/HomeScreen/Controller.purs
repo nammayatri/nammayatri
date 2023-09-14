@@ -35,11 +35,12 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel.Controller as StatsModelController
+import Components.GoToLocationModal as GoToLocationModal
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
@@ -47,7 +48,7 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC, getPixels, getDeviceDefaultDensity)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
@@ -192,6 +193,7 @@ instance loggableAction :: Loggable Action where
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
+    _ -> pure unit
     WaitTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "wait_timer_callBack" 
     MakePaymentModalAC act -> pure unit
     RateCardAC act -> pure unit
@@ -230,6 +232,11 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
                     | ClearPendingDues ST.HomeScreenState
+                    | EnableGoto ST.HomeScreenState String
+                    | LoadGotoLocations ST.HomeScreenState
+                    | DisableGoto ST.HomeScreenState
+                    | ExitGotoLocation ST.HomeScreenState
+                    | RefreshGoTo ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -277,6 +284,12 @@ data Action = NoAction
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
+            | GoToButtonClickAC PrimaryButtonController.Action
+            | GoToLocationModalAC GoToLocationModal.Action
+            | CancelBackAC PrimaryButtonController.Action
+            | ClickInfo
+            | GotoKnowMoreAction PopUpModal.Action
+            | OnClickChangeAction GoToLocationModal.Action 
             | WaitTimerCallback String String Int
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
@@ -298,35 +311,83 @@ data Action = NoAction
             | PaymentPendingPopupAC PopUpModal.Action
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
-
+            | GotoRequestPopupAction PopUpModal.Action
+            | GotoCancellationPreventionAction PopUpModal.Action 
+            | GotoLocInRangeAction PopUpModal.Action
+            | EnableGotoTimerAC PrimaryButtonController.Action
+            | UpdateGoHomeTimer String String Int
+            | AddLocation PrimaryButtonController.Action
+            | ConfirmDisableGoto PopUpModal.Action
+            
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
-eval AfterRender state = do
-  continue state{props{mapRendered= true}}
+eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
+  pure $ toggleBtnLoader "GotoClick" false
+  if state.data.driverGotoState.isGotoEnabled then continue state { data { driverGotoState { confirmGotoCancel = true } }} 
+  else if state.data.driverGotoState.gotoCount <=0 then continue state
+  else do
+    pure $ toggleBtnLoader "GotoClick" true
+    updateAndExit state{ data { driverGotoState { savedLocationsArray = []}}} $ LoadGotoLocations state{ data { driverGotoState { savedLocationsArray = []}}}
+
+eval ClickInfo state = continue state {data { driverGotoState {goToInfo = true}}}
+
+eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { data { driverGotoState { goToInfo = false } }} 
+
+eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
+
+eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
+
+eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
+  case state.data.driverGotoState.goToPopUpType of
+    ST.VALIDITY_EXPIRED -> exit $ RefreshGoTo state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW } }} 
+    _ -> continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW} }} 
+
+eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state { data { driverGotoState { gotoLocInRange = false } }} 
+
+eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
+
+eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
+
+eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
+  _ <- pure $ clearTimer timerID
+  continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
+  else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
+
+eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
+
+eval (AddLocation PrimaryButtonController.OnClick) state = exit $ ExitGotoLocation state
+
+eval AfterRender state = continue state { props { mapRendered = true}}
+
 eval BackPressed state = do
   if state.props.showGenericAccessibilityPopUp then continue state{props{showGenericAccessibilityPopUp = false}}
-    else if state.props.enterOtpModal then
-      continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
-      else if (state.props.currentStage == ST.ChatWithCustomer) then do
-        _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
-        continue state{props{currentStage = ST.RideAccepted}}
-        else if state.props.cancelRideModalShow then
-          continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
-            else if state.props.cancelConfirmationPopup then do
-              _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
-              continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
-                else if state.props.showBonusInfo then
-                  continue state { props { showBonusInfo = false } }
-                    else if state.data.paymentState.showRateCard then
-                      continue state { data { paymentState{ showRateCard = false } } }
-                        else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
-                          else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                            else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
-                            else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
-                              else do
-                                _ <- pure $ minimizeApp ""
-                                continue state
+  else if state.props.currentStage == ST.RideCompleted then do
+    _ <- pure $ minimizeApp ""
+    continue state
+  else if state.props.enterOtpModal then continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
+  else if (state.props.currentStage == ST.ChatWithCustomer) then do
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
+    continue state{props{currentStage = ST.RideAccepted}}
+  else if state.props.cancelRideModalShow then continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
+  else if state.props.cancelConfirmationPopup then do
+    _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
+    continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
+  else if state.props.showBonusInfo then continue state { props { showBonusInfo = false } }
+  else if state.data.paymentState.showRateCard then continue state { data { paymentState{ showRateCard = false } } }
+  else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
+  else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
+  else if state.props.silentPopUpView then continue state { props {silentPopUpView = false}}
+  else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
+  else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+  else if state.data.driverGotoState.goToInfo then continue state{data {driverGotoState {goToInfo = false}}}
+  else if state.data.driverGotoState.gotoLocInRange then continue state { data { driverGotoState { gotoLocInRange = false }}} 
+  else if state.data.driverGotoState.confirmGotoCancel then continue state { data { driverGotoState { confirmGotoCancel = false }}} 
+  else if state.data.driverGotoState.showGoto then continue state { data { driverGotoState { showGoto = false }}} 
+  else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
+  else do
+    _ <- pure $ minimizeApp ""
+    continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -343,19 +404,6 @@ eval (KeyboardCallback keyBoardState) state = do
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
   else pure unit
   continue state
-
--- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
---   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
---         continueWithCmd state [ do
---           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
---           _ <- pure $ toast (getString DEMO_MODE_DISABLED)
---           _ <- pure $  deleteValueFromLocalStore IS_DEMOMODE_ENABLED
---           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
---           _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
---           pure NoAction
---           ]
---     else if  status then exit (DriverAvailabilityStatus state status)
---       else continue state { props { goOfflineModal = true }}
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
@@ -917,11 +965,13 @@ activeRideDetail state (RidesInfo ride) = {
   isDriverArrived : state.data.activeRide.isDriverArrived,
   notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
   exoPhone : ride.exoPhone,
-  specialLocationTag : ride.specialLocationTag,
   waitingTime : if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" && state.props.timerRefresh then (getValueToLocalStore SET_WAITING_TIME) else state.data.activeRide.waitingTime,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
+  specialLocationTag :  if isJust ride.disabilityTag then Just "Accessibility"
+                        else if isJust ride.driverGoHomeRequestId then Just "GOTO" 
+                        else ride.specialLocationTag, --  "None_SureMetro_PriorityDrop",--"GOTO",
   disabilityTag :  case ride.disabilityTag of
               Just "BLIND_LOW_VISION" -> Just ST.BLIND_AND_LOW_VISION
               Just "HEAR_IMPAIRMENT" -> Just ST.HEAR_IMPAIRMENT

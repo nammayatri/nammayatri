@@ -237,7 +237,9 @@ foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import getVideoID :: String -> String
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
-
+foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
+foreign import updateInputString :: String -> Unit
 
 type LottieAnimationConfig = {
     rawJson :: String
