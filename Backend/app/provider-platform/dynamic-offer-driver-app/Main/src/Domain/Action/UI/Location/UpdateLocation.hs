@@ -160,6 +160,10 @@ handleDriverPayments driverId diffUtc = do
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
         updateSubscription False (cast driverId)
 
+diffTimeMilliseconds :: NominalDiffTime -> Integer
+diffTimeMilliseconds startTime endTime =
+  round $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
+
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
@@ -174,51 +178,96 @@ updateLocationHandler ::
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
+    start <- getCurrentTime
     let driverId = driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+    end <- getCurrentTime
+    logDebug $ "findByMerchantId : " <> diffTimeMilliseconds start end
+
+    start <- getCurrentTime
     when (thresholdConfig.subscription) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
       handleDriverPayments driverId thresholdConfig.timeDiffFromUtc
+    end <- getCurrentTime
+    logDebug $ "handleDriverPayments : " <> diffTimeMilliseconds start end
+
+    start <- getCurrentTime
     driverInfo <- DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+    end <- getCurrentTime
+    logDebug $ "DInfo.findById : " <> diffTimeMilliseconds start end
+
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
+
+    start <- getCurrentTime
     checkLocationUpdatesRateLimit driverId
+    end <- getCurrentTime
+    logDebug $ "checkLocationUpdatesRateLimit : " <> diffTimeMilliseconds start end
+
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driverId $ do
+      start <- getCurrentTime
       mbOldLoc <- findDriverLocation
+      end <- getCurrentTime
+      logDebug $ "findDriverLocation : " <> diffTimeMilliseconds start end
+
+      start <- getCurrentTime
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
           filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+      end <- getCurrentTime
+      logDebug $ "filteredWaypoint : " <> diffTimeMilliseconds start end
+
+      start <- getCurrentTime
       mbRideIdAndStatus <- getAssignedRide
+      end <- getCurrentTime
+      logDebug $ "getAssignedRide : " <> diffTimeMilliseconds start end
 
       case filteredWaypoint of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
+          start <- getCurrentTime
           upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
+          end <- getCurrentTime
+          logDebug $ "upsertDriverLocation : " <> diffTimeMilliseconds start end
+
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
               status <- case mbRideIdAndStatus of
                 Just (_, DRide.INPROGRESS) -> pure ON_RIDE
                 Just (_, DRide.NEW) -> pure ON_PICKUP
                 _ -> pure IDLE
+              start <- getCurrentTime
               streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driverId point.pt point.ts point.acc status driverInfo.active driverInfo.mode
+              end <- getCurrentTime
+              logDebug $ "streamLocationUpdates : " <> diffTimeMilliseconds start end
 
+      start <- getCurrentTime
       let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
       let filteredNearPoints = maybe filteredWaypointWithAccuracy (\oldLoc -> filter (filterVeryNearPoints thresholdConfig.driverLocationAccuracyBuffer oldLoc) filteredWaypointWithAccuracy) mbOldLoc
+      end <- getCurrentTime
+      logDebug $ "filteredNearPoints : " <> diffTimeMilliseconds start end
+
       case filteredNearPoints of
         [] -> logWarning "Accuracy of the points is low, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
+              start
               updateDriverSpeedInRedis driver.merchantId driverId point.pt point.ts
+              end "updateDriverSpeedInRedis"
+
+          start <- getCurrentTime
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
             mbRideIdAndStatus
+          end <- getCurrentTime
+          logDebug $ "addIntermediateRoutePoints : " <> diffTimeMilliseconds start end
 
     pure Success
 
