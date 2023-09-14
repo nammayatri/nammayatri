@@ -58,7 +58,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..))
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
 import JBridge as JB
 import Language.Strings (getString)
@@ -99,6 +99,8 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Constants as Constants
+import Data.Function.Uncurried (runFn1)
+import Helpers.FileProvider.Utils (stringifyJSON)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -120,9 +122,7 @@ baseAppFlow baseFlow event = do
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
               lift $ lift $ doAff do liftEffect hideSplash
               setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-              let (GlobalState defGlobalState) = defaultGlobalState
-              modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-              subScriptionFlow
+              updateAvailableAppsAndGoToSubs
             _ -> do
                   setValueToLocalNativeStore REGISTERATION_TOKEN regToken
                   getDriverInfoFlow
@@ -1363,9 +1363,7 @@ myRidesScreenFlow = do
           let paymentHistory = getPaymentHistoryItemList response
           modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
         Left err -> pure unit
-    RIDE_HISTORY_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-      subScriptionFlow
+    RIDE_HISTORY_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     RIDE_HISTORY_NAV _ -> myRidesScreenFlow
 
 rideSelectionScreenFlow :: FlowBT String Unit
@@ -1524,9 +1522,7 @@ referralScreenFlow = do
           referralScreenFlow
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
-    REFERRAL_SCREEN_NAV GoToSubscription -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-      subScriptionFlow
+    REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
@@ -1576,7 +1572,7 @@ currentRideFlow = do
   case allState.globalProps.callScreen of
     ScreenNames.SUBSCRIPTION_SCREEN -> do 
       lift $ lift $ doAff do liftEffect hideSplash
-      subScriptionFlow
+      updateAvailableAppsAndGoToSubs
     _ -> pure unit
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   let isRequestExpired = if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
@@ -2004,8 +2000,7 @@ homeScreenFlow = do
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-      subScriptionFlow
+      updateAvailableAppsAndGoToSubs
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
@@ -2377,9 +2372,7 @@ notificationFlow = do
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow
-    NOTIFICATION_SCREEN_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-      subScriptionFlow
+    NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow
 
 removeChatService :: String -> FlowBT String Unit
@@ -2404,3 +2397,20 @@ getPaymentPageLangKey key = case key of
   "BN_IN" -> "bengali"
   "TA_IN" -> "tamil"
   _       -> "english"
+
+updateAvailableAppsAndGoToSubs :: FlowBT String Unit
+updateAvailableAppsAndGoToSubs = do
+  state <- getState
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
+  void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ getUpiApps
+  subScriptionFlow
+
+getUpiApps :: FlowBT String Unit
+getUpiApps = do
+  resp <- lift $ lift $ doAff $ makeAff (\cb -> (runEffectFn1 getAvailableUpiApps (cb <<< Right) ) $> nonCanceler)
+  let (UpdateDriverInfoReq req) = Remote.mkUpdateDriverInfoReq ""
+  let appsSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> item.supportsMandate) resp
+  let appsNotSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> not item.supportsMandate) resp
+  pure $ setCleverTapUserProp "appsSupportMandate" appsSupportMandate
+  pure $ setCleverTapUserProp "appsNotSupportMandate" appsNotSupportMandate
+  void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})
