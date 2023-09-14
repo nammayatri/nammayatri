@@ -105,12 +105,12 @@ markAsFailed _ = pure ()
 updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
 updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
 
-udpateKey :: Text -> Text -> Value -> Value
-udpateKey key newString (A.Object obj) =
-  let udpateKey' (A.String _) = A.String newString
-      udpateKey' other = other
-   in A.Object $ HM.adjust udpateKey' key obj
-udpateKey _ _ other = other
+updateKey :: Text -> Text -> Value -> Value
+updateKey key newString (A.Object obj) =
+  let updateKey' (A.String _) = A.String newString
+      updateKey' other = other
+   in A.Object $ HM.adjust updateKey' key obj
+updateKey _ _ other = other
 
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
 reSchedule j byTime = do
@@ -118,9 +118,9 @@ reSchedule j byTime = do
   uuid <- generateGUIDText
   key <- asks (.schedulerSetName)
   let A.String newScheduleTime = toJSON byTime
-  let newJOB = udpateKey "scheduledAt" newScheduleTime jobJson
-  let newJOB' = udpateKey "id" uuid newJOB
-  let newJOB'' = udpateKey "parentJobId" uuid newJOB'
+  let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
+  let newJOB' = updateKey "id" uuid newJOB
+  let newJOB'' = updateKey "parentJobId" uuid newJOB'
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB'')]
 
 updateFailureCount :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
