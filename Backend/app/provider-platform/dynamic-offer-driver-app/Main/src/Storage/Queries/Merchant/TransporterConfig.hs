@@ -100,6 +100,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
             aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
             bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
+            specialZoneBookingOtpExpiry = secondsToNominalDiffTime specialZoneBookingOtpExpiry,
             ..
           }
     where
@@ -160,5 +161,5 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.isAvoidToll = isAvoidToll,
-        BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry
+        BeamTC.specialZoneBookingOtpExpiry = nominalDiffTimeToSeconds specialZoneBookingOtpExpiry
       }

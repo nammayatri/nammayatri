@@ -62,6 +62,7 @@ data TransporterConfigT f = TransporterConfigT
     rcLimit :: B.C f Int,
     automaticRCActivationCutOff :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
+    specialZoneBookingOtpExpiry :: B.C f Seconds,
     timeDiffFromUtc :: B.C f Seconds,
     subscription :: B.C f Bool,
     minLocationAccuracy :: B.C f Double,
