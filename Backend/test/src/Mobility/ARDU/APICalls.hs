@@ -21,6 +21,7 @@ import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import Data.Time
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
+import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
@@ -41,7 +42,7 @@ data UIAPIs = UIAPIs
 
 data RideAPIs = RideAPIs
   { rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess,
-    rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess,
+    rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM DER.EndRideResp,
     rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM DCR.CancelRideResp
   }
 
