@@ -45,4 +45,5 @@
     <string name="service" translatable="false">for_compilation</string>
     <string name="tip_included">" tip included!"</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="assistance_required">Assistance Required</string>
 </resources>

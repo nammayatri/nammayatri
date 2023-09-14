@@ -45,7 +45,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>))
+import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
@@ -82,7 +82,7 @@ rideActionModalConfig state = let
     waitTime = state.data.activeRide.waitingTime,
     isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
-    accessbilityTag = state.data.activeRide.disabilityTag
+    accessibilityTag = state.data.activeRide.disabilityTag
   }
   in rideActionModalConfig'
 
@@ -679,7 +679,7 @@ accessibilityPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 accessibilityPopUpConfig state = 
   let 
     config = PopUpModal.config
-    popupData = getAccessibilityPopupData state.data.activeRide.disabilityTag state.data.activeRide.isDriverArrived
+    popupData = getAccessibilityPopupData state.data.activeRide.disabilityTag (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer)
     config' = config
       {
         gravity = CENTER,
@@ -717,6 +717,33 @@ type ContentConfig =
     secondaryText :: String,
     imageUrl :: String
   }
+
+chatBlockerPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+chatBlockerPopUpConfig state = let
+  config' = PopUpModal.config 
+  popUpConfig' = config'{
+    gravity = CENTER,
+    cornerRadius = (PTD.Corners 24.0 true true true true),
+    margin = (MarginHorizontal 16 16),
+    primaryText {text = (getString CUSTOMER_HAS_LOW_VISION)},
+    secondaryText {text = (getString PLEASE_CONSIDER_CALLING_THEM )},
+    option1{ text = (getString GOT_IT),
+      width = MATCH_PARENT,
+      background = Color.black900,
+      strokeColor = Color.black900,
+      color = Color.yellow900,
+      margin = MarginHorizontal 16 16
+      },
+    option2{text = (getString PROCEED_TO_CHAT),
+      strokeColor = Color.white900,
+      color = Color.black650,
+      background = Color.white900,
+      margin = MarginHorizontal 16 16 ,
+      width = MATCH_PARENT},
+    optionButtonOrientation = "VERTICAL",
+    dismissPopup = true
+  }
+  in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
 accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_illustration.png"}
@@ -810,8 +837,8 @@ getRideCompletedConfig state = let
       bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
-      visible =state.data.endRideData.tip /= Nothing ,
-      savedMoney =  (case state.data.endRideData.tip of 
+      visible = true,
+      savedMoney = [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] <> (case state.data.endRideData.tip of 
                             Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
                             Nothing -> [])
     },

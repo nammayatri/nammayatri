@@ -425,7 +425,7 @@ const kannadaStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ. ನಮ್ಮ ಯಾತ್ರಿ ಇದನ್ನು 24 ಗಂಟೆಗಳಲ್ಲಿ ಪರಿಹರಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತದೆ.",
   ADDED_VOICE_NOTE : "ಧ್ವನಿ ಟಿಪ್ಪಣಿಯನ್ನು ಸೇರಿಸಲಾಗಿದೆ",
   NO_VOICE_NOTE_ADDED : "ಯಾವುದೇ ಧ್ವನಿ ಟಿಪ್ಪಣಿಯನ್ನು ಸೇರಿಸಲಾಗಿಲ್ಲ",
-  CALL_CUSTOMER_TITLE : "ಗ್ರಾಹಕರನ್ನು ಕರೆಯುವುದೇ?",
+  CALL_CUSTOMER_TITLE : "ಗ್ರಾಹಕರನ್ನು ಕರೆಯುವುದೇ",
   CALL_CUSTOMER_DESCRIPTION : "ನೀವು ಗ್ರಾಹಕರಿಗೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
   PLACE_CALL : "ಕರೆ ಮಾಡಿ",
   ADD_IMAGE : "ಚಿತ್ರವನ್ನು ಸೇರಿಸಿ",
@@ -796,5 +796,7 @@ const kannadaStrings = {
   SUBMIT_FEEDBACK : "ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಸಲ್ಲಿಸಿ",
   BADGE_EARNED : "ಬ್ಯಾಡ್ಜ್ ಗಳಿಸಲಾಗಿದೆ",
   PURPLE_RIDE_CHAMPION : "ಪರ್ಪಲ್ ರೈಡ್ ಚಾಂಪಿಯನ್",
-  PURPLE_RIDE : "ಪರ್ಪಲ್ ರೈಡ್"
+  PURPLE_RIDE : "ಪರ್ಪಲ್ ರೈಡ್",
+  PROCEED_TO_CHAT : "ಚಾಟ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿರಿ",
+  PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ"
 }

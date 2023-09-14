@@ -31,6 +31,7 @@ data Action = StartRide
             | WaitingInfo
             | LoadMessages
             | SecondaryTextClick
+            | VisuallyImpairedCustomer
 
 type Config = { 
   startRideActive :: Boolean,
@@ -49,7 +50,7 @@ type Config = {
   waitTime :: String,
   isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
-  accessbilityTag :: Mb.Maybe DisabilityType
+  accessibilityTag :: Mb.Maybe DisabilityType
   }
 
 type AddressConfig = {
@@ -81,5 +82,5 @@ config = {
   specialLocationTag : Mb.Nothing,
   isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
-  accessbilityTag : Mb.Nothing
+  accessibilityTag : Mb.Nothing
 }

@@ -38,4 +38,5 @@
     <string name="select_date">তারিখ নির্বাচন করুন</string>
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
+    <string name="assistance_required">সহায়তা প্রয়োজন</string>
 </resources>

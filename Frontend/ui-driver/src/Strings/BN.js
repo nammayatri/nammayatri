@@ -776,7 +776,7 @@ const bengaliStrings = {
 	SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "বিশেষ ছাড় পেতে এখনই অটোপে সেটআপ করুন",
 	SETUP_NOW : "এখন সেটআপ",
 	NEED_HELP_JOINING_THE_PLAN : "পরিকল্পনায় যোগদানের জন্য সাহায্যের প্রয়োজন? যোগাযোগ করুন",
-  	NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>",
+  NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>",
 	CUSTOMER_HAS_LOW_MOBILITY: "গ্রাহকের চালনা সমস্যা রয়েছে",
 	CUSTOMER_HAS_DISABILITY: "গ্রাহকের একটি প্রতিবন্ধি আছে",
 	CUSTOMER_HAS_LOW_VISION: "গ্রাহকের দুর্দশার্য দর্শন রয়েছে",
@@ -814,5 +814,7 @@ const bengaliStrings = {
   SUBMIT_FEEDBACK : "প্রতিক্রিয়া জমা দিন",
   BADGE_EARNED : "ব্যাজ অর্জিত",
   PURPLE_RIDE_CHAMPION : "পার্পল রাইড চ্যাম্পিয়ন",
-  PURPLE_RIDE : "বেগুনি রাইড"
+  PURPLE_RIDE : "বেগুনি রাইড",
+	PROCEED_TO_CHAT : "চ্যাট দিয়ে এগিয়ে যান",
+	PLEASE_CONSIDER_CALLING_THEM : "তারা চ্যাট পড়তে সক্ষম নাও হতে পারে. তাদের কল করুন"
 }
