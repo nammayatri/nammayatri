@@ -1723,3 +1723,10 @@ instance showPaymentHistorySubview :: Show PaymentHistorySubview where show = ge
 instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericEq
 instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
 instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode
+
+type UpiApps
+  = { supportsPay :: Boolean
+    , supportsMandate :: Boolean
+    , packageName :: String
+    , appName :: String
+    }

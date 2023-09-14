@@ -19,6 +19,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Exception (throw)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
+import Data.Function.Uncurried (Fn1)
 import Foreign (Foreign)
 import Foreign.Generic (encode)
 import MerchantConfigs.CommonConfig (commonConfig)
@@ -31,6 +32,10 @@ foreign import appendConfigToDocument :: EffectFn1 String String
 foreign import loadInWindow :: forall a. EffectFn2 String a Unit
 
 foreign import loadFileInDUI :: EffectFn1 String String
+
+foreign import stringifyJSON :: forall a. Fn1 a String
+
+
 
 loadAppConfig :: EffectFn1 String Unit
 loadAppConfig =

@@ -856,6 +856,54 @@ export const initiatePP = function () {
     console.log("%cHyperpay initiate Result - Already Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
   }
 }
+export const getAvailableUpiApps = function (resultCb) {
+  var cb = function (code) {
+    return function (_response) {
+      return function () {
+        console.log("%cUPIINTENT Terminate Response ", "background:darkblue;color:white;font-size:13px;padding:2px", code, _response);
+      }
+    }
+  }
+  if (JOS) {
+    try {
+      var result = function (code) {
+        return function (_response) {
+          return function () {
+            console.log("%cUPIINTENT initiate Result ", "background:darkblue;color:white;font-size:13px;padding:2px", _response);
+            try {
+              let resultPayload = JSON.parse(_response)
+              resultCb(resultPayload.payload.response.available_apps)();
+              killPP();
+            } catch (err) {
+              console.log("%cUPIINTENT initiate Result error", "background:darkblue;color:white;font-size:13px;padding:2px", err, code);
+            }
+          }
+        }
+      }
+      var payload = {
+        "UPI_PAYMENT_METHOD": "NA",
+        "client_id": "",
+        "environment": "",
+        "get_available_apps": "true",
+        "get_mandate_apps": "true",
+        "merchant_id": "",
+        "order_id": "",
+      }
+      const outerPayload = {
+        payload : payload,
+        requestId : window.__payload.requestId,
+        service : "in.juspay.upiintent"
+      };
+      console.log("%cUPIINTENT initiate Result - Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", payload); 
+      JOS.startApp("in.juspay.upiintent")(payload)(cb)();
+      window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
+    } catch (err) {
+      console.error("UPIINTENT initiate Request not sent : ", err);
+    }
+  } else {
+    console.log("%cUPIINTENT initiate Result - Already Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
+  }
+}
 
 export const consumeBP = function (unit){
   var jpConsumingBackpress = {

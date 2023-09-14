@@ -76,6 +76,7 @@ import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..))
 import Styles.Colors as Color
+import Screens.Types (UpiApps(..))
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -321,6 +322,8 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 foreign import startPP :: MicroAPPInvokeSignature
 
 foreign import initiatePP :: EffectFn1 Unit Unit
+
+foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
 
 foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
 

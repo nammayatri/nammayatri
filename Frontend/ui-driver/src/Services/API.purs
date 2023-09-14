@@ -624,6 +624,7 @@ newtype UpdateDriverInfoReq
   , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
   , vehicleName :: Maybe String
+  , availableUpiApps :: Maybe String
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
