@@ -22,9 +22,13 @@ import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Storage.Hedis.Config (HedisEnv)
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (LoggerEnv)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
@@ -85,7 +89,25 @@ findStuckBookings (Id merchantId) bookingIds now = do
           ]
       ]
 
-findBookingBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP ::
+  ( MonadFlow m,
+    Metrics.CoreMetrics m,
+    MonadReader r m,
+    HasField "cacheConfig" r CacheConfig,
+    HasField "enablePrometheusMetricLogging" r Bool,
+    HasField "enableRedisLatencyLogging" r Bool,
+    HasField "esqDBEnv" r EsqDBEnv,
+    HasField "hedisClusterEnv" r HedisEnv,
+    HasField "hedisEnv" r HedisEnv,
+    HasField "hedisMigrationStage" r Bool,
+    HasField "hedisNonCriticalClusterEnv" r HedisEnv,
+    HasField "hedisNonCriticalEnv" r HedisEnv,
+    HasField "loggerEnv" r LoggerEnv
+  ) =>
+  Id Merchant ->
+  Text ->
+  UTCTime ->
+  m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   transporterConfig <- TC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now transporterConfig.specialZoneBookingOtpExpiry
