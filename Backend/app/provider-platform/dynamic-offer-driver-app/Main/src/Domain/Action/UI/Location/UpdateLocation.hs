@@ -176,35 +176,35 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
     (thresholdConfig, duration1) <- measureDuration $ QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    logDebug $ "findByMerchantId : " <> duration1
+    logDebug $ "findByMerchantId : " <> show duration1
 
     (_, duration2) <- measureDuration $ do
       when (thresholdConfig.subscription) $ do
         -- window end time over - still ongoing - sendPaymentReminder
         -- payBy is also over - still ongoing/pending - unsubscribe
         handleDriverPayments driverId thresholdConfig.timeDiffFromUtc
-    logDebug $ "handleDriverPayments : " <> duration2
+    logDebug $ "handleDriverPayments : " <> show duration2
 
     (driverInfo, duration3) <- measureDuration $ DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-    logDebug $ "DInfo.findById : " <> duration3
+    logDebug $ "DInfo.findById : " <> show duration3
 
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
 
     (_, duration4) <- measureDuration $ checkLocationUpdatesRateLimit driverId
-    logDebug $ "checkLocationUpdatesRateLimit : " <> duration4
+    logDebug $ "checkLocationUpdatesRateLimit : " <> show duration4
 
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driverId $ do
       (mbOldLoc, duration5) <- findDriverLocation
-      logDebug $ "findDriverLocation : " <> duration5
+      logDebug $ "findDriverLocation : " <> show duration5
 
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
           filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
       (mbRideIdAndStatus, duration6) <- measureDuration $ getAssignedRide
-      logDebug $ "getAssignedRide : " <> duration6
+      logDebug $ "getAssignedRide : " <> show duration6
 
       case filteredWaypoint of
         [] -> logWarning "Incoming points are older than current one, ignoring"
@@ -212,7 +212,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
           (_, duration7) <- measureDuration $ upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
-          logDebug $ "upsertDriverLocation : " <> duration7
+          logDebug $ "upsertDriverLocation : " <> show duration7
 
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
@@ -221,7 +221,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
                 Just (_, DRide.NEW) -> pure ON_PICKUP
                 _ -> pure IDLE
               (_, duration8) <- measureDuration $ streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driverId point.pt point.ts point.acc status driverInfo.active driverInfo.mode
-              logDebug $ "streamLocationUpdates : " <> duration8
+              logDebug $ "streamLocationUpdates : " <> show duration8
 
       let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
       let filteredNearPoints = maybe filteredWaypointWithAccuracy (\oldLoc -> filter (filterVeryNearPoints thresholdConfig.driverLocationAccuracyBuffer oldLoc) filteredWaypointWithAccuracy) mbOldLoc
@@ -233,7 +233,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
               (_, duration9) <- measureDuration $ updateDriverSpeedInRedis driver.merchantId driverId point.pt point.ts
-              logDebug $ "updateDriverSpeedInRedis : " <> duration9
+              logDebug $ "updateDriverSpeedInRedis : " <> show duration9
 
           (_, duration10) <-
             measureDuration $ do
@@ -241,7 +241,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
                 (logInfo "No ride is assigned to driver, ignoring")
                 (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
                 mbRideIdAndStatus
-          logDebug $ "addIntermediateRoutePoints : " <> duration10
+          logDebug $ "addIntermediateRoutePoints : " <> show duration10
 
     pure Success
 
