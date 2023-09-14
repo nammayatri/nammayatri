@@ -449,6 +449,7 @@ mkUpdateDriverInfoReq dummy
     , languagesSpoken: Nothing
     , hometown: Nothing
     , vehicleName: Nothing
+    , availableUpiApps: Nothing
     }
 
 

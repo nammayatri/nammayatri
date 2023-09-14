@@ -58,3 +58,13 @@ export const loadFileInDUI = function (fileName) {
     return "";
   }
 }
+
+export const stringifyJSON = function (obj) {
+  let result;
+  try{
+    result = JSON.stringify(obj);
+  } catch (errr) {
+    result = ""
+  }
+  return result;
+}
