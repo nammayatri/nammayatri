@@ -17,6 +17,7 @@ module Domain.Action.UI.Ride.EndRide
     DriverEndRideReq (..),
     CallBasedEndRideReq (..),
     DashboardEndRideReq (..),
+    EndRideResp (..),
     callBasedEndRide,
     buildEndRideHandle,
     driverEndRide,
@@ -24,6 +25,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
@@ -71,6 +73,12 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq
+
+data EndRideResp = EndRideResp
+  { result :: Text,
+    homeLocationReached :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
@@ -143,7 +151,7 @@ driverEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
-  m APISuccess.APISuccess
+  m EndRideResp
 driverEndRide handle rideId req = do
   withLogTag ("requestorId-" <> req.requestor.id.getId)
     . endRide handle rideId
@@ -154,7 +162,7 @@ callBasedEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
-  m APISuccess.APISuccess
+  m EndRideResp
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
@@ -163,17 +171,19 @@ dashboardEndRide ::
   Id DRide.Ride ->
   DashboardEndRideReq ->
   m APISuccess.APISuccess
-dashboardEndRide handle rideId req =
-  withLogTag ("merchantId-" <> req.merchantId.getId)
-    . endRide handle rideId
-    $ DashboardReq req
+dashboardEndRide handle rideId req = do
+  void $
+    withLogTag ("merchantId-" <> req.merchantId.getId)
+      . endRide handle rideId
+      $ DashboardReq req
+  return APISuccess.Success
 
 endRide ::
   (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
-  m APISuccess.APISuccess
+  m EndRideResp
 endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
@@ -211,19 +221,30 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   goHomeConfig <- CQGHC.findByMerchantId booking.providerId
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
 
-  when (ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome) $ do
-    case ghInfo.driverGoHomeRequestId of
-      Nothing -> logError "DriverGoHomeRequestId not present even though status is active."
-      Just ghrId -> do
-        mbDriverGoHomeReq <- QDGR.findById ghrId
-        whenJust mbDriverGoHomeReq $ \driverGoHomeReq -> do
-          let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-          routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
-          logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
-          let driverHomeDists = mapMaybe (.distance) routesResp
-          if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
-            then CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo
-            else CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
+  homeLocationReached' <-
+    if ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
+      then do
+        case ghInfo.driverGoHomeRequestId of
+          Nothing -> do
+            logError "DriverGoHomeRequestId not present even though status is active."
+            return Nothing
+          Just ghrId -> do
+            mbDriverGoHomeReq <- QDGR.findById ghrId
+            case mbDriverGoHomeReq of
+              Just driverGoHomeReq -> do
+                let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
+                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
+                let driverHomeDists = mapMaybe (.distance) routesResp
+                if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
+                  then do
+                    CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo
+                    return $ Just True
+                  else do
+                    CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
+                    return $ Just False
+              Nothing -> return Nothing
+      else return Nothing
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
@@ -278,7 +299,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
         _ -> pure ()
 
-  return APISuccess.Success
+  return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
