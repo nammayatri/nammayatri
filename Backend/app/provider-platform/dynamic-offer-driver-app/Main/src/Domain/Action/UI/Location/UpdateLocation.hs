@@ -160,9 +160,9 @@ handleDriverPayments driverId diffUtc = do
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
         updateSubscription False (cast driverId)
 
-diffTimeMilliseconds :: UTCTime -> UTCTime -> Integer
+diffTimeMilliseconds :: UTCTime -> UTCTime -> Text
 diffTimeMilliseconds startTime endTime =
-  round $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
+  show $ round $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
 
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
@@ -257,9 +257,10 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           let newWaypoints = a :| ax
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
-              start
+              start <- getCurrentTime
               updateDriverSpeedInRedis driver.merchantId driverId point.pt point.ts
-              end "updateDriverSpeedInRedis"
+              end <- getCurrentTime
+              logDebug $ "updateDriverSpeedInRedis : " <> diffTimeMilliseconds start end
 
           start <- getCurrentTime
           maybe
