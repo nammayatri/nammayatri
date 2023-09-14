@@ -624,20 +624,13 @@ setActivity (personId, _) isActive mode = do
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
-activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
-activateGoHomeFeature (driverId, merchantId) driverHomeLocationId = do
+activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
+activateGoHomeFeature (driverId, merchantId) driverHomeLocationId driverLocation = do
   goHomeConfig <- CQGHC.findByMerchantId merchantId
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  driverLocation <- do
-    if enableLocationTrackingService
-      then do
-        mbDriverLocation <- LF.driversLocation [driverId]
-        listToMaybe mbDriverLocation & fromMaybeM LocationNotFound
-      else QDriverLocation.findById driverId >>= fromMaybeM LocationNotFound
   let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}

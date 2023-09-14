@@ -82,7 +82,7 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "end"
                     :> ReqBody '[JSON] EndRideReq
-                    :> Post '[JSON] APISuccess
+                    :> Post '[JSON] RideEnd.EndRideResp
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "cancel"
@@ -143,7 +143,7 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
 
-endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
+endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy}
