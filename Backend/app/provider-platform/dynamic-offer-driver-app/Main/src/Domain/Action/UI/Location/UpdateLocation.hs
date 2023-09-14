@@ -162,7 +162,7 @@ handleDriverPayments driverId diffUtc = do
 
 diffTimeMilliseconds :: UTCTime -> UTCTime -> Text
 diffTimeMilliseconds startTime endTime =
-  show $ round $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
+  show $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
 
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
