@@ -38,7 +38,8 @@ updateDB ::
     B.HasQBuilder be,
     EL.MonadFlow m,
     ToJSON (table Identity),
-    FromJSON (table Identity)
+    FromJSON (table Identity),
+    Show (table Identity)
   ) =>
   ET.DBConfig beM ->
   Maybe Text ->
@@ -50,9 +51,8 @@ updateDB dbConf _ setClause whereClause bts = do
   either (pure . Left) ((Right <$>) . mapM updateModel') . mapLeft MDBError
     =<< runExceptT
       ( do
-          updateObj <- ExceptT $ CDB.findAll dbConf Nothing whereClause
-          ExceptT $ CDB.updateOneWoReturning dbConf Nothing setClause whereClause
-          pure updateObj
+          updateObj <- ExceptT $ CDB.updateOne dbConf Nothing setClause whereClause
+          pure [updateObj]
       )
   where
     updateModel' model = do

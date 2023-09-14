@@ -38,7 +38,8 @@ updateDB ::
     B.HasQBuilder be,
     EL.MonadFlow m,
     ToJSON (table Identity),
-    FromJSON (table Identity)
+    FromJSON (table Identity),
+    Show (table Identity)
   ) =>
   ET.DBConfig beM ->
   Maybe Text ->
@@ -50,9 +51,8 @@ updateDB dbConf _ setClause whereClause bts = do
   either (pure . Left) ((Right <$>) . mapM updateModel') . mapLeft MDBError
     =<< runExceptT
       ( do
-          updateObj <- ExceptT $ CDB.findAll dbConf Nothing whereClause
-          ExceptT $ CDB.updateOneWoReturning dbConf Nothing setClause whereClause
-          pure updateObj
+          updateObj <- ExceptT $ CDB.updateOne dbConf Nothing setClause whereClause
+          pure [updateObj]
       )
   where
     updateModel' model = do
@@ -114,7 +114,7 @@ runUpdateCommands (cmd, val) streamKey = do
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
       runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
-
+    -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
     runUpdateInKafka id value streamKey' setClause whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -131,7 +131,7 @@ runUpdateCommands (cmd, val) streamKey = do
             )
             (\_ -> pure $ Right id)
             res
-
+    -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
     runUpdateInKafkaAndDb id value streamKey' setClause whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
@@ -184,6 +184,6 @@ getDbUpdateDataJson model upd whereClause =
           [ "set" .= A.object [k .= v | (k, v) <- upd],
             "where" .= modelEncodeWhere whereClause
           ],
-      "tag" .= T.pack (pascal (T.unpack model)),
+      "tag" .= T.pack (pascal (T.unpack model) <> "Object"),
       "type" .= ("UPDATE" :: Text)
     ]
