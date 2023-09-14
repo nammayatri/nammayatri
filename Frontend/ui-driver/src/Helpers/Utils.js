@@ -14,6 +14,8 @@ var inputForDebounce;
 var timerIdForTimeout;
 var allTimerIID = [];
 var uniqueId = 0;
+var countDownInMinutesId = null;
+let microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
 
 export const generateUniqueId = function (unit) {
   uniqueId += 1;
@@ -655,20 +657,19 @@ function rideLabelConfig(){
     Accessibility : {
       "backgroundColor" : "#9747FF",
       "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
-      "secondaryText" : getStringFromCommon("LEARN_MORE"), //"Learn More",
+      "secondaryText" : getStringFromCommon("LEARN_MORE"),
       "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
       "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+      "cancelConfirmImage" : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     },
-    Purple_Ride : {
-      "backgroundColor" : "#9747FF",
-      "text" : getStringFromCommon("PURPLE_RIDE"),
-      "secondaryText" : "", //"Learn More",
-      "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    GOTO : {
+      "backgroundColor" : "#2C2F3A",
+      "text" : getStringFromCommon("GO_TO"),
+      "secondaryText" : "",
+      "imageUrl" : "ny_pin_check_white,",
+      "cancelText" : "GO_TO_CANCELLATION_TITLE",
+      "cancelConfirmImage" : "ny_ic_gotodriver_zero,"
     }
-    //More rideLabelConfigs can be added
   }
 }
 
@@ -905,8 +906,6 @@ export const getPopupObject = function (just, nothing, key){
     if (val == "__failed") {
       return nothing;
     } 
-    console.log("zxc console key ", val);
-    console.log("zxc console parsed key ", JSON.parse(val));
     return just(JSON.parse(val));
   } catch( e ){
     console.warn(e);
@@ -996,9 +995,6 @@ function callUpiProcess(process,service) {
   }
 }
 
-let microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
-
-
 export const _generateQRCode = function (data, id, size, margin, sc) {
   if (typeof JBridge.generateQRCode === "function") {
     try {
@@ -1039,3 +1035,34 @@ export const getDeviceDefaultDensity = function (){
     return window.JBridge.getDensity() * 160;
   }
 }
+
+export const countDownInMinutes = function (seconds, cb, action) {
+  try {
+    var sec = seconds - 5; //5 seconds buffer
+    if (sec <= 0) {
+      cb(action(countDownInMinutesId)("")(0))();
+    } else {
+      if (countDownInMinutesId) clearInterval(countDownInMinutesId);
+      countDownInMinutesId = setInterval(convertInMinutesFormat, 60000); //setting interval of 1 min
+      cb(action(countDownInMinutesId)(Math.floor(sec / 60) + 1)(sec))();
+      function convertInMinutesFormat() {
+        sec = sec - 60;
+        var minutes = Math.floor(sec / 60);
+        cb(action(countDownInMinutesId)(minutes + 1)(sec))();
+      }
+    }
+  } catch (error) {
+    console.error("Error occured ", error);
+  }
+}
+
+export const istToUtcDate = function (dateStr) {
+  try {
+    var dateObj = new Date(dateStr);
+    const offsetMilliseconds = 5 * 60 * 60 * 1000 + 30 * 60 * 1000;
+    const newDateObj = new Date(dateObj.getTime() - offsetMilliseconds);
+    return newDateObj.toISOString();
+  } catch (err) {
+    console.error("Error in istToUtcDate " + err);
+  }
+};

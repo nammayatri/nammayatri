@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:visibility="gone"
     android:id="@+id/relative_layout"
     android:background="@android:color/transparent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -38,104 +39,128 @@
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
                         android:visibility="gone"
-                        android:id="@+id/customer_tip_block"
+                        android:id="@+id/tags_block"
                         android:padding="10dp">
-                    <HorizontalScrollView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@color/grey900"
-                        android:padding="10dp">
-                        <LinearLayout
+                        <HorizontalScrollView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="6dp">
-
+                            android:background="@color/grey900">
                             <LinearLayout
                                 android:layout_width="wrap_content"
-                                android:background="@drawable/ic_tip_tag"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingHorizontal="3dp"
-                                android:visibility="gone"
-                                android:id="@+id/customerTipTag"
-                                android:layout_marginEnd="10dp"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_tip_icon"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/tip_text"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="₹10 Tip"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/Black900"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp">
 
-                            <LinearLayout
-                                android:id="@+id/rideTypeTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:layout_marginHorizontal="8dp"
-                                android:paddingHorizontal="8dp"
-                                android:background="@drawable/ic_ac_variant_tag"
-                                android:visibility="gone">
-                                <ImageView
-                                    android:id="@+id/rideTypeImage"
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
-                                    android:src="@drawable/ny_ic_snow"/>
-                                <TextView
-                                    android:id="@+id/rideTypeText"
+                                <LinearLayout
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="AC SUV"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/white"/>
-                            </LinearLayout>
+                                    android:background="@drawable/ic_tip_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/customerTipTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_tip_icon"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/tip_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="₹10 Tip"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/Black900"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:background="@drawable/ic_accessibility_tag"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:id="@+id/accessibilityTag"
-                                android:visibility="gone"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_wheelchair"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/accessibilityTagText"
+                                <LinearLayout
+                                    android:id="@+id/rideTypeTag"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:layout_marginHorizontal="8dp"
                                     android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/assistance_required"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
+                                    android:background="@drawable/ic_ac_variant_tag"
+                                    android:visibility="gone">
+                                    <ImageView
+                                        android:id="@+id/rideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/ny_ic_snow"/>
+                                    <TextView
+                                        android:id="@+id/rideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="AC SUV"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/white"/>
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:background="@drawable/ic_accessibility_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:id="@+id/accessibilityTag"
+                                    android:visibility="gone"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_wheelchair"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/accessibilityTagText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/assistance_required"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:id="@+id/gotoTag"
+                                    android:layout_marginLeft="5dp"
+                                    android:background="@drawable/ic_goto_bg"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_pin_check_white"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/go_to"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
                             </LinearLayout>
-                        </LinearLayout>
-                    </HorizontalScrollView>
-                        </LinearLayout>
+                        </HorizontalScrollView>
+                    </LinearLayout>
 
 
                     <LinearLayout
@@ -171,10 +196,11 @@
                                         android:textColor="#2C2F3A"
                                         android:textFontWeight="600"
                                         android:textSize="16dp" />
+
                                     <LinearLayout
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                       >
+                                        >
                                         <TextView
                                             android:id="@+id/distancePickUp"
                                             android:layout_width="wrap_content"
@@ -189,9 +215,9 @@
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:text="•"
+                                            android:id="@+id/durationToPickupImage"
                                             android:textSize="24dp"
                                             android:visibility="gone"
-                                            android:id="@+id/durationToPickupImage"
                                             android:textColor="#A7A7A7"
                                             android:layout_marginHorizontal="4dp"/>
 
@@ -207,47 +233,29 @@
                                             android:textFontWeight="600"
                                             android:textSize="24dp"/>
                                     </LinearLayout>
-                                    
+
+                                </LinearLayout>
+
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:gravity="right">
 
-                                <com.google.android.material.card.MaterialCardView
-                                    android:id="@+id/specialLocationTag"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:visibility="gone"
-                                    app:cardBackgroundColor="#1A0066FF"
-                                    android:theme="@style/Theme.MaterialComponents.Light"
-                                    app:cardCornerRadius="10dp"
-                                    app:cardElevation="0dp"
-                                    app:contentPadding="10dp"
-                                    android:layout_marginVertical="10dp">
-
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/specialLocationTag"
+                                        android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:orientation="horizontal">
+                                        android:layout_gravity="center"
+                                        android:visibility="gone"
+                                        app:cardBackgroundColor="#1A0066FF"
+                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                        app:cardCornerRadius="10dp"
+                                        app:cardElevation="0dp"
+                                        app:contentPadding="10dp"
+                                        android:layout_marginVertical="10dp">
 
-                                        <TextView
-                                            android:id="@+id/fixedFareText"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:textSize="11dp"
-                                            android:layout_marginLeft="5dp"
-                                            android:textColor="#0066FF"
-                                            android:gravity="center"
-                                            android:singleLine="false"
-                                            android:textFontWeight="600"
-                                            android:fontFamily="@font/plus_jakartasans_semibold"
-                                            android:text="No Cancellation"/>
-                                    </LinearLayout>
+                                    </com.google.android.material.card.MaterialCardView>
 
-                                </com.google.android.material.card.MaterialCardView>
-
-                                </LinearLayout>
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -438,12 +446,12 @@
                                         android:visibility="gone"
                                         />
                                 </LinearLayout>
-                            <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="match_parent"
-                                android:id="@+id/assetZoneDrop"
-                                android:visibility="gone"
-                                android:src="@drawable/ic_metro_shape"/>
+                                <ImageView
+                                    android:layout_width="40dp"
+                                    android:layout_height="match_parent"
+                                    android:id="@+id/assetZoneDrop"
+                                    android:visibility="gone"
+                                    android:src="@drawable/ic_metro_shape"/>
 
                             </LinearLayout>
 

@@ -29,6 +29,7 @@ initData = {
         config : DC.config,
         driverName : "",
         vehicleType : "",
+        profileImg : Nothing,
         driverAlternateMobile : Nothing,
         activeRide : {
           id : "",
@@ -79,8 +80,8 @@ initData = {
         messagesSize : "-1",
         suggestionsList : [],
         messageToBeSent : "",
-        logField : empty
-      ,  paymentState : {
+        logField : empty, 
+        paymentState : {
           rideCount : 0,
           totalMoneyCollected : 0,
           payableAndGST : 0,
@@ -110,7 +111,6 @@ initData = {
           showBlockingPopup : false,
           autoPayStatus : NO_AUTOPAY
         },
-        profileImg : Nothing,
         triggerPatchCounter : 0,
         peekHeight : 0,
         endRideData : {
@@ -123,6 +123,22 @@ initData = {
           feedback : "",
           disability : Nothing,
           payerVpa : ""
+        },
+        driverGotoState : {
+          gotoCount : 0,
+          goToInfo : false,
+          selectedGoTo : "",
+          savedLocationsArray : [],
+          showGoto : false,
+          gotoValidTill : "-",
+          timerInMinutes : "-",
+          isGotoEnabled : false,
+          timerId : "",
+          gotoReducedCount : Nothing,
+          gotoLocInRange : false,
+          goToPopUpType : NO_POPUP_VIEW,
+          gotoEnabledForMerchant : false,
+          confirmGotoCancel : false
         }
     },
     props: {

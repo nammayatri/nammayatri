@@ -15,6 +15,7 @@
 
 module Screens.TripDetailsScreen.ScreenData where
 
+import Data.Maybe (Maybe(..))
 import Screens.Types (TripDetailsScreenState, PaymentMode(..))
 
 
@@ -33,7 +34,14 @@ initData = {
       totalAmount : 0,
       paymentMode : CASH,
       status : "",
-      vehicleType : ""
+      vehicleType : "",
+      customerExtraFee : Nothing,
+      purpleTagVisibility : false,
+      gotoTagVisibility : false,
+      spLocTagVisibility : false,
+      specialZoneLayoutBackground : "",
+      specialZoneImage : "",
+      specialZoneText : ""
   },
   props: {
     rating : 4,

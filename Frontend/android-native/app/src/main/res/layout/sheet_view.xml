@@ -38,7 +38,7 @@
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
                         android:visibility="gone"
-                        android:id="@+id/customer_tip_block"
+                        android:id="@+id/tags_block"
                         android:padding="10dp">
                     <HorizontalScrollView
                         android:layout_width="wrap_content"
@@ -127,7 +127,32 @@
                                     android:fontFamily="@font/plus_jakartasans_semibold"
                                     android:paddingHorizontal="8dp"
                                     android:paddingVertical="6dp"
-                                    android:text="Assistance Required"
+                                    android:text="@string/assistance_required"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:id="@+id/gotoTag"
+                                android:layout_marginLeft="5dp"
+                                android:background="@drawable/ic_goto_bg"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_pin_check_white"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/go_to"
                                     android:lineHeight="20dp"
                                     android:textColor="@color/white"
                                     android:textSize="12dp" />

@@ -50,5 +50,6 @@
     <string name="invoice_downloaded">ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="qr_downloaded">Qr ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ !!!</string>
+    <string name="accept_goto">ಒಪ್ಪಿಕೊಳ್ಳಿ “ಗೋ-ಟು”</string>
 
 </resources>

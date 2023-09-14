@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..))
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -57,6 +57,7 @@ import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens (ScreenName(..)) as ScreenNames
+import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -100,6 +101,7 @@ newtype GlobalState = GlobalState {
   , subscriptionScreen :: SubscriptionScreenState
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
+  , driverSavedLocationScreen :: DriverSavedLocationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -143,6 +145,7 @@ defaultGlobalState = GlobalState {
 , subscriptionScreen : SubscriptionScreenData.initData
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
+, driverSavedLocationScreen : DriverSavedLocationScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -150,7 +153,8 @@ defaultGlobalProps = {
   aadhaarVerificationRequired : false,
   driverInformation : DriverProfileScreenData.dummyDriverInfo,
   driverRideStats : HomeScreenData.dummyDriverRideStats,
-  callScreen : ScreenNames.HOME_SCREEN
+  callScreen : ScreenNames.HOME_SCREEN,
+  gotoPopupType : NO_POPUP_VIEW
 }
 
 data ScreenType =
@@ -191,10 +195,11 @@ data ScreenType =
   | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
   | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
+  | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
-data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
+data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN 
                             | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
                             | REFRESH RideHistoryScreenState
@@ -242,7 +247,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
                                     | SUBCRIPTION 
-
+                                    | SAVED_LOCATIONS_SCREEN
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -289,12 +294,12 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_EDIT_GENDER_SCREEN
                           | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} HomeScreenState
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} HomeScreenState
-                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String }
+                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } HomeScreenState
                           | DRIVER_AVAILABILITY_STATUS HomeScreenState DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
                           | UPDATE_ROUTE HomeScreenState
-                          | FCM_NOTIFICATION String
+                          | FCM_NOTIFICATION String HomeScreenState
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
@@ -308,6 +313,11 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
+                          | ENABLE_GOTO_API HomeScreenState String String
+                          | LOAD_GOTO_LOCATIONS HomeScreenState
+                          | DISABLE_GOTO HomeScreenState
+                          | GOTO_LOCATION_FLOW HomeScreenState
+                          | REFRESH_GOTO HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -376,3 +386,12 @@ data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | LOAD_MORE_ITEMS PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow
+
+data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN 
+                                  | AUTO_COMPLETE DriverSavedLocationScreenState String String String
+                                  | GET_LOCATION_NAME DriverSavedLocationScreenState
+                                  | SAVE_LOCATION DriverSavedLocationScreenState
+                                  | GET_PLACE_NAME DriverSavedLocationScreenState String
+                                  | DELETE_PLACE DriverSavedLocationScreenState String
+                                  | CHANGE_VIEW 
+                                  | UPDATE_HOME_LOCATION DriverSavedLocationScreenState

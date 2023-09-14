@@ -234,3 +234,30 @@ paymentEntityDetails id = (getBaseUrl "") <> "/driver/v2/payments/history/" <> i
 
 cleardues :: String -> String 
 cleardues _ = (getBaseUrl "") <> "/driver/cleardues"
+
+autoComplete :: String -> String
+autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
+
+placeDetails :: String -> String
+placeDetails _ =  (getBaseUrl "") <> "/maps/getPlaceDetails"
+
+getPlaceName :: String -> String 
+getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
+
+activateDriverGoTo :: String -> String -> String
+activateDriverGoTo homeLocationId currentLocation = getBaseUrl "" <> "/driver/goHome/activate?homeLocationId=" <> homeLocationId <> "&currentLocation=" <> currentLocation
+
+deactivateDriverGoTo :: String -> String
+deactivateDriverGoTo _ = getBaseUrl "" <> "/driver/goHome/deactivate"
+
+addDriverHomeLocation :: String -> String
+addDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHome/add"
+
+getDriverHomeLocation :: String -> String
+getDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHome/get"
+
+deleteDriverHomeLocation :: String -> String
+deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/delete?homeLocationId=" <> homeLocationId
+
+updateDriverHomeLocation :: String -> String
+updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/update?homeLocationId=" <> homeLocationId

@@ -50,4 +50,5 @@
     <string name="invoice_downloaded">விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">உங்கள் சவாரிக்கான விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>
     <string name="qr_downloaded">QR பதிவிறக்கம் !!!</string>
+    <string name="accept_goto">ஏற்றுக்கொள்ளுங்கள் “கோ-டூ”</string>
 </resources>

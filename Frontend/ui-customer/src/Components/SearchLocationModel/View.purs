@@ -33,9 +33,8 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
-import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig)
+import Helpers.Utils (getLocationName, getPreviousVersion, getSearchType, getAssetsBaseUrl, getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)

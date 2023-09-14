@@ -28,6 +28,7 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import JBridge (getVersionCode, waitingCountdownTimer, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -41,7 +42,6 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
 import JBridge as JB
@@ -141,7 +141,7 @@ rideActionViewWithLabel push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ getRideLabelData "backgroundColor" config.specialLocationTag config.accessibilityTag 
+  , background $ getRideLabelData "backgroundColor" config.specialLocationTag
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -154,21 +154,12 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag config.accessibilityTag 
+          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ getRideLabelData "text" config.specialLocationTag config.accessibilityTag 
-          , gravity CENTER_VERTICAL
-          , color Color.white900
-          , margin $ MarginLeft 5
-          ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
-        , textView $ 
-          [ width WRAP_CONTENT
-          , height MATCH_PARENT
-          , text "|"
-          , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
+          , text $ getRideLabelData "text" config.specialLocationTag
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -176,24 +167,36 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , orientation VERTICAL
-          , margin $ MarginLeft 5
           , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
-          , onClick push $ const SecondaryTextClick
-          ]
-          [ textView $ 
+          ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
-              , text $ getRideLabelData "secondaryText" config.specialLocationTag config.accessibilityTag 
+              , text "|"
               , gravity CENTER_VERTICAL
               , color Color.white900
+              , margin $ MarginLeft 5
               ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
-          , linearLayout
-              [ height $ V 1
-              , width MATCH_PARENT
-              , background Color.white900
-              , margin (Margin 1 0 2 0)
-              ][]
+            , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ MarginLeft 5
+              , onClick push $ const SecondaryTextClick
+              ]
+              [ textView $ 
+                  [ width WRAP_CONTENT
+                  , height MATCH_PARENT
+                  , text $ getRideLabelData "secondaryText" config.specialLocationTag
+                  , gravity CENTER_VERTICAL
+                  , color Color.white900
+                  ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
+              , linearLayout
+                  [ height $ V 1
+                  , width MATCH_PARENT
+                  , background Color.white900
+                  , margin $ MarginHorizontal 1 2
+                  ][]
+              ]
           ]
       ]
     , rideActionView (MarginTop 6) push config
@@ -735,7 +738,7 @@ separatorConfig =
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
+isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag)
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -26,6 +26,7 @@ import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -43,7 +44,9 @@ view push config =
         , visibility config.visibility
         , gravity CENTER
         ]
-        [ linearLayout
+        [ PrestoAnim.animationSet
+          [ Anim.triggerOnAnimationEnd true] $
+          linearLayout
             ([ height config.height
             , cornerRadius config.cornerRadius
             , background config.background
@@ -58,10 +61,10 @@ view push config =
                 )
                 (const OnClick)
             , orientation HORIZONTAL
-            , afterRender
+            , onAnimationEnd
                 ( \action -> do
-                    _ <- pure $ toggleBtnLoader "" false
-                    pure unit
+                    _ <- pure $ if config.lottieConfig.autoDisableLoader then (toggleBtnLoader config.id false) else unit
+                    push action
                 )
                 (const NoAction)
             , alpha if config.enableLoader then 0.5 else config.alpha

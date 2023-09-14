@@ -58,7 +58,7 @@ screen initialState =
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
                       else do
-                        _ <- HU.storeCallBackLocateOnMap push UpdateLocation
+                        _ <- JB.storeCallBackLocateOnMap push UpdateLocation
                         pure (pure unit))]
   , eval : \action state -> do
         let _ = spy "AddNewAddressScreenState action " action

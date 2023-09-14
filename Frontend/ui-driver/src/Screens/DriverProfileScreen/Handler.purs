@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard, (==))
+import Prelude (bind, pure, ($), (<$>), discard, (==), Unit)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
@@ -90,6 +90,9 @@ driverProfileScreen = do
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
+    GoToDriverSavedLocationScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
     GoBack -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen ->
         DriverProfileScreenData.initData { data { driverVehicleType = driverDetailsScreen.data.driverVehicleType

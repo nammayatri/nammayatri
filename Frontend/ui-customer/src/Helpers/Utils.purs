@@ -109,8 +109,6 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
-
 foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
@@ -168,11 +166,6 @@ foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect
 foreign import seperateByWhiteSpaces :: String -> String
 
 foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
-
-foreign import updateInputString :: String -> Unit
-
-foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
-
 foreign import clearWaitingTimer :: String -> Unit
 foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
@@ -180,8 +173,6 @@ foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
--- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
 foreign import getMobileNumber :: EffectFn2 String String String
 
 foreign import extractKeyByRegex :: Fn2 String String String

@@ -111,7 +111,7 @@ const frenchStrings = {
   REGISTRATION_CERTIFICATE_IMAGE: "Image du certificat d'enregistrement (CE)",
   HOME: "Accueil",
   RIDES: "Courses",
-  TRIPS: "Trajets",
+  MY_RIDES: "Trajets",
   PROFILE: "Profil",
   ENTER_DRIVING_LICENSE_NUMBER: "Entrez le numéro de permis de conduire",
   WHERE_IS_MY_LICENSE_NUMBER: "Où est mon numéro de permis ?",

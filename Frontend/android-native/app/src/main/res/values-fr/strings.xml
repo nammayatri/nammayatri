@@ -44,4 +44,5 @@
     <string name="new_ride_available_for_offering">Nouveau trajet disponible pour offrir </string>
     <string name="and">et </string>
     <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>
+    <string name="go_to">aller à</string>
 </resources>

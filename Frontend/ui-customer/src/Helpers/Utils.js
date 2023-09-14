@@ -89,30 +89,6 @@ export const requestKeyboardShow = function(id) {
     }
   }
 
-export const storeCallBackLocateOnMap = function (cb) {
-  try {
-  return function (action) {
-      return function () {
-        var callback = callbackMapper.map(function (key, lat, lon) {
-          console.log("in show storeCallBackLocateOnMap",action);
-          if(timerIdDebounce){
-            clearTimeout(timerIdDebounce);
-          }
-          window.x = cb;
-          window.y = action;
-          timerIdDebounce = setTimeout(() => {
-            cb(action (key) (lat) (lon))();
-          }, 200);
-        });
-          console.log("In storeCallBackLocateOnMap ---------- + " + action);
-          window.JBridge.storeCallBackLocateOnMap(callback);
-      }
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackLocateOnMap ------", error);
-  }
-}
-
 export const storeCallBackCustomer = function (cb) {
 
     return function (action) {
@@ -260,50 +236,6 @@ export const setEnabled = function (id){
     if (window.__OS == "ANDROID") {
       var cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
       window.Android.runInUI(cmd,null)
-    }
-  }
-}
-
-  // exports ["debounceFunction"] = function (delay) { NEED TO HANDLE DEBOUNCING IN LOCATEONMAP
-  //   return function (cb){
-  //     return function (action){
-  //       return function(){
-  //         console.logs("debounceFunctiondebounceFunction");
-  //         var callback = callbackMapper.map(function () {
-  //           if (timerIdDebounce) clearTimeout(timerIdDebounce);
-  //           timerIdDebounce = setTimeout(() => {
-  //             timerIdDebounce = "MAKEAPICALL";
-  //             cb(action (inputForDebounce))();
-  //           },delay);
-  //         });
-  //         window.callUICallback(callback);
-  //       }
-  //     }
-  //   }
-  // }
-
-var inputForDebounce;
-export const updateInputString = function (a){
-  console.log("UPDATED STRING NOW" + a);
-  inputForDebounce = a;
-}
-
-var timerIdDebounce = null;
-export const debounceFunction = function (delay) {
-  return function (cb) {
-    return function (action) {
-      return function (isSource) {
-        return function () {
-          var callback = callbackMapper.map(function () {
-            if (timerIdDebounce) clearTimeout(timerIdDebounce);
-            timerIdDebounce = setTimeout(() => {
-              timerIdDebounce = "MAKEAPICALL";
-              cb(action(inputForDebounce)(isSource))();
-            }, delay);
-          });
-          window.callUICallback(callback);
-        }
-      }
     }
   }
 }

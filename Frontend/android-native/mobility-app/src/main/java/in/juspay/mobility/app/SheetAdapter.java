@@ -70,7 +70,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag;
 
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -91,7 +91,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             progressBar = itemView.findViewById(R.id.progressBar);
             textDecPrice = itemView.findViewById(R.id.textDecPrice);
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
-            customerTipBlock = itemView.findViewById(R.id.customer_tip_block);
+            tagsBlock = itemView.findViewById(R.id.tags_block);
             customerTipText = itemView.findViewById(R.id.tip_text);
             accessibilityTagText = itemView.findViewById(R.id.accessibilityTagText);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
@@ -105,6 +105,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rideTypeText = itemView.findViewById(R.id.rideTypeText);
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);
             durationToPickupImage = itemView.findViewById(R.id.durationToPickupImage);
+            gotoTag = itemView.findViewById(R.id.gotoTag);
         }
     }
 

@@ -18,7 +18,7 @@ module Screens.RideSelectionScreen.Controller where
 import Log
 import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool, convertUTCtoISC)
 import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
@@ -36,6 +36,7 @@ import Styles.Colors as Color
 import Components.ErrorModal as ErrorModalController
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
+import Helpers.Utils as HU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -185,11 +186,13 @@ rideHistoryListTransformer list categoryAction =
     , shimmer_visibility : toPropValue "gone"
     , driverSelectedFare : toPropValue ride.driverSelectedFare
     , riderName : toPropValue $ fromMaybe "" ride.riderName
-    , metroTagVisibility : toPropValue  "gone"
-    , accessibilityTagVisibility : toPropValue "gone"
-    , specialZoneText : toPropValue ""
-    , specialZoneImage : toPropValue ""
-    , specialZoneLayoutBackground : toPropValue $ ""
+    , spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (HU.getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone"
+    , specialZoneText : toPropValue $ HU.getRideLabelData "text" ride.specialLocationTag
+    , specialZoneImage : toPropValue $ HU.getRideLabelData "imageUrl" ride.specialLocationTag
+    , specialZoneLayoutBackground : toPropValue $ HU.getRideLabelData "backgroundColor" ride.specialLocationTag
+    , gotoTagVisibility : toPropValue if isJust ride.driverGoHomeRequestId then "visible" else "gone"
+    , purpleTagVisibility : toPropValue if isJust ride.disabilityTag then "visible" else "gone"
+    , tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone"
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 
@@ -222,6 +225,13 @@ rideListResponseTransformer list categoryAction =
     , driverSelectedFare : ride.driverSelectedFare
     , vehicleType : ride.vehicleVariant
     , riderName : fromMaybe "" ride.riderName
+    , customerExtraFee : Nothing
+    , purpleTagVisibility : false
+    , gotoTagVisibility : false
+    , spLocTagVisibility : false 
+    , specialZoneLayoutBackground : ""
+    , specialZoneImage : ""
+    , specialZoneText : ""
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

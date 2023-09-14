@@ -31,7 +31,7 @@ import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
-import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Data.Number (ceil)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -210,30 +210,15 @@ getPlaceNameResp placeId lat lon item = do
     case item.locationItemType of
       Just PREDICTION ->
           case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
             Nothing       ->  pure $ makePlaceNameResp lat lon
       _ ->  do
         case item.lat, item.lon of
           Nothing, Nothing -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
             Nothing       ->  pure $ makePlaceNameResp lat lon
           Just 0.0, Just 0.0 -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
             Nothing       ->  pure $ makePlaceNameResp lat lon
           _ , _ -> pure $ makePlaceNameResp lat lon
 

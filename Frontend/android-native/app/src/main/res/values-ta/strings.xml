@@ -45,5 +45,6 @@
     <string name="and">மற்றும்</string>
     <string name="no_enabled_browser">உங்கள் சாதனத்தில் இயக்கப்பட்ட உலாவி இல்லை, உலாவியை இயக்கவும் அல்லது நிறுவவும்</string>
     <string name="message_from_customer">வாடிக்கையாளரிடமிருந்து செய்தி</string>
+    <string name="go_to">கோ-டூ</string>
 
 </resources>

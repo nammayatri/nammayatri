@@ -24,12 +24,14 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Either (Either(..), either)
 import Data.Int as INT
+import Data.Number as Number
 import Data.String as DS
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
+import Foreign.NullOrUndefined (undefined)
 import Helpers.Utils (decodeErrorCode, getTime, toString, decodeErrorMessage)
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
@@ -551,9 +553,21 @@ getCorrespondingErrorMessage errorPayload = do
         "NO_PLAN_FOR_DRIVER" -> getString NO_PLAN_FOR_DRIVER
         "INVALID_PAYMENT_MODE" -> getString INVALID_PAYMENT_MODE
         "INVALID_AUTO_PAY_STATUS" -> getString INVALID_AUTO_PAY_STATUS
+        "DRIVER_HOME_LOCATION_NOT_FOUND" -> getString DRIVER_HOME_LOCATION_NOT_FOUND
+        "DRIVER_HOME_LOCATION_DOES_NOT_EXIST" -> getString DRIVER_HOME_LOCATION_DOES_NOT_EXIST
+        "DRIVER_HOME_LOCATION_LIMIT_REACHED" -> getString DRIVER_HOME_LOCATION_LIMIT_REACHED
+        "DRIVER_GO_HOME_REQUEST_NOT_FOUND" -> getString DRIVER_GO_HOME_REQUEST_NOT_FOUND
+        "DRIVER_GO_HOME_REQUEST_DOES_NOT_EXIST" -> getString DRIVER_GO_HOME_REQUEST_DOES_NOT_EXIST
+        "DRIVER_GO_HOME_REQUEST_DAILY_USAGE_LIMIT_REACHED" -> getString DRIVER_GO_HOME_REQUEST_DAILY_USAGE_LIMIT_REACHED
+        "DRIVER_GO_HOME_REQUEST_ALREADY_ACTIVE" -> getString DRIVER_GO_HOME_REQUEST_ALREADY_ACTIVE
+        "DRIVER_GO_HOME_REQUEST_NOT_PRESENT" -> getString DRIVER_GO_HOME_REQUEST_NOT_PRESENT
+        "DRIVER_HOME_LOCATION_OUTSIDE_SERVICE_AREA" -> getString DRIVER_HOME_LOCATION_OUTSIDE_SERVICE_AREA
+        "NEW_LOCATION_TOO_CLOSE_TO_PREVIOUS_HOME_LOCATION" -> getString NEW_LOCATION_TOO_CLOSE_TO_PREVIOUS_HOME_LOCATION
+        "DRIVER_HOME_LOCATION_DOES_NOT_BELONG_TO_DRIVER" -> getString DRIVER_HOME_LOCATION_DOES_NOT_BELONG_TO_DRIVER
+        "DRIVER_HOME_LOCATION_DELETE_WHILE_ACTIVE_ERROR" -> getString DRIVER_HOME_LOCATION_DELETE_WHILE_ACTIVE_ERROR
         "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-        _ -> decodeErrorMessage errorPayload.response.errorMessage
+        undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC payload = do
      headers <- getHeaders "" false
@@ -1106,3 +1120,122 @@ cleardues _ = do
     withAPIResult (EP.cleardues "") unwrapResponse $ callAPI headers (ClearDuesReq "")
     where
         unwrapResponse (x) = x
+
+----------------------------------------------autoComplete-------------------------------------------------
+autoComplete :: String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse AutoCompleteResp)
+autoComplete searchVal lat lon language = do
+  headers <- getHeaders  "" true
+  withAPIResult (EP.autoComplete "") unwrapResponse $ callAPI headers $ makeReq searchVal lat lon language
+  where
+    makeReq :: String -> String -> String -> String -> AutoCompleteReq
+    makeReq searchVal lat lon language= AutoCompleteReq {
+        components : "",
+        sessionToken : Nothing,
+        location : (lat <> "," <> lon),
+        radius : 100000,
+        input : searchVal,
+        language : language,
+        strictbounds : Nothing,
+        origin : LatLong {
+            lat : fromMaybe 0.0 (Number.fromString lat),
+            lon : fromMaybe 0.0 (Number.fromString lon)
+        }
+    }
+    unwrapResponse (x) = x 
+
+-----------------------------------------getPlaceName--------------------------------------------------
+placeName :: GetPlaceNameReq -> Flow GlobalState (Either ErrorResponse GetPlaceNameResp)
+placeName payload = do
+     headers <- getHeaders  "" false
+     withAPIResult (EP.getPlaceName "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x 
+
+makePlaceNameReq :: Number -> Number -> String -> GetPlaceNameReq
+makePlaceNameReq lat lng language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByLatLong",
+          "contents" :LatLongType ( LatLonBody {
+              "lat" : lat,
+              "lon" : lng
+          })
+      }
+    }
+
+makePlaceNameReqByPlaceId :: String -> String -> GetPlaceNameReq
+makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByPlaceId",
+          "contents" : (PlaceId placeId)
+      }
+    }
+
+-------------------------------------------Driver Go To--------------------------------------------------
+
+addDriverHomeLocation :: Number -> Number  -> String -> String -> Flow GlobalState (Either ErrorResponse AddHomeLocationResp)
+addDriverHomeLocation lat lon address tag = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.addDriverHomeLocation "") unwrapResponse $ callAPI headers $ makeAddReq lat lon address tag
+  where
+    makeAddReq :: Number -> Number -> String -> String -> AddHomeLocationReq
+    makeAddReq lat lon address tag = AddHomeLocationReq {
+        position : LatLong $ {
+            lat : lat,
+            lon : lon
+        } ,
+        address : address,
+        tag : tag
+    }
+    unwrapResponse x = x
+
+
+getDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse GetHomeLocationsRes)
+getDriverHomeLocation _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getDriverHomeLocation "") unwrapResponse $ callAPI headers (GetHomeLocationReq)
+  where
+    unwrapResponse x = x
+
+activateDriverGoTo :: String -> String -> Flow GlobalState (Either ErrorResponse ActivateDriverGoToResp)
+activateDriverGoTo id currentLocation = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.activateDriverGoTo id currentLocation) unwrapResponse $ callAPI headers (ActivateDriverGoToReq id currentLocation)
+  where
+    unwrapResponse x = x
+
+deactivateDriverGoTo :: String -> Flow GlobalState (Either ErrorResponse DeactivateDriverGoToResp)
+deactivateDriverGoTo _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deactivateDriverGoTo "") unwrapResponse $ callAPI headers (DeactivateDriverGoToReq)
+  where
+    unwrapResponse x = x
+
+deleteDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse DeleteDriverHomeLocationResp)
+deleteDriverHomeLocation id = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deleteDriverHomeLocation id) unwrapResponse $ callAPI headers (DeleteDriverHomeLocationReq id)
+  where
+    unwrapResponse x = x
+
+updateDriverHomeLocation :: String -> Number ->Number -> String -> String  -> Flow GlobalState (Either ErrorResponse UpdateHomeLocationResp)
+updateDriverHomeLocation qParam lat lon address tag = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.updateDriverHomeLocation qParam) unwrapResponse $ callAPI headers $ makeUpdateReq qParam lat lon address tag
+  where
+    makeUpdateReq :: String -> Number -> Number -> String -> String -> UpdateHomeLocationReq
+    makeUpdateReq param lat lon address tag = UpdateHomeLocationReq {
+        qParam : param,
+        body : AddHomeLocationReq $ {
+            position : LatLong $ {
+                lat : lat,
+                lon : lon
+            } ,
+            address : address,
+            tag : tag
+        }
+    }
+    unwrapResponse x = x

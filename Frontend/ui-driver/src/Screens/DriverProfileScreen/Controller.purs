@@ -42,14 +42,12 @@ import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||))
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
 import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..), MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..))
 import Screens.Types as ST
 import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.API as SA
@@ -61,6 +59,7 @@ import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.SubscriptionScreen.Controller
 import Effect.Aff (launchAff_)
 import Effect.Uncurried(runEffectFn4)
+import Storage (isLocalStageOn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -192,10 +191,11 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
                     | SubscriptionScreen
+                    | GoToDriverSavedLocationScreen DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
-            | OptionClick Data.MenuOptions
+            | OptionClick MenuOptions
             | BottomNavBarAction BottomNavBar.Action
             | GetDriverInfoResponse SA.GetDriverInfoResp
             | DriverSummary DriverProfileSummaryRes
@@ -300,16 +300,17 @@ eval (UpdateValue value) state = do
 
 eval (OptionClick optionIndex) state = do
   case optionIndex of
-    Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
-    Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
-    Data.DRIVER_BANK_DETAILS -> continue state
-    Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
-    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
-    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
-    Data.ABOUT_APP -> exit $ GoToAboutUsScreen
-    Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
-    Data.REFER -> exit $ OnBoardingFlow
-    Data.APP_INFO_SETTINGS -> do
+    DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
+    DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
+    DRIVER_BANK_DETAILS -> continue state
+    GO_TO_LOCATIONS -> exit $ GoToDriverSavedLocationScreen state  
+    DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
+    MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
+    HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
+    ABOUT_APP -> exit $ GoToAboutUsScreen
+    DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
+    REFER -> exit $ OnBoardingFlow
+    APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
@@ -342,7 +343,8 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 
 eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
   let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
-  continue (state {data = state.data {driverName = driverProfileResp.firstName,
+  let (SA.DriverGoHomeInfo driverGoHomeInfo) =  driverProfileResp.driverGoHomeInfo
+  continue state {data = state.data {driverName = driverProfileResp.firstName,
                                       driverVehicleType = linkedVehicle.variant,
                                       driverRating = driverProfileResp.rating,
                                       driverMobile = driverProfileResp.mobileNumber,
@@ -355,7 +357,8 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       driverGender = driverProfileResp.gender,
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
-                                      }})
+                                      },
+                    props { hideGoto = not driverProfileResp.isGoHomeEnabled}}
 
 eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
   let rctransformedData = makeRcsTransformData rcDataArray
@@ -551,20 +554,21 @@ eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = sta
 
 eval _ state = continue state
 
-getTitle :: Data.MenuOptions -> String
+getTitle :: MenuOptions -> String
 getTitle menuOption =
   case menuOption of
-    Data.DRIVER_PRESONAL_DETAILS -> (getString STR.PERSONAL_DETAILS)
-    Data.DRIVER_VEHICLE_DETAILS -> (getString STR.VEHICLE_DETAILS)
-    Data.DRIVER_BANK_DETAILS -> (getString STR.BANK_DETAILS)
-    Data.MULTI_LANGUAGE -> (getString STR.LANGUAGES)
-    Data.HELP_AND_FAQS -> (getString STR.HELP_AND_FAQ)
-    Data.ABOUT_APP -> (getString STR.ABOUT)
-    Data.REFER -> (getString STR.ADD_YOUR_FRIEND)
-    Data.DRIVER_LOGOUT -> (getString STR.LOGOUT)
-    Data.APP_INFO_SETTINGS -> (getString STR.APP_INFO)
-    Data.LIVE_STATS_DASHBOARD -> (getString STR.LIVE_DASHBOARD)
-    Data.DRIVER_BOOKING_OPTIONS -> (getString STR.BOOKING_OPTIONS)
+    DRIVER_PRESONAL_DETAILS -> getString STR.PERSONAL_DETAILS
+    DRIVER_VEHICLE_DETAILS -> getString STR.VEHICLE_DETAILS
+    DRIVER_BANK_DETAILS -> getString STR.BANK_DETAILS
+    MULTI_LANGUAGE -> getString STR.LANGUAGES
+    HELP_AND_FAQS -> getString STR.HELP_AND_FAQ
+    ABOUT_APP -> getString STR.ABOUT
+    REFER -> getString STR.ADD_YOUR_FRIEND
+    DRIVER_LOGOUT -> getString STR.LOGOUT
+    APP_INFO_SETTINGS -> getString STR.APP_INFO
+    LIVE_STATS_DASHBOARD -> getString STR.LIVE_DASHBOARD
+    DRIVER_BOOKING_OPTIONS -> getString STR.BOOKING_OPTIONS
+    GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
 
 getDowngradeOptionsSelected :: SA.GetDriverInfoResp -> Array VehicleP
 getDowngradeOptionsSelected (SA.GetDriverInfoResp driverInfoResponse) =
@@ -619,14 +623,15 @@ makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
   }
   ) listRes
 
-optionList :: String -> Array Listtype
-optionList dummy =
+optionList :: DriverProfileScreenState -> Array Listtype
+optionList state =
+    (if (not any ( _ == true )[isLocalStageOn ST.RideAccepted, isLocalStageOn ST.RideStarted, isLocalStageOn ST.ChatWithCustomer, state.props.hideGoto]) then [{menuOptions: GO_TO_LOCATIONS , icon:"ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_loc_grey.png"}] else []) <>
     (if (getMerchant FunctionCall /= NAMMAYATRI)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
     [
       {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},
       {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},
       {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"}
-    ]
+    ] 
     <> (if (getMerchant FunctionCall == NAMMAYATRI) then [{menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png"}] else []) <>
     [
       {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},

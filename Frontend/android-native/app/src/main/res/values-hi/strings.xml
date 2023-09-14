@@ -45,4 +45,5 @@
     <string name="and">और</string>
     <string name="no_enabled_browser">आपके डिवाइस में कोई सक्षम ब्राउज़र नहीं मिला, कृपया ब्राउज़र को सक्षम या स्थापित करें</string>
     <string name="message_from_customer">ग्राहक की ओर से संदेश </string>
+    <string name="go_to">गो-टू</string>
 </resources>

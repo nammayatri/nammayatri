@@ -173,4 +173,13 @@ public class Utils {
             Log.e(UTILS, "Error sending user data: " + e);
         }
     }
+    
+    public static VariantType getVariantType(String variant) {
+        if (variant.equals("Non AC Taxi")) {
+            return VariantType.NON_AC;
+        }
+        return VariantType.AC;
+    }
+
+    public static enum VariantType { AC, NON_AC }
 }

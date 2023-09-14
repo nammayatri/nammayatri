@@ -215,7 +215,7 @@ view push state =
              , accessibility ENABLE
              , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
              , visibility $ state.secondaryText.visibility
-             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+             ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
             , imageView [
                width state.secondaryText.suffixImage.width
                , height state.secondaryText.suffixImage.height

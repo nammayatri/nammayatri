@@ -21,11 +21,12 @@ import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
+import Language.Types (STR(..)) as STR
 import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.DefaultConfig as DC
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
-import Services.API (GetDriverInfoResp(..), OrganizationInfo(..))
+import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 
 initData :: DriverProfileScreenState
 initData = {
@@ -118,19 +119,13 @@ initData = {
     btnActive : false,
     showBookingOptionForTaxi : false,
     upiQrView : false,
-    paymentInfoView : false
+    paymentInfoView : false,
+    hideGoto : false
    }
 }
 
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
-derive instance genericMenuoptions :: Generic MenuOptions _
-instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 
-type Listtype =
-    { icon :: String,
-      menuOptions :: MenuOptions
-    }
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
@@ -201,6 +196,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , payerVpa              : Nothing
     , currentDues           : Nothing
     , manualDues           : Nothing
+    , driverGoHomeInfo      : dummyDriverGoHomeInfo
+    , isGoHomeEnabled       : false
 }
 
 organizationInfo :: OrganizationInfo
@@ -211,4 +208,15 @@ organizationInfo = OrganizationInfo {
   status        : "",
   enabled       : false,
   id            : ""
+}
+
+
+dummyDriverGoHomeInfo :: DriverGoHomeInfo
+dummyDriverGoHomeInfo = DriverGoHomeInfo {
+  cnt : 0,
+  driverGoHomeRequestId : Nothing,
+  validTill : Nothing,
+  status : Nothing,
+  isOnRide : false,
+  goHomeReferenceTime : ""
 }

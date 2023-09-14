@@ -42,6 +42,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
+import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, saveObject, reboot, showSplash)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
@@ -871,12 +872,7 @@ homeScreenFlow = do
         rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) getSearchRadius  (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                                                                                                    "HI_IN" -> "HINDI"
-                                                                                                                                                                                                    "KN_IN" -> "KANNADA"
-                                                                                                                                                                                                    "BN_IN" -> "BENGALI"
-                                                                                                                                                                                                    "ML_IN" -> "MALAYALAM"
-                                                                                                                                                                                                    _      -> "ENGLISH") "")
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) getSearchRadius (EHC.getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY) "")
       let event =
             case state.props.isSource of
               Just true -> "ny_user_auto_complete_api_trigger_src"
@@ -1905,12 +1901,7 @@ addNewAddressScreenFlow input = do
   case flow of
     SEARCH_ADDRESS input state -> do
       (GlobalState newState) <- getState
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) getSearchRadius (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                                                                                                                                "HI_IN" -> "HINDI"
-                                                                                                                                                                                                                                "KN_IN" -> "KANNADA"
-                                                                                                                                                                                                                                "BN_IN" -> "BENGALI"
-                                                                                                                                                                                                                                "ML_IN" -> "MALAYALAM"
-                                                                                                                                                                                                                                _      -> "ENGLISH") "")
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) getSearchRadius (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY) ) "")
       let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
           predictionList = AddNewAddress.getLocationList sortedByDistanceList
           recentLists = state.data.recentSearchs.predictionArray
@@ -2334,12 +2325,7 @@ getPlaceName lat long location = do
               , addressComponents : [addressComponent]
             })
     Nothing -> do
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                                "HI_IN" -> "HINDI"
-                                                                                                                                "KN_IN" -> "KANNADA"
-                                                                                                                                "BN_IN" -> "BENGALI"
-                                                                                                                                "ML_IN" -> "MALAYALAM"
-                                                                                                                                _      -> "ENGLISH"))
+      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
 
       let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
       pure (PlaceName address)
