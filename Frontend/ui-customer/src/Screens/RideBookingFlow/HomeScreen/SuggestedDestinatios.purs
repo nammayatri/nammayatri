@@ -61,7 +61,6 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestedDestinations 
                                                      tripSuggestions : []} suggestedDestinations
 
 
--- checkAndUpdateGeohash :: {sourceGeohash :: String, }
 
 addOrUpdateSuggestedTrips ::
   SourceGeoHash ->
@@ -74,15 +73,15 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestedDestinations =
     updateSuggestions suggestion = Just $ suggestion {tripSuggestions = updateTrips suggestion.tripSuggestions} 
 
     updateTrips ::  (Array Trip) -> Array Trip
-    updateTrips trips = (updateDestination trips)
+    updateTrips trips = (updateTrip trips)
 
-    updateDestination :: Array Trip -> Array Trip
-    updateDestination trips =
+    updateTrip :: Array Trip -> Array Trip
+    updateTrip trips =
       let
         updateExisting :: Trip -> Trip
         updateExisting existingDestination =
-          if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingDestination.sourceLat existingDestination.sourceLong) < 11.0
-          && (getDistanceBwCordinates trip.destLat trip.destLong existingDestination.destLat existingDestination.destLong) < 11.0
+          if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingDestination.sourceLat existingDestination.sourceLong) < 0.011
+          && (getDistanceBwCordinates trip.destLat trip.destLong existingDestination.destLat existingDestination.destLong) < 0.011
           then existingDestination
                  { frequencyCount = Just $ (fromMaybe 0 existingDestination.frequencyCount) +  1
                  , recencyDate = Just $ (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
@@ -91,8 +90,8 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestedDestinations =
           else existingDestination
 
         updatedDestinations = map updateExisting trips
-        destinationExists = any (\d -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong d.sourceLat d.sourceLong) < 11.0
-          && (getDistanceBwCordinates trip.destLat trip.destLong d.destLat d.destLong) < 11.0) trips
+        destinationExists = any (\d -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong d.sourceLat d.sourceLong) < 0.011
+          && (getDistanceBwCordinates trip.destLat trip.destLong d.destLat d.destLong) < 0.011) trips
         sortedDestinations = sortTripsByScore updatedDestinations
       in
         if destinationExists
@@ -119,7 +118,7 @@ getSuggestedDestinations sourceGeohash suggestedDestinations =
 calculateScore :: Number -> String -> Number
 calculateScore frequency recencyDate =
   let
-    frequencyWeight = 0.6
+    frequencyWeight = 0.7
     recencyWeight = 1.0 - frequencyWeight
     currentDate = (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
     recencyInDays = getDifferenceBetweenDates currentDate recencyDate
