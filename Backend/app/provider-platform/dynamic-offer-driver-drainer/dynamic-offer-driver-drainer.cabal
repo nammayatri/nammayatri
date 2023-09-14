@@ -122,8 +122,6 @@ library
     , warp
     , warp-tls
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable dynamic-offer-driver-drainer-exe
   main-is: Main.hs
@@ -209,5 +207,3 @@ executable dynamic-offer-driver-drainer-exe
     , warp
     , warp-tls
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

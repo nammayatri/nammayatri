@@ -94,8 +94,6 @@ library
     , time
     , uuid
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable producer-exe
   main-is: Main.hs
@@ -170,5 +168,3 @@ executable producer-exe
     , time
     , uuid
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

@@ -121,8 +121,6 @@ library
     , warp
     , warp-tls
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable rider-app-drainer-exe
   main-is: Main.hs
@@ -208,5 +206,3 @@ executable rider-app-drainer-exe
     , warp
     , warp-tls
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

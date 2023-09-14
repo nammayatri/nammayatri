@@ -29,8 +29,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import qualified Storage.Queries.Ride as QRide
 
 data BulkLocUpdateReq = BulkLocUpdateReq
-  { rideId :: Id DRide.Ride,
-    driverId :: Id DP.Person,
+  { driverId :: Id DP.Person,
     loc :: NonEmpty LatLong
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
@@ -38,9 +37,8 @@ data BulkLocUpdateReq = BulkLocUpdateReq
 bulkLocUpdate :: BulkLocUpdateReq -> Flow APISuccess
 bulkLocUpdate req = do
   let driverId = req.driverId
-      rideId = req.rideId
       loc = req.loc
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- QRide.getActiveByDriverId driverId >>= fromMaybeM (RideNotFound "Active ride not found for bulk location update.")
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
   _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId loc
