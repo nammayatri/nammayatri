@@ -364,7 +364,7 @@ callCustomerModel state push =
    , margin (MarginHorizontal 16 16)
    , gravity CENTER
    ][ textView
-    [ text $ getString CALL_CUSTOMER_TITLE
+    [ text $ getString CALL_CUSTOMER_TITLE <> "?"
     , textSize FontSize.a_20
     , fontStyle $ bold LanguageStyle
     , color Color.black800

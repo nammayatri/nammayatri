@@ -31,6 +31,7 @@ data Action = StartRide
             | WaitingInfo
             | LoadMessages
             | SecondaryTextClick
+            | VisuallyImpairedCustomer
 
 type Config = { 
   startRideActive :: Boolean,

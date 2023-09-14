@@ -80,9 +80,9 @@ messageButton push config =
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
   , afterRender push $ const $ LoadMessages
-  , onClick push $ const $ MessageCustomer
+  , onClick push $ const $  if config.accessbilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
   , alpha if config.accessbilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
-  , clickable if config.accessbilityTag == Maybe.Just BLIND_AND_LOW_VISION then false else true
+  , clickable true
   ][  imageView
       [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
       , height $ V 20

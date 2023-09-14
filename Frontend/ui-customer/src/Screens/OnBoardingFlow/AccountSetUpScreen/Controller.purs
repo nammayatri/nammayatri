@@ -160,6 +160,7 @@ eval (SpecialAssistanceListAC action) state = case action of
     continue state { props{btnActive = getBtnActive newState}, data = newState.data}
   SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
   SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
+    _ <- pure $ hideKeyboardOnNavigation true
     let newState = state{data{editedDisabilityOptions{otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason, isSpecialAssistList = false, selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) }}}
         updatedState = state{props{btnActive = getBtnActive newState}, data = newState.data } 
     continue updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}

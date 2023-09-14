@@ -814,5 +814,7 @@ const bengaliStrings = {
   SUBMIT_FEEDBACK : "প্রতিক্রিয়া জমা দিন",
   BADGE_EARNED : "ব্যাজ অর্জিত",
   PURPLE_RIDE_CHAMPION : "পার্পল রাইড চ্যাম্পিয়ন",
-  PURPLE_RIDE : "বেগুনি রাইড"
+  PURPLE_RIDE : "বেগুনি রাইড",
+	PROCEED_TO_CHAT : "চ্যাট দিয়ে এগিয়ে যান",
+	PLEASE_CONSIDER_CALLING_THEM : "তারা চ্যাট পড়তে সক্ষম নাও হতে পারে. তাদের কল করুন"
 }

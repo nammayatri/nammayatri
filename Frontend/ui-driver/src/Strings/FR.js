@@ -422,7 +422,7 @@ const frenchStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER: "Décrivez votre problème Namma Yatri essaiera de le résoudre en moins de 24 heures",
   ADDED_VOICE_NOTE: "Note vocale ajoutée",
   NO_VOICE_NOTE_ADDED: "Aucune note vocale ajoutée",
-  CALL_CUSTOMER_TITLE: "Appelez le client?",
+  CALL_CUSTOMER_TITLE: "Appelez le client",
   CALL_CUSTOMER_DESCRIPTION: "Vous êtes sur le point de passer un appel au client Voulez-vous continuer?",
   PLACE_CALL: "Placez l'appel",
   ADD_IMAGE: "Ajouter des images)",

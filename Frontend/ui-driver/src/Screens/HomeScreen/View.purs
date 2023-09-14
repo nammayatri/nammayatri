@@ -191,7 +191,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ][ relativeLayout
+  ]([ relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , background Color.white900
@@ -230,9 +230,16 @@ view push state =
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-  ]
+  ] <> if state.props.showChatBlockerPopUp then [chatBlockerPopUpView push state] else [])
 
 
+chatBlockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chatBlockerPopUpView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< PopUpModalChatBlockerAction) (chatBlockerPopUpConfig state)]
+  
 accessibilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 accessibilityPopUpView push state =
   linearLayout
@@ -606,6 +613,7 @@ driverDetail push state =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height MATCH_PARENT
+      , gravity CENTER
       , padding (Padding 16 20 12 16)
       ][ linearLayout [
           width $ V 42
@@ -649,6 +657,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   , margin (Margin 10 10 10 10)
   , background Color.lightPurple
   , cornerRadius 50.0
+  , padding (Padding 8 8 8 8)
   ][
     imageView
     [ width $ V 25

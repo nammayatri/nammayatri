@@ -166,6 +166,7 @@ eval (SpecialAssistanceListAC action) state = case action of
     continue state { data{editedDisabilityOptions = editedDisability}}
   SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
   SelectListModal.Button2 (PrimaryButton.OnClick) -> do 
+    _ <- pure $ hideKeyboardOnNavigation true
     let editedDisability = state.data.editedDisabilityOptions
                                 { otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason
                                 , isSpecialAssistList = false
