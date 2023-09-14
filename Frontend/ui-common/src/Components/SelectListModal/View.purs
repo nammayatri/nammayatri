@@ -225,7 +225,7 @@ dataListOptions config push =
             _ <- case item.reasonCode of
               "OTHER" -> requestKeyboardShow (getNewIDWithTag "OtherReasonEditText")
               "TECHNICAL_GLITCH" -> requestKeyboardShow (getNewIDWithTag "TechGlitchEditText")
-              _ -> pure unit
+              _ ->  pure $ hideKeyboardOnNavigation true
             pure unit
           ) (const (UpdateIndex index))
           ] <> if config.showBgColor then 

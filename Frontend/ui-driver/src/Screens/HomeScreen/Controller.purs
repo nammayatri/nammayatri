@@ -275,6 +275,7 @@ data Action = NoAction
             | PopUpModalAccessibilityAction PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
             | RatingCardAC RatingCard.Action
+            | PopUpModalChatBlockerAction PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -421,7 +422,7 @@ eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) sta
 ------------------------------- ChatService - Start --------------------------
 
 eval (OpenChatScreen) state = do
-  if not state.props.chatcallbackInitiated then continue state else do
+  if not state.props.chatcallbackInitiated || state.data.activeRide.disabilityTag == Just ST.BLIND_AND_LOW_VISION then continue state else do
     continueWithCmd state{props{openChatScreen = false}} [do
       pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
     ]
@@ -432,6 +433,8 @@ eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
     let allMessages = getChatMessages ""
     continue state{data{messages = allMessages}, props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}}
+
+eval (RideActionModalAction (RideActionModal.VisuallyImpairedCustomer)) state = continue state{props{showChatBlockerPopUp = true}}
 
 eval (UpdateInChat) state = continue state {props{updatedArrivalInChat = true}}
 
@@ -684,6 +687,16 @@ eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerifi
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
 eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue state{props{showAccessbilityPopup = false}}
+
+eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
+      pure $ RideActionModalAction (RideActionModal.MessageCustomer)
+  ]
+
+eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
+      pure $ PopUpModalChatBlockerAction PopUpModal.DismissPopup
+    ]
+
+eval (PopUpModalChatBlockerAction PopUpModal.DismissPopup) state = continue state{props{showChatBlockerPopUp = false}}
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

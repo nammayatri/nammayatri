@@ -426,7 +426,7 @@ const englishStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER : "Describe your issue. Namma Yatri will try to resolve it in under 24 hours.",
   ADDED_VOICE_NOTE : "Added Voice Note",
   NO_VOICE_NOTE_ADDED : "No Voice Note Added",
-  CALL_CUSTOMER_TITLE : "Call Customer?",
+  CALL_CUSTOMER_TITLE : "Call Customer",
   CALL_CUSTOMER_DESCRIPTION : "You are about to place a call to the Customer. Do you want to proceed?",
   PLACE_CALL : "Place Call",
   ADD_IMAGE : "Add Image(s)",
@@ -825,5 +825,7 @@ const englishStrings = {
   SUBMIT_FEEDBACK : "Submit Feedback",
   BADGE_EARNED : "Badge Earned",
   PURPLE_RIDE_CHAMPION : "Purple Ride Champion",
-  PURPLE_RIDE : "Purple Ride"
+  PURPLE_RIDE : "Purple Ride",
+  PROCEED_TO_CHAT : "Proceed to Chat",
+  PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them"
 } 

@@ -422,7 +422,7 @@ const frenchStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER: "Décrivez votre problème Namma Yatri essaiera de le résoudre en moins de 24 heures",
   ADDED_VOICE_NOTE: "Note vocale ajoutée",
   NO_VOICE_NOTE_ADDED: "Aucune note vocale ajoutée",
-  CALL_CUSTOMER_TITLE: "Appelez le client?",
+  CALL_CUSTOMER_TITLE: "Appelez le client",
   CALL_CUSTOMER_DESCRIPTION: "Vous êtes sur le point de passer un appel au client Voulez-vous continuer?",
   PLACE_CALL: "Placez l'appel",
   ADD_IMAGE: "Ajouter des images)",
@@ -653,5 +653,7 @@ const frenchStrings = {
   SUBMIT_FEEDBACK : "Envoyer des commentaires",
   BADGE_EARNED : "Badge obtenu",
   PURPLE_RIDE_CHAMPION : "Champion du Purple Ride",
-  PURPLE_RIDE : "Tour violet"
+  PURPLE_RIDE : "Tour violet",
+  PROCEED_TO_CHAT : "Passer au chat",
+  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler"
 }

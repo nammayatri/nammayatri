@@ -156,6 +156,7 @@ initData = {
         showAccessbilityPopup : false,
         showRideCompleted : false,
         showRideRating : false,
-        showContackSupportPopUp : false
+        showContackSupportPopUp : false,
+        showChatBlockerPopUp : false
     }
 }
