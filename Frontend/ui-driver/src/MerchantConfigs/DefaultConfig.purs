@@ -39,6 +39,9 @@ config =
   showPaymentDetails : true,
   rideActionModelConfig : {
     showVehicleVariant : true
+  },
+  gotoConfig : {
+    maxGotoLocations : 5
   }
   , profile :
       { bookingOptionMenuForTaxi : false
