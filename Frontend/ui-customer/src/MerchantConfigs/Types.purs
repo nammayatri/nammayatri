@@ -60,6 +60,7 @@ type AppConfig =
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , mapConfig :: MapConfig
+  , purpleRideConfig :: PurpleRideConfig
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -196,4 +197,8 @@ type DottedLineConfig = {
   visible :: Boolean,
   range :: Int,
   color :: String
+}
+
+type PurpleRideConfig = {
+  genericVideoUrl :: String
 }

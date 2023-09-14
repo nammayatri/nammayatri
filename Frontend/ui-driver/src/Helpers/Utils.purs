@@ -114,8 +114,6 @@ foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
 foreign import renderBase64ImageFile :: String -> String -> Boolean -> String ->  Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
-foreign import getVideoID :: String -> String
-foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit

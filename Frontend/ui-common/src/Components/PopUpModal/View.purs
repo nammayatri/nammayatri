@@ -23,7 +23,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Font.Size as FontSize
-import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
@@ -33,9 +33,10 @@ import Engineering.Helpers.Commons (os, clearTimer, countDown)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (startTimerWithTime, setYoutubePlayer, getVideoID)
+import JBridge (startTimerWithTime, setYoutubePlayer, supportsInbuildYoutubePlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
+import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -135,32 +136,35 @@ view push state =
                 , text state.topTitle.text
                 , visibility state.topTitle.visibility
                 ] <> (FontStyle.h2 LanguageStyle)
-                , linearLayout[
-                    height state.coverVideoConfig.height
-                , visibility state.coverVideoConfig.visibility 
+              , linearLayout[
+                  height $ state.coverVideoConfig.height
+                , width state.coverVideoConfig.width
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $ linearLayout
-                [ height WRAP_CONTENT
-                , width state.coverVideoConfig.width
-                , margin state.coverVideoConfig.margin
-                , padding state.coverVideoConfig.padding
-                , cornerRadius 16.0
-                , visibility state.coverVideoConfig.visibility
-                , id (getNewIDWithTag "popUpModalCoverVideo")
-                , onAnimationEnd
-                    ( \action -> do
-                        let
-                            mediaType = state.coverVideoConfig.mediaType
-                            id = (getNewIDWithTag "popUpModalCoverVideo")
-                            url = state.coverVideoConfig.mediaUrl
-                        case mediaType of
-                            "VideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "VIDEO") id ("PLAY")
-                            "PortraitVideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "PORTRAIT_VIDEO") id ("PLAY")
-                            _ -> pure unit
-                    )(const NoAction)
-                ][]
-            ]]
+                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
+                    [ height WRAP_CONTENT
+                    , width state.coverVideoConfig.width
+                    , margin state.coverVideoConfig.margin
+                    , padding state.coverVideoConfig.padding
+                    , cornerRadius 16.0
+                    , visibility state.coverVideoConfig.visibility
+                    , id (getNewIDWithTag  state.coverVideoConfig.id)
+                    , onAnimationEnd
+                        ( \action -> do
+                            let
+                                mediaType = state.coverVideoConfig.mediaType
+                                id = getNewIDWithTag state.coverVideoConfig.id
+                                url = state.coverVideoConfig.mediaUrl
+                            if (supportsInbuildYoutubePlayer unit) then 
+                                case mediaType of
+                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
+                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
+                                    _ -> pure unit
+                                else pure unit
+                        )(const NoAction)
+                    ][]
+                  ]
+                ]
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -583,13 +587,4 @@ contactView push state =
         ]
     ]
 
-youtubeData :: CoverVideoConfig -> String -> YoutubeData
-youtubeData state mediaType =
-  { videoTitle: "title"
-  , setVideoTitle: false
-  , showMenuButton: false
-  , showDuration: true
-  , showSeekBar: true
-  , videoId: getVideoID state.mediaUrl
-  , videoType: mediaType
-  }
+

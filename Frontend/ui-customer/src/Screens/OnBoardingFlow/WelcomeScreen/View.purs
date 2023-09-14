@@ -11,9 +11,10 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import Screens.Types (WelcomeScreenState)
-import Helpers.Utils (addCarousel)
+import JBridge (addCarousel)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Components.PrimaryButton as PrimaryButton
+import Data.Function.Uncurried (runFn2)
 
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
@@ -68,7 +69,7 @@ carouselView state push =
     , margin $ MarginBottom 20
     , afterRender (\action -> do
         _ <- push action
-        _ <- addCarousel state.data.carouselModel (getNewIDWithTag "CarouselView")
+        _ <- runFn2 addCarousel state.data.carouselModal (getNewIDWithTag "CarouselView")
         pure unit
         ) (const AfterRender)
     ][]

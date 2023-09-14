@@ -1,4 +1,4 @@
-package in.juspay.mobility.driver;
+package in.juspay.mobility.app;
 
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
@@ -60,10 +60,10 @@ public class YoutubeVideoView extends AppCompatActivity {
             youTubePlayerView.release();
         }
         super.onDestroy();
-        if(MobilityDriverBridge.youtubePlayer != null) {
-            MobilityDriverBridge.youTubePlayerView.exitFullScreen();
-            MobilityDriverBridge.youtubePlayer.seekTo(duration);
-            MobilityDriverBridge.youtubePlayer.play();
+        if(MobilityAppBridge.youtubePlayer != null) {
+            MobilityAppBridge.youTubePlayerView.exitFullScreen();
+            MobilityAppBridge.youtubePlayer.seekTo(duration);
+            MobilityAppBridge.youtubePlayer.play();
         }
     }
 }

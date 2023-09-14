@@ -500,6 +500,7 @@ badgeCardView config push =
   , background config.badgeCard.background
   , cornerRadius 8.0
   , margin $ MarginBottom 24 
+  , stroke config.badgeCard.stroke
   ][
     imageView[
       imageWithFallback config.badgeCard.image

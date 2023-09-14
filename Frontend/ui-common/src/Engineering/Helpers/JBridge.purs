@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, PolylineAnimationConfig)
+import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -179,6 +179,8 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
+foreign import setYoutubePlayer :: Fn3 YoutubeData String String Unit
+foreign import addCarousel :: Fn2 CarouselModal String (Effect Unit)
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
 foreign import metaLogEventWithParams :: String -> String -> String -> Effect Unit
@@ -234,11 +236,11 @@ foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effe
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
-foreign import getVideoID :: String -> String
-foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
+foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
+foreign import addCarouselWithVideoExists :: Unit -> Boolean
 
 type LottieAnimationConfig = {
     rawJson :: String

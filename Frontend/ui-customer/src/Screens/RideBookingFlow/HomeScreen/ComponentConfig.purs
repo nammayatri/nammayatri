@@ -198,6 +198,46 @@ skipButtonConfig state =
   in
     primaryButtonConfig'
 
+maybeLaterButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+maybeLaterButtonConfig state =
+  let
+    issueFaced =  state.data.ratingViewState.issueFacedView
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = ""
+          , textFromHtml =  Just ("<u>" <> (getString MAYBE_LATER) <> "<u>")
+          , accessibilityHint = "Maybe Later : Button"
+          , color = Color.black650
+          }
+        , background = Color.white900
+        , id = "MaybeLaterButton"
+        , margin = (Margin 0 0 0 0)
+        }
+  in
+    primaryButtonConfig'
+
+updateProfileConfig :: ST.HomeScreenState -> PrimaryButton.Config
+updateProfileConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = getString UPDATE_PROFILE
+          , accessibilityHint = "Update Profile : Button"
+          , color = state.data.config.primaryTextColor
+          }
+        , background = Color.black900
+        , margin = MarginTop 8
+        , id = "UpdateProfile"
+        }
+  in
+    primaryButtonConfig'
+
+
+
 whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let
@@ -1234,3 +1274,32 @@ getFareUpdatedString diffInDist = do
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
                                                         _       -> "your ride was " <> dist <> " km longer")
+
+getCarouselData :: ST.HomeScreenState -> Array CarouselData
+getCarouselData state =
+  map (\item -> 
+    { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
+      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight),
+      contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
+      gravity : item.gravity ,
+      backgroundColor : item.carouselBgColor,
+      titleConfig : {
+        text : item.title,
+        textSize : 16,
+        textColor : Color.black800,
+        gravity : "CENTER",
+        margin : { top : 16 , bottom : 0 , right : 16 , left : 16 }
+      }, 
+      descriptionConfig : {
+        text : item.description, 
+        textSize : item.descTextSize,
+        textColor : Color.black700,
+        gravity : "LEFT",
+        margin : { top : 0 , bottom : 0 , right : 16 , left : 16 }
+      }
+    }) [ {image : "carousel_4" , videoLink : (EHC.getVideoID state.data.config.purpleRideConfig.genericVideoUrl), videoHeight : 690, imageHeight : 160, imageBgColor : Color.grey700, title:  (getString EDUCATIONAL_POP_UP_SLIDE_1_TITLE), description : (getString EDUCATIONAL_POP_UP_SLIDE_1_SUBTITLE) , descTextSize : 14 , carouselBgColor : Color.grey700, gravity : 0},
+        {image : "ny_ic_blind_pickup" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.blue600, title :   (getString EDUCATIONAL_POP_UP_SLIDE_2_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_2_SUBTITLE) , descTextSize : 12, carouselBgColor :  Color.grey700,  gravity : 0},
+        {image : "ny_ic_deaf_pickup" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.blue600, title :   (getString EDUCATIONAL_POP_UP_SLIDE_3_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_3_SUBTITLE) , descTextSize : 12 ,carouselBgColor :  Color.grey700,  gravity : 0},
+        {image : "ny_ic_locomotor_arrival" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.blue600, title :   (getString EDUCATIONAL_POP_UP_SLIDE_4_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE) , descTextSize : 12, carouselBgColor :  Color.grey700, gravity : 0},
+        {image : "ny_ic_disability_illustration" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.white900, title :   (getString EDUCATIONAL_POP_UP_SLIDE_5_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE) , descTextSize : 12 ,carouselBgColor :  Color.grey700, gravity : 0}
+      ]

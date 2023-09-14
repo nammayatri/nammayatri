@@ -18,7 +18,7 @@ module Screens.HomeScreen.View where
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
 import Components.ChatView as ChatView
@@ -65,7 +65,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer, storeOnResumeCallback)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, startTimerWithTime, stopChatListenerService, storeCallBackLocateOnMap, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, updateRouteConfig, waitingCountdownTimer)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -73,7 +73,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -92,8 +92,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
-import Data.Function.Uncurried (runFn1)
-import Effect.Uncurried (runEffectFn2)
+import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
@@ -275,7 +274,7 @@ view push state =
             )
             (const MapReadyAction)
         ]
-        [ relativeLayout
+       [ relativeLayout
             [ width MATCH_PARENT
             , weight 1.0
             , orientation VERTICAL
@@ -283,7 +282,7 @@ view push state =
             , accessibility DISABLE
             , height MATCH_PARENT
             ]
-            [ frameLayout
+            ([ frameLayout
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 , accessibility DISABLE
@@ -376,7 +375,15 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            ]
+            ] <> if state.props.showEducationalCarousel then 
+                    [ linearLayout
+                      [ height MATCH_PARENT
+                      , width MATCH_PARENT
+                      , gravity CENTER
+                      , onClick push $ const NoAction
+                      , background Color.black9000
+                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
+                    else [])
         ]
     ] 
 
@@ -793,7 +800,7 @@ recentSearchesAndFavourites state push =
   , cornerRadii $ Corners (4.0) true true false false
   ]([ savedLocationsView state push
    , recentSearchesView state push]
-   <> if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner ) then [updateDisabilityBanner state push] else [])
+   <> if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) then [updateDisabilityBanner state push] else [])
   --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -2268,3 +2275,47 @@ genderBanner push state =
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
 isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
+
+carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+carouselView state push = 
+  PrestoAnim.animationSet [ fadeIn true ] $ 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , cornerRadius 16.0
+  , gravity CENTER
+  , visibility if state.props.showEducationalCarousel then VISIBLE else GONE
+  , orientation VERTICAL
+  , margin $ MarginHorizontal 16 16
+  ][  textView $ 
+      [ text $ getString INCLUSIVE_AND_ACCESSIBLE
+      , margin $ MarginBottom 20
+      , color Color.black800
+      ] <> FontStyle.body7 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , stroke $ "1," <> Color.grey900
+      , background Color.grey700
+      , margin $ MarginBottom 16
+      , orientation VERTICAL
+      , cornerRadius 8.0
+      ][  PrestoAnim.animationSet [ fadeIn true ] $  linearLayout
+          [ height $ V 340
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , id $ getNewIDWithTag "AccessibilityCarouselView"
+          , accessibility DISABLE
+          , gravity CENTER    
+          , onAnimationEnd (\action -> do
+              _ <- push action
+              if (addCarouselWithVideoExists unit) then 
+                void $ runFn2 addCarousel { gravity : "TOP", carouselData : getCarouselData state } (getNewIDWithTag "AccessibilityCarouselView")
+                else pure unit
+            ) (const AfterRender)
+          ][]
+        ]
+    , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
+    , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterButtonConfig state)]

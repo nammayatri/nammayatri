@@ -407,14 +407,6 @@ export const removeLabelFromMarker = (zoomLevel) => {
     }
   }
 }
-export const addCarousel = function (modelArray) {
-  return function (id) {
-    const stringifyModelArray = JSON.stringify(modelArray)
-    if(JBridge.addCarousel){
-      return JBridge.addCarousel(stringifyModelArray, id);
-    }
-  };
-};
 
 export const strLenWithSpecificCharacters = function(input) {
   return function(pattern){

@@ -258,6 +258,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
+                String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+                if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
@@ -691,10 +696,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String sessionToken = sharedPref.getString("SESSION_ID", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
-        if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
-            lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-        }
         try {
             String orderUrl = baseUrl + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());

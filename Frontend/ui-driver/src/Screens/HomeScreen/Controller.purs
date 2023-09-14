@@ -388,7 +388,7 @@ eval BackPressed state = do
   else if state.data.driverGotoState.confirmGotoCancel then continue state { data { driverGotoState { confirmGotoCancel = false }}} 
   else if state.data.driverGotoState.showGoto then continue state { data { driverGotoState { showGoto = false }}} 
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
-  else if state.props.showRideRating then continue state{props{showRideRating = false}}
+  else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -699,6 +699,9 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
   updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
+
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continue state{props{showGenericAccessibilityPopUp = false}}
+
 eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode = (fromMaybe dummyCancelReason $ state.data.cancelRideModal.selectionOptions Array.!!indexValue).reasonCode } } }
 eval (CancelRideModalAction (SelectListModal.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
 eval (CancelRideModalAction (SelectListModal.Button1 PrimaryButtonController.OnClick)) state = do
@@ -830,6 +833,8 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
                   _ -> ""
   _ <- pure $ cleverTapCustomEvent ctEvent
   exit $ SubscriptionScreen state
+
+eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 

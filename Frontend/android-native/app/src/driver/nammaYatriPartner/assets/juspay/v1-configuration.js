@@ -111,7 +111,6 @@ window.getMerchantConfig = function () {
         "showVehicleVariant" : false
       }
     , "referralType" : "LeaderBoard"
-    , "enablePurpleRideBanner" : true
     , "gotoConfig" : {
       "maxGotoLocations" : 5,
       "enableGoto" : true
@@ -121,5 +120,12 @@ window.getMerchantConfig = function () {
             { isVisible : true
             }
       }
+    , "purpleRideConfig" : {
+        "showPurpleVideos" : true,
+        "visualImpairmentVideo" : "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+        "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
+        "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
+        "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
+    }
   })
 }

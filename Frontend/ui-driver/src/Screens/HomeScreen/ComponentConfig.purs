@@ -17,7 +17,7 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
 
-import Common.Types.App (LazyCheck(..), YoutubeData, PolylineAnimationConfig)
+import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
@@ -189,18 +189,6 @@ accessbilityBannerConfig state =
         stroke = "1,"<>Color.fadedPurple
       }
   in config'
-
-youtubeData :: ST.HomeScreenState -> String -> YoutubeData
-youtubeData state mediaType =
-  { videoTitle: "title"
-  , setVideoTitle: false
-  , showMenuButton: false
-  , showDuration: true
-  , showSeekBar: true
-  , videoId: HU.getVideoID "https://youtu.be/5s21p2rI58c"
-  , videoType: "PortraitVideoLink"
-  }
-
 
 ------------------------------------ linkAadhaarPopupConfig -----------------------------
 linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -853,7 +841,7 @@ accessibilityPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 accessibilityPopUpConfig state = 
   let 
     config = PopUpModal.config
-    popupData = getAccessibilityPopupData state.data.activeRide.disabilityTag (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer)
+    popupData = getAccessibilityPopupData state state.data.activeRide.disabilityTag (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer)
     config' = config
       {
         gravity = CENTER,
@@ -878,18 +866,19 @@ accessibilityPopUpConfig state =
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           imageUrl = popupData.imageUrl
-        , visibility = if popupData.videoUrl /= "" && state.data.config.enablePurpleRideBanner then GONE else VISIBLE
+        , visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then GONE else VISIBLE
         , height = V 160
         , width = MATCH_PARENT
         , margin = Margin 16 16 16 0
         },
         coverVideoConfig {
-          visibility = if popupData.videoUrl /= "" && state.data.config.enablePurpleRideBanner then VISIBLE else GONE 
+          visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then VISIBLE else GONE 
         , height = V 175
         , width = MATCH_PARENT
         , padding = Padding 16 16 16 0
         , mediaType = popupData.mediaType
         , mediaUrl = popupData.videoUrl
+        , id = popupData.videoId
         }
       }
   in config'
@@ -899,7 +888,8 @@ type ContentConfig =
     secondaryText :: String,
     imageUrl :: String,
     videoUrl :: String, 
-    mediaType :: String
+    mediaType :: String,
+    videoId :: String
     
   }
 
@@ -937,7 +927,8 @@ genericAccessibilityPopUpConfig state = let
         , width = MATCH_PARENT
         , padding = Padding 16 16 16 0
         , mediaType = "PortraitVideoLink"
-        , mediaUrl = "https://youtu.be/5s21p2rI58c"
+        , mediaUrl = state.data.config.purpleRideConfig.genericAccessibilityVideo
+        , id = "GenericAccessibilityCoverVideo"
         }
     }
   in config'
@@ -970,47 +961,53 @@ chatBlockerPopUpConfig state = let
   in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
-accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_illustration.png", videoUrl : "", mediaType : ""}
+accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_illustration.png", mediaType : "", videoId : ""}
 
-getAccessibilityPopupData :: Maybe ST.DisabilityType -> Boolean -> ContentConfig
-getAccessibilityPopupData pwdtype isDriverArrived = 
+getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
+getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
                                                 imageUrl = "ny_ic_blind_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_arrival.png",
                                                 videoUrl = "",
-                                                mediaType = ""
+                                                mediaType = "",
+                                                videoId = ""
                                               }   
       Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
                                                 imageUrl = "ny_ic_blind_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_pickup.png",
-                                                videoUrl = "https://www.youtube.com/watch?v=2qYXl03N6Jg",
-                                                mediaType = "VideoLink"
+                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo, -- "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+                                                mediaType = "VideoLink",
+                                                videoId = "BlindOrLowVisionCoverVideo"
                                               }
       Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_POOR_HEARING_MESSAGE_THEM_AT_PICKUP,
                                                 imageUrl = "ny_ic_deaf_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_arrival.png",
                                                 videoUrl = "",
-                                                mediaType = ""
+                                                mediaType = "",
+                                                videoId = ""
                                               }   
       Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
                                                 imageUrl = "ny_ic_deaf_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_pickup.png",
-                                                videoUrl = "https://youtu.be/udkWOt0serg?feature=shared",
-                                                mediaType = "VideoLink"
+                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo, --"https://youtu.be/udkWOt0serg?feature=shared",
+                                                mediaType = "VideoLink",
+                                                videoId = "HearingImpairmentCoverVideo"
                                               }
       Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_STORE_THEIR_SUPPORT_AT_PICKUP ,
                                                 imageUrl = "ny_ic_locomotor_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_arrival.png",
                                                 videoUrl = "",
-                                                mediaType = ""
+                                                mediaType = "",
+                                                videoId = ""
                                               }    
       Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
                                                 imageUrl = "ny_ic_locomotor_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_pickup.png",
-                                                videoUrl = "https://youtu.be/B0C6SZTQO6k",
-                                                mediaType = "VideoLink"
+                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, --"https://youtu.be/B0C6SZTQO6k",
+                                                mediaType = "VideoLink",
+                                                videoId = "LocomotorDisabilityCoverVideo"
                                               }
       Just ST.OTHER_DISABILITY, true ->      accessibilityConfig'   
       Just ST.OTHER_DISABILITY, false ->     accessibilityConfig' 
@@ -1021,25 +1018,25 @@ getAccessibilityPopupData pwdtype isDriverArrived =
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
 getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
                         case state.data.activeRide.disabilityTag, state.data.activeRide.isDriverArrived of   
-                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : ""}
-                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
+                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
                       -- else if state.data.activeRide.isDriverArrived then
                           -- case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "", mediaType : ""}
-                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
+                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
                       else 
                         case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : ""}
-                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : ""}
-                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
-                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : ""}
+                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 

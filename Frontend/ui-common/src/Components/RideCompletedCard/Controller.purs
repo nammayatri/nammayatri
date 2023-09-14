@@ -124,7 +124,8 @@ config = {
     text2Color : Color.darkCharcoal,
     image : "",
     imageWidth : V 0, 
-    imageHeight : V 0
+    imageHeight : V 0,
+    stroke : "1," <> Color.grey900
   },
   driverUpiQrCard : {
     text : "",
@@ -214,7 +215,8 @@ type BadgeCard = {
   text2Color :: String,
   image :: String,
   imageWidth :: Length, 
-  imageHeight :: Length
+  imageHeight :: Length,
+  stroke :: String
 }
 
 type DriverUpiQrCard = {
