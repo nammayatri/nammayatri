@@ -160,7 +160,7 @@ handleDriverPayments driverId diffUtc = do
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
         updateSubscription False (cast driverId)
 
-diffTimeMilliseconds :: NominalDiffTime -> Integer
+diffTimeMilliseconds :: UTCTime -> UTCTime -> Integer
 diffTimeMilliseconds startTime endTime =
   round $ nominalDiffTimeToSeconds (diffUTCTime endTime startTime) * 1000
 
