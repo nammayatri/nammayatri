@@ -197,7 +197,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driverId $ do
-      (mbOldLoc, duration5) <- findDriverLocation
+      (mbOldLoc, duration5) <- measureDuration $ findDriverLocation
       logDebug $ "findDriverLocation : " <> show duration5
 
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
