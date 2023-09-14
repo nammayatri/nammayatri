@@ -17,15 +17,16 @@ module Screens.PermissionScreen.Controller where
 
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.PopUpModal as PopUpModal
 import Effect.Uncurried (EffectFn3, mkEffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation)
+import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation, getLocationPermissionStatus)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==))
+import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (PermissionScreenState)
+import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
 import Effect.Unsafe 
 import Engineering.Helpers.LogEvent (logEvent)
 
@@ -52,6 +53,7 @@ instance loggableAction :: Loggable Action where
       LocationPermissionCallBackCustomer str -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "location_permission_call_back_customer"
       RequestLocation -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "request_location"
       NoAction -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "no_action"
+      _ -> pure unit
 
 data Action = ErrorModalActionController ErrorModalController.Action 
             | PrimaryButtonActionController PrimaryButtonController.Action
@@ -62,6 +64,7 @@ data Action = ErrorModalActionController ErrorModalController.Action
             | InternetCallBackCustomer String
             | AfterRender
             | RequestLocation
+            | LocationBlockerPopUpAC PopUpModal.Action
 
 data ScreenOutput = GoBack | Refresh | InternetCallBack PermissionScreenState | LocationCallBack PermissionScreenState 
 
@@ -79,8 +82,9 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
   ]
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
+  let status = getLocationPermissionStatus unit
   if isLocationPermissionEnabled then updateAndExit state (LocationCallBack state)
-    else continue state
+    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else NORMAL)}
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do
     updateAndExit state (InternetCallBack state)

@@ -611,5 +611,7 @@ const kannadaStrings = {
   "NOW_GET_ASSISTED_RIDES" : "ನೀವು ಅಂಗವೈಕಲ್ಯ ಹೊಂದಿರುವ ವ್ಯಕ್ತಿಯಾಗಿದ್ದರೆ ಈಗ ಸಹಾಯಕ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಿರಿ" ,
   "CLEAN_CAB" : "ಕ್ಲೀನ್ ಕ್ಯಾಬ್",
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ", 
-  "SENT_OTP_VIA_SMS" : "SMS ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ"
+  "SENT_OTP_VIA_SMS" : "SMS ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ",
+  "ENABLE_LOCATION_PERMISSION_TO" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕಲು ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
 }

@@ -52,6 +52,7 @@ import Screens.Types (AddNewAddressScreenState, CardType(..), Location, Location
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""

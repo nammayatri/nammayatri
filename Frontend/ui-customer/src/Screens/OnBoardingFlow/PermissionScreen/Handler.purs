@@ -24,11 +24,11 @@ import Screens.PermissionScreen.Controller (ScreenOutput(..))
 import Screens.PermissionScreen.View as PermissionScreen
 import Types.App (FlowBT, GlobalState(..), PERMISSION_SCREEN_OUTPUT(..))
 
-permissionScreen :: String -> FlowBT String PERMISSION_SCREEN_OUTPUT
-permissionScreen triggertype= do
+permissionScreen :: FlowBT String PERMISSION_SCREEN_OUTPUT
+permissionScreen = do
   (GlobalState state) <- getState
   logField_ <- lift $ lift $ getLogFields
-  act <- lift $ lift $ showScreen $ PermissionScreen.screen state.permissionScreen{logField = logField_} triggertype
+  act <- lift $ lift $ showScreen $ PermissionScreen.screen state.permissionScreen{logField = logField_}
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)

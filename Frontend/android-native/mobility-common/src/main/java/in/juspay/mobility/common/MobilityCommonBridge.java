@@ -297,6 +297,18 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public String getLocationPermissionStatus() {
+        if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(bridgeComponents.getActivity(), ACCESS_FINE_LOCATION)) {
+                return "DISABLED";
+            } else {
+                return "DENIED";
+            }
+        }else{
+            return "ENABLED";
+        }
+    }
+    @JavascriptInterface
     public boolean isLocationPermissionEnabled() {
         return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }

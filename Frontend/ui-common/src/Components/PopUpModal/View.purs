@@ -99,14 +99,14 @@ view push state =
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
             ][  textView $
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , margin $ MarginVertical 10 10
-                , color Color.black800
-                ] <> (case state.topTitle of
-                        Just txt -> [text txt]
-                        Nothing -> [visibility GONE])
-                  <> (FontStyle.h2 LanguageStyle)
+                [ width state.topTitle.width
+                , height state.topTitle.height
+                , margin state.topTitle.margin
+                , color state.topTitle.color
+                , gravity state.topTitle.gravity
+                , text state.topTitle.text
+                , visibility state.topTitle.visibility
+                ] <> (FontStyle.h2 LanguageStyle)
               , imageView
                 [ height state.coverImageConfig.height
                 , width state.coverImageConfig.width

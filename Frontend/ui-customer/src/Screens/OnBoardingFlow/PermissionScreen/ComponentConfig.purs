@@ -17,20 +17,23 @@ module Screens.OnBoardingFlow.PermissionScreen.ComponentConfig where
 
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PopUpModal as PopUpModal
 import Engineering.Helpers.Commons as EHC 
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==), (/=), (<>))
-import PrestoDOM (Length(..), Margin(..))
+import Prelude ((==), (/=), (<>), ($))
+import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Visibility(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.Types (PermissionScreenState)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Commons (os)
 
 errorModalConfig :: PermissionScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -79,3 +82,43 @@ primaryButtonConfig  state = let
       , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
       }
   in primaryButtonConfig'
+
+getLocationBlockerPopUpConfig :: PermissionScreenState -> PopUpModal.Config 
+getLocationBlockerPopUpConfig state = let 
+  config = PopUpModal.config 
+  config' = config{
+    cornerRadius = Corners 15.0 true true true true
+  , gravity = CENTER
+  , margin = MarginHorizontal 24 24
+  , buttonLayoutMargin = Margin 0 0 0 0 
+  , padding = Padding 16 20 16 20
+  , topTitle {
+      text = getString ENABLE_LOCATION_PERMISSION_TO
+    , height = WRAP_CONTENT
+    , width = MATCH_PARENT 
+    , gravity = CENTER
+    }
+  , primaryText {
+      visibility = GONE
+    }
+  , secondaryText {
+      text = getString PLEASE_ENABLE_LOCATION_PERMISSION
+    , margin = MarginTop 20
+    , padding = Padding 0 0 0 0
+    }
+  , coverImageConfig {
+      imageUrl = if (os == "IOS") then "ny_ic_enable_location_in_settings_ios," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_ios.png"
+                 else "ny_ic_enable_location_in_settings_android," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_android.png"
+    , visibility = VISIBLE
+    , width = V 280
+    , height = V 200
+    , margin = Margin 0 0 0 0 
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      visibility = false
+    }
+  }
+  in config'

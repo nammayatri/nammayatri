@@ -200,6 +200,8 @@
       "ny_ic_emergency_contact_empty" : true,
       "ny_ic_emergency_contacts" : true,
       "ny_ic_emergency_shield" : true,
+      "ny_ic_enable_location_in_settings_android" : true,
+      "ny_ic_enable_location_in_settings_ios" : true,
       "ny_ic_error_404" : true,
       "ny_ic_faster" : true,
       "ny_ic_fav" : true,
