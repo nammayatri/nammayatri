@@ -178,6 +178,6 @@ getDbDeleteDataJson model whereClause =
         .= A.object
           [ "where" .= modelEncodeWhere whereClause
           ],
-      "tag" .= T.pack (pascal (T.unpack model)),
+      "tag" .= T.pack (pascal (T.unpack model) <> "Object"),
       "type" .= ("DELETE" :: Text)
     ]
