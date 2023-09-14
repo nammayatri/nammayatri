@@ -1140,7 +1140,7 @@ rideCompletedCardConfig state = let
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
             image = "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png",
             imageVis = VISIBLE,
-            visible = if state.data.rideRatingState.distanceDifference == 0 then GONE else VISIBLE
+            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
           bottomText =  getString RIDE_DETAILS
         },
