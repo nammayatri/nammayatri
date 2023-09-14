@@ -129,7 +129,9 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1958,6 +1960,71 @@ public class MobilityCommonBridge extends HyperBridge {
         return false;
     }
     // endregion
+
+    public String getAPIResponse(String url) {
+        if (url.equals("")) return "";
+        StringBuilder result = new StringBuilder();
+        try {
+            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("token", getKeysInSharedPref("REGISTERATION_TOKEN"));
+            connection.setRequestProperty("x-device", getKeysInSharedPref("DEVICE_DETAILS"));
+            connection.connect();
+            int respCode = connection.getResponseCode();
+            InputStreamReader respReader;
+            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                respReader = new InputStreamReader(connection.getErrorStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                return "";
+            } else {
+                respReader = new InputStreamReader(connection.getInputStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                return result.toString();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+    @JavascriptInterface
+    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
+        if (url.contains("http"))
+            url = getAPIResponse(url);
+        renderBase64ImageFile(url, id, fitCenter, imgScaleType);
+    }
+    @JavascriptInterface
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                    if (layout != null){
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(bridgeComponents.getContext());
+                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                        imageView.setLayoutParams(layoutParams);
+                        imageView.setImageBitmap(decodedByte);
+                        imageView.setScaleType(getScaleTypes("CENTER_INSIDE"));
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
 
     protected static class Receivers {
         BroadcastReceiver gpsReceiver;

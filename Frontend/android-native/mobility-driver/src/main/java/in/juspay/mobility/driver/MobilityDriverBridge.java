@@ -447,39 +447,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         });
     }
 
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        if (url.contains("http"))
-            url = getAPIResponse(url);
-        renderBase64ImageFile(url, id, fitCenter, imgScaleType);
-    }
-
-    @JavascriptInterface
-    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
-        ExecutorManager.runOnMainThread(() -> {
-            try {
-                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
-                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    if (layout != null){
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(bridgeComponents.getContext());
-                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
-                        imageView.setLayoutParams(layoutParams);
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(getScaleTypes(imgScaleType));
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
     /*
      * This function is deprecated on 22 May - 2023
      * Added only for Backward Compatibility
@@ -879,39 +846,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     //region Others
-    private String getAPIResponse(String url) {
-        if (url.equals("")) return "";
-        StringBuilder result = new StringBuilder();
-        try {
-            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("token", getKeysInSharedPref("REGISTERATION_TOKEN"));
-            connection.setRequestProperty("x-device", getKeysInSharedPref("DEVICE_DETAILS"));
-            connection.connect();
-            int respCode = connection.getResponseCode();
-            InputStreamReader respReader;
-            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                respReader = new InputStreamReader(connection.getErrorStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                return "";
-            } else {
-                respReader = new InputStreamReader(connection.getInputStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                return result.toString();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
 
     @JavascriptInterface
     public void launchAppSettings() {

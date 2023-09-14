@@ -802,6 +802,7 @@ driverInfoTransformer state =
     , lastMessage : state.data.lastMessage
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
+    , driverProfileImage : Nothing
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

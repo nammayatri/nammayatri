@@ -29,7 +29,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber)
@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, id)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -50,7 +50,7 @@ import Storage (KeyStore(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
-import JBridge(fromMetersToKm)
+import JBridge(fromMetersToKm, renderBase64Image)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -820,15 +820,29 @@ driverDetailsView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
-          ][imageView
-              [ height $ V 50
-              , width $ V 50
-              , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
-              , accessibility ENABLE
-              , padding $ Padding 2 3 2 1
-              , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
+          ][
+            PrestoAnim.animationSet [fadeIn true] $ linearLayout 
+            [ height $ V 100
+              , width $ V 100
+              , background Color.green900
+              -- , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
+              -- , accessibility ENABLE
+              -- , padding $ Padding 2 3 2 1
+              , onAnimationEnd (\action -> do renderBase64Image (spy "base64 img ---->" (fromMaybe dummyImage state.data.driverProfileImage)) (getNewIDWithTag "driverIno_driver_prof_img") false "CENTER_CROP") (const NoAction)
+              , id (getNewIDWithTag "driverIno_driver_prof_img")][]
               ]
-          ]
+          -- ([] <> (if (spy "Driver Profile Image ----> " (state.data.driverProfileImage /= Nothing)) then 
+          --     [imageView
+          --       [ height $ V 50
+          --       , width $ V 50
+          --       , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
+          --       , accessibility ENABLE
+          --       , padding $ Padding 2 3 2 1
+          --       , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
+          --       ]]
+          --   else [])
+          --   <> (if state.data.driverProfileImage == Nothing then [ 
+          --     ] else []))
         , textView $
           [ text state.data.driverName
           , maxLines 1
@@ -1018,7 +1032,16 @@ sourceDistanceView push state =
       , accessibility ENABLE
       , margin $ Margin 16 0 0 10
       ] <> FontStyle.body3 TypoGraphy)
-    , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
+              ,    PrestoAnim.animationSet [fadeIn true] $ linearLayout 
+            [ height $ V 100
+              , width $ V 100
+              , background Color.green900
+              -- , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
+              -- , accessibility ENABLE
+              -- , padding $ Padding 2 3 2 1
+              , onAnimationEnd (\action -> do renderBase64Image (spy "base64 img ---->" (fromMaybe dummyImage state.data.driverProfileImage)) (getNewIDWithTag "driverIno_driver_prof_img") false "CENTER_CROP") (const NoAction)
+              , id (getNewIDWithTag "driverIno_driver_prof_img")][]
+    -- , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
   ]
 
 ---------------------------------- separator ---------------------------------------
@@ -1222,3 +1245,7 @@ getVehicleImage variant vehicleDetail = do
   else
     if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
     else "ic_white_taxi," <> url <> "ic_white_taxi.png"
+
+
+dummyImage ::  String 
+dummyImage = "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"

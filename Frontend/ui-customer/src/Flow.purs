@@ -1849,7 +1849,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      -- _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       homeScreenFlow
   pure unit
 
@@ -1908,7 +1908,7 @@ addNewAddressScreenFlow input = do
         else pure $ toast (getString FAVOURITE_ADDED_SUCCESSFULLY)
 
       _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      -- _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       if state.props.fromHome then do
         (GlobalState globalState) <- getState
         (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
@@ -1961,7 +1961,7 @@ addNewAddressScreenFlow input = do
                                                                                                       } )
         addNewAddressScreenFlow ""
     GO_TO_FAVOURITES -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      -- _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       savedLocationFlow
 
     CHECK_LOCATION_SERVICEABILITY state locItemType-> do
@@ -2034,7 +2034,7 @@ addNewAddressScreenFlow input = do
                 } )
         updateDistanceInfo state recentItem.lat recentItem.lon
     GO_TO_HOME_SCREEN_FLOW -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      -- _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       homeScreenFlow
 
   pure unit

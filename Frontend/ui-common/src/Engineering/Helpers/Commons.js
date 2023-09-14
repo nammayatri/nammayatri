@@ -153,8 +153,12 @@ export const showUIImpl = function (sc, screen) {
 };
 
 export const getNewIDWithTag = function(tag){
+  console.log(tag)
+  // tag = "driverIno_driver_prof_img"
   window.__usedID = window.__usedID || {}
   window.__usedID[tag] = window.__usedID[tag] || "" + window.createPrestoElement().__id;
+  console.log("tage ==> " + tag)
+  console.log("Image ID ===> " + window.__usedID[tag] )
   return window.__usedID[tag];
 }
 
