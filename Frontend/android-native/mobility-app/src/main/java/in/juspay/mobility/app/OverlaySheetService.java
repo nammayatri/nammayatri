@@ -123,6 +123,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
                 if (model.getDisabilityTag()) {
                     holder.accessibilityTag.setVisibility(View.VISIBLE);
+                    holder.accessibilityTagText.setText(getString(R.string.assistance_required));
                 }  else{
                     holder.accessibilityTag.setVisibility(View.GONE);
                 }

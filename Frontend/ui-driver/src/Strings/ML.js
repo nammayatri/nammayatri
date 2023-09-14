@@ -430,7 +430,7 @@ const mlStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ അത് പരിഹരിക്കാൻ ശ്രമിക്കും.",
   ADDED_VOICE_NOTE : "വോയ്സ് നോട്ട് ചേർത്തു",
   NO_VOICE_NOTE_ADDED : "വോയിസ് നോട്ട് ചേർത്തിട്ടില്ല",
-  CALL_CUSTOMER_TITLE : "ഉപഭോക്താവിനെ വിളിക്കണോ?",
+  CALL_CUSTOMER_TITLE : "ഉപഭോക്താവിനെ വിളിക്കണോ",
   CALL_CUSTOMER_DESCRIPTION : "നിങ്ങൾ ഉപഭോക്താവിനെ വിളിക്കാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
   PLACE_CALL : "വിളിക്കുക",
   ADD_IMAGE : "ചിത്രം ചേർക്കുക",
@@ -771,5 +771,7 @@ const mlStrings = {
   SUBMIT_FEEDBACK : "ഫീഡ്‌ബാക്ക് സമർപ്പിക്കുക",
   BADGE_EARNED : "ബാഡ്ജ് സമ്പാദിച്ചു",
   PURPLE_RIDE_CHAMPION : "പർപ്പിൾ റൈഡ് ചാമ്പ്യൻ",
-  PURPLE_RIDE : "പർപ്പിൾ റൈഡ്"
+  PURPLE_RIDE : "പർപ്പിൾ റൈഡ്",
+  PROCEED_TO_CHAT : "ചാറ്റുമായി മുന്നോട്ട് പോകൂ",
+  PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക"
 }

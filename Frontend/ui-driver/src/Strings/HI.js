@@ -427,7 +427,7 @@ const hindiStrings = {
   REPORT_ISSUE_CHAT_PLACEHOLDER : "अपने मामले का वर्णन करें। नम्मा यात्री 24 घंटे के भीतर इसे हल करने का प्रयास करेंगे।",
   ADDED_VOICE_NOTE : "जोड़ा आवाज नोट",
   NO_VOICE_NOTE_ADDED : "कोई वॉयस नोट नहीं जोड़ा गया",
-  CALL_CUSTOMER_TITLE : "ग्राहक को कॉल करें?",
+  CALL_CUSTOMER_TITLE : "ग्राहक को कॉल करें",
   CALL_CUSTOMER_DESCRIPTION : "आप ग्राहक को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
   PLACE_CALL : "कॉल करें",
   ADD_IMAGE : "छवि जोड़ें",
@@ -824,5 +824,7 @@ const hindiStrings = {
   SUBMIT_FEEDBACK : "प्रतिपुष्टि दें",
   BADGE_EARNED : "बैज अर्जित",
   PURPLE_RIDE_CHAMPION : "पर्पल राइड चैंपियन",
-  PURPLE_RIDE : "पर्पल राइड"
+  PURPLE_RIDE : "पर्पल राइड",
+  PROCEED_TO_CHAT : "चैट के साथ आगे बढ़ें",
+  PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें"
 }

@@ -98,7 +98,7 @@
                                     android:fontFamily="@font/plus_jakartasans_semibold"
                                     android:paddingHorizontal="8dp"
                                     android:paddingVertical="6dp"
-                                    android:text="Assistance Required"
+                                    android:text="@string/assistance_required"
                                     android:lineHeight="20dp"
                                     android:textColor="@color/white"
                                     android:textSize="12dp" />

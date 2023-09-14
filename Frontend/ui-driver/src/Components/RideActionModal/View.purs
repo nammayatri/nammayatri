@@ -80,9 +80,9 @@ messageButton push config =
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
   , afterRender push $ const $ LoadMessages
-  , onClick push $ const $ MessageCustomer
-  , alpha if config.accessbilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
-  , clickable if config.accessbilityTag == Maybe.Just BLIND_AND_LOW_VISION then false else true
+  , onClick push $ const $  if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
+  , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
+  , clickable true
   ][  imageView
       [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
       , height $ V 20
@@ -115,10 +115,10 @@ callButton push config =
   , background Color.white900
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
-  , alpha if config.accessbilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
+  , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
   , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
-  , clickable (not (config.accessbilityTag == Maybe.Just HEAR_IMPAIRMENT))
+  , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
   ][  imageView
       [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "/ic_phone.png"
       , height $ V 20
@@ -131,7 +131,7 @@ rideActionViewWithLabel push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ getRideLabelData "backgroundColor" config.specialLocationTag config.accessbilityTag 
+  , background $ getRideLabelData "backgroundColor" config.specialLocationTag config.accessibilityTag 
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -143,12 +143,12 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag config.accessbilityTag 
+          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag config.accessibilityTag 
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ getRideLabelData "text" config.specialLocationTag config.accessbilityTag 
+          , text $ getRideLabelData "text" config.specialLocationTag config.accessibilityTag 
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -157,7 +157,7 @@ rideActionViewWithLabel push config =
           [ width WRAP_CONTENT
           , height MATCH_PARENT
           , text "|"
-          , visibility if Maybe.isJust config.accessbilityTag then VISIBLE else GONE
+          , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -167,13 +167,13 @@ rideActionViewWithLabel push config =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , margin $ MarginLeft 5
-          , visibility if Maybe.isJust config.accessbilityTag then VISIBLE else GONE
+          , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
           , onClick push $ const SecondaryTextClick
           ]
           [ textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
-              , text $ getRideLabelData "secondaryText" config.specialLocationTag config.accessbilityTag 
+              , text $ getRideLabelData "secondaryText" config.specialLocationTag config.accessibilityTag 
               , gravity CENTER_VERTICAL
               , color Color.white900
               ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
@@ -707,4 +707,4 @@ separatorConfig =
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessbilityTag)) || Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessbilityTag)
+isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) || Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
