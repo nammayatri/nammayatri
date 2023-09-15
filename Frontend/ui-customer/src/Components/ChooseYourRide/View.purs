@@ -33,6 +33,7 @@ view push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , onAnimationEnd push (const NoAction)
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -64,7 +65,6 @@ view push config =
       , stroke $ "1," <> Color.grey900
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
-      , onAnimationEnd push (const NoAction)
       ]
       [ textView (
           [ text (getString CHOOSE_YOUR_RIDE)
