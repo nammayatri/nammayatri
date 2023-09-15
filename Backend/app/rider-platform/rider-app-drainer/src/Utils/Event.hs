@@ -71,7 +71,7 @@ drainer_stop_status =
   gauge #drainer_stop_status
     .& build
 
-kafka_message_push_failure :: PromRep 'Counter "kafka_message_push_failure" '[]
-kafka_message_push_failure =
-  counter #kafka_message_push_failure
+rider_kafka_push_failure :: PromRep 'Counter "rider_kafka_push_failure" '[]
+rider_kafka_push_failure =
+  counter #rider_kafka_push_failure
     .& build

@@ -62,3 +62,6 @@ threadPerPodCount = "THREAD_PER_POD_COUNT"
 
 pushToKafkaEnvKey :: String
 pushToKafkaEnvKey = "PUSH_TO_KAFKA"
+
+kafkaUpdateFailedStream :: String
+kafkaUpdateFailedStream = "rider-kafka-update-failed-stream"

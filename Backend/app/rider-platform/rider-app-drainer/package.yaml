@@ -92,6 +92,7 @@ dependencies:
   - warp
   - warp-tls
   - hw-kafka-client
+  - cereal
 
 ghc-options:
   - -fwrite-ide-info
