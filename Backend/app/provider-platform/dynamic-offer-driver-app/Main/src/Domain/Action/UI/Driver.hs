@@ -38,6 +38,7 @@ module Domain.Action.UI.Driver
     ResendAuth (..),
     DriverPaymentHistoryResp,
     MetaDataReq (..),
+    DriverNYPaymentHistoryResp,
     ClearDuesRes (..),
     getInformation,
     activateGoHomeFeature,
@@ -64,6 +65,7 @@ module Domain.Action.UI.Driver
     remove,
     getDriverPayments,
     clearDriverDues,
+    getNYDriverPayments,
     DriverInfo.DriverMode,
     updateMetaData,
   )
@@ -440,6 +442,39 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
     txnInfo :: [DriverTxnInfo]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverFeeInfo = DriverFeeInfo
+  { ridesTakenOn :: UTCTime,
+    driverFeeId :: Id DDF.DriverFee,
+    totalRides :: Int,
+    paymentAmount :: Money,
+    chargesBreakup :: [DriverPaymentBreakup],
+    planOfferDetails :: ""
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- DriverFee   InvoiceId     DriverFeeId
+--   1             1             1     !INACTIVE
+--   2             1             2     !INACTIVE
+--   3             2             3     !INACTIVE
+--   4             3             4     !INACTIVE
+--   5             4             5     INACTIVE
+--                 5             5     !INACTIVE
+
+data InvoiceInfo = InvoiceInfo
+  { id :: Id Invoice,
+    paymentMode :: InvoiceStatus,
+    debitedOn :: UTCTime,
+    invoiceAmount :: HighPrecMoney,
+    numberOfDays :: Int,
+    -- invoiceStatus :: {
+    --   status = SUCCESS | FAILED | NOTIFICATION_SCHEDULED | NOTIFICATION_SENT | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTED | PAYMENT_OVERDUE
+    --   time = UTCTime
+    -- }, -- todo
+    driverFees :: [DriverFeeInfo]
+  }
+
+type DriverNYPaymentHistoryResponse = [InvoiceInfo]
 
 data DriverPaymentBreakup = DriverPaymentBreakup
   { component :: Text,
@@ -1602,4 +1637,75 @@ clearDriverDues (personId, _merchantId) = do
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
     groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
 
----- todo handle race and allow double debit ------
+getNYDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> m DriverNYPaymentHistoryResp
+getNYDriverPayments (personId, merchantId_) mbFrom mbTo mbLimit mbOffset = do
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+      defaultFrom = fromMaybe (fromGregorian 2023 9 23) mbFrom
+  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let today = utctDay now
+      from = fromMaybe defaultFrom mbFrom
+      to = fromMaybe today mbTo
+  let windowStartTime = UTCTime from 0
+      windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
+  driverFees <- runInReplica $ QDF.findWindows personId windowStartTime windowEndTime limit offset
+  uniqueInvoices <- getUniqueInvoices driverFees from
+  mapM buildNYPaymentHistory invoices
+  where
+    getUniqueInvoices driverFees from = do
+      invoices <- mapM (\driverFee -> QINV.findValidByDriverFeeId driverFee.id from) driverFees
+      mergeSortAndRemoveDuplicate invoices
+
+    mergeSortAndRemoveDuplicate invoices = do
+      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+      sortOn (Down . (.createdAt)) uniqueInvoices
+
+    buildNYPaymentHistory INV.Invoice {..} = do
+      allInvoices <- QINV.findValidByInvoiceIdWithWindow id invoiceStatus
+      allDriverFeesUnSorted <- mapM (QDF.findByDriverFeeId . (.driverFeeId)) allInvoices
+      allDriverFees <- sortOn (Down . (.createdAt)) allDriverFeesUnSorted
+      driverFeesResp <- mapM mkDriverFeeResp allDriverFees
+
+      let driverFees = driverFeesResp
+          debitedOn = updatedAt -- check
+          invoiceAmount = sum (mapM (.paymentAmount) driverFeeResp) -- check
+          numberOfDays = len $ groupBy sameDriverFeeCreatedDate allDriverFees
+
+      return DriverNYPaymentHistoryResp {..}
+
+    sameDriverFeeCreatedDate driverFee1 driverFee2 =
+      let createdAtOne = formatTime defaultTimeLocale "%Y-%m-%d" driverFee1.createdAt
+          createdAtTwo = formatTime defaultTimeLocale "%Y-%m-%d" driverFee2.createdAt
+       in createdAtOne == createdAtTwo
+
+    mkDriverFeeResp DDF.DriverFee {..} = do
+      let ridesTakenOn = now --todo
+          driverFeeId = getId id
+          totalRides = numRides
+          paymentAmount = platformFee
+          chargesBreakup = mkChargesBreakup govtCharges platformFee cgst sgst --todo
+          planOfferDetails = "" -- todo
+          -- invoiceStatus =  --todo
+      return DriverInfo {..}
+
+    mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
+
+    mkChargesBreakup govtCharges platformFee cgst sgst =
+      [ DriverPaymentBreakup
+          { component = "Government Charges",
+            amount = govtCharges
+          },
+        DriverPaymentBreakup
+          { component = "Platform Fee",
+            amount = platformFee
+          },
+        DriverPaymentBreakup
+          { component = "CGST",
+            amount = cgst
+          },
+        DriverPaymentBreakup
+          { component = "SGST",
+            amount = sgst
+          }
+      ]
