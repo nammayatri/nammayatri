@@ -328,8 +328,8 @@ getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
 getFilteredEstimate quotes = do
   let filteredEstimate = (case (getMerchant FunctionCall) of
                             YATRISATHI -> do
-                              let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) quotes
-                                  nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
+                              let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK", "TAXI_PLUS"])) quotes
+                                  nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK", "TAXI_PLUS"] )) quotes
                                   taxiVariant = DA.sortBy (\(EstimateAPIEntity estimateEntity1) (EstimateAPIEntity estimateEntity2) -> compare (estimateEntity1.vehicleVariant) (estimateEntity2.vehicleVariant)) acTaxiVariants
                               ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
                             _ -> quotes)
@@ -352,14 +352,14 @@ getFilteredQuotes quotes =  do
                                   case item of
                                     Quotes body -> do
                                       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                      DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"]
+                                      DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN", "TAXI_PLUS"]
                                     _ -> false
                                   ) quotes
                                 nonAcTaxiVariants = DA.filter(\item -> do
                                   case item of
                                     Quotes body -> do
                                       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                      not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
+                                      not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN", "TAXI_PLUS"])
                                     _ -> false
                                   ) quotes
                                 sortedACTaxiVariants = DA.sortBy (\ quote1 quote2 ->
