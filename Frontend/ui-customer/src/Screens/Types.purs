@@ -786,7 +786,8 @@ type EmergencyHelpModelState = {
    isSelectEmergencyContact :: Boolean,
    showContactSupportPopUp :: Boolean,
    showCallPolicePopUp :: Boolean,
-   emergencyContactData :: Array Contact
+   emergencyContactData :: Array Contact,
+   waitingDialerCallback :: Boolean
 }
 
 type RecentlySearchedObject =
