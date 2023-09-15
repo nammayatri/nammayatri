@@ -44,22 +44,6 @@ query_drain_latency =
     .& lbl @"action" @Text
     .& build
 
--- euler_db_sync_stream_length :: PromRep 'Gauge "euler_db_sync_stream_length" '[ '("stream", Text)]
--- euler_db_sync_stream_length =
---   gauge #euler_db_sync_stream_length
---     .& lbl @"stream" @Text
---     .& build
-
--- euler_query_batch_process_time :: PromRep 'Histogram "euler_query_batch_process_time" '[]
--- euler_query_batch_process_time =
---   histogram #euler_query_batch_process_time
---     .& build
-
--- euler_query_batch_size :: PromRep 'Gauge "euler_query_batch_size" '[]
--- euler_query_batch_size =
---   gauge #euler_query_batch_size
---     .& build
-
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
 drainer_query_executes =
   counter #drainer_query_executes
@@ -71,7 +55,7 @@ drainer_stop_status =
   gauge #drainer_stop_status
     .& build
 
-kafka_message_push_failure :: PromRep 'Counter "kafka_message_push_failure" '[]
-kafka_message_push_failure =
-  counter #kafka_message_push_failure
+rider_kafka_push_failure :: PromRep 'Counter "rider_kafka_push_failure" '[]
+rider_kafka_push_failure =
+  counter #rider_kafka_push_failure
     .& build
