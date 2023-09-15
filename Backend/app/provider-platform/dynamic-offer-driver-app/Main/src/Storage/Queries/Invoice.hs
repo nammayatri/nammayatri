@@ -29,6 +29,16 @@ findValidByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
+findValidByInvoiceIdWithWindow :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> UTCTime -> m [Domain.Invoice]
+findValidByInvoiceIdWithWindow (Id invoiceId) status from =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.id $ Se.Eq invoiceId,
+          Se.Is BeamI.invoiceStatus $ Se.Eq status,
+          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq from
+        ]
+    ]
+
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 

@@ -114,6 +114,19 @@ findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
     (Just limitVal)
     (Just offsetVal)
 
+findWindows :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
+findWindows (Id driverId) from to limitVal offsetVal =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.updatedAt $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.updatedAt $ Se.LessThanOrEq to
+        ]
+    ]
+    (Se.Desc BeamDF.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+
 findOngoingAfterEndTime :: MonadFlow m => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTime (Id driverId) now =
   findOneWithKV
