@@ -89,7 +89,7 @@ runCreateCommands cmds streamKey = do
               let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
+              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection dataObjects streamKey'
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -135,8 +135,8 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
-streamDriverDrainerCreates producer dbObject streamKey = do
+streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
+streamRiderDrainerCreates producer dbObject streamKey = do
   let topicName = "rider-drainer"
   mapM_ (KafkaProd.produceMessage producer . message topicName) dbObject
   flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer

@@ -85,6 +85,7 @@ library
     , beam-postgres
     , bytestring
     , casing
+    , cereal
     , connection
     , containers
     , directory
@@ -171,6 +172,7 @@ executable dynamic-offer-driver-drainer-exe
     , beam-postgres
     , bytestring
     , casing
+    , cereal
     , connection
     , containers
     , directory

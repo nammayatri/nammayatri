@@ -84,6 +84,7 @@ library
     , beam-postgres
     , bytestring
     , casing
+    , cereal
     , connection
     , containers
     , directory
@@ -170,6 +171,7 @@ executable rider-app-drainer-exe
     , beam-postgres
     , bytestring
     , casing
+    , cereal
     , connection
     , containers
     , directory
