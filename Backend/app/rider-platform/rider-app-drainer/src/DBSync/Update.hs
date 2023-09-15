@@ -1,31 +1,36 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module DBSync.Update where
 
 import Config.Env
+import qualified Constants as C
 import Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
+import qualified Data.Serialize as Serialize
 import Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
-import EulerHS.KVConnector.DBSync
-import EulerHS.KVConnector.Types
-import EulerHS.KVConnector.Utils as EKU
+import EulerHS.KVConnector.Types as EKT
+import EulerHS.KVConnector.Utils as Utils
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
+import qualified Kernel.Beam.Functions as BeamFunction
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
 import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
 import Types.Event as Event
+import Utils.Redis
 import Utils.Utils
 
 updateDB ::
@@ -46,101 +51,121 @@ updateDB ::
   [Set be table] ->
   Where be table ->
   ByteString ->
-  m (Either MeshError [A.Value])
-updateDB dbConf _ setClause whereClause bts = do
-  either (pure . Left) ((Right <$>) . mapM updateModel') . mapLeft MDBError
-    =<< runExceptT
-      ( do
-          updateObj <- ExceptT $ CDB.updateOne dbConf Nothing setClause whereClause
-          pure [updateObj]
-      )
-  where
-    updateModel' model = do
-      let val = (EKU.updateModel @be @table) model (EKU.jsonKeyValueUpdates setClause)
-      case val of
-        Right obj -> pure obj
-        Left err -> do
-          EL.logError (("Model Update failed: " :: Text) <> T.pack (show err)) (show [("command" :: String, bts)] :: Text)
-          pure A.Null
+  m (Either MeshError ())
+updateDB dbConf _ setClause whereClause _ =
+  do
+    either (pure . Left) (pure . Right) . mapLeft MDBError
+    =<< CDB.updateOneWoReturning dbConf Nothing setClause whereClause
+
+getUpdatedValue ::
+  forall beM be table m.
+  ( HasCallStack,
+    ET.BeamRuntime be beM,
+    ET.BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    B.HasQBuilder be,
+    EL.MonadFlow m,
+    ToJSON (table Identity),
+    FromJSON (table Identity),
+    Serialize.Serialize (table Identity)
+  ) =>
+  Text ->
+  Where be table ->
+  m (Either MeshError (table Identity))
+getUpdatedValue tag _ = do
+  res <- EL.runKVDB BeamFunction.meshConfig.kvRedis $ EL.get $ fromString $ T.unpack tag
+  case res of
+    Right (Just r) -> do
+      let (decodeResult :: MeshResult [table Identity], isLive) = Utils.decodeToField $ BSL.fromChunks [r]
+       in case decodeResult of
+            Right [decodeRes] -> return $ Right decodeRes
+            Right _ -> return $ Left (UnexpectedError "Redis Error: No Data for the key")
+            Left _ -> return $ Left (UnexpectedError "Redis Error: Decode Failed")
+    _ -> return $ Left (UnexpectedError "Redis Error")
 
 runUpdateCommands :: (UpdateDBCommand, ByteString) -> Text -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runUpdateCommands (cmd, val) streamKey = do
   let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
   case cmd of
-    UpdateDBCommand id _ _ _ _ (AppInstallsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("AppInstalls" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (BlackListOrgOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("BlackListOrg" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (BookingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Booking" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (BookingLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("BookingLocation" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (BookingCancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("BookingCancellationReason" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (CallbackRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("CallbackRequest" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("CallStatus" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("CancellationReason" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (DriverOfferOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("DriverOffer" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (EstimateOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Estimate" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (EstimateBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("EstimateBreakup" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (ExophoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Exophone" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (FareBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("FareBreakup" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (GeometryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Geometry" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (IssueOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Issue" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (DirectionsCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("DirectionsCache" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("PlaceNameCache" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Merchant" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("MerchantMessage" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantPaymentMethodOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("MerchantPaymentMethod" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantServiceConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("MerchantServiceConfig" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantServiceUsageConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (MerchantConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("MerchantConfig" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (OnSearchEventOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("OnSearchEvent" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("PaymentOrder" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("PaymentTransaction" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PersonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Person" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PersonDefaultEmergencyNumberOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("PersonDefaultEmergencyNumber" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PersonFlowStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("PersonFlowStatus" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (QuoteOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Quote" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (RegistrationTokenOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("RegistrationToken" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (RentalSlabOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("RentalSlab" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (RideOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Ride" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (SavedReqLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("SavedReqLocation" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("SearchRequest" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (SearchReqLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("SearchReqLocation" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (SosOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Sos" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (SpecialZoneQuoteOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("SpecialZoneQuote" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (TripTermsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("TripTerms" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (WebengageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("Webengage" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("FeedbackForm" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (HotSpotConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("HotSpotConfig" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (AppInstallsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("AppInstalls" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (BlackListOrgOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("BlackListOrg" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (BookingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Booking" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (BookingLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("BookingLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (BookingCancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("BookingCancellationReason" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (CallbackRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("CallbackRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("CallStatus" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("CancellationReason" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (DriverOfferOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("DriverOffer" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (EstimateOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Estimate" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (EstimateBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("EstimateBreakup" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (ExophoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Exophone" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (FareBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("FareBreakup" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (GeometryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Geometry" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (IssueOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Issue" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (DirectionsCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("DirectionsCache" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PlaceNameCache" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Merchant" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantMessage" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantPaymentMethodOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantPaymentMethod" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantServiceConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantServiceConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantServiceUsageConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MerchantConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (OnSearchEventOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("OnSearchEvent" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PaymentOrder" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PaymentTransaction" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PersonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Person" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PersonDefaultEmergencyNumberOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PersonDefaultEmergencyNumber" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PersonFlowStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PersonFlowStatus" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (QuoteOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Quote" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (RegistrationTokenOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("RegistrationToken" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (RentalSlabOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("RentalSlab" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (RideOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Ride" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SavedReqLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("SavedReqLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("SearchRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SearchReqLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("SearchReqLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SosOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Sos" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SpecialZoneQuoteOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("SpecialZoneQuote" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TripTermsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TripTerms" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (WebengageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Webengage" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("FeedbackForm" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (HotSpotConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("HotSpotConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("BecknRequest" :: Text) =<< dbConf
   where
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
       runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
-    -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
-    runUpdateInKafka id value streamKey' setClause whereClause model dbConf = do
+    runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
-        then runUpdate id value streamKey' setClause whereClause model dbConf
+        then runUpdate id value dbStreamKey' setClause whereClause model dbConf
         else do
-          let setAndWhere = getDbUpdateDataJson model (jsonKeyValueUpdates setClause) whereClause
-          Env {..} <- ask
-          res <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection setAndWhere streamKey'
-          either
-            ( \err -> do
-                void $ publishDBSyncMetric Event.KafkaPushFailure
-                EL.logError ("ERROR:" :: Text) ("Kafka Update Error " :: Text)
-                pure $ Left (UnexpectedError err, id)
-            )
-            (\_ -> pure $ Right id)
-            res
-    -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
-    runUpdateInKafkaAndDb id value streamKey' setClause whereClause model dbConf = do
-      isPushToKafka' <- EL.runIO isPushToKafka
-      if not isPushToKafka'
-        then runUpdate id value streamKey' setClause whereClause model dbConf
-        else do
-          res <- runUpdateInKafka id value streamKey' setClause whereClause model dbConf
+          res <- getUpdatedValue tag whereClause
           case res of
-            Left (err, id') -> pure $ Left (err, id')
-            Right _ -> runUpdate id value streamKey' setClause whereClause model dbConf
+            Right dataObj -> do
+              Env {..} <- ask
+              let updatedJSON = getDbUpdateDataJson model dataObj
+              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              either
+                ( \_ -> do
+                    void $ publishDBSyncMetric Event.KafkaPushFailure
+                    EL.logError ("ERROR:" :: Text) ("Kafka Update Error " :: Text)
+                    pure $ Left (UnexpectedError "Kafka Error", id)
+                )
+                (\_ -> pure $ Right id)
+                res''
+            Left _ -> do
+              _ <- addValueToErrorQueue C.kafkaUpdateFailedStream [("UpdateCommand", value)]
+              pure $ Left (UnexpectedError "Kafka Error", id)
+
+    -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
+    runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause model dbConf = do
+      isPushToKafka' <- EL.runIO isPushToKafka
+      if not isPushToKafka'
+        then runUpdate id value dbStreamKey' setClause whereClause model dbConf
+        else do
+          res <- runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag
+          either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value dbStreamKey' setClause whereClause model dbConf) res
 
     runUpdateWithRetries id value setClause whereClause model dbConf retryIndex maxRetries = do
       res <- updateDB dbConf Nothing setClause whereClause value
@@ -149,15 +174,15 @@ runUpdateCommands (cmd, val) streamKey = do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" model
           EL.runIO $ delay =<< getRetryDelay
           runUpdateWithRetries id value setClause whereClause model dbConf (retryIndex + 1) maxRetries
-        (Left x, _) -> do
+        (Left _, _) -> do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" model
-          EL.logError (("Update failed: " :: Text) <> T.pack (show x)) (show [("command" :: String, value)] :: Text)
-          pure $ Left (x, id)
+          EL.logError (("Update failed for model: " :: Text) <> T.pack (show model)) (show [("command" :: String, value)] :: Text)
+          pure $ Left (UnexpectedError "Update failed for model", id)
         (Right _, _) -> do
           pure $ Right id
 
-streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
-streamDriverDrainerUpdates producer dbObject dbStreamKey = do
+streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
+streamRiderDrainerUpdates producer dbObject dbStreamKey = do
   let topicName = "rider-drainer"
   void $ KafkaProd.produceMessage producer (message topicName dbObject)
   flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
@@ -176,14 +201,11 @@ streamDriverDrainerUpdates producer dbObject dbStreamKey = do
           prValue = Just . LBS.toStrict $ encode event
         }
 
-getDbUpdateDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> [(Text, A.Value)] -> Where be table -> A.Value
-getDbUpdateDataJson model upd whereClause =
+getDbUpdateDataJson :: ToJSON a => Text -> a -> A.Value
+getDbUpdateDataJson model a =
   A.object
     [ "contents"
-        .= A.object
-          [ "set" .= A.object [k .= v | (k, v) <- upd],
-            "where" .= modelEncodeWhere whereClause
-          ],
+        .= A.toJSON a,
       "tag" .= T.pack (pascal (T.unpack model) <> "Object"),
       "type" .= ("UPDATE" :: Text)
     ]

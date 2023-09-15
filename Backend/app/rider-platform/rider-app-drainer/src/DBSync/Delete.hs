@@ -85,7 +85,7 @@ runDeleteCommands (cmd, val) dbStreamKey = do
         then runDelete id value dbstremKey whereClause model dbConf
         else do
           Env {..} <- ask
-          res <- EL.runIO $ streamDriverDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
+          res <- EL.runIO $ streamRiderDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
           either
             ( \_ -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -118,8 +118,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
         (Right _, _) -> do
           pure $ Right id
 
-streamDriverDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
-streamDriverDrainerDeletes producer dbObject dbStreamKey = do
+streamRiderDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
+streamRiderDrainerDeletes producer dbObject dbStreamKey = do
   let topicName = "rider-drainer"
   void $ KafkaProd.produceMessage producer (message topicName dbObject)
   flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
