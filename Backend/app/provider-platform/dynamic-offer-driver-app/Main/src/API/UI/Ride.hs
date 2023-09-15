@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Servant hiding (throwError)
 import SharedLogic.Person (findPerson)
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Auth
@@ -133,7 +134,8 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = req.specialZoneOtpCode
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  transporterConfig <- TC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}

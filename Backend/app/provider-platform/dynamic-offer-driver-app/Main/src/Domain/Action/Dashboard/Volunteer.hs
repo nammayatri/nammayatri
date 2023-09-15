@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -40,7 +41,8 @@ bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
 bookingInfo merchantShortId otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  transporterConfig <- TC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
   return $ buildMessageInfoResponse booking
   where
     buildMessageInfoResponse Domain.Booking {..} =
