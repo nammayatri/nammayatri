@@ -59,4 +59,5 @@ in  { loggerConfig =
     , schedulerType = common.schedulerType.DbBased
     , schedulerSetName = "Scheduled_Jobs"
     , streamName = "Available_Jobs"
+    , maxThreads = +5
     }

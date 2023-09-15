@@ -92,6 +92,7 @@ dependencies:
   - wai-middleware-prometheus
   - warp
   - warp-tls
+  - cereal
 
 ghc-options:
   - -fwrite-ide-info

@@ -20,7 +20,7 @@ mkDBSyncMetric = do
       DrainerQueryExecutes action count -> add (metrics </> #drainer_query_executes) count action
       QueryDrainLatency action latency -> observe (metrics </> #query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #drainer_stop_status) status
-      KafkaPushFailure -> inc (metrics </> #kafka_message_push_failure)
+      KafkaPushFailure -> inc (metrics </> #rider_kafka_push_failure)
   where
     collectionDBSyncMetric =
       peek_db_command_error
@@ -31,5 +31,5 @@ mkDBSyncMetric = do
         .> drainer_query_executes
         .> query_drain_latency
         .> drainer_stop_status
-        .> kafka_message_push_failure
+        .> rider_kafka_push_failure
         .> MNil
