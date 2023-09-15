@@ -652,24 +652,27 @@ eval (UpdateCurrentStage stage) state = do
     continue state
 
 eval OnResumeCallback state =
-  case getValueToLocalNativeStore LOCAL_STAGE of
-    "FindingQuotes" -> do
-      case (methodArgumentCount "startLottieProcess") == 1 of
-        true  -> do
-          let secondsLeft = findingQuotesSearchExpired false
-              findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
-          if secondsLeft > 0 then
-            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
-          else pure unit
-        false -> pure unit
-      case flowWithoutOffers WithoutOffers of
-        true  -> exit $ OnResumeApp state
-        false -> continue state
-    "QuoteList" -> do
-      let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
-      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
-      continue state
-    _ -> continue state
+  if(state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.props.emergencyHelpModelState.waitingDialerCallback then 
+    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}}}
+  else 
+    case getValueToLocalNativeStore LOCAL_STAGE of
+      "FindingQuotes" -> do
+        case (methodArgumentCount "startLottieProcess") == 1 of
+          true  -> do
+            let secondsLeft = findingQuotesSearchExpired false
+                findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+            if secondsLeft > 0 then
+              void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+            else pure unit
+          false -> pure unit
+        case flowWithoutOffers WithoutOffers of
+          true  -> exit $ OnResumeApp state
+          false -> continue state
+      "QuoteList" -> do
+        let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+        continue state
+      _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -1225,22 +1228,27 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) sta
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
-    updateAndExit state{props{emergencyHelpModelState{showCallContactPopUp = false}}} $ CallContact state {props {emergencyHelpModelState{showCallContactPopUp = false}}}
+    let newState = state{props{emergencyHelpModelState{showCallContactPopUp = false, waitingDialerCallback = true}}}
+    updateAndExit newState $ CallContact newState
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do
-    updateAndExit state{props{emergencyHelpModelState{showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}} $ UpdateSosStatus state {props{emergencyHelpModelState {showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}}
+    let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}}
+    updateAndExit newState $ UpdateSosStatus newState
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton2Click)) state = do
-    updateAndExit state{props{emergencyHelpModelState{showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}} $ UpdateSosStatus state {props{emergencyHelpModelState {showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}}
+    let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}}
+    updateAndExit newState $ UpdateSosStatus newState
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
     void $ pure $  showDialer "112" false -- TODO: FIX_DIALER
-    updateAndExit state{props{emergencyHelpModelState{showCallPolicePopUp = false}}} $ CallPolice state {props {emergencyHelpModelState{showCallPolicePopUp = false}}}
+    let newState = state{props{emergencyHelpModelState{showCallPolicePopUp = false, waitingDialerCallback = true}}}
+    updateAndExit newState $ CallPolice newState
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
     void $ pure $  showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
-    updateAndExit state{props{emergencyHelpModelState{showContactSupportPopUp = false}}} $ CallSupport state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
+    let newState = state{props{emergencyHelpModelState{showContactSupportPopUp = false, waitingDialerCallback = true}}}
+    updateAndExit newState $ CallSupport newState
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do
       _ <- pure $ performHapticFeedback unit
