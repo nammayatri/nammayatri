@@ -25,5 +25,9 @@
         ./Backend/default.nix
         ./Frontend/default.nix
       ];
+
+      flake.nix-health.default = {
+        caches.required = [ "https://nammayatri.cachix.org" ];
+      };
     };
 }
