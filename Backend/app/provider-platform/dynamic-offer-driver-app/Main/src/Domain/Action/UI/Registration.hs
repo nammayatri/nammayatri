@@ -26,6 +26,7 @@ module Domain.Action.UI.Registration
 where
 
 import Data.OpenApi hiding (info, url)
+import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -300,7 +301,8 @@ verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -313,6 +315,9 @@ verify tokenId req = do
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
+  fork "generating the referral code for driver" $ do
+    void $ generateReferralCode (person.id, person.merchantId)
+
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
