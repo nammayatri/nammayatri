@@ -77,7 +77,8 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToTaxi :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
-    aadhaarImageResizeConfig :: B.C f (Maybe A.Value)
+    aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
+    specialZoneBookingOtpExpiry :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

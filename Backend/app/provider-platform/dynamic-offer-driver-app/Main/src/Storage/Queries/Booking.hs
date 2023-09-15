@@ -27,7 +27,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
@@ -85,10 +84,9 @@ findStuckBookings (Id merchantId) bookingIds now = do
           ]
       ]
 
-findBookingBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
-findBookingBySpecialZoneOTP merchantId otpCode now = do
-  transporterConfig <- TC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now transporterConfig.specialZoneBookingOtpExpiry
+findBookingBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe Booking)
+findBookingBySpecialZoneOTP merchantId otpCode now specialZoneBookingOtpExpiry = do
+  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now specialZoneBookingOtpExpiry
   maybe
     (return Nothing)
     findById
@@ -96,7 +94,7 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
 
 findBookingIdBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe (Id Booking))
 findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now bookingOtpExpiry = do
-  let otpExpiryCondition = addUTCTime (- (bookingOtpExpiry * 60) :: NominalDiffTime) now
+  let otpExpiryCondition = addUTCTime (- (fromIntegral bookingOtpExpiry * 60) :: NominalDiffTime) now
   (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
 cancelBookings :: MonadFlow m => [Id Booking] -> UTCTime -> m ()
