@@ -19,13 +19,14 @@ import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.GenericRadioButton as GenericRadioButton
 import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((/=), negate)
+import Prelude ((/=), (==), negate)
 import PrestoDOM (Length(..), Margin(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -101,4 +102,24 @@ translateFullYAnimWithDurationConfigs state = animConfig {
 , repeatCount = (PrestoAnim.Repeat 0)
 , ifAnim = state.props.expandEnabled
 , duration = 200
+}
+
+getRadioButtonConfig :: Int -> String -> ST.AccountSetUpScreenState -> GenericRadioButton.Config
+getRadioButtonConfig index item state = GenericRadioButton.config {
+  activeButtonConfig {
+    stroke = Color.blue900
+  , buttonColor = Color.black800
+  , background = Color.blue600
+  },
+  buttonTextConfig {
+    text = item
+  , color = Color.black900
+  }
+  , inActiveButtonConfig {
+    stroke = Color.grey900
+  , buttonColor = Color.black600
+  , background = Color.white900
+  }
+  , isSelected = index == state.data.editedDisabilityOptions.activeIndex
+  , id = index
 }

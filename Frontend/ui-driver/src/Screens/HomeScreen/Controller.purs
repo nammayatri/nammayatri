@@ -693,7 +693,7 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
   ]
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
-      pure $ RideActionModalAction (RideActionModal.CallCustomer)
+      pure $ PopUpModalChatBlockerAction PopUpModal.DismissPopup
     ]
 
 eval (PopUpModalChatBlockerAction PopUpModal.DismissPopup) state = continue state{props{showChatBlockerPopUp = false}}

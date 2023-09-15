@@ -1745,7 +1745,7 @@ myProfileScreenFlow = do
                                   then Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason))
                                   else Nothing
             _ -> Nothing
-          hasDisability = Just (state.data.editedDisabilityOptions.activeIndex == 1)
+          hasDisability = if (isJust disability) then Just (state.data.editedDisabilityOptions.activeIndex == 1) else Nothing
       resp <- if nameLength > 2 then
                 lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (name !! 1) (name !! (nameLength - 1)) (email) gender hasDisability disability)
                 else if nameLength == 2 then

@@ -106,7 +106,10 @@ data Action
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  updateAndExit state $ GoHome state
+  let activeIndex = state.data.editedDisabilityOptions.activeIndex
+  if  activeIndex == 1 then 
+    continue state{data{editedDisabilityOptions{isSpecialAssistList = true}}}
+    else updateAndExit state $ GoHome state
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
   continueWithCmd state
@@ -149,7 +152,7 @@ eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
                           Just reason -> reason
                           Nothing -> ""
   _ <- pure $ setText (getNewIDWithTag "SpecialAssistanceEditText") otherDisability
-  let newState = state{data{editedDisabilityOptions{activeIndex = idx, isSpecialAssistList = idx == 1, selectedDisability = if idx == 0 then Nothing else state.data.editedDisabilityOptions.selectedDisability ,specialAssistActiveIndex = if idx == 0 then 0 else state.data.editedDisabilityOptions.specialAssistActiveIndex}}}
+  let newState = state{data{editedDisabilityOptions{activeIndex = idx, selectedDisability = if idx == 0 then Nothing else state.data.editedDisabilityOptions.selectedDisability ,specialAssistActiveIndex = if idx == 0 then 0 else state.data.editedDisabilityOptions.specialAssistActiveIndex}}}
   continue state{ data = newState.data{disabilityOptions = if idx == 0 then newState.data.editedDisabilityOptions else state.data.disabilityOptions}, props{btnActive = getBtnActive newState }}
 
 
@@ -161,9 +164,10 @@ eval (SpecialAssistanceListAC action) state = case action of
   SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
   SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
     _ <- pure $ hideKeyboardOnNavigation true
-    let newState = state{data{editedDisabilityOptions{otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason, isSpecialAssistList = false, selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) }}}
+    let newState = state{data{editedDisabilityOptions{otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason, selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) }}}
         updatedState = state{props{btnActive = getBtnActive newState}, data = newState.data } 
-    continue updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}
+    -- continue updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}
+    updateAndExit updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}} $ GoHome updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}
   _ -> continue state
 
 eval _ state = continue state
