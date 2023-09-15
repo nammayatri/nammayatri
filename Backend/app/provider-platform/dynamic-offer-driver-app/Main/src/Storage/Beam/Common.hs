@@ -28,6 +28,7 @@ import Storage.Beam.DriverOnboarding.IdfyVerification
 import Storage.Beam.DriverOnboarding.Image
 import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
+import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
 import Storage.Beam.Message.Message
@@ -68,7 +69,8 @@ atlasDB =
         rating = ratingTable,
         message = messageTable,
         messageTranslation = messageTranslationTable,
-        driverGoHomeRequest = driverGoHomeRequestTable
+        driverGoHomeRequest = driverGoHomeRequestTable,
+        driverReferral = driverReferralTable
       }
 
 data AtlasDB f = AtlasDB
@@ -95,6 +97,7 @@ data AtlasDB f = AtlasDB
     rating :: f (B.TableEntity RatingT),
     message :: f (B.TableEntity MessageT),
     messageTranslation :: f (B.TableEntity MessageTranslationT),
-    driverGoHomeRequest :: f (B.TableEntity DriverGoHomeRequestT)
+    driverGoHomeRequest :: f (B.TableEntity DriverGoHomeRequestT),
+    driverReferral :: f (B.TableEntity DriverReferralT)
   }
   deriving (Generic, B.Database be)
