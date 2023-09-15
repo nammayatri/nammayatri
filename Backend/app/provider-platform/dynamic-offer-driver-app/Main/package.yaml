@@ -106,6 +106,10 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - memory
+  - base64-bytestring
+  - case-insensitive
+  - http-types
 
 ghc-options:
   - -fwrite-ide-info

@@ -104,8 +104,8 @@ buildUpdateLocationHandle ::
   Id Person.Person ->
   Flow (UpdateLocationHandle Flow)
 buildUpdateLocationHandle driverId = do
-  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
+  driver <- md "QP.findById driverId" $ runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  defaultRideInterpolationHandler <- md "buildRideInterpolationHandler" (LocUpd.buildRideInterpolationHandler driver.merchantId False)
   pure $
     UpdateLocationHandle
       { driver,
@@ -115,6 +115,11 @@ buildUpdateLocationHandle driverId = do
         addIntermediateRoutePoints = \rideId ->
           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
       }
+  where
+    md tag f = do
+      (res, duration) <- measureDuration f
+      logDebug $ (tag <> " : ") <> show duration
+      pure res
 
 streamLocationUpdates ::
   ( MonadFlow m,

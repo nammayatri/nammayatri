@@ -529,12 +529,14 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres
     , beckn-services
     , beckn-spec
     , bytestring
+    , case-insensitive
     , casing
     , cassava
     , cereal
@@ -551,8 +553,10 @@ library
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
     , location-updates
+    , memory
     , mobility-core
     , openapi3
     , payment
@@ -632,12 +636,14 @@ executable dynamic-offer-driver-app-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres
     , beckn-services
     , beckn-spec
     , bytestring
+    , case-insensitive
     , casing
     , cassava
     , cereal
@@ -655,7 +661,9 @@ executable dynamic-offer-driver-app-exe
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
+    , memory
     , mobility-core
     , openapi3
     , persistent

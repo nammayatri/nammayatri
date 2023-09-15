@@ -33,6 +33,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Time as TT
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified SharedLogic.Ride as SRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
@@ -81,23 +82,30 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
 
 buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId isEndRide = do
-  transportConfig <- MTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  orgMapsConfig <- QOMC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  transportConfig <- md "MTC.findByMerchantId merchantId" $ MTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  orgMapsConfig <- md "QOMC.findByMerchantId merchantId" $ QOMC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService orgMapsConfig.snapToRoad)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show orgMapsConfig.snapToRoad))
-  case orgMapsServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig cfg ->
-      return $
-        mkRideInterpolationHandler
-          isEndRide
-          cfg
-          (\driverId dist snapCalls -> void (QRide.updateDistance driverId dist snapCalls))
-          ( \driverId batchWaypoints -> do
-              mRide <- SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
-              updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
-          )
-    _ -> throwError $ InternalError "Unknown Service Config"
+    md "QOMC.findByMerchantIdAndService merchantId" $
+      QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService orgMapsConfig.snapToRoad)
+        >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show orgMapsConfig.snapToRoad))
+  md "case orgMapsServiceConfig.serviceConfig of" $
+    case orgMapsServiceConfig.serviceConfig of
+      DOSC.MapsServiceConfig cfg ->
+        return $
+          mkRideInterpolationHandler
+            isEndRide
+            cfg
+            (\driverId dist snapCalls -> void (QRide.updateDistance driverId dist snapCalls))
+            ( \driverId batchWaypoints -> do
+                mRide <- md "SRide.getInProgressOrNewRideIdAndStatusByDriverId" $ SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
+                md "updateDeviation" $ updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
+            )
+      _ -> throwError $ InternalError "Unknown Service Config"
+  where
+    md tag f = do
+      (res, duration) <- TT.measureDuration f
+      logError $ (tag <> " : ") <> show duration
+      pure res
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do
