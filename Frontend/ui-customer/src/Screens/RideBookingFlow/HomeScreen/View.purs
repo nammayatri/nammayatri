@@ -80,7 +80,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), CarouselModel(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -91,6 +91,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
+import Helpers.Utils (addCarousel)
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -261,7 +262,7 @@ view push state =
             )
             (const MapReadyAction)
         ]
-        [ relativeLayout
+       [ relativeLayout
             [ width MATCH_PARENT
             , weight 1.0
             , orientation VERTICAL
@@ -269,7 +270,7 @@ view push state =
             , accessibility DISABLE
             , height MATCH_PARENT
             ]
-            [ frameLayout
+            ([ frameLayout
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 , accessibility DISABLE
@@ -361,7 +362,7 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            ]
+            ] <>[ linearLayout[height MATCH_PARENT, width MATCH_PARENT, gravity CENTER, background Color.blackLessTrans][ carouselView state push ]])
         ]
     ] 
 
@@ -2254,3 +2255,27 @@ genderBanner push state =
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
 isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
+
+carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+carouselView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , id $ getNewIDWithTag "AccessibilityCarouselView"
+    , accessibility DISABLE
+    , gravity CENTER
+    , background Color.white900
+    , cornerRadius 16.0
+    , margin $ MarginHorizontal 16 16
+    , afterRender (\action -> do
+        _ <- push action
+        _ <- addCarousel ([
+                  {image : "carousel_1", title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily."},
+                  {image : "carousel_2", title : "No more\nsurge pricing!", description : "Experience fair and consistent fares,\neven during peak hours."},
+                  {image : "carousel_4", title : "Inclusive and accessible for everyone!", description : "We strive to provide all our users an \n even & equal experience."},
+                  {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all."}
+                ]) (getNewIDWithTag "AccessibilityCarouselView")
+        pure unit
+        ) (const AfterRender)
+    ][]
