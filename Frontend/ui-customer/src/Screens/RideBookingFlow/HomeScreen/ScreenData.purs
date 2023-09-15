@@ -248,7 +248,8 @@ emergencyHelpModalData = {
   currentlySelectedContact : selectedContactData,
   sosId : "",
   sosStatus : "",
-  isSelectEmergencyContact : false
+  isSelectEmergencyContact : false,
+  waitingDialerCallback : false
 }
 
 
