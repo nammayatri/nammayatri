@@ -163,6 +163,9 @@ let AllocatorJobType =
       | SendPaymentReminderToDriver
       | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
+      | SendPDNNotificationToDriver
+      | MandateExecution
+      | CalculateDriverFees
       >
 
 let jobInfoMapx =
@@ -176,6 +179,11 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.MandateExecution, mapValue = True }
+      , { mapKey = AllocatorJobType.CalculateDriverFees, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

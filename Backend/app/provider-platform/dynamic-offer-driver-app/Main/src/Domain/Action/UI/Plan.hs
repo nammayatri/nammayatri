@@ -449,6 +449,7 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
         }
     makeOfferReq date paymentMode_ transporterConfig = do
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      now <- getCurrentTime
       let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = Payment.INR}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
@@ -457,6 +458,7 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
             customer = Just customerReq,
             planId = plan.id.getId,
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date,
+            dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_
           }
     mkPlanFareBreakup offers = do

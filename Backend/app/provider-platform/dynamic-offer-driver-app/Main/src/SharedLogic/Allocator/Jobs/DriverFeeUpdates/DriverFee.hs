@@ -39,7 +39,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id, cast, getShortId)
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, GuidLike (generateGUID), HasShortDurationRetryCfg, HighPrecMoney (..), Log (withLogTag), MonadFlow, MonadGuid, MonadTime (getCurrentTime), addUTCTime, fromMaybeM, generateShortId, getLocalCurrentTime, logError, logInfo, secondsToNominalDiffTime, throwError, withShortRetry)
 import Lib.Scheduler
 import SharedLogic.Allocator
@@ -131,8 +131,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       mbDriverPlan <- findByDriverId (cast driverFee.driverId)
       plan <- getPlan mbDriverPlan merchantId
       cacheDriverPlan driverFee.driverId endTime plan
-      setDriverFeeBillNumberKey merchantId 1 36000 -- check here --
-      Hedis.del (mkDriverFeeCalcJobFlagKey startTime endTime merchantId)
+    setDriverFeeBillNumberKey merchantId 1 36000 -- check here --
+    Hedis.del (mkDriverFeeCalcJobFlagKey startTime endTime merchantId)
   -- Schedule notif job
 
   now <- getCurrentTime
@@ -143,24 +143,28 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     plan <- getDriverPlanCache endTime driverFee.driverId >>= fromMaybeM (InternalError ("No plan found for driver" <> driverFee.driverId.getId))
     driverPlan <- findByDriverId (cast driverFee.driverId) >>= fromMaybeM (InternalError ("No driver plan found for driver" <> driverFee.driverId.getId))
     let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-    let due = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+        dutyDate = driverFee.createdAt
+        due = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+        mandateSetupDate = fromMaybe now (driverPlan.mandateSetupDate)
+
     driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
     (totalFee, offerId, offerTitle) <- case planBaseFrequcency of
       "PER_RIDE" -> do
         let numRides = driverFee.numRides - plan.freeRideCount
             feeWithoutDiscount = min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides))
-        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount driverFee.id
+        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
       "DAILY" -> do
         let numRides = driverFee.numRides - plan.freeRideCount
             feeWithoutDiscount = if numRides > 0 then baseAmount else 0
-        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount driverFee.id
+        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
       _ -> return (0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
     let offerAndPlanTitle = Just plan.id.getId <> Just "-*$*-" <> offerTitle ---- this we will send in payment history ----
     updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
-    offerTxnId <- generateShortId
-    let offerApplyRequest' = mkApplyOfferRequest offerTxnId.getShortId (catMaybes [offerId]) due driverPlan <$> driverPlan.mandateSetupDate
-    maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) offerApplyRequest'
+    offerTxnId <- getShortId <$> generateShortId
+    let offerApplied = catMaybes [offerId]
+        offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied due driverPlan dutyDate mandateSetupDate
+    maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
     ---- here we need the status to notification scheduled ----
     unless (totalFee == 0) $ do
       driverFeeSplitter plan totalFee transporterConfig driverFee now
@@ -187,7 +191,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       Nothing -> throwError $ InternalError "No batch gap defined for driver fee calculator job"
       Just gap -> ReSchedule <$> getRescheduledTime gap
   where
-    mkApplyOfferRequest offerTxnUUID appliedOfferIds due driverPlan' registrationDate =
+    mkApplyOfferRequest offerTxnUUID appliedOfferIds due driverPlan' dutyDate registrationDate =
       PaymentInterface.OfferApplyReq
         { txnId = offerTxnUUID,
           offers = appliedOfferIds,
@@ -196,6 +200,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           currency = PaymentInterface.INR,
           planId = driverPlan'.planId.getId,
           registrationDate,
+          dutyDate = dutyDate,
           paymentMode = show $ driverPlan'.planType
         }
 
@@ -217,28 +222,30 @@ calculatePlatformFeeAttr totalFee transporterConfig = do
       sgst = HighPrecMoney (toRational transporterConfig.sgstPercentage) * platformFee
   (platformFee, cgst, sgst)
 
-makeOfferReq :: UTCTime -> HighPrecMoney -> Person -> Plan -> Payment.OfferListReq
-makeOfferReq now totalFee driver plan = do
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Payment.OfferListReq
+makeOfferReq totalFee driver plan dutyDate registrationDate = do
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = Payment.INR} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
     { order = offerOrder,
       customer = Just customerReq,
       planId = plan.id.getId,
-      registrationDate = now,
-      paymentMode = show plan.paymentMode
+      registrationDate,
+      paymentMode = show plan.paymentMode,
+      dutyDate
     }
 
-getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> HighPrecMoney -> Id DriverFee -> m (HighPrecMoney, Maybe Text, Maybe Text)
-getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount driverFeeId = do
+getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> HighPrecMoney -> UTCTime -> DriverFee -> m (HighPrecMoney, Maybe Text, Maybe Text)
+getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount registrationDate driverFee = do
   now <- getCurrentTime
-  let nowLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
+  let dutyDate = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt
+      registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
   if feeWithoutDiscount == 0
     then do
-      updateStatus CLEARED now driverFeeId
+      updateStatus CLEARED now driverFee.id
       return (0, Nothing, Nothing)
     else do
-      offers <- Payment.offerList merchantId (makeOfferReq nowLocal feeWithoutDiscount driver plan) -- handle UDFs
+      offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (baseAmount, Nothing, Nothing)
@@ -246,7 +253,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       let (platformFee, cgst, sgst) = calculatePlatformFeeAttr finalOrderAmount transporterConfig -- this should be HighPrecMoney
-      updateFee driverFeeId Nothing 0 (round platformFee) cgst sgst now False -- add split logic before update
+      updateFee driverFee.id Nothing 0 (round platformFee) cgst sgst now False -- add split logic before update
       return (finalOrderAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> TransporterConfig -> DriverFee -> [DriverFee]
@@ -359,13 +366,8 @@ updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r) => Id Drive
 updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = do
   Hedis.whenWithLockRedis (billNumberGenerationLockKey driverFeeId.getId) 60 $ do
     counter <- getDriverFeeBillNumberKey merchantId
-    let setCounter = setDriverFeeBillNumberKey merchantId
-    case counter of
-      Just billNumber -> do
-        QDF.updateBillNumberById counter driverFeeId
-        Hedis.del (mkDriverFeeBillNumberKey merchantId)
-        setCounter (billNumber + 1) 5000
-      Nothing -> do
-        count <- listToMaybe <$> QDF.findMaxBillNumberInRange merchantId startTime endTime
-        Hedis.del (mkDriverFeeBillNumberKey merchantId)
-        maybe (pure ()) (\billNumber' -> setCounter (billNumber' + 1) 5000) (count >>= (.billNumber))
+    when (isNothing counter) $ do
+      count <- listToMaybe <$> QDF.findMaxBillNumberInRange merchantId startTime endTime
+      void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantId) (maybe 0 toInteger (count >>= (.billNumber)))
+    billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantId)
+    QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
