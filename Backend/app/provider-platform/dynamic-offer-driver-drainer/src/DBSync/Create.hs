@@ -42,7 +42,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarOtpVerify" :: Text) [(obj, val, entryId, AadhaarOtpVerifyObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpVerifyObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarVerification" :: Text) [(obj, val, entryId, AadhaarVerificationObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarVerificationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverLicense" :: Text) [(obj, val, entryId, DriverLicenseObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverLicenseObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverRCAssociation" :: Text) [(obj, val, entryId, DriverRCAssociationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverRCAssociationObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("DriverRcAssociation" :: Text) [(obj, val, entryId, DriverRcAssociationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverRcAssociationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("IdfyVerification" :: Text) [(obj, val, entryId, IdfyVerificationObject obj) | (CreateDBCommand entryId _ _ _ _ (IdfyVerificationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Image" :: Text) [(obj, val, entryId, ImageObject obj) | (CreateDBCommand entryId _ _ _ _ (ImageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("OperatingCity" :: Text) [(obj, val, entryId, OperatingCityObject obj) | (CreateDBCommand entryId _ _ _ _ (OperatingCityObject obj), val) <- cmds]
