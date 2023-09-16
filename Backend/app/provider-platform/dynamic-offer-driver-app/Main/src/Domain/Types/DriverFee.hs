@@ -43,7 +43,12 @@ data DriverFee = DriverFee
     collectedBy :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    feeType :: FeeType
+    feeType :: FeeType,
+    offerId :: Maybe Text,
+    planOfferTitle :: Maybe Text,
+    billNumber :: Maybe Int,
+    autopayPaymentStage :: Maybe AutopayPaymentStage,
+    stageUpdatedAt :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
@@ -58,11 +63,16 @@ data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | E
 
 data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
+data AutopayPaymentStage = NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
 mandateProcessingLockKey :: Text -> Text
 mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
+
+billNumberGenerationLockKey :: Text -> Text
+billNumberGenerationLockKey driverFeeId = "DriverFee:Processing:DriverFeeId" <> driverFeeId
 
 instance FromHttpApiData DriverFeeStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -87,3 +97,5 @@ instance ToHttpApiData FeeType where
 $(mkBeamInstancesForEnum ''DriverFeeStatus)
 
 $(mkBeamInstancesForEnum ''FeeType)
+
+$(mkBeamInstancesForEnum ''AutopayPaymentStage)

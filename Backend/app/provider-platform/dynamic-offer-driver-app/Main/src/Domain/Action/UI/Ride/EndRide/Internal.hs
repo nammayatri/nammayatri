@@ -24,6 +24,8 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getRidesAndDistancefromZscore,
     makeCachedDailyDriverLeaderBoardKey,
     makeCachedWeeklyDriverLeaderBoardKey,
+    mkDriverFeeCalcJobFlagKey,
+    getDriverFeeCalcJobFlagKey,
   )
 where
 
@@ -305,35 +307,59 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
           then -- then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
+
+            if isNothing transporterConfig.driverFeeCalculationTime
+              then QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
+              else QDF.updateFee ldFee.id rideFare 0 0 0 0 now True
           else -- else Esq.runNoTransaction $ QDF.create driverFee
             QDF.create driverFee
       Nothing -> QDF.create driverFee
+    scheduleJobs transporterConfig driverFee merchantId maxShards now
 
-    isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
-    let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
-    case isPendingPaymentJobScheduled of
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Int -> UTCTime -> m ()
+scheduleJobs transporterConfig driverFee merchantId maxShards now = do
+  void $
+    case transporterConfig.driverFeeCalculationTime of
       Nothing -> do
-        createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
-          SendPaymentReminderToDriverJobData
-            { startTime = driverFee.startTime,
-              endTime = driverFee.endTime,
-              timeDiff = transporterConfig.timeDiffFromUtc
-            }
-        setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
-      _ -> pure ()
+        isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
+        let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
+        case isPendingPaymentJobScheduled of
+          Nothing -> do
+            createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
+              SendPaymentReminderToDriverJobData
+                { startTime = driverFee.startTime,
+                  endTime = driverFee.endTime,
+                  timeDiff = transporterConfig.timeDiffFromUtc,
+                  merchantId = merchantId
+                }
+            setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
+          _ -> pure ()
+      Just dfCalcTime -> do
+        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId
+        let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
+        case isDfCaclculationJobScheduled of
+          Nothing -> do
+            createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
+              CalculateDriverFeesJobData
+                { merchantId = merchantId,
+                  startTime = driverFee.startTime,
+                  endTime = driverFee.endTime
+                }
+            setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
+          _ -> pure ()
 
-    let overduePaymentJobTs = diffUTCTime driverFee.payBy now
-    isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
-    case isOverduePaymentJobScheduled of
-      Nothing -> do
-        createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
-          UnsubscribeDriverForPaymentOverdueJobData
-            { startTime = driverFee.startTime,
-              timeDiff = transporterConfig.timeDiffFromUtc
-            }
-        setOverduePaymentCache driverFee.endTime overduePaymentJobTs
-      _ -> pure ()
+  let overduePaymentJobTs = diffUTCTime driverFee.payBy now
+  isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
+  case isOverduePaymentJobScheduled of
+    Nothing -> do
+      createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
+        UnsubscribeDriverForPaymentOverdueJobData
+          { startTime = driverFee.startTime,
+            timeDiff = transporterConfig.timeDiffFromUtc,
+            merchantId = merchantId
+          }
+      setOverduePaymentCache driverFee.endTime overduePaymentJobTs
+    _ -> pure ()
 
 mkDriverFee ::
   ( MonadFlow m
@@ -353,17 +379,25 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
+      payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
+      platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
+      govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
   return $
     DF.DriverFee
-      { payBy = addUTCTime transporterConfig.driverPaymentCycleBuffer endTime,
-        status = DF.ONGOING,
+      { status = DF.ONGOING,
         collectedBy = Nothing,
         numRides = 1,
         createdAt = now,
         updatedAt = now,
-        platformFee = DF.PlatformFee platformFee cgst sgst,
+        platformFee = platformFee_,
         totalEarnings = fromMaybe 0 rideFare,
-        feeType = DF.RECURRING_INVOICE,
+        feeType = DF.RECURRING_INVOICE, -- CHECK THIS
+        govtCharges = govtCharges_,
+        offerId = Nothing,
+        planOfferTitle = Nothing,
+        autopayPaymentStage = Nothing,
+        stageUpdatedAt = Nothing,
+        billNumber = Nothing,
         ..
       }
 
@@ -384,3 +418,20 @@ getOverduePaymentCache endTime = Hedis.get (mkOverduePaymentProcessingKey endTim
 
 setOverduePaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
 setOverduePaymentCache endTime expTime = Hedis.setExp (mkOverduePaymentProcessingKey endTime) False (round expTime)
+
+getDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> m (Maybe Bool)
+getDriverFeeCalcJobCache startTime endTime merchantId = Hedis.get (mkDriverFeeCalcJobCacheKey startTime endTime merchantId)
+
+mkDriverFeeCalcJobCacheKey :: UTCTime -> UTCTime -> Id Merchant -> Text
+mkDriverFeeCalcJobCacheKey startTime endTime merchantId = "DriverFeeCalculation:MerchantId:" <> merchantId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+
+mkDriverFeeCalcJobFlagKey :: UTCTime -> UTCTime -> Id Merchant -> Text
+mkDriverFeeCalcJobFlagKey startTime endTime merchantId = "DriverFeeCalculationFlag:MerchantId:" <> merchantId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+
+getDriverFeeCalcJobFlagKey :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> m (Maybe Bool)
+getDriverFeeCalcJobFlagKey startTime endTime merchantId = Hedis.get (mkDriverFeeCalcJobFlagKey startTime endTime merchantId)
+
+setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> NominalDiffTime -> m ()
+setDriverFeeCalcJobCache startTime endTime merchantId expTime = do
+  Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantId) True (round $ expTime + 86399)
+  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantId) False (round expTime)

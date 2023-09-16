@@ -17,6 +17,7 @@ module Storage.Queries.DriverFee where
 
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -28,6 +29,9 @@ import qualified Storage.Beam.DriverFee as BeamDF
 
 create :: MonadFlow m => DriverFee -> m ()
 create = createWithKV
+
+createMany :: MonadFlow m => [DriverFee] -> m ()
+createMany = traverse_ create
 
 findById :: MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
@@ -87,15 +91,31 @@ findOldestFeeByStatus (Id driverId) status =
     Nothing
     <&> listToMaybe
 
-findFeesInRangeWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
-findFeesInRangeWithStatus startTime endTime status =
-  findAllWithKV
+findFeesInRangeWithStatus :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> DriverFeeStatus -> Maybe Int -> m [DriverFee]
+findFeesInRangeWithStatus merchantId startTime endTime status mbLimit =
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
           Se.Is BeamDF.status $ Se.Eq status,
           Se.Or [Se.Is BeamDF.status (Se.Eq ONGOING), Se.Is BeamDF.payBy (Se.LessThanOrEq endTime)],
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.endTime)
+    mbLimit
+    Nothing
+
+findFeesInRangeAndDriverIdsWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> [Id Person] -> m [DriverFee]
+findFeesInRangeAndDriverIdsWithStatus startTime endTime status driverIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
         ]
     ]
 
@@ -125,6 +145,98 @@ findOngoingAfterEndTime (Id driverId) now =
         ]
     ]
 
+-- findDriverFeeInRangeWithNotifcationNotSentAndStatus :: MonadFlow m => Integer -> UTCTime -> UTCTime -> Domain.DriverFeeStatus -> m [DriverFee]
+-- findDriverFeeInRangeWithNotifcationNotSentAndStatus limit startTime endTime status = do
+--   dbConf <- getMasterBeamConfig
+--   res <- L.runDB dbConf $
+--     L.findRows $
+--       B.select $
+--         B.limit_ limit $
+--           B.filter_
+--             ( \(driverFee, notification) ->
+--                 notification.driverFeeId B./=. driverFee.id
+--                   B.&&. driverFee.createdAt B.>=. B.val_ startTime
+--                   B.&&. driverFee.createdAt B.<=. B.val_ endTime
+--                   B.&&. driverFee.status B.==. B.val_ status
+--             )
+--             do
+--               driverFee <- B.all_ (SBC.driverFee SBC.atlasDB)
+--               notifications <- B.join_' (SBC.notification SBC.atlasDB) (\notification'' -> BeamN.driverFeeId notification'' B.==?. BeamDF.id driverFee)
+--               pure (driverFee, notifications)
+--   case res of
+--     Right res' -> do
+--       let driverFee' = fst <$> res'
+--       catMaybes <$> mapM fromTType' driverFee'
+--     Left _ -> pure []
+
+findDriverFeeInRangeWithNotifcationNotSentAndStatus :: MonadFlow m => Id Merchant -> Int -> UTCTime -> UTCTime -> Domain.DriverFeeStatus -> m [DriverFee]
+findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime status = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.createdAt)
+    (Just limit)
+    Nothing
+
+-- findDriverFeeInRangeWithOrderNotExecutedAndPending :: MonadFlow m => Integer -> UTCTime -> UTCTime -> m [DriverFee]
+-- findDriverFeeInRangeWithOrderNotExecutedAndPending limit startTime endTime = do
+--   dbConf <- getMasterBeamConfig
+--   res <- L.runDB dbConf $
+--     L.findRows $
+--       B.select $
+--         B.limit_ limit $
+--           B.filter_
+--             ( \(driverFee, invoice) ->
+--                 invoice.driverFeeId B./=. driverFee.id
+--                   B.&&. driverFee.createdAt B.>=. B.val_ startTime
+--                   B.&&. driverFee.createdAt B.<=. B.val_ endTime
+--                   B.&&. driverFee.status B.==. B.val_ Domain.PAYMENT_PENDING
+--             )
+--             do
+--               driverFee <- B.all_ (SBC.driverFee SBC.atlasDB)
+--               invoices <- B.join_' (SBC.invoice SBC.atlasDB) (\invoice'' -> BeamIN.driverFeeId invoice'' B.==?. BeamDF.id driverFee) --- add the payment mode here after merging branch txn flow capture ---
+--               pure (driverFee, invoices)
+--   case res of
+--     Right res' -> do
+--       let driverFee' = fst <$> res'
+--       catMaybes <$> mapM fromTType' driverFee'
+--     Left _ -> pure []
+
+findDriverFeeInRangeWithOrderNotExecutedAndPending :: MonadFlow m => Id Merchant -> Int -> UTCTime -> UTCTime -> m [DriverFee]
+findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.createdAt)
+    (Just limit)
+    Nothing
+
+findMaxBillNumberInRange :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
+findMaxBillNumberInRange merchantId startTime endTime =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.billNumber)
+    (Just 1)
+    Nothing
+
 findUnpaidAfterPayBy :: MonadFlow m => Id Person -> UTCTime -> m (Maybe DriverFee)
 findUnpaidAfterPayBy (Id driverId) now =
   findOneWithKV
@@ -136,8 +248,8 @@ findUnpaidAfterPayBy (Id driverId) now =
         ]
     ]
 
-updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
+updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> m ()
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -146,7 +258,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       let cgst' = df.platformFee.cgst
       let sgst' = df.platformFee.sgst
       let totalEarnings = df.totalEarnings
-      let numRides = df.numRides
+      let numRides = df.numRides + if isRideEnd then 1 else 0
       let fare = fromMaybe 0 mbFare
       updateOneWithKV
         [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
@@ -155,11 +267,30 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
           Se.Set BeamDF.sgst $ sgst' + sgst,
           Se.Set BeamDF.status ONGOING,
           Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
-          Se.Set BeamDF.numRides $ numRides + 1, -- in the api, num_rides needed without cost contribution?
+          Se.Set BeamDF.numRides numRides,
           Se.Set BeamDF.updatedAt now
         ]
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
+
+updateOfferId :: MonadFlow m => Maybe Text -> Id DriverFee -> UTCTime -> m ()
+updateOfferId offerId driverFeeId now = do
+  updateOneWithKV
+    [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+updateOfferAndPlanDetails :: MonadFlow m => Maybe Text -> Maybe Text -> Id DriverFee -> UTCTime -> m ()
+updateOfferAndPlanDetails offerId planAndOfferTitle driverFeeId now = do
+  updateOneWithKV
+    [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.planOfferTitle planAndOfferTitle, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+updateAutopayPayementStageById :: MonadFlow m => Maybe Domain.AutopayPaymentStage -> Id DriverFee -> m ()
+updateAutopayPayementStageById autopayPaymentStage driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 updateStatusByIds :: MonadFlow m => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now =
@@ -167,8 +298,28 @@ updateStatusByIds status driverFeeIds now =
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
+updateFeeTypeByIds :: MonadFlow m => FeeType -> [Id DriverFee] -> UTCTime -> m ()
+updateFeeTypeByIds feeType driverFeeIds now =
+  updateWithKV
+    [ Se.Set BeamDF.feeType feeType,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+
+updateBillNumberById :: MonadFlow m => Maybe Int -> Id DriverFee -> m ()
+updateBillNumberById billNumber driverFeeId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.billNumber billNumber,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id $ Se.Eq (driverFeeId.getId)]
+
+findAllByStatusAndDriverId :: MonadFlow m => Id Person -> [Domain.DriverFeeStatus] -> m [DriverFee]
+findAllByStatusAndDriverId (Id driverId) driverFeeStatus = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE], Se.Is BeamDF.status $ Se.In driverFeeStatus, Se.Is BeamDF.driverId $ Se.Eq driverId]]
+
 findAllPendingAndDueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
-findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING], Se.Is BeamDF.driverId $ Se.Eq driverId]]
+findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE], Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 findAllPendingRegistrationDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
@@ -187,14 +338,14 @@ findLatestByFeeTypeAndStatus feeType status driverId = do
     Nothing
     <&> listToMaybe
 
-updateStatus :: MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
-updateStatus status (Id driverFeeId) now = do
+updateStatus :: MonadFlow m => DriverFeeStatus -> UTCTime -> Id DriverFee -> m ()
+updateStatus status now (Id driverFeeId) = do
   updateOneWithKV
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
-updateFeeType :: MonadFlow m => FeeType -> Id DriverFee -> UTCTime -> m ()
-updateFeeType feeType (Id driverFeeId) now = do
+updateFeeType :: MonadFlow m => FeeType -> UTCTime -> Id DriverFee -> m ()
+updateFeeType feeType now (Id driverFeeId) = do
   updateOneWithKV
     [Se.Set BeamDF.feeType feeType, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
@@ -230,8 +381,13 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             status = status,
             feeType = feeType,
             collectedBy = collectedBy,
+            offerId = offerId,
+            planOfferTitle,
+            autopayPaymentStage,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            billNumber,
+            stageUpdatedAt
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -252,6 +408,11 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.status = status,
         BeamDF.feeType = feeType,
         BeamDF.collectedBy = collectedBy,
+        BeamDF.offerId = offerId,
+        BeamDF.planOfferTitle = planOfferTitle,
+        BeamDF.billNumber = billNumber,
+        BeamDF.autopayPaymentStage = autopayPaymentStage,
+        BeamDF.stageUpdatedAt = stageUpdatedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

@@ -43,6 +43,17 @@ create = createWithKV
 findById :: MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
+findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> Bool -> m [DriverInformation]
+findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds subscribed = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId),
+          Se.Is BeamDI.autoPayStatus $ Se.Eq autoPayStatus,
+          Se.Is BeamDI.subscribed $ Se.Eq subscribed,
+          Se.Is BeamDI.driverId $ Se.In (getId <$> driverIds)
+        ]
+    ]
+
 fetchAllByIds :: MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
   dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
@@ -279,13 +290,15 @@ updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchbac
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateAutoPayStatus :: MonadFlow m => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()
-updateAutoPayStatus autoPayStatus (Id driverId) = do
+updateAutoPayStatusAndPayerVpa :: MonadFlow m => Maybe DriverAutoPayStatus -> Maybe Text -> Id Person.Driver -> m ()
+updateAutoPayStatusAndPayerVpa autoPayStatus payerVpa (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamDI.autoPayStatus autoPayStatus,
-      Se.Set BeamDI.updatedAt now
-    ]
+    ( [ Se.Set BeamDI.autoPayStatus autoPayStatus,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> [Se.Set BeamDI.payerVpa payerVpa | isJust payerVpa]
+    )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 updateSubscription :: MonadFlow m => Bool -> Id Person.Driver -> m ()

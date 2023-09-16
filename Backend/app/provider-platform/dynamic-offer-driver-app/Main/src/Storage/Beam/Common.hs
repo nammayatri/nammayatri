@@ -20,6 +20,7 @@ import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
+import Storage.Beam.DriverFee
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
@@ -30,9 +31,11 @@ import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
+import Storage.Beam.Invoice
 import Storage.Beam.Message.Message
 import Storage.Beam.Message.MessageReport
 import Storage.Beam.Message.MessageTranslation
+import Storage.Beam.Notification
 import Storage.Beam.Person
 import Storage.Beam.QuoteSpecialZone
 import Storage.Beam.Rating (RatingT, ratingTable)
@@ -65,6 +68,9 @@ atlasDB =
         quoteSpecialZone = quoteSpecialZoneTable,
         messageReport = messageReportTable,
         bookingCancellationReason = bookingCancellationReasonTable,
+        driverFee = driverFeeTable,
+        notification = notificationTable,
+        invoice = invoiceTable,
         rating = ratingTable,
         message = messageTable,
         messageTranslation = messageTranslationTable,
@@ -95,6 +101,9 @@ data AtlasDB f = AtlasDB
     rating :: f (B.TableEntity RatingT),
     message :: f (B.TableEntity MessageT),
     messageTranslation :: f (B.TableEntity MessageTranslationT),
-    driverGoHomeRequest :: f (B.TableEntity DriverGoHomeRequestT)
+    driverGoHomeRequest :: f (B.TableEntity DriverGoHomeRequestT),
+    driverFee :: f (B.TableEntity DriverFeeT),
+    notification :: f (B.TableEntity NotificationT),
+    invoice :: f (B.TableEntity InvoiceT)
   }
   deriving (Generic, B.Database be)

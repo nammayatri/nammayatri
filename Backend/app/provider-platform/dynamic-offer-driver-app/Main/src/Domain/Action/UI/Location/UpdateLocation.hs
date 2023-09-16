@@ -57,6 +57,7 @@ import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
+import Storage.Queries.DriverInformation
 import qualified Storage.Queries.DriverInformation as DInfo
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -147,15 +148,15 @@ handleDriverPayments driverId diffUtc = do
     case (ongoingAfterEndTime, overdueFee) of
       (Nothing, _) -> pure ()
       (Just df, Nothing) -> do
-        updateStatus PAYMENT_PENDING df.id now
-        DInfo.updatePendingPayment True (cast driverId)
+        _ <- updateStatus PAYMENT_PENDING now df.id
+        updatePendingPayment True (cast driverId)
       (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
 
     unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
     case unpaidAfterdeadline of
       Nothing -> pure ()
       Just df -> do
-        updateStatus PAYMENT_OVERDUE df.id now
+        _ <- updateStatus PAYMENT_OVERDUE now df.id
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
         DInfo.updateSubscription False (cast driverId)
 
@@ -175,7 +176,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    when (thresholdConfig.subscription) $ do
+    when (thresholdConfig.subscription && isJust thresholdConfig.driverFeeCalculationTime) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
       handleDriverPayments driverId thresholdConfig.timeDiffFromUtc

@@ -45,6 +45,11 @@ data DriverFeeT f = DriverFeeT
     status :: B.C f Domain.DriverFeeStatus,
     collectedBy :: B.C f (Maybe Text),
     feeType :: B.C f Domain.FeeType,
+    offerId :: B.C f (Maybe Text),
+    planOfferTitle :: B.C f (Maybe Text),
+    stageUpdatedAt :: B.C f (Maybe UTCTime),
+    billNumber :: B.C f (Maybe Int),
+    autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
