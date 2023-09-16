@@ -320,8 +320,8 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  logInfo $ "Webhook response dump: " <> respDump
-  logInfo $ "Webhook response: " <> show resp
+  logError $ "Webhook response dump: " <> respDump
+  logError $ "Webhook response: " <> show resp
   case resp of
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)

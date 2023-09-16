@@ -120,6 +120,7 @@ juspayWebhookHandler ::
 juspayWebhookHandler merchantShortId authData value = do
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
+  logError $ "Webhook response: " <> (encodeToText resp)
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
