@@ -139,6 +139,13 @@ generateQR qrString viewId size margin = makeAff $
     (_generateQRCode qrString viewId size margin (Right >>> cb))
     *> pure nonCanceler
 
+generateQRCode :: String -> String -> Int -> Int -> Effect (Fiber String)
+generateQRCode qrString viewId size margin = do
+  launchAff $ makeAff $
+    \cb ->
+      (_generateQRCode qrString viewId size margin (Right >>> cb))
+      *> pure nonCanceler
+
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
 

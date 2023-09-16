@@ -342,6 +342,7 @@
       "ny_ic_settings" : true,
       "ny_ic_settings_filled_blue" : true,
       "ny_ic_settings_unfilled" : true,
+      "ny_ic_share" : true,
       "ny_ic_shimmer_img" : true,
       "ny_ic_side_cab_active" : true,
       "ny_ic_side_cab_inactive" : true,

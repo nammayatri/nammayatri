@@ -166,6 +166,45 @@ updateButtonConfig state = let
       }
   in primaryButtonConfig'
 
+downloadQRConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+downloadQRConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = "Download QR"
+      , color = Color.primaryButtonColor}
+      , margin = MarginHorizontal 10 10
+      , cornerRadius = 10.0
+      , background = Color.black900
+      , height = (V 48)
+      , isClickable = state.props.btnActive
+      , id = "DriverProfileScreenUpdatePrimaryButton"
+      }
+  in primaryButtonConfig'
+
+
+shareOptionButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+shareOptionButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = "Share Options"
+      , color = Color.black900}
+      , isPrefixImage = true
+      , prefixImageConfig {
+          imageUrl = "ny_ic_share,https://assets.juspay.in/nammayatri/images/driver/ny_ic_qr_code.png"
+        , margin = MarginRight 8
+        , padding = PaddingTop 4
+      }
+      , margin = MarginHorizontal 10 10
+      , cornerRadius = 10.0
+      , background = Color.white900
+      , height = (V 48)
+      , isClickable = state.props.btnActive
+      , id = "DriverProfileScreenUpdatePrimaryButton"
+      }
+  in primaryButtonConfig'
+
 
 alternatePrimaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
 alternatePrimaryEditTextConfig state = let

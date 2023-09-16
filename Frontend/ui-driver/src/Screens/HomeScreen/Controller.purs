@@ -705,7 +705,7 @@ eval (PaymentStatusAction status) state =
   
 eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
   continueWithCmd state [ do
-                    _ <- launchAff_ do void $ generateQR "nammayatri.in" id 200 0
+                    _ <- launchAff_ do void $ generateQR "upi://pay?pa=9876543210@ybl" id 200 0
                     pure $ NoAction
                 ]
 

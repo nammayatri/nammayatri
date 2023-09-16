@@ -111,7 +111,8 @@ initData = {
     callDriver : false,
     openRcView : false,
     detailsUpdationType : Nothing,
-    btnActive : false
+    btnActive : false,
+    upiQrView : false
    }
 }
 

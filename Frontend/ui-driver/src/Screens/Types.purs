@@ -353,7 +353,8 @@ type DriverProfileScreenProps = {
   callDriver :: Boolean,
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean
+  btnActive :: Boolean,
+  upiQrView :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -364,7 +365,7 @@ instance showDriverProfileScreenType :: Show DriverProfileScreenType where show 
 instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
 
 
-data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
+data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME | PAYMENT
 
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow

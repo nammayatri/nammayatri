@@ -36,7 +36,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings)
+import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings, generateQR)
 import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types as STR
@@ -58,6 +58,7 @@ import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Effect.Aff (launchAff_)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -229,6 +230,8 @@ data Action = BackPressed
             | SkipActiveRc
             | RemoveEditRC
             | DirectActivateRc EditRc
+            | UpiQrRendered String
+            | DismissQrPopup
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -279,6 +282,7 @@ eval (UpdateValue value) state = do
     LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}, data {languageList = updateLanguageList state state.data.languagesSpoken}}
     VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
     VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
+    PAYMENT -> continue state{props {upiQrView = true }}
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -296,6 +300,13 @@ eval (OptionClick optionIndex) state = do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+
+eval (UpiQrRendered id) state = do
+  continueWithCmd state [ do
+                    _ <- launchAff_ do void $ generateQR "upi://pay?pa=9876543210@ybl" id 200 0
+                    pure $ NoAction
+                ]
+eval (DismissQrPopup) state = continue state {props { upiQrView = false}}
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
