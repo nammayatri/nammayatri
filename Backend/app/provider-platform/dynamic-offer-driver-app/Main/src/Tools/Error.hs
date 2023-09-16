@@ -171,6 +171,7 @@ instanceExceptionWithParent 'BaseException ''ShardMappingError
 data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
+  | NoPlanSelected Text
   | DriverAccountBlocked
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
@@ -183,6 +184,7 @@ instanceExceptionWithParent 'HTTPException ''DriverError
 instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
+  toMessage (NoPlanSelected personId) = Just $ "Driver with id = " <> personId <> " has not selected any plan"
   toMessage DriverAccountBlocked = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
@@ -193,6 +195,7 @@ instance IsHTTPError DriverError where
   toErrorCode = \case
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
+    NoPlanSelected _ -> "NO_PLAN_SELECTED"
     DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
@@ -201,6 +204,7 @@ instance IsHTTPError DriverError where
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E500
+    NoPlanSelected _ -> E500
     DriverAccountBlocked -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
@@ -678,7 +682,7 @@ data SubscriptionError
   | ActiveMandateDoNotExist Text
   | InActiveMandateDoNotExist Text
   | InvalidPaymentMode
-  | OngoingPaymentExecution
+  | OngoingManualPayment
   | NoCurrentPlanForDriver Text
   | NoDriverPlanForMandate Text
   | InvalidAutoPayStatus
@@ -697,7 +701,7 @@ instance IsBaseError SubscriptionError where
     NoDriverPlanForMandate mandateId -> Just $ "No plan exists for mandateId \"" <> show mandateId <> "\""
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
-    OngoingPaymentExecution -> Just "There is ongoing mandate execution pls wait"
+    OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -710,7 +714,7 @@ instance IsHTTPError SubscriptionError where
     NoDriverPlanForMandate _ -> "NO_DRIVER_PLAN_FOR_MANDATE"
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
-    OngoingPaymentExecution -> "ONGOING_PAYMENT_EXECUTION"
+    OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -721,6 +725,6 @@ instance IsHTTPError SubscriptionError where
     InvalidAutoPayStatus -> E400
     NoCurrentPlanForDriver _ -> E500
     NoDriverPlanForMandate _ -> E500
-    OngoingPaymentExecution -> E400
+    OngoingManualPayment -> E400
 
 instance IsAPIError SubscriptionError

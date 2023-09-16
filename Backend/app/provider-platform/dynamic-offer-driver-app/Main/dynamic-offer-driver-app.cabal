@@ -229,6 +229,7 @@ library
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
+      Domain.Types.Notification
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -256,6 +257,8 @@ library
       Lib.Utils
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+      SharedLogic.Allocator.Jobs.Mandate.Execution
+      SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -365,6 +368,7 @@ library
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.MetaData
+      Storage.Beam.Notification
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.Plan
@@ -488,6 +492,7 @@ library
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
+      Storage.Queries.Notification
       Storage.Queries.Person
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide

@@ -14,6 +14,7 @@
 
 module SharedLogic.DriverFee where
 
+import Data.List ((\\))
 import qualified Data.List as DL
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
@@ -26,29 +27,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
-
-mergeDriverFee :: (MonadFlow m, EsqDBFlow m r) => DDF.DriverFee -> DDF.DriverFee -> UTCTime -> m ()
-mergeDriverFee oldFee newFee now = do
-  id <- generateGUID
-  let driverId = newFee.driverId
-      merchantId = newFee.merchantId
-      govtCharges = newFee.govtCharges + oldFee.govtCharges
-      platformFee = DDF.PlatformFee (oldFee.platformFee.fee + newFee.platformFee.fee) (oldFee.platformFee.cgst + newFee.platformFee.cgst) (oldFee.platformFee.sgst + newFee.platformFee.sgst)
-      numRides = oldFee.numRides + newFee.numRides
-      payBy = newFee.endTime
-      totalEarnings = oldFee.totalEarnings + newFee.totalEarnings
-      startTime = oldFee.startTime
-      endTime = newFee.endTime
-      status = DDF.PAYMENT_OVERDUE
-      collectedBy = Nothing
-      createdAt = now
-      updatedAt = now
-      feeType = DDF.RECURRING_INVOICE
-  let newDriverFee = DDF.DriverFee {..}
-  -- runTransaction $ do
-  _ <- QDF.updateStatus DDF.INACTIVE oldFee.id now
-  _ <- QDF.updateStatus DDF.INACTIVE newFee.id now
-  void $ QDF.create newDriverFee
 
 data DriverFeeByInvoice = DriverFeeByInvoice
   { invoiceId :: Id INV.Invoice,
@@ -131,6 +109,7 @@ groupDriverFeeByInvoices driverFees_ = do
           bankErrorCode = Nothing,
           bankErrorMessage = Nothing,
           bankErrorUpdatedAt = Nothing,
+          driverId = driverFee.driverId,
           updatedAt = now,
           createdAt = now
         }
@@ -164,3 +143,9 @@ groupDriverFeeByInvoices driverFees_ = do
               Nothing -> maybe DDF.INACTIVE (.status) (listToMaybe invoiceDriverFees)
 
       return $ DriverFeeByInvoice {..}
+
+changeAutoPayFeesAndInvoicesForDriverFeesToManual :: MonadFlow m => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
+changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
+  let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
+  QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
+  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE driverFeeIdsToBeShiftedToManual

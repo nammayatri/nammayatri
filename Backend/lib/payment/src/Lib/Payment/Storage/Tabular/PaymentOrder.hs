@@ -49,9 +49,9 @@ mkPersist
       webPaymentLink Text Maybe
       iframePaymentLink Text Maybe
       mobilePaymentLink Text Maybe
-      clientAuthTokenEncrypted Text
-      clientAuthTokenHash DbHash
-      clientAuthTokenExpiry UTCTime
+      clientAuthTokenEncrypted Text Maybe
+      clientAuthTokenHash DbHash Maybe
+      clientAuthTokenExpiry UTCTime Maybe
       getUpiDeepLinksOption Bool Maybe
       environment Text Maybe
       createMandate Payment.MandateType Maybe
@@ -80,7 +80,9 @@ instance FromTType PaymentOrderT Domain.PaymentOrder where
           shortId = ShortId shortId,
           personId = Id personId,
           merchantId = Id merchantId,
-          clientAuthToken = EncryptedHashed (Encrypted clientAuthTokenEncrypted) clientAuthTokenHash,
+          clientAuthToken = case (clientAuthTokenEncrypted, clientAuthTokenHash) of
+            (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
+            (_, _) -> Nothing,
           ..
         }
 
@@ -101,7 +103,7 @@ instance ToTType PaymentOrderT Domain.PaymentOrder where
         webPaymentLink = showBaseUrl <$> paymentLinks.web,
         iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
         mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
-        clientAuthTokenEncrypted = clientAuthToken & unEncrypted . (.encrypted),
-        clientAuthTokenHash = clientAuthToken.hash,
+        clientAuthTokenEncrypted = clientAuthToken <&> unEncrypted . (.encrypted),
+        clientAuthTokenHash = clientAuthToken <&> (.hash),
         ..
       }

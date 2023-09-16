@@ -52,12 +52,12 @@ createOrder ::
     MonadFlow m
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
-  [DriverFee] ->
+  ([DriverFee], [DriverFee]) ->
   Maybe MandateOrder ->
   INV.InvoicePaymentMode ->
   Maybe (Id INV.Invoice, Text) ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId) driverFees mbMandateOrder invoicePaymentMode existingInvoice = do
+createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -95,7 +95,7 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder invoicePaymentMode 
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId) driverFees mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
+      createOrder (driverId, merchantId) (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
@@ -104,6 +104,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
       invoiceStatus = INV.ACTIVE_INVOICE,
+      driverId = driverFee.driverId,
       maxMandateAmount,
       paymentMode,
       bankErrorCode = Nothing,
