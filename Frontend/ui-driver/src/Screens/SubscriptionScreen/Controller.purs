@@ -14,6 +14,7 @@ import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.Number (fromString) as Number
+import Data.Number.Format (fixed, toStringWith)
 import Data.String (toLower)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC)
@@ -312,7 +313,7 @@ getPlanPrice fares priceType = do
   case price DA.!! 0 of
     Mb.Just (PaymentBreakUp element) -> case (DI.fromNumber element.amount) of
                         Mb.Just value -> show value
-                        Mb.Nothing -> show element.amount
+                        Mb.Nothing ->  toStringWith (fixed 2) element.amount
     Mb.Nothing -> ""
 
 getAllFareFromArray :: Array PaymentBreakUp -> Array String -> Number
