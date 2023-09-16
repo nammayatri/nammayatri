@@ -164,7 +164,16 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     driverPaymentCycleDuration :: Maybe (MandatoryValue NominalDiffTime),
     driverPaymentCycleStartTime :: Maybe (MandatoryValue NominalDiffTime),
     driverPaymentReminderInterval :: Maybe (MandatoryValue NominalDiffTime),
-    timeDiffFromUtc :: Maybe (MandatoryValue Seconds)
+    timeDiffFromUtc :: Maybe (MandatoryValue Seconds),
+    driverAutoPayNotificationTime :: Maybe (MandatoryValue NominalDiffTime),
+    driverAutoPayExecutionTime :: Maybe (MandatoryValue NominalDiffTime),
+    driverFeeMandateNotificationBatchSize :: Maybe (MandatoryValue Int),
+    driverFeeMandateExecutionBatchSize :: Maybe (MandatoryValue Int),
+    mandateNotificationRescheduleInterval :: Maybe (MandatoryValue NominalDiffTime),
+    mandateExecutionRescheduleInterval :: Maybe (MandatoryValue NominalDiffTime),
+    driverFeeCalculationTime :: Maybe (OptionalValue NominalDiffTime),
+    driverFeeCalculatorBatchSize :: Maybe (OptionalValue Int),
+    driverFeeCalculatorBatchGap :: Maybe (OptionalValue NominalDiffTime)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

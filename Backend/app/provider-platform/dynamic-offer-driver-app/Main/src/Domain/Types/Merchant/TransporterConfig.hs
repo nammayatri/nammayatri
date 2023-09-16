@@ -60,6 +60,13 @@ data TransporterConfigD u = TransporterConfig
     driverAutoPayNotificationTime :: NominalDiffTime,
     driverAutoPayExecutionTime :: NominalDiffTime,
     bankErrorExpiry :: NominalDiffTime,
+    driverFeeMandateNotificationBatchSize :: Int,
+    driverFeeMandateExecutionBatchSize :: Int,
+    mandateNotificationRescheduleInterval :: NominalDiffTime,
+    mandateExecutionRescheduleInterval :: NominalDiffTime,
+    driverFeeCalculationTime :: Maybe NominalDiffTime,
+    driverFeeCalculatorBatchSize :: Maybe Int,
+    driverFeeCalculatorBatchGap :: Maybe NominalDiffTime,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,
@@ -77,7 +84,9 @@ data TransporterConfigD u = TransporterConfig
     automaticRCActivationCutOff :: Seconds,
     isAvoidToll :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
-    specialZoneBookingOtpExpiry :: Int
+    specialZoneBookingOtpExpiry :: Int,
+    isPlanMandatory :: Bool,
+    freeTrialDays :: Int
   }
   deriving (Generic, Show)
 

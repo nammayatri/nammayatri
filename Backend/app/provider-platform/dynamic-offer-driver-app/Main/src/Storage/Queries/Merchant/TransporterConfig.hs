@@ -75,6 +75,15 @@ update config = do
       Se.Set BeamTC.driverPaymentCycleBuffer (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
       Se.Set BeamTC.driverPaymentReminderInterval (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
       Se.Set BeamTC.driverPaymentCycleDuration (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
+      Se.Set BeamTC.driverAutoPayNotificationTime (nominalDiffTimeToSeconds config.driverAutoPayNotificationTime),
+      Se.Set BeamTC.driverAutoPayExecutionTime (nominalDiffTimeToSeconds config.driverAutoPayExecutionTime),
+      Se.Set BeamTC.driverFeeMandateNotificationBatchSize config.driverFeeMandateNotificationBatchSize,
+      Se.Set BeamTC.driverFeeMandateExecutionBatchSize config.driverFeeMandateExecutionBatchSize,
+      Se.Set BeamTC.mandateNotificationRescheduleInterval (nominalDiffTimeToSeconds config.mandateNotificationRescheduleInterval),
+      Se.Set BeamTC.mandateExecutionRescheduleInterval (nominalDiffTimeToSeconds config.mandateExecutionRescheduleInterval),
+      Se.Set BeamTC.driverFeeCalculationTime (nominalDiffTimeToSeconds <$> config.driverFeeCalculationTime),
+      Se.Set BeamTC.driverFeeCalculatorBatchSize config.driverFeeCalculatorBatchSize,
+      Se.Set BeamTC.driverFeeCalculatorBatchGap (nominalDiffTimeToSeconds <$> config.driverFeeCalculatorBatchGap),
       Se.Set BeamTC.updatedAt now
     ]
     [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
@@ -99,7 +108,11 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
             aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
+            mandateNotificationRescheduleInterval = secondsToNominalDiffTime mandateNotificationRescheduleInterval,
+            mandateExecutionRescheduleInterval = secondsToNominalDiffTime mandateExecutionRescheduleInterval,
             bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
+            driverFeeCalculationTime = secondsToNominalDiffTime <$> driverFeeCalculationTime,
+            driverFeeCalculatorBatchGap = secondsToNominalDiffTime <$> driverFeeCalculatorBatchGap,
             ..
           }
     where
@@ -141,7 +154,14 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverPaymentReminderInterval = nominalDiffTimeToSeconds driverPaymentReminderInterval,
         BeamTC.driverAutoPayNotificationTime = nominalDiffTimeToSeconds driverAutoPayNotificationTime,
         BeamTC.driverAutoPayExecutionTime = nominalDiffTimeToSeconds driverAutoPayExecutionTime,
+        BeamTC.mandateNotificationRescheduleInterval = nominalDiffTimeToSeconds mandateNotificationRescheduleInterval,
+        BeamTC.mandateExecutionRescheduleInterval = nominalDiffTimeToSeconds mandateExecutionRescheduleInterval,
+        BeamTC.driverFeeMandateNotificationBatchSize = driverFeeMandateNotificationBatchSize,
+        BeamTC.driverFeeMandateExecutionBatchSize = driverFeeMandateExecutionBatchSize,
         BeamTC.timeDiffFromUtc = timeDiffFromUtc,
+        BeamTC.driverFeeCalculationTime = nominalDiffTimeToSeconds <$> driverFeeCalculationTime,
+        BeamTC.driverFeeCalculatorBatchSize = driverFeeCalculatorBatchSize,
+        BeamTC.driverFeeCalculatorBatchGap = nominalDiffTimeToSeconds <$> driverFeeCalculatorBatchGap,
         BeamTC.subscription = subscription,
         BeamTC.minLocationAccuracy = minLocationAccuracy,
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
@@ -155,6 +175,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
         BeamTC.routeDeviationThreshold = routeDeviationThreshold,
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
+        BeamTC.isPlanMandatory = isPlanMandatory,
+        BeamTC.freeTrialDays = freeTrialDays,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,

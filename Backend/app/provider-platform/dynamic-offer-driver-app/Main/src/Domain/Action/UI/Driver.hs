@@ -37,8 +37,10 @@ module Domain.Action.UI.Driver
     DriverPhotoUploadReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
-    DriverDuesResp (..),
     MetaDataReq (..),
+    HistoryEntityV2 (..),
+    HistoryEntryDetailsEntityV2 (..),
+    ClearDuesRes (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -63,15 +65,21 @@ module Domain.Action.UI.Driver
     resendOtp,
     remove,
     getDriverPayments,
-    getDriverDues,
+    clearDriverDues,
     DriverInfo.DriverMode,
     updateMetaData,
+    getDriverPaymentsHistoryV2,
+    getHistoryEntryDetailsEntityV2,
+    calcExecutionTime,
   )
 where
 
 import AWS.S3 as S3
+import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
+import Data.List (groupBy, intersect, (\\))
+import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
@@ -118,6 +126,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Payment.Interface
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
@@ -140,6 +149,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.SessionizerMetrics.Types.Event
@@ -147,30 +157,31 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverMode as DMode
+import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDriverLocation
-import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
@@ -216,6 +227,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
+    payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
@@ -223,7 +235,8 @@ data DriverInformationRes = DriverInformationRes
     mediaUrl :: Maybe Text,
     aadhaarCardPhoto :: Maybe Text,
     isGoHomeEnabled :: Bool,
-    driverGoHomeInfo :: DDGR.CachedGoHomeRequest
+    driverGoHomeInfo :: DDGR.CachedGoHomeRequest,
+    freeTrialDaysLeft :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -252,13 +265,15 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
     mediaUrl :: Maybe Text,
-    aadhaarCardPhoto :: Maybe Text
+    aadhaarCardPhoto :: Maybe Text,
+    freeTrialDaysLeft :: Int
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -436,6 +451,39 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data DriverFeeInfo = DriverFeeInfo
+  { date :: Day, -- window start day
+    driverFeeId :: Id DDF.DriverFee,
+    autoPayStage :: DDF.AutopayPaymentStage,
+    id :: Maybe (Id INV.Invoice),
+    billNumber :: Maybe Integer,
+    status :: DDF.DriverFeeStatus,
+    paymentAmount :: HighPrecMoney,
+    planOfferDetails :: Text,
+    totalRides :: Int,
+    totalEarnings :: HighPrecMoney,
+    charges :: Money,
+    invoiceDetails :: Maybe InvoiceInfo
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- DriverFee   InvoiceId     DriverFeeId
+--   1             1             1     !INACTIVE
+--   2             1             2     !INACTIVE
+--   3             2             3     !INACTIVE
+--   4             3             4     !INACTIVE
+--   5             4             5     INACTIVE
+--                 5             5     !INACTIVE
+
+data InvoiceInfo = InvoiceInfo
+  { id :: Id INV.Invoice,
+    paymentMode :: INV.InvoiceStatus,
+    debitedOn :: UTCTime,
+    invoiceAmount :: HighPrecMoney,
+    numberOfDays :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data DriverPaymentBreakup = DriverPaymentBreakup
   { component :: Text,
     amount :: HighPrecMoney
@@ -469,6 +517,12 @@ data MetaDataReq = MetaDataReq
     appPermissions :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ClearDuesRes = ClearDuesRes
+  { orderId :: Id DOrder.PaymentOrder,
+    orderResp :: Payment.CreateOrderResp
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createDriver ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
@@ -562,14 +616,16 @@ createDriverDetails personId adminId merchantId = do
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             mode = Just DriverInfo.OFFLINE,
-            lastEnabledOn = Just now,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
-            createdAt = now,
-            updatedAt = now,
             autoPayStatus = Nothing,
             compAadhaarImagePath = Nothing,
-            availableUpiApps = Nothing
+            availableUpiApps = Nothing,
+            payerVpa = Nothing,
+            lastEnabledOn = Just now,
+            enabledAt = Just now,
+            createdAt = now,
+            updatedAt = now
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -602,13 +658,16 @@ getInformation (personId, merchantId) = do
   makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
-setActivity (personId, _) isActive mode = do
+setActivity (personId, merchantId) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     mbVehicle <- QV.findById personId
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
+    when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0) $ throwError (NoPlanSelected personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -736,6 +795,7 @@ listDriver admin mbSearchString mbLimit mbOffset = do
 
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
+  transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
@@ -743,6 +803,7 @@ buildDriverEntityRes (person, driverInfo) = do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
   aadhaarCardPhoto <- fetchAndCacheAadhaarImage person driverInfo
+  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   return $
     DriverEntityRes
       { id = person.id,
@@ -766,12 +827,14 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         mode = driverInfo.mode,
+        payerVpa = driverInfo.payerVpa,
         autoPayStatus = driverInfo.autoPayStatus,
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,
         gender = Just person.gender,
         mediaUrl = mediaUrl,
-        aadhaarCardPhoto = aadhaarCardPhoto
+        aadhaarCardPhoto = aadhaarCardPhoto,
+        freeTrialDaysLeft = freeTrialDaysLeft
       }
 
 changeDriverEnableState ::
@@ -1556,44 +1619,175 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
           }
       ]
 
-data DriverDuesResp = DriverDuesResp
-  { dues :: [DriverDuesEntity],
-    totalDue :: HighPrecMoney,
-    overdueThreshold :: HighPrecMoney
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data DriverDuesEntity = DriverDuesEntity
-  { date :: UTCTime,
-    amount :: Money,
-    earnings :: Money,
-    offers :: [OfferEntity]
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data OfferEntity = OfferEntity
-  { title :: Maybe Text,
-    description :: Maybe Text,
-    tnc :: Maybe Text
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
-getDriverDues (personId, _merchantId) = do
-  driverPlan <- runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
-  plan <- QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
-  dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId personId
-  return $
-    DriverDuesResp
-      { dues = buildDriverDuesEntity <$> dueInvoices,
-        totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
-        overdueThreshold = plan.maxCreditLimit
-      }
+clearDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m ClearDuesRes
+clearDriverDues (personId, _merchantId) = do
+  dueDriverFees <- QDF.findAllByStatusAndDriverId personId [DDF.PAYMENT_OVERDUE]
+  invoices <- groupInvoices <$> QINV.findAllByDriverFeeIdAndStatus (map DDF.id dueDriverFees) INV.ACTIVE_INVOICE [INV.MANUAL_INVOICE]
+  let (invoice, currentDuesForExistingInvoice, newDues) = validateExistingInvoice (listToMaybe invoices) dueDriverFees
+  if null invoices || (length invoices == 1 && isJust invoice)
+    then do
+      let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
+      let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
+      when (isJust invoice) $ QDF.updateFeeTypeByIds DDF.RECURRING_INVOICE (dueDriverFees <&> (.id)) =<< getCurrentTime
+      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice
+    else throwError OngoingManualPayment
   where
-    buildDriverDuesEntity DDF.DriverFee {..} =
-      DriverDuesEntity
-        { date = createdAt,
-          amount = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
-          earnings = totalEarnings,
-          offers = []
-        }
+    validateExistingInvoice invoicesGroup driverFees = do
+      let driverFeeIds = driverFees <&> getId . (.id)
+      case invoicesGroup of
+        Just invoices -> do
+          let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
+          if length currentDueDriverFee <= length invoices
+            then do
+              ((\inv -> (inv.id, inv.invoiceShortId)) <$> listToMaybe invoices, currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
+            else (Nothing, driverFeeIds, [])
+        Nothing -> (Nothing, driverFeeIds, [])
+    mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
+    groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
+
+data HistoryEntityV2 = HistoryEntityV2
+  { autoPayInvoices :: [AutoPayInvoiceHistory],
+    manualPayInvoices :: [ManualInvoiceHistory]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data AutoPayInvoiceHistory = AutoPayInvoiceHistory
+  { invoiceId :: Text,
+    amount :: HighPrecMoney,
+    executionAt :: UTCTime,
+    autoPayStage :: Maybe DDF.AutopayPaymentStage,
+    rideTakenOn :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ManualInvoiceHistory = ManualInvoiceHistory
+  { invoiceId :: Text,
+    createdAt :: UTCTime,
+    rideDays :: Int,
+    amount :: HighPrecMoney,
+    feeType :: DDF.FeeType,
+    paymentStatus :: INV.InvoiceStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+getDriverPaymentsHistoryV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> m HistoryEntityV2
+getDriverPaymentsHistoryV2 (driverId, merchantId) mbLimit mbOffset = do
+  let defaultLimit = 20
+      limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset
+  driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- check if there is error type already for this
+  let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
+  manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
+  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) (filter (\inv -> inv.paymentMode == INV.AUTOPAY_INVOICE) invoices)
+  return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
+
+mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)
+mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
+  allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
+  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
+  let amount = sum $ mapToAmount allDriverFeeForInvoice
+  case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
+    Just _ ->
+      return $
+        Just
+          ManualInvoiceHistory
+            { invoiceId = manualInvoice.id.getId,
+              rideDays = length allDriverFeeForInvoice,
+              amount,
+              createdAt = manualInvoice.createdAt,
+              feeType = if any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
+              paymentStatus = manualInvoice.invoiceStatus
+            }
+    Nothing -> return Nothing
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+
+mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
+mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
+  now <- getCurrentTime
+  case mapDriverFeeByDriverFeeId' M.!? (autoInvoice.driverFeeId) of
+    Just dfee ->
+      return $
+        Just
+          AutoPayInvoiceHistory
+            { invoiceId = autoInvoice.id.getId,
+              amount = sum $ mapToAmount [dfee],
+              executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
+              autoPayStage = dfee.autopayPaymentStage,
+              rideTakenOn = dfee.createdAt
+            }
+    Nothing -> return Nothing
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+
+data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
+  { invoiceId :: Text,
+    amount :: HighPrecMoney,
+    createdAt :: Maybe UTCTime,
+    executionAt :: Maybe UTCTime,
+    feeType :: DDF.FeeType,
+    driverFeeInfo :: [DriverFeeInfoEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverFeeInfoEntity = DriverFeeInfoEntity
+  { autoPayStage :: Maybe DDF.AutopayPaymentStage,
+    paymentStatus :: Maybe INV.InvoiceStatus,
+    totalEarnings :: HighPrecMoney,
+    totalRides :: Int,
+    planAmount :: HighPrecMoney,
+    isSplit :: Bool,
+    offerAndPlanDetails :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+getHistoryEntryDetailsEntityV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id INV.Invoice -> m HistoryEntryDetailsEntityV2
+getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
+  allEntiresByInvoiceId <- QINV.findAllByInvoiceId invoiceId
+  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  let amount = sum $ mapToAmount allDriverFeeForInvoice
+      invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
+      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+      executionAt =
+        if invoiceType == Just INV.AUTOPAY_INVOICE
+          then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
+          else Nothing
+      feeType
+        | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
+        | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
+        | otherwise = DDF.RECURRING_INVOICE
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
+  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceId.getId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+
+mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> m [DriverFeeInfoEntity]
+mkDriverFeeInfoEntity driverFees invoiceStatus = do
+  mapM
+    ( \driverFee -> do
+        driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
+        return
+          DriverFeeInfoEntity
+            { autoPayStage = driverFee.autopayPaymentStage,
+              paymentStatus = invoiceStatus,
+              totalEarnings = fromIntegral driverFee.totalEarnings,
+              totalRides = driverFee.numRides,
+              planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
+              isSplit = not (null driverFeesInWindow),
+              offerAndPlanDetails = driverFee.planOfferTitle
+            }
+    )
+    driverFees
+
+calcExecutionTime :: TransporterConfig -> Maybe DDF.AutopayPaymentStage -> UTCTime -> UTCTime
+calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
+  let notificationTimeDiff = transporterConfig'.driverAutoPayNotificationTime
+      executionTimeDiff = transporterConfig'.driverAutoPayExecutionTime
+  case autopayPaymentStage of
+    Just DDF.NOTIFICATION_SCHEDULED -> addUTCTime (notificationTimeDiff + executionTimeDiff) scheduledAt
+    Just DDF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
+    Just DDF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
+    _ -> scheduledAt

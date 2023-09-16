@@ -4,7 +4,8 @@ module Storage.Queries.Invoice where
 
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Domain.Types.Person (Person)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -28,6 +29,24 @@ findValidByDriverFeeId (Id driverFeeId) =
           Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
         ]
     ]
+
+-- findValidByInvoiceIdWithWindow :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> UTCTime -> m [Domain.Invoice]
+-- findValidByInvoiceIdWithWindow (Id invoiceId) status from =
+--   findAllWithKV
+--     [ Se.And
+--         [ Se.Is BeamI.id $ Se.Eq invoiceId,
+--           Se.Is BeamI.invoiceStatus $ Se.Eq status,
+--           Se.Is BeamI.createdAt $ Se.GreaterThanOrEq from
+--         ]
+--     ]
+
+findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> Int -> Int -> m [Domain.Invoice]
+findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamI.driverId $ Se.Eq (driverId.getId)]
+    (Se.Desc BeamI.createdAt)
+    (Just limit)
+    (Just offset)
 
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
@@ -56,6 +75,22 @@ findByDriverFeeIds driverFeeIds =
   findAllWithKV
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
+findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DriverFee] -> Domain.InvoiceStatus -> [Domain.InvoicePaymentMode] -> m [Domain.Invoice]
+findAllByDriverFeeIdAndStatus driverIds status paymentMode = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (driverIds <&> getId), Se.Is BeamI.invoiceStatus $ Se.Eq status, Se.Is BeamI.paymentMode $ Se.In paymentMode]]
+
+findLatestAutopayActiveByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findLatestAutopayActiveByDriverFeeId driverFeeId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq (getId driverFeeId),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
+        ]
+    ]
+    (Se.Desc BeamI.createdAt)
+    (Just 1)
+    Nothing
+
 updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
   now <- getCurrentTime
@@ -64,6 +99,15 @@ updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
       Se.Set BeamI.updatedAt now
     ]
     [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+
+updateInvoiceStatusByDriverFeeIds :: MonadFlow m => Domain.InvoiceStatus -> [Id DriverFee] -> m ()
+updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus status,
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
 updateBankErrorsByInvoiceId :: MonadFlow m => Maybe Text -> Maybe Text -> Id Domain.Invoice -> m ()
 updateBankErrorsByInvoiceId bankError errorCode invoiceId = do
@@ -82,6 +126,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
         Invoice
           { id = Id id,
             invoiceShortId = invoiceShortId,
+            driverId = Id driverId,
             driverFeeId = Id driverFeeId,
             invoiceStatus = invoiceStatus,
             paymentMode = paymentMode,
@@ -99,6 +144,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
       { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
         BeamI.driverFeeId = getId driverFeeId,
+        BeamI.driverId = getId driverId,
         BeamI.paymentMode = paymentMode,
         BeamI.invoiceStatus = invoiceStatus,
         BeamI.maxMandateAmount = maxMandateAmount,

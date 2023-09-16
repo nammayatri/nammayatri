@@ -6,6 +6,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.DriverFee as DF
+import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
@@ -16,6 +17,7 @@ data Invoice = Invoice
   { id :: Id Invoice,
     invoiceShortId :: Text,
     driverFeeId :: Id DF.DriverFee,
+    driverId :: Id Person,
     invoiceStatus :: InvoiceStatus,
     paymentMode :: InvoicePaymentMode,
     bankErrorMessage :: Maybe Text,

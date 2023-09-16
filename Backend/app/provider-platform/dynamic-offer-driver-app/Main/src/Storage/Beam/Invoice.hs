@@ -19,6 +19,7 @@ data InvoiceT f = InvoiceT
   { id :: B.C f Text,
     invoiceShortId :: B.C f Text,
     driverFeeId :: B.C f Text,
+    driverId :: B.C f Text,
     invoiceStatus :: B.C f Domain.InvoiceStatus,
     paymentMode :: B.C f Domain.InvoicePaymentMode,
     maxMandateAmount :: B.C f (Maybe HighPrecMoney),
