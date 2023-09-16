@@ -111,7 +111,8 @@ data DriverRideRes = DriverRideRes
     customerExtraFee :: Maybe Money,
     disabilityTag :: Maybe Text,
     requestedVehicleVariant :: DVeh.Variant,
-    driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest)
+    driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
+    payerVpa :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -137,6 +138,7 @@ listDriverRides ::
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+  driverPayerVpa <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId) <&> (.payerVpa)
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
@@ -144,7 +146,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
     let goHomeReqId = ride.driverGoHomeRequestId
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverPayerVpa
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -155,8 +157,9 @@ mkDriverRideRes ::
   (DRide.Ride, DRB.Booking) ->
   Maybe DSM.BapMetadata ->
   Maybe (Id DDGR.DriverGoHomeRequest) ->
+  Maybe Text ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId payerVpa = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -195,7 +198,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       bapLogo = bapMetadata <&> (.logoUrl),
       disabilityTag = booking.disabilityTag,
       requestedVehicleVariant = booking.vehicleVariant,
-      driverGoHomeRequestId = goHomeReqId
+      driverGoHomeRequestId = goHomeReqId,
+      payerVpa
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -261,7 +265,7 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking uBooking (Just driver) transporter >> throwM exc

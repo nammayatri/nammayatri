@@ -55,6 +55,16 @@ data PaymentStatusResp
         bankErrorCode :: Maybe Text,
         upi :: Maybe Payment.Upi
       }
+  | PDNNotificationStatusResp
+      { eventName :: Maybe Payment.PaymentStatus,
+        notificationStatus :: Payment.NotificationStatus,
+        sourceObject :: Text,
+        endDate :: Text,
+        sourceInfo :: Payment.SourceInfo,
+        notificationType :: Text,
+        juspayProviedId :: Text,
+        notificationId :: Text
+      }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- create order -----------------------------------------------------
@@ -79,65 +89,76 @@ createOrderService merchantId personId createOrderReq createOrderCall = do
         QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
-      isOrderExpired <- checkIfExpired existingOrder.clientAuthTokenExpiry
+      isOrderExpired <- maybe (pure True) checkIfExpired existingOrder.clientAuthTokenExpiry
       if isOrderExpired
         then do
           Esq.runTransaction $ QOrder.updateStatusToExpired existingOrder.id
           return Nothing
         else do
-          sdk_payload <- buildSDKPayload createOrderReq existingOrder
-          return $
-            Just $
-              Payment.CreateOrderResp
-                { status = existingOrder.status,
-                  id = existingOrder.paymentServiceOrderId,
-                  order_id = existingOrder.shortId.getShortId,
-                  payment_links = Just existingOrder.paymentLinks,
-                  sdk_payload
-                }
+          sdkPayload <- buildSDKPayload createOrderReq existingOrder
+          case sdkPayload of
+            Just sdk_payload -> do
+              return $
+                Just $
+                  Payment.CreateOrderResp
+                    { status = existingOrder.status,
+                      id = existingOrder.paymentServiceOrderId,
+                      order_id = existingOrder.shortId.getShortId,
+                      payment_links = Just existingOrder.paymentLinks,
+                      sdk_payload
+                    }
+            Nothing -> return Nothing
   where
     checkIfExpired expiry = do
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (expiry < addUTCTime buffer now)
 
-buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m Juspay.SDKPayload
+buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
   payload <- buildSDKPayloadDetails req order
-  pure
-    Juspay.SDKPayload
-      { requestId = order.requestId,
-        service = order.service,
-        payload
-      }
+  case payload of
+    Just sdkPayload -> do
+      return $
+        Just
+          Juspay.SDKPayload
+            { requestId = order.requestId,
+              service = order.service,
+              payload = sdkPayload
+            }
+    Nothing -> return Nothing
 
-buildSDKPayloadDetails :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m Juspay.SDKPayloadDetails
+buildSDKPayloadDetails :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
 buildSDKPayloadDetails req order = do
-  clientAuthToken <- decrypt order.clientAuthToken
-  pure
-    Juspay.SDKPayloadDetails
-      { clientId = order.clientId,
-        amount = show order.amount,
-        merchantId = order.paymentMerchantId,
-        clientAuthToken,
-        clientAuthTokenExpiry = order.clientAuthTokenExpiry,
-        environment = order.environment,
-        options_getUpiDeepLinks = order.getUpiDeepLinksOption,
-        lastName = req.customerLastName,
-        action = order.action,
-        customerId = Just order.personId.getId,
-        returnUrl = order.returnUrl,
-        currency = order.currency,
-        firstName = req.customerFirstName,
-        customerPhone = Just req.customerPhone,
-        customerEmail = Just req.customerEmail,
-        orderId = Just order.shortId.getShortId,
-        description = order.description,
-        createMandate = order.createMandate,
-        mandateMaxAmount = show <$> order.mandateMaxAmount,
-        mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
-        mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
-      }
+  case (order.clientAuthToken, order.clientAuthTokenExpiry) of
+    (Just token, Just clientAuthTokenExpiry) -> do
+      clientAuthToken <- decrypt token
+      return $
+        Just
+          Juspay.SDKPayloadDetails
+            { clientId = order.clientId,
+              amount = show order.amount,
+              merchantId = order.paymentMerchantId,
+              clientAuthToken,
+              clientAuthTokenExpiry = clientAuthTokenExpiry,
+              environment = order.environment,
+              options_getUpiDeepLinks = order.getUpiDeepLinksOption,
+              lastName = req.customerLastName,
+              action = order.action,
+              customerId = Just order.personId.getId,
+              returnUrl = order.returnUrl,
+              currency = order.currency,
+              firstName = req.customerFirstName,
+              customerPhone = Just req.customerPhone,
+              customerEmail = Just req.customerEmail,
+              orderId = Just order.shortId.getShortId,
+              description = order.description,
+              createMandate = order.createMandate,
+              mandateMaxAmount = show <$> order.mandateMaxAmount,
+              mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
+              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
+            }
+    (_, _) -> return Nothing
 
 buildPaymentOrder ::
   ( EncFlow m r,
@@ -170,8 +191,8 @@ buildPaymentOrder merchantId personId req resp = do
         currency = resp.sdk_payload.payload.currency,
         status = resp.status,
         paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing) resp.payment_links,
-        clientAuthToken,
-        clientAuthTokenExpiry = resp.sdk_payload.payload.clientAuthTokenExpiry,
+        clientAuthToken = Just clientAuthToken,
+        clientAuthTokenExpiry = Just resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
         environment = resp.sdk_payload.payload.environment,
         createMandate = resp.sdk_payload.payload.createMandate,
@@ -330,8 +351,8 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  logInfo $ "Webhook response dump: " <> respDump
-  logInfo $ "Webhook response: " <> show resp
+  logWarning $ "Webhook response dump: " <> respDump --- want this for now that's why changed it to warning
+  logWarning $ "Webhook response: " <> show resp
   case resp of
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
@@ -382,8 +403,46 @@ createExecutionService ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r
   ) =>
-  Payment.MandateExecutionReq ->
+  (Payment.MandateExecutionReq, Text) ->
+  Id Merchant ->
   (Payment.MandateExecutionReq -> m Payment.MandateExecutionRes) ->
   m Payment.MandateExecutionRes
-createExecutionService req executionCall = do
-  executionCall req
+createExecutionService (request, orderId) merchantId executionCall = do
+  executionResp <- executionCall request
+  executionOrder <- mkExecutionOrder request executionResp
+  Esq.runTransaction $ QOrder.create executionOrder
+  return executionResp
+  where
+    mkExecutionOrder req resp = do
+      now <- getCurrentTime
+      return
+        DOrder.PaymentOrder
+          { id = Id orderId,
+            shortId = ShortId req.orderId, ---- to check --------
+            paymentServiceOrderId = resp.orderId,
+            requestId = Nothing,
+            service = Nothing,
+            clientId = Nothing,
+            description = Nothing,
+            returnUrl = Nothing,
+            action = Nothing,
+            personId = Id req.customerId,
+            merchantId = merchantId,
+            paymentMerchantId = Nothing,
+            amount = round req.amount,
+            currency = Juspay.INR,
+            status = resp.status,
+            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing,
+            clientAuthToken = Nothing,
+            clientAuthTokenExpiry = Nothing,
+            getUpiDeepLinksOption = Nothing,
+            environment = Nothing,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            bankErrorMessage = Nothing,
+            bankErrorCode = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }

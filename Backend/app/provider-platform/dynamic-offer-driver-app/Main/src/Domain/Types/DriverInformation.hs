@@ -60,6 +60,8 @@ data DriverAutoPayStatus
   | SUSPENDED
   | PAUSED_PSP
   | CANCELLED_PSP
+  | MANDATE_FAILED
+  | MANDATE_EXPIRED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverAutoPayStatus
 
@@ -99,6 +101,8 @@ data DriverInformationE e = DriverInformation
     autoPayStatus :: Maybe DriverAutoPayStatus,
     blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
+    payerVpa :: Maybe Text,
+    enabledAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     compAadhaarImagePath :: Maybe Text,
