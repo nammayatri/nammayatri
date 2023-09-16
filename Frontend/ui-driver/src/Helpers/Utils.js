@@ -936,3 +936,32 @@ function getStringFromCommon(key) {
       return englishStrings.getStringValue(key);
   }
 }
+
+export const _generateQRCode = function (data) {
+  return function (id) {
+    return function (size) {
+      return function (margin) {
+        return function (sc) {
+          return function () {
+            if (typeof QrBridge.generateQRCode === "function") {
+              try {
+                const cb = callbackMapper.map(function (_status) {
+                  console.log("QR status:: ", _status);
+                  sc(_status)();
+                });
+                QrBridge.generateQRCode(data, id, size, margin, cb);
+              } catch (e) {
+                console.warn(e);
+                sc("FAILURE")();
+              }
+            }
+            else {
+              console.warn(e);
+              sc("FAILURE")();
+            }
+          }
+        }
+      }
+    }
+  }
+}

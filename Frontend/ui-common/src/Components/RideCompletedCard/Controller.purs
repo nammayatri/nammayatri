@@ -20,6 +20,7 @@ data Action = Support
             | IssueReportPopUpAC SL.Action
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
+            | UpiQrRendered String
             
 type Config = {
   topCard :: TopCard,

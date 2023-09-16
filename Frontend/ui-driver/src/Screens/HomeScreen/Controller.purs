@@ -65,6 +65,8 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Services.Config (getSupportNumber)
+import Effect.Aff (launchAff_)
+import Helpers.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -239,6 +241,7 @@ data Action = NoAction
             | CancelRideModalAction SelectListModal.Action
             | Cancel
             | SetToken String
+            | UpiQrRendered String
             | ModifyRoute String String
             | RetryTimeUpdate
             | TimeUpdate String String String
@@ -700,8 +703,13 @@ eval (PaymentStatusAction status) state =
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
   
-eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContackSupportPopUp = true}}
+eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
+  continueWithCmd state [ do
+                    _ <- launchAff_ do void $ generateQR "nammayatri.in" id 200 0
+                    pure $ NoAction
+                ]
 
+eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContackSupportPopUp = true}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContackSupportPopUp = false}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
                                                                                                       _ <- pure $ showDialer (getSupportNumber "") false 

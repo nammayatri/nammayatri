@@ -45,7 +45,7 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
+import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC) as ReExport
 import Foreign (Foreign)
@@ -130,6 +130,14 @@ foreign import preFetch :: Effect (Array RenewFile)
 
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
+
+foreign import _generateQRCode :: String -> String -> Int -> Int -> (AffSuccess String) -> Effect Unit
+
+generateQR:: String -> String -> Int -> Int -> Aff String
+generateQR qrString viewId size margin = makeAff $
+  \cb ->
+    (_generateQRCode qrString viewId size margin (Right >>> cb))
+    *> pure nonCanceler
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
