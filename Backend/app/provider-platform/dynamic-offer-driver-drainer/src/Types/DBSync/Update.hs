@@ -108,7 +108,7 @@ data UpdateModel
   | AadhaarOtpVerifyUpdate
   | AadhaarVerificationUpdate
   | DriverLicenseUpdate
-  | DriverRCAssociationUpdate
+  | DriverRcAssociationUpdate
   | IdfyVerificationUpdate
   | ImageUpdate
   | OperatingCityUpdate
@@ -192,7 +192,7 @@ getTagUpdate AadhaarOtpReqUpdate = "AadhaarOtpReqOptions"
 getTagUpdate AadhaarOtpVerifyUpdate = "AadhaarOtpVerifyOptions"
 getTagUpdate AadhaarVerificationUpdate = "AadhaarVerificationOptions"
 getTagUpdate DriverLicenseUpdate = "DriverLicenseOptions"
-getTagUpdate DriverRCAssociationUpdate = "DriverRCAssociationOptions"
+getTagUpdate DriverRcAssociationUpdate = "DriverRcAssociationOptions"
 getTagUpdate IdfyVerificationUpdate = "IdfyVerificationOptions"
 getTagUpdate ImageUpdate = "ImageOptions"
 getTagUpdate OperatingCityUpdate = "OperatingCityOptions"
@@ -275,7 +275,7 @@ parseTagUpdate "AadhaarOtpReqOptions" = return AadhaarOtpReqUpdate
 parseTagUpdate "AadhaarOtpVerifyOptions" = return AadhaarOtpVerifyUpdate
 parseTagUpdate "AadhaarVerificationOptions" = return AadhaarVerificationUpdate
 parseTagUpdate "DriverLicenseOptions" = return DriverLicenseUpdate
-parseTagUpdate "DriverRCAssociationOptions" = return DriverRCAssociationUpdate
+parseTagUpdate "DriverRcAssociationOptions" = return DriverRcAssociationUpdate
 parseTagUpdate "IdfyVerificationOptions" = return IdfyVerificationUpdate
 parseTagUpdate "ImageOptions" = return ImageUpdate
 parseTagUpdate "OperatingCityOptions" = return OperatingCityUpdate
@@ -359,7 +359,7 @@ data DBUpdateObject
   | AadhaarOtpVerifyOptions UpdateModel [Set Postgres AadhaarOtpVerify.AadhaarOtpVerifyT] (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationOptions UpdateModel [Set Postgres AadhaarVerification.AadhaarVerificationT] (Where Postgres AadhaarVerification.AadhaarVerificationT)
   | DriverLicenseOptions UpdateModel [Set Postgres DriverLicense.DriverLicenseT] (Where Postgres DriverLicense.DriverLicenseT)
-  | DriverRCAssociationOptions UpdateModel [Set Postgres DriverRCAssociation.DriverRCAssociationT] (Where Postgres DriverRCAssociation.DriverRCAssociationT)
+  | DriverRcAssociationOptions UpdateModel [Set Postgres DriverRCAssociation.DriverRCAssociationT] (Where Postgres DriverRCAssociation.DriverRCAssociationT)
   | IdfyVerificationOptions UpdateModel [Set Postgres IdfyVerification.IdfyVerificationT] (Where Postgres IdfyVerification.IdfyVerificationT)
   | ImageOptions UpdateModel [Set Postgres Image.ImageT] (Where Postgres Image.ImageT)
   | OperatingCityOptions UpdateModel [Set Postgres OperatingCity.OperatingCityT] (Where Postgres OperatingCity.OperatingCityT)
@@ -483,9 +483,9 @@ instance FromJSON DBUpdateObject where
       DriverLicenseUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverLicenseOptions updateModel updVals whereClause
-      DriverRCAssociationUpdate -> do
+      DriverRcAssociationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ DriverRCAssociationOptions updateModel updVals whereClause
+        return $ DriverRcAssociationOptions updateModel updVals whereClause
       IdfyVerificationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ IdfyVerificationOptions updateModel updVals whereClause

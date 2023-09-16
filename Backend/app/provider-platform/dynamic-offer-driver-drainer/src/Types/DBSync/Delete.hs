@@ -107,7 +107,7 @@ data DeleteModel
   | AadhaarOtpVerifyDelete
   | AadhaarVerificationDelete
   | DriverLicenseDelete
-  | DriverRCAssociationDelete
+  | DriverRcAssociationDelete
   | IdfyVerificationDelete
   | ImageDelete
   | OperatingCityDelete
@@ -191,7 +191,7 @@ getTagDelete AadhaarOtpReqDelete = "AadhaarOtpReqOptions"
 getTagDelete AadhaarOtpVerifyDelete = "AadhaarOtpVerifyOptions"
 getTagDelete AadhaarVerificationDelete = "AadhaarVerificationOptions"
 getTagDelete DriverLicenseDelete = "DriverLicenseOptions"
-getTagDelete DriverRCAssociationDelete = "DriverRCAssociationOptions"
+getTagDelete DriverRcAssociationDelete = "DriverRcAssociationOptions"
 getTagDelete IdfyVerificationDelete = "IdfyVerificationOptions"
 getTagDelete ImageDelete = "ImageOptions"
 getTagDelete OperatingCityDelete = "OperatingCityOptions"
@@ -272,7 +272,7 @@ parseTagDelete "AadhaarOtpReqOptions" = return AadhaarOtpReqDelete
 parseTagDelete "AadhaarOtpVerifyOptions" = return AadhaarOtpVerifyDelete
 parseTagDelete "AadhaarVerificationOptions" = return AadhaarVerificationDelete
 parseTagDelete "DriverLicenseOptions" = return DriverLicenseDelete
-parseTagDelete "DriverRCAssociationOptions" = return DriverRCAssociationDelete
+parseTagDelete "DriverRcAssociationOptions" = return DriverRcAssociationDelete
 parseTagDelete "IdfyVerificationOptions" = return IdfyVerificationDelete
 parseTagDelete "ImageOptions" = return ImageDelete
 parseTagDelete "OperatingCityOptions" = return OperatingCityDelete
@@ -355,7 +355,7 @@ data DBDeleteObject
   | AadhaarOtpVerifyDeleteOptions DeleteModel (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationDeleteOptions DeleteModel (Where Postgres AadhaarVerification.AadhaarVerificationT)
   | DriverLicenseDeleteOptions DeleteModel (Where Postgres DriverLicense.DriverLicenseT)
-  | DriverRCAssociationDeleteOptions DeleteModel (Where Postgres DriverRCAssociation.DriverRCAssociationT)
+  | DriverRcAssociationDeleteOptions DeleteModel (Where Postgres DriverRCAssociation.DriverRCAssociationT)
   | IdfyVerificationDeleteOptions DeleteModel (Where Postgres IdfyVerification.IdfyVerificationT)
   | ImageDeleteOptions DeleteModel (Where Postgres Image.ImageT)
   | OperatingCityDeleteOptions DeleteModel (Where Postgres OperatingCity.OperatingCityT)
@@ -479,9 +479,9 @@ instance FromJSON DBDeleteObject where
       DriverLicenseDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverLicenseDeleteOptions deleteModel whereClause
-      DriverRCAssociationDelete -> do
+      DriverRcAssociationDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ DriverRCAssociationDeleteOptions deleteModel whereClause
+        return $ DriverRcAssociationDeleteOptions deleteModel whereClause
       IdfyVerificationDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ IdfyVerificationDeleteOptions deleteModel whereClause

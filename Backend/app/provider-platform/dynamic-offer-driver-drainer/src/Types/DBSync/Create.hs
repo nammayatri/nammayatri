@@ -102,7 +102,7 @@ data DBCreateObject
   | AadhaarOtpVerifyObject AadhaarOtpVerify.AadhaarOtpVerify
   | AadhaarVerificationObject AadhaarVerification.AadhaarVerification
   | DriverLicenseObject DriverLicense.DriverLicense
-  | DriverRCAssociationObject DriverRCAssociation.DriverRCAssociation
+  | DriverRcAssociationObject DriverRCAssociation.DriverRCAssociation
   | IdfyVerificationObject IdfyVerification.IdfyVerification
   | ImageObject Image.Image
   | OperatingCityObject OperatingCity.OperatingCity
@@ -189,7 +189,7 @@ modelName (AadhaarOtpReqObject _) = "AadhaarOtpReq"
 modelName (AadhaarOtpVerifyObject _) = "AadhaarOtpVerify"
 modelName (AadhaarVerificationObject _) = "AadhaarVerification"
 modelName (DriverLicenseObject _) = "DriverLicense"
-modelName (DriverRCAssociationObject _) = "DriverRCAssociation"
+modelName (DriverRcAssociationObject _) = "DriverRcAssociation"
 modelName (IdfyVerificationObject _) = "IdfyVerification"
 modelName (ImageObject _) = "Image"
 modelName (OperatingCityObject _) = "OperatingCity"
