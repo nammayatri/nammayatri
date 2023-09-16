@@ -22,6 +22,7 @@ import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
 import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
 import Components.ChatView.Controller (makeChatComponent')
+import Constants as Constants
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -79,6 +80,7 @@ import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
+import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
@@ -96,9 +98,8 @@ import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDri
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..))
+import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Constants as Constants
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -2079,7 +2080,9 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
 
 paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
-  exitAction <- UI.paymentHistory
+  action <- UI.paymentHistory
+  case action of 
+    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData true -- to discuss
   pure unit 
 
 ysPaymentFlow :: FlowBT String Unit
@@ -2191,7 +2194,9 @@ subScriptionFlow = do
           setValueToLocalStore DISABLE_WIDGET "true"
           nyPaymentFlow selectedPlan true
         Nothing -> subScriptionFlow
-    GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
+    GOTO_PAYMENT_HISTORY state -> do
+      modifyScreenState $ PaymentHistoryScreenStateType(\paymentHistory -> paymentHistory{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}, data{planData = state.data.myPlanData.planEntity}})
+      paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
       case suspendMandate of 

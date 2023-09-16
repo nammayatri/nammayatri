@@ -31,5 +31,7 @@ type DueCard = {
   totalEarningsOfDay :: String,
   dueAmount :: String,
   fareBreakup :: String,
-  expanded :: Boolean
+  expanded :: Boolean,
+  isAutoPayFailed :: Boolean,
+  isSplitPayment :: Boolean
 }

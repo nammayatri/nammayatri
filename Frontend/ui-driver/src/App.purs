@@ -359,6 +359,8 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToContest
                           | GoToAlerts
 
-data PAYMENT_HISTORY_SCREEN_OUTPUT = ViewDetails PaymentHistoryScreenState
+data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
+      -- ViewDetails PaymentHistoryScreenState
+                                    --  | 
 
 data APP_UPDATE_POPUP = Later | UpdateNow

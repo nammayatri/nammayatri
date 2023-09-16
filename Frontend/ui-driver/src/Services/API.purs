@@ -15,28 +15,30 @@
 
 module Services.API where
 
-import Common.Types.App (Version(..),APIPaymentStatus(..)) as Common
+import Data.Maybe
+
+import Common.Types.App (Version(..), APIPaymentStatus(..)) as Common
 import Control.Alt ((<|>))
+import Control.Monad.Except (except, runExcept)
 import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
 import Data.Either as Either
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail)
+import Debug (spy)
+import Foreign (ForeignError(..), fail, unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
+import Foreign.Index (readProp)
 import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
-import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
-import Data.Either as Either
-import Data.Maybe
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -2486,6 +2488,8 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean
+  -- ,
+  -- bankErrors :: Array BankError
 }
 
 newtype MandateData = MandateData {
@@ -2496,6 +2500,12 @@ newtype MandateData = MandateData {
   payerVpa :: Maybe String,
   frequency :: String,
   maxAmount :: Number
+}
+
+newtype BankError = BankError {
+  message :: String,
+  code :: String,
+  amount :: Number
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where
@@ -2522,6 +2532,13 @@ instance standardEncodeMandateData :: StandardEncode MandateData where standardE
 instance showMandateData :: Show MandateData where show = genericShow
 instance decodeMandateData :: Decode MandateData where decode = defaultDecode
 instance encodeMandateData :: Encode MandateData where encode = defaultEncode
+
+derive instance genericBankError :: Generic BankError _
+derive instance newtypeBankError:: Newtype BankError _
+instance standardEncodeBankError :: StandardEncode BankError where standardEncode (BankError res) = standardEncode res
+instance showBankError :: Show BankError where show = genericShow
+instance decodeBankError :: Decode BankError where decode = defaultDecode
+instance encodeBankError :: Encode BankError where encode = defaultEncode
 
 ---------------------------------------------- KioskLocations ---------------------------------------------------
 
@@ -2585,3 +2602,78 @@ instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackRe
 instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
 instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
 instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode
+
+---------------------------------------------- NY-PaymentHistory ---------------------------------------------------
+
+-- data InvoiceInfo = InvoiceInfo
+--   { id :: Id Invoice,
+--     paymentMode :: MANUAL | AUTOPAY,
+--     debitedOn :: ,
+--     invoiceAmount ::
+--     numberOfDays ::
+--     invoiceStatus :: {
+--       status = SUCCESS | FAILED | NOTIFICATION_SCHEDULED | NOTIFICATION_SENT | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTED | PAYMENT_OVERDUE
+--       time = UTCTime
+--     },
+--     driverFees :: [DriverFeeInfo]
+--   }
+-- data DriverFeeInfo = DriverFeeInfo
+--   { ridesTakenOn :: UTCTime,
+--     driverFeeId :: Id DDF.DriverFee,
+--     totalRides :: Int,
+--     paymentAmount :: Money,
+--     chargesBreakup :: [DriverPaymentBreakup],
+--     planOfferDetails :: ""
+--   }
+
+-- data GetNYPaymentHistoryReq = GetNYPaymentHistoryReq String String (Maybe String)
+
+-- newtype GetNYPaymentHistoryResp = GetNYPaymentHistoryResp (Array PaymentHistoryItem)
+
+-- newtype PaymentHistoryItem = PaymentHistoryItem {
+--     date :: String
+--   , totalRides :: Int
+--   , totalEarnings :: Int
+--   , charges :: Int
+--   , chargesBreakup :: Array PaymentBreakUp
+--   , txnInfo :: Array TxnInfo
+--   , driverFeeId :: String
+-- }
+
+-- newtype PaymentBreakUp = PaymentBreakUp {
+--     component :: String
+--   , amount :: Number
+-- }
+
+-- newtype TxnInfo = TxnInfo {
+--     id :: String
+--   , status :: Common.APIPaymentStatus
+-- }
+
+
+-- instance makeGetNYPaymentHistoryReq :: RestEndpoint GetNYPaymentHistoryReq GetPaymentHistoryResp where
+--  makeRequest reqBody@(GetNYPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
+--  decodeResponse = decodeJSON
+--  encodeRequest req = standardEncode req
+
+-- derive instance genericGetGetNYPaymentHistoryReq :: Generic GetGetNYPaymentHistoryReq _
+-- instance standardEncodeGetGetNYPaymentHistoryReq :: StandardEncode GetGetNYPaymentHistoryReq where standardEncode res = standardEncode {}
+-- instance showGetGetNYPaymentHistoryReq :: Show GetGetNYPaymentHistoryReq where show = genericShow
+-- instance decodeGetGetNYPaymentHistoryReq :: Decode GetGetNYPaymentHistoryReq where decode = defaultDecode
+-- instance encodeGetGetNYPaymentHistoryReq :: Encode GetGetNYPaymentHistoryReq where encode = defaultEncode
+
+
+data FeeType = AUTOPAY_REGISTRATION | MANUAL_PAYMENT | AUTOPAY_PAYMENT
+
+derive instance genericFeeType :: Generic FeeType _
+instance showFeeType :: Show FeeType where show = genericShow
+instance decodeFeeType :: Decode FeeType where 
+  decode body = case unsafeFromForeign body of
+                  "MANDATE_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION 
+                  "RECURRING_INVOICE"           -> except $ Right MANUAL_PAYMENT 
+                  "RECURRING_EXECUTION_INVOICE" -> except $ Right AUTOPAY_PAYMENT 
+                  _                             -> fail $ ForeignError "Unknown response"
+instance encodeFeeType :: Encode FeeType where 
+  encode _ = encode {}
+instance eqFeeType :: Eq FeeType where eq = genericEq
+instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}

@@ -16,34 +16,60 @@
 module Screens.PaymentHistoryScreen.View where
 
 
+import Screens.PaymentHistoryScreen.ComponentConfig
+
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App as Common
+import Components.DueDetailsList (DueDetailsListState)
+import Components.DueDetailsList as DueDetailsList
 import Components.GenericHeader as GenericHeader
+import Components.PrimaryButton as PrimaryButton
+import Control.Monad.Except (lift, runExcept, runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, screenWidth)
 import Font.Size as FontSize
 import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
+import Foreign (Foreign, unsafeToForeign)
+import Foreign.Generic (decode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, unit, ($), (&&), (-), (<<<), (<>), (>), (==))
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, VDom, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=))
+import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, VDom, Visibility(..), afterRender, alignParentBottom, background, backgroundColor, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..))
+import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..)) as SA
+import Services.Backend as Remote
 import Styles.Colors as Color
-
+import Types.App (defaultGlobalState)
 
 screen :: PaymentHistoryScreenState -> Screen Action PaymentHistoryScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "PaymentHistoryScreen"
-  , globalEvents: []
+  , globalEvents: [(\push -> do
+      void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+      --   resp <- lift $ lift $ Remote.getPaymentHistory "" "" Nothing
+      --   case resp of
+      --     Right (SA.GetPaymentHistoryResp resp) -> do
+            lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory --resp
+      --     Left err -> pure unit
+      --   pure unit
+      pure (pure unit)
+    )]
   , eval:
       ( \state action -> do
           let _ = spy "PaymentHistoryScreen ----- state" state
@@ -71,16 +97,19 @@ view push state =
       , background Color.grey900
       , margin $ MarginBottom 16
       ][]
-    , linearLayout
+    , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , weight 1.0
       , orientation VERTICAL
-      ][  paymentHistoryView push state (state.props.subView == PaymentHistory)
-        , transactionDetails push state (state.props.subView == TransactionDetails)
-        , rideDetails push state (state.props.subView == RideDetails)
+      ][  if (state.props.subView == PaymentHistory) then paymentHistoryView push state (state.props.subView == PaymentHistory) else emptyView
+        , if (state.props.subView == TransactionDetails) then transactionDetails push state (state.props.subView == TransactionDetails) else emptyView
+        , if (state.props.subView == RideDetails) then rideDetails push state (state.props.subView == RideDetails) else emptyView
       ]
   ]
+
+emptyView :: forall w. PrestoDOM (Effect Unit) w
+emptyView = linearLayout[][]
 
 paymentHistoryView :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 paymentHistoryView push state visibility' = 
@@ -91,14 +120,19 @@ paymentHistoryView push state visibility' =
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
   , visibility if visibility' then VISIBLE else GONE
-  ][ tabView state push
-   , if DA.length state.data.paymentListItem > 0 then paymentList push state else noPaymentsView state push
+  ][ if visibility' then tabView state push else emptyView
+   , paymentList push state
   ]
 
 paymentList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
 paymentList push state = 
-  PrestoAnim.animationSet [Anim.fadeIn (not state.props.autoPayHistory)] $
-  scrollView
+  let transactionSplit = DA.partition (\item -> item.feeType == SA.MANUAL_PAYMENT) state.data.transactions
+      transactionItems = if state.props.autoPayHistory then transactionSplit.no else transactionSplit.yes
+  in
+  PrestoAnim.animationSet [Anim.fadeIn true] $ 
+  if DA.null transactionItems then noPaymentsView state push 
+  else 
+    scrollView
     [ width MATCH_PARENT
     , weight 1.0
     , height WRAP_CONTENT
@@ -107,8 +141,10 @@ paymentList push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if DA.length state.data.paymentListItem > 0 then VISIBLE else GONE
-        ] (map (\item -> 
+        , visibility if DA.length state.data.transactions > 0 then VISIBLE else GONE
+        ] (DA.mapWithIndex (\index item -> 
+          let itemConfig = getStatusConfig item.paymentStatus
+          in
           linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -117,57 +153,57 @@ paymentList push state =
             , cornerRadius 8.0
             , margin $ MarginVertical 6 6
             , padding $ Padding 16 16 16 16
-            -- , onClick push $ const $ ListItemClick
+            , onClick push $ const $ ListItemClick index
             ][ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , gravity CENTER
+                , gravity CENTER_VERTICAL
                 , orientation HORIZONTAL
-                , margin $ MarginVertical 6 6
-                ][ commonTV push (getString PAID_ON) Color.black700 (FontStyle.tags TypoGraphy) 0 LEFT
-                , commonTV push " 2 Oct 2023" Color.black700 (FontStyle.tags TypoGraphy) 0 LEFT -- convertUTCtoISC config.date "Do MMM YYYY"
+                , margin $ MarginVertical 0 6
+                ][ commonTV push (getString PAID_ON <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT
+                , commonTV push (convertUTCtoISC item.transactionDate "Do MMM, YYYY") Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT -- convertUTCtoISC config.date "Do MMM YYYY"
                 , linearLayout
                     [ height WRAP_CONTENT
                     , weight 1.0
                     ][]
-                , commonTV push "₹23" Color.green900 (FontStyle.h2 TypoGraphy) 0 RIGHT
+                , commonTV push ("₹" <> show item.totalCharges) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT
                 , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , cornerRadius 24.0
                     , padding $ Padding 8 4 8 4
-                    , background "#1653BB6F"
+                    , background itemConfig.backgroundColor
                     , margin $ MarginLeft 4
-                    ] [textView' push Nothing (getString SUCCESS) Color.green900 Body16 (Just $ PaddingTop 1) Nothing]
+                    ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
                 ]
               , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][ commonTV push ((getString RIDES_TAKEN_ON) <> " 2 days") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
-                , linearLayout
-                    [ height WRAP_CONTENT
-                    , weight 1.0
-                    ][]
-              , linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , orientation HORIZONTAL
-                , gravity CENTER_VERTICAL
-                , cornerRadius 20.0
-                , background Color.white900
-                , padding $ Padding 8 5 8 5
-                ][ imageView
-                    [ width $ V 12
-                    , height $ V 12
-                    , margin (MarginRight 4)
-                    , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
-                    ]
-                  , commonTV push (if state.props.autoPayHistory then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
-                  ]
+                ][  commonTV push (getString RIDES_TAKEN_ON <> "  " <> (convertUTCtoISC item.ridesTakenDate "Do MMM, YYYY")) Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                    , linearLayout
+                        [ height WRAP_CONTENT
+                        , weight 1.0
+                        ][]
+                    , linearLayout
+                      [ height WRAP_CONTENT
+                      , width WRAP_CONTENT
+                      , orientation HORIZONTAL
+                      , gravity CENTER_VERTICAL
+                      , cornerRadius 20.0
+                      , background Color.white900
+                      , padding $ Padding 8 5 8 5
+                      ][ imageView
+                          [ width $ V 12
+                          , height $ V 12
+                          , margin (MarginRight 4)
+                          , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
+                          ]
+                        , commonTV push (if state.props.autoPayHistory then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                        ]
                 ]
             ]
-        ) state.data.paymentListItem) -- if state.props.autoPayHistory then autoPayArray else upiArray
+        ) transactionItems) -- if state.props.autoPayHistory then autoPayArray else upiArray
     ]
 
 noPaymentsView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -176,16 +212,24 @@ noPaymentsView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER
-  , padding $ PaddingHorizontal 48 48
   , orientation VERTICAL
   ][ imageView
     [ width $ V 200
     , height $ V 200
     , gravity CENTER
-    , imageWithFallback if state.props.autoPayHistory then "ny_no_automatic_payments," else "ny_no_manual_payments,"
+    , imageWithFallback case state.props.autoPayHistory of
+                          true -> case state.props.autoPaySetup of 
+                                    true -> "ny_no_automatic_payments," 
+                                    false -> "ny_ic_enable_autopay,"
+                          false -> "ny_no_manual_payments,"
     ]
   , textView
-    [ text $ (if state.props.autoPayHistory then (getString AUTOMATIC_PAYMENTS_WILL_APPEAR_HERE) else (getString MANUAL_PAYMENTS_WILL_APPEAR_HERE) )
+    [ text $ getString $ case state.props.autoPayHistory of
+                           true -> case state.props.autoPaySetup of 
+                                     true -> AUTOMATIC_PAYMENTS_WILL_APPEAR_HERE 
+                                     false -> AUTOPAY_IS_NOT_ENABLED_YET
+                           false -> MANUAL_PAYMENTS_WILL_APPEAR_HERE
+    , padding $ PaddingHorizontal 48 48
     , textSize FontSize.a_18
     , fontStyle $ FontStyle.bold LanguageStyle
     , color Color.black900
@@ -193,12 +237,18 @@ noPaymentsView state push =
     , gravity CENTER
     ]
   , textView
-    [ text if state.props.autoPayHistory then (getString NO_AUTOMATIC_PAYMENTS_DESC) else (getString NO_MANUAL_PAYMENTS_DESC)
+    [ text $ getString $ case state.props.autoPayHistory of
+                           true -> case state.props.autoPaySetup of 
+                                     true -> NO_AUTOMATIC_PAYMENTS_DESC 
+                                     false -> ENABLE_AUTOPAY_DESC
+                           false -> NO_MANUAL_PAYMENTS_DESC
+    , padding $ PaddingHorizontal 48 48
     , textSize FontSize.a_14
     , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black700
     , gravity CENTER
     ]
+  , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)
   ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> PrestoDOM (Effect Unit) w
@@ -248,7 +298,7 @@ tabView state push =
       , text (getString AUTOPAY_PAYMENTS)
       , cornerRadius 24.0 
       , padding $ PaddingVertical 6 8
-      , onClick push $ const $ ChangeTab
+      , onClick push $ const $ ChangeTab true
       , fontStyle $ FontStyle.medium LanguageStyle
       , gravity CENTER
       , color if state.props.autoPayHistory then Color.white900 else Color.black700
@@ -258,7 +308,7 @@ tabView state push =
       , weight 1.0 
       , gravity CENTER
       , cornerRadius 24.0  
-      , onClick push $ const $ ChangeTab
+      , onClick push $ const $ ChangeTab false
       , padding $ PaddingVertical 6 8
       , text (getString MANUAL_PAYMENTS)
       , fontStyle $ FontStyle.medium LanguageStyle
@@ -269,6 +319,8 @@ tabView state push =
 
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 transactionDetails push state visibility' = 
+  let config = getTransactionConfig state.data.transactionDetails.notificationStatus
+  in
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   scrollView
     [ width MATCH_PARENT
@@ -286,20 +338,20 @@ transactionDetails push state visibility' =
             , gravity CENTER
             , margin $ MarginTop 20
             ][ imageView
-                [ width MATCH_PARENT
-                , height $ V 150
-                , imageWithFallback "ny_ic_green_tick,"
+                [ width $ V 114
+                , height $ V 114
+                , imageWithFallback config.image
                 ]
-              , commonTV push (getString PAYMENT_SUCCESSFUL) Color.black900 (FontStyle.h2 TypoGraphy) 10 CENTER
-              , commonTV push ((getString TRANSACTION_ON) <> ": 23 Aug 2023,5:50 PM") Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER
+              , commonTV push config.title Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER
+              , commonTV push ((getString TRANSACTION_ON) <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER
             ]
           , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              , margin $ Margin 16 20 16 0
+              , margin $ Margin 16 20 16 24
               , padding $ Padding 16 8 16 8
-              , cornerRadius 18.0
+              , cornerRadius  10.0
               , gravity CENTER_VERTICAL
               , background Color.blue600
               ][ linearLayout
@@ -308,13 +360,13 @@ transactionDetails push state visibility' =
                 , orientation VERTICAL
                 , padding $ PaddingVertical 8 8
                 ](DA.mapWithIndex (\ index item -> 
-                  transactionHistoryRow push item.title index (DA.length state.data.transactionListItem) $ case item.key of
+                  transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) $ case item.key of
                     "OFFER" -> promoCodeView item.val
-                    "TXN_ID" -> rightItem item.val false true
-                    "PAYMENT_METHOD" -> rightItem item.val true false
-                    _ -> commonTV push item.val Color.black700 (FontStyle.body3 TypoGraphy) 0 RIGHT
+                    "TXN_ID" -> rightItem push item.val false true
+                    "PAYMENT_MODE" -> rightItem push item.val true false
+                    _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT
               
-                  ) state.data.transactionListItem)
+                  ) state.data.transactionDetails.details)
             , manualPaymentRidesList push state -- if manualPayment
               ]
         ]
@@ -333,6 +385,7 @@ transactionHistoryRow push item index length rightLayout =
       , margin $ MarginTop 2
       , background Color.blue600
       , padding $ PaddingVertical 8 8
+      , gravity CENTER_VERTICAL
       ][ commonTV push item Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT
       , linearLayout
           [ weight 1.0
@@ -340,13 +393,17 @@ transactionHistoryRow push item index length rightLayout =
           , gravity RIGHT
           ][ rightLayout ]
       ]
-    , linearLayout
+    , separatorView (index /= (length -1))
+    ]
+
+separatorView :: forall w. Boolean -> PrestoDOM (Effect Unit) w 
+separatorView visible = 
+  linearLayout
       [ width MATCH_PARENT
       , height $ V 1
       , background Color.white900
-      , visibility if index == (length -1) then GONE else VISIBLE
+      , visibility if visible then VISIBLE else GONE
       ][]
-    ]
 promoCodeView :: forall w. String -> PrestoDOM (Effect Unit) w 
 promoCodeView val =
   linearLayout
@@ -356,7 +413,6 @@ promoCodeView val =
   , padding $ Padding 10 4 10 4
   , stroke $ "1," <> Color.grey900
   , background Color.white900
-  , margin $ MarginRight 4
   , gravity CENTER_VERTICAL
   , gradient (Linear 90.0 ["#FFE7C2", "#FFFFFF", "#DDFFEB"])
   ][ imageView
@@ -365,21 +421,20 @@ promoCodeView val =
      , margin (MarginRight 4)
      , imageWithFallback "ny_ic_discount,"
      ] 
-   , textView
+   , textView $
      [ text val
-     , textSize FontSize.a_10
-     , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.blue900
      , padding $ PaddingBottom 3
-     ]
+     ] <> FontStyle.body16 TypoGraphy
   ]
 
-rightItem :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
-rightItem val prefixImage postfixImage =
+rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+rightItem push val prefixImage postfixImage =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  , gravity RIGHT
+  , gravity CENTER_VERTICAL
+  , onClick push $ const if postfixImage then (Copy val) else NoAction
   ][ imageView
      [ width $ V 12
      , height $ V 12
@@ -387,61 +442,91 @@ rightItem val prefixImage postfixImage =
      , visibility if prefixImage then VISIBLE else GONE
      , imageWithFallback "ny_ic_upi_logo,"
      ] 
-   , textView
+   , textView $
      [ text val
-     , textSize FontSize.a_10
-     , fontStyle $ FontStyle.medium LanguageStyle
-     , color Color.blue900
+     , color Color.black900
      , padding $ PaddingBottom 3
-     ]
+     ] <> FontStyle.body6 TypoGraphy
   , imageView
-     [ width $ V 12
-     , height $ V 12
-     , margin (MarginRight 4)
+     [ width $ V 16
+     , height $ V 16
+     , margin (MarginLeft 3)
      , visibility if postfixImage then VISIBLE else GONE
-     , imageWithFallback "ny_ic_copy,"
+     , imageWithFallback "ny_ic_copy_blue,"
      ] 
   ]
 
 manualPaymentRidesList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
 manualPaymentRidesList push state = 
+  let screenwidth = (screenWidth unit) - 64
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , gravity CENTER
-  , visibility GONE
+  , visibility if DA.null state.data.transactionDetails.manualSpecificDetails then GONE else VISIBLE
   , background Color.blue600
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , margin $ MarginBottom 12
+      , orientation HORIZONTAL
+      ][ textView $
+          [ text $ getString TRIP_DATE
+          , width $ V (screenwidth/3)
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+        , textView $
+          [ text $ getString PLAN
+          , color Color.black700
+          , width $ V (screenwidth/3)
+          ] <> FontStyle.body3 TypoGraphy
+        , textView $
+          [ text $ getString AMOUNT
+          , width $ V (screenwidth/3)
+          , color Color.black700
+          , gravity RIGHT
+          ] <> FontStyle.body3 TypoGraphy
+      ]
+      , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ MarginBottom 16
       ](map (\item -> 
             linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER
+            , margin $ MarginBottom 12
             ][ textView $
                 [ text item.key
-                , weight 1.0
+                , color Color.black800
+                , width $ V (screenwidth/3)
                 ] <> FontStyle.tags TypoGraphy
               , textView $
                 [ text item.title
-                , weight 1.0
+                , width $ V (screenwidth/3)
+                , color Color.black800
                 ] <> FontStyle.tags TypoGraphy
               , textView $
                 [ text item.val
-                , weight 1.0
+                , color Color.black800
+                , width $ V (screenwidth/3)
                 , gravity RIGHT
                 ] <> FontStyle.tags TypoGraphy
             ]
-            ) state.data.manualPaymentRidesListItem)
+            ) state.data.transactionDetails.manualSpecificDetails)
+    , separatorView true
     , textView $
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text (getString VIEW_RIDE_DETAILS)
+      , gravity CENTER
+      , textFromHtml $ "<u>"<>(getString VIEW_RIDE_DETAILS)<>"</u>"
       , color Color.black650
       , onClick push $ const ViewRideDetails
+      , padding $ PaddingVertical 16 16
       ] <> FontStyle.body1 TypoGraphy
     
   ]
@@ -454,33 +539,69 @@ rideDetails push state visibility' =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , visibility if visibility' then VISIBLE else GONE
-  ][]
+  ][
+    DueDetailsList.view (push <<< DueDetailsListAction) dummyData
+  ]
 
-
-
-genericHeaderConfig :: PaymentHistoryScreenState -> GenericHeader.Config
-genericHeaderConfig state = let 
-  config = GenericHeader.config
-  genericHeaderConfig' = config 
-    {
-      height = WRAP_CONTENT
-    , prefixImageConfig {
-       visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , height = V 25
-      , width = V 25
-      , margin = Margin 16 16 16 16
-      } 
-    , padding = PaddingVertical 5 5
-    , textConfig {
-        text = case state.props.subView of
-                  PaymentHistory -> (getString PAYMENT_HISTORY)
-                  TransactionDetails -> (getString TRANSACTION_DETAILS)
-                  RideDetails -> (getString RIDE_DETAILS)
-      , color = Color.darkCharcoal
-      }
-    , suffixImageConfig {
-        visibility = GONE
-      }
-    }
-  in genericHeaderConfig'
+dummyData :: DueDetailsListState
+dummyData = {
+  dues : [{
+    date : "05 Oct 2023",
+    planType : "DAILY UNLIMITED PLAN",
+    offerApplied : 
+                {
+                title : Just "Freedom Offer: 76% off APPLIED",
+                offerDescription : Nothing,
+                isGradient : true,
+                gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
+                hasImage : true,
+                imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
+                addedFromUI : true
+                },
+    noOfRides : "04",
+    totalEarningsOfDay : "210",dueAmount : "25",
+    fareBreakup : "-",
+    expanded : true,
+    isAutoPayFailed : true,
+    isSplitPayment : true
+  },
+  {
+    date : "05 Oct 2023",
+    planType : "DAILY UNLIMITED PLAN",
+    offerApplied : {
+                title : Just "First Ride FREE",
+                offerDescription : Nothing,
+                isGradient : false,
+                gradient : [],
+                hasImage : false,
+                imageURL : "",
+                addedFromUI : true
+                },
+    noOfRides : "04",
+    totalEarningsOfDay : "210",dueAmount : "25",
+    fareBreakup : "-",
+    expanded : true,
+    isAutoPayFailed : true,
+    isSplitPayment : true
+  },
+  {
+    date : "05 Oct 2023",
+    planType : "DAILY UNLIMITED PLAN",
+    offerApplied : {
+                title : Just "First Ride FREE",
+                offerDescription : Nothing,
+                isGradient : false,
+                gradient : [],
+                hasImage : false,
+                imageURL : "",
+                addedFromUI : true
+                },
+    noOfRides : "04",
+    totalEarningsOfDay : "210",
+    dueAmount : "25",
+    fareBreakup : "-",
+    expanded : true,
+    isAutoPayFailed : true,
+    isSplitPayment : true
+  }]
+}

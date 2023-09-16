@@ -18,8 +18,8 @@ module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (PaymentBreakUp(..))
+import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
+import Services.API (FeeType(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
 initData = {
@@ -34,10 +34,10 @@ initData = {
             subscriptionStartDate : ""
         },
         myPlanData : {
-            dueItems : [],
+            dueItems : dummyDues,
             planEntity : dummyPlanConfig,
             autoPayStatus : NO_AUTOPAY,
-            lowAccountBalance : false,
+            lowAccountBalance : Mb.Just 5.0,
             paymentMethodWarning : false,
             switchAndSave : false,
             maxDueAmount : 0.0,
@@ -65,13 +65,16 @@ initData = {
         showShimmer : true ,
         refreshPaymentStatus : false,
         confirmCancel : false,
-        isDueViewExpanded : false,
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing
         },
         myPlanProps : {
-            isDuesExpanded : false
+            isDuesExpanded : false,
+            isDueViewExpanded : false,
+            overDue : false,
+            multiTypeDues : true,
+            dueType : MANUAL_PAYMENT
         },
         managePlanProps : {
             selectedPlanItem : dummyPlanConfig
@@ -110,3 +113,39 @@ dummyPlanConfig =
     , freeRideCount : 1
     , showOffer : true
 }
+
+dummyDues :: Array DueItem
+dummyDues = [
+  {
+    tripDate: "2023-09-13T12:34:56Z",
+    amount: 25.0,
+    earnings: 200.0,
+    noOfRides: 5,
+    scheduledAt: "2023-09-11T12:34:56Z",
+    paymentStatus: "Paid",
+    feeBreakup: "Breakup",
+    plan: "Plan",
+    mode: MANUAL_PAYMENT
+  },
+  {
+    tripDate: "2023-09-12T12:34:57Z",
+    amount: 20.0,
+    earnings: 300.0,
+    noOfRides: 16,
+    scheduledAt: "2023-09-11T12:34:57Z",
+    paymentStatus: "Paid",
+    feeBreakup: "Breakup",
+    plan: "Plan",
+    mode: MANUAL_PAYMENT
+  },
+  {
+    tripDate: "2023-09-11T12:34:58Z",
+    amount: 35.0,
+    earnings: 500.0,
+    noOfRides: 9,
+    scheduledAt: "2023-09-11T12:34:58Z",
+    paymentStatus: "Paid",
+    feeBreakup: "Breakup",
+    plan: "Plan",
+    mode: AUTOPAY_PAYMENT
+  }]
