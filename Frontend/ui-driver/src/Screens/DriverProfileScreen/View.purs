@@ -239,7 +239,7 @@ renderQRView state push =
       , imageView[
           height $ V 280
         , width $ V 280
-        , margin $ MarginTop 15
+        , margin $ MarginVertical 15 24
         , id $ getNewIDWithTag "renderQRView"
         , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
       ]
