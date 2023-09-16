@@ -61,5 +61,5 @@ main = do
 spawnDrainerThread :: Int -> R.FlowRuntime -> TDB.Env -> IO ()
 spawnDrainerThread 0 _ _ = pure ()
 spawnDrainerThread count flowRt env = do
-  void . forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
+  threadId <- forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
   spawnDrainerThread (count -1) flowRt env
