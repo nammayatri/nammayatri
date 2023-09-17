@@ -41,6 +41,7 @@ import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
 import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
@@ -69,13 +70,17 @@ retryPaymentButtonConfig state =
         , width = WRAP_CONTENT
         , gravity = LEFT
         , height = WRAP_CONTENT
-        , textStyle = Body4
+        , textStyle = case getValueToLocalStore LANGUAGE_KEY of
+                      "KN_IN" -> Body3
+                      _ -> Body4
         , weight = Mb.Just 1.0
         }
       , height = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 8.0
-      , padding = Padding 10 8 10 10
+      , padding = case getValueToLocalStore LANGUAGE_KEY of
+                      "KN_IN" -> Padding 10 10 10 10
+                      _ -> Padding 10 8 10 10
       , margin = MarginLeft 0
       , isSuffixImage = true
       , suffixImageConfig
@@ -117,7 +122,9 @@ checkStatusButtonConfig state =
         { imageUrl = "ny_ic_refresh_unfilled," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh_unfilled.png"
         , height = V 16
         , width = V 16
-        , margin = (Margin 0 2 5 0)
+        , margin = case getValueToLocalStore LANGUAGE_KEY of
+                      "KN_IN" -> (Margin 0 0 5 0)
+                      _ -> (Margin 0 1 5 0)
         , animation = [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
         }
       , id = "CheckStatusButtonLayout"
