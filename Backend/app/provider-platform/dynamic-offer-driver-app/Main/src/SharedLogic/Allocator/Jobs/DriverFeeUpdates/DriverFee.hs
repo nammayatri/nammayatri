@@ -22,6 +22,7 @@ where
 
 import qualified Control.Monad.Catch as C
 import Data.Fixed (mod')
+import qualified Data.Map as M
 import Data.Ord
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeCalcJobFlagKey, mkDriverFeeCalcJobFlagKey)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -40,8 +41,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast, getShortId)
-import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, GuidLike (generateGUID), HasShortDurationRetryCfg, HighPrecMoney (..), Log (withLogTag), MonadFlow, MonadGuid, MonadTime (getCurrentTime), addUTCTime, fromMaybeM, generateShortId, getLocalCurrentTime, logError, logInfo, secondsToNominalDiffTime, throwError, withShortRetry)
+import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, GuidLike (generateGUID), HasShortDurationRetryCfg, HighPrecMoney (..), Log (withLogTag), MonadFlow, MonadGuid, MonadTime (getCurrentTime), addUTCTime, diffUTCTime, fromMaybeM, generateShortId, getLocalCurrentTime, logError, logInfo, secondsToNominalDiffTime, throwError, withShortRetry)
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee hiding (PlatformFee)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -113,7 +115,11 @@ calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Job 'CalculateDriverFees ->
   m ExecutionResult
@@ -186,6 +192,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   case listToMaybe driverFees of
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantId)
+      maxShards <- asks (.maxShards)
+      scheduleJobs transporterConfig startTime endTime merchantId maxShards now
       return Complete
     _ -> case transporterConfig.driverFeeCalculatorBatchGap of
       Nothing -> throwError $ InternalError "No batch gap defined for driver fee calculator job"
@@ -371,3 +379,14 @@ updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = 
       void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantId) (maybe 0 toInteger (count >>= (.billNumber)))
     billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantId)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
+
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do
+  let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
+  let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
+  createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
+    SendPDNNotificationToDriverJobData
+      { merchantId = merchantId,
+        startTime = startTime,
+        endTime = endTime
+      }

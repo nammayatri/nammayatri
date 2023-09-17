@@ -1,10 +1,12 @@
 module SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver) where
 
+import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
 import Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan as DPlan
 import Domain.Types.Mandate (Mandate)
+import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
@@ -17,6 +19,7 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
@@ -31,7 +34,11 @@ sendPDNNotificationToDriver ::
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Job 'SendPDNNotificationToDriver ->
   m ExecutionResult
@@ -45,15 +52,18 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = fromInteger $ transporterConfig.driverFeeMandateNotificationBatchSize
+    now <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime DF.PAYMENT_PENDING
     if null driverFees
-      then return Complete --- TO DO :- here we will tigger execution scheduler ---
+      then do
+        maxShards <- asks (.maxShards)
+        scheduleJobs transporterConfig startTime endTime merchantId maxShards now
+        return Complete --- TO DO :- here we will tigger execution scheduler ---
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
         activeSubscribedDrivers <- QDI.findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
         mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeSubscribedDrivers) Plan.AUTOPAY
         let driverInfoForPDNotification = mapDriverInfoForPDNNotification (Map.fromList mandateIdAndDriverIdsToNotify) driverFees
-        now <- getCurrentTime
         for_ driverInfoForPDNotification $ \driverToNotify -> do
           notificationId <- generateGUID
           notificationShortId <- generateShortId
@@ -125,3 +135,14 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
 
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
+
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do
+  let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
+  let dfCalculationJobTs = diffUTCTime (addUTCTime dfExecutionTime endTime) now
+  createJobIn @_ @'MandateExecution dfCalculationJobTs maxShards $
+    MandateExecutionInfo
+      { merchantId = merchantId,
+        startTime = startTime,
+        endTime = endTime
+      }

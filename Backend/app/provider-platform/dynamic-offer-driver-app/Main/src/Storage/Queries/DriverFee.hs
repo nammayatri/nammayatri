@@ -139,8 +139,8 @@ findWindows (Id driverId) from to limitVal offsetVal =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.updatedAt $ Se.GreaterThanOrEq from,
-          Se.Is BeamDF.updatedAt $ Se.LessThanOrEq to
+          Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.createdAt $ Se.LessThanOrEq to
         ]
     ]
     (Se.Desc BeamDF.createdAt)

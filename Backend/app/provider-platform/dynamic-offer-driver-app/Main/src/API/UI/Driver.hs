@@ -168,14 +168,14 @@ type API =
              :<|> "cleardues"
                :> TokenAuth
                :> Get '[JSON] DDriver.ClearDuesRes
-             :<|> "ny-payments"
-               :> "history"
-               :> TokenAuth
-               :> QueryParam "from" Day -- rides with window start date >= from
-               :> QueryParam "to" Day -- rides with window end date <= to
-               :> QueryParam "limit" Int
-               :> QueryParam "offset" Int
-               :> Get '[JSON] DDriver.DriverNYPaymentHistoryResponse
+               --  :<|> "ny-payments"
+               --    :> "history"
+               --    :> TokenAuth
+               --    :> QueryParam "from" Day -- rides with window start date >= from
+               --    :> QueryParam "to" Day -- rides with window end date <= to
+               --    :> QueryParam "limit" Int
+               --    :> QueryParam "offset" Int
+               --    :> Get '[JSON] DDriver.DriverNYPaymentHistoryResponse
          )
 
 handler :: FlowServer API
@@ -209,7 +209,7 @@ handler =
                   )
              :<|> getDriverPayments
              :<|> clearDriverDues
-             :<|> getNYDriverPayments
+             --  :<|> getNYDriverPayments
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -295,5 +295,5 @@ getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . D
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.ClearDuesRes
 clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
 
-getNYDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverNYPaymentHistoryResponse]
-getNYDriverPayments mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI . DDriver.getNYDriverPayments mbFrom mbTo mbLimit mbOffset
+-- getNYDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> FlowHandler DDriver.DriverNYPaymentHistoryResponse
+-- getNYDriverPayments (driverId,merchantId) mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI . DDriver.getNYDriverPayments (driverId,merchantId) mbFrom mbTo mbLimit mbOffset
