@@ -37,8 +37,8 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), HotSpotData)
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), HotSpotInfo(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -471,3 +471,11 @@ getNearByDrivers estimates = DA.nub (getCoordinatesFromEstimates [] estimates)
       let latLngs = estimate.driversLatLong
       in
         map (\(LatLong item) -> { lat : item.lat, lng : item.lon }) latLngs
+        
+transformHotSpotInfo :: Array HotSpotInfo -> Array HotSpotData
+transformHotSpotInfo hotSpotInfo = map (\hotSpot -> transformHotSpot hotSpot) hotSpotInfo
+
+transformHotSpot :: HotSpotInfo -> HotSpotData
+transformHotSpot (HotSpotInfo hotSpot) =
+  let (LatLong centroidLatLong) = hotSpot.centroidLatLong
+  in { lat : centroidLatLong.lat, lon : centroidLatLong.lon }

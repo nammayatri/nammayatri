@@ -635,10 +635,10 @@ eval TerminateApp state = do
   pure $ terminateApp state.props.currentStage true
   continue state
 
-eval (IsMockLocation isMock) state = do
-  let val = isMock == "true"
-      _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+-- eval (IsMockLocation isMock) state = do
+--   let val = isMock == "true"
+--       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
+--   continue state{props{isMockLocation = val}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -925,21 +925,23 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 
 eval (UpdateLocation key lat lon) state = case key of
   "LatLon" -> do
-    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+    let isSourceManuallyMoved = state.props.hotSpot.manuallyMoved
+    exit $ UpdateLocationName state{props{defaultPickUpPoint = "", hotSpot{ manuallyMoved = if state.props.isSource == Just true then true else isSourceManuallyMoved }}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
   _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdateLocationName state{props{defaultPickUpPoint = key, hotSpot{ manuallyMoved = false }}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         else continue state
 
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      let isSourceManuallyMoved = state.props.hotSpot.manuallyMoved
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = "", hotSpot{ manuallyMoved = if state.props.isSource == Just true then true else isSourceManuallyMoved }}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> do
       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
       case focusedIndex of
         Just index -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key, hotSpot{ manuallyMoved = false }}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         Nothing -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
@@ -1280,7 +1282,7 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Bu
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
-  locationSelected item false state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+  locationSelected item false state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false, hotSpot{ manuallyMoved = if state.props.isSource == Just true then false else state.props.hotSpot.manuallyMoved }}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -1322,7 +1324,7 @@ eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
-  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }, data { nearByDrivers = Nothing } }
+  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap, hotSpot{ manuallyMoved = if state.props.isSource == Just true then false else state.props.hotSpot.manuallyMoved } }, data { nearByDrivers = Nothing } }
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 

@@ -346,8 +346,8 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd=
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> Boolean -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd isSourceManuallyMoved isSpecialLocation =
      SearchReq { "contents" : OneWaySearchReq{
                                                "destination" : SearchReqLocation {
                                                         "gps" : LatLong {
@@ -361,7 +361,9 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd=
                                                             "lat" : slat ,
                                                             "lon" : slong
                                                 },"address" : (LocationAddress srcAdd)
-                                               }
+                                               },
+                                               "isSourceManuallyMoved" : Just isSourceManuallyMoved,
+                                               "isSpecialLocation" : Just isSpecialLocation
                                               },
                  "fareProductType" : "ONE_WAY"
                 }

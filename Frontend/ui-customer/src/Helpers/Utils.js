@@ -505,3 +505,15 @@ export const getMobileNumber = function (signatureAuthData, maskedNumber) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }
+
+export const showHotSpots = function (hotSpots) {
+  try {
+    if (JBridge.showHotSpots) {
+      var config = { hotSpots : hotSpots };
+      console.log("debug hotspot js");
+      return JBridge.showHotSpots(JSON.stringify(config));
+    }
+  } catch (error) {
+    console.log("showHotSpot error", error);
+  }
+}

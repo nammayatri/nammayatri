@@ -900,15 +900,21 @@ export const showMapImpl = function (id) {
       return function (zoom) {
         return function (cb) {
           return function (action) {
-            return function () {
-              var callback = callbackMapper.map(function (key, lat, lon) {
-                console.log("in show map",action);
-                window.x = cb;
-                window.y = action;
-                cb(action (key) (lat) (lon))();
-              });
-              window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
-              return true;
+            return function (mapConfig) {
+              return function () {
+                var callback = callbackMapper.map(function (key, lat, lon) {
+                  console.log("in show map", action);
+                  window.x = cb;
+                  window.y = action;
+                  cb(action(key)(lat)(lon))();
+                });
+                try {
+                  window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback, JSON.stringify(mapConfig));
+                } catch (error) {
+                  window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+                }
+                return true;
+              };
             };
           };
         }
@@ -1849,12 +1855,6 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
     window.JBridge.horizontalScrollToPos(id,childId, focus);
   }
 }
-
-// focus values --
-  // left - 17
-  // right - 66
-  // top - 33
-  // down - 130
 
 export const withinTimeRange = function (startTime) {
   return function (endTime) {

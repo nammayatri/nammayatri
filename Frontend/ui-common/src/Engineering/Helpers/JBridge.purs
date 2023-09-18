@@ -130,7 +130,7 @@ foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
 foreign import isBatteryPermissionEnabled :: Unit -> Effect Boolean
 foreign import reallocateMapFragment :: String -> Effect Unit
-foreign import showMapImpl :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
+foreign import showMapImpl :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> MapConfig -> Effect Boolean
 foreign import mapSnapShot :: forall action. String -> Locations -> String -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Boolean
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
@@ -332,7 +332,7 @@ showLoader str = liftFlow (showLoaderImpl str)
 addMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat lng markerSize anchorV anchorV1)
 
-showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
+showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> MapConfig -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 
 -- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
@@ -445,3 +445,16 @@ fromMetersToKm distanceInMeters
 
 getArray :: Int ->Array Int
 getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))
+
+type MapConfig = {
+    dottedLine :: DottedLineConfig
+  , animationSpeed :: Int
+  , hotSpotRadius :: Int
+  , selectNearByPointRadius :: Number
+}
+
+type DottedLineConfig = {
+    visible :: Boolean
+  , range :: Number
+  , color :: String
+}
