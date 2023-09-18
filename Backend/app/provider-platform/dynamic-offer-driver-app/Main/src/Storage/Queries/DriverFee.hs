@@ -400,7 +400,8 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             createdAt = createdAt,
             updatedAt = updatedAt,
             billNumber,
-            stageUpdatedAt
+            stageUpdatedAt,
+            feeWithoutDiscount
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -426,6 +427,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.billNumber = billNumber,
         BeamDF.autopayPaymentStage = autopayPaymentStage,
         BeamDF.stageUpdatedAt = stageUpdatedAt,
+        BeamDF.feeWithoutDiscount = feeWithoutDiscount,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

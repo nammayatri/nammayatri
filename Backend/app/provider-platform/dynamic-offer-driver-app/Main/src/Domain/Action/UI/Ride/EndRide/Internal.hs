@@ -408,6 +408,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         autopayPaymentStage = Nothing,
         stageUpdatedAt = Nothing,
         billNumber = Nothing,
+        feeWithoutDiscount = Nothing, -- Only for NY rn
         ..
       }
 

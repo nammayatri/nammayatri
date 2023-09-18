@@ -144,7 +144,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
 
     driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
-    (totalFee, offerId, offerTitle) <- case planBaseFrequcency of
+    (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
       "PER_RIDE" -> do
         let numRides = driverFee.numRides - plan.freeRideCount
             feeWithoutDiscount = min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides))
@@ -153,7 +153,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         let numRides = driverFee.numRides - plan.freeRideCount
             feeWithoutDiscount = if numRides > 0 then baseAmount else 0
         getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
-      _ -> return (0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
+      _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
     let offerAndPlanTitle = Just plan.id.getId <> Just "-*$*-" <> offerTitle ---- this we will send in payment history ----
     updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
     offerTxnId <- getShortId <$> generateShortId
@@ -162,7 +162,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
     ---- here we need the status to notification scheduled ----
     unless (totalFee == 0) $ do
-      driverFeeSplitter plan totalFee driverFee now
+      driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now
       updatePendingPayment True (cast driverFee.driverId)
 
     -- blocking
@@ -232,7 +232,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate = do
       dutyDate
     }
 
-getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> HighPrecMoney -> UTCTime -> DriverFee -> m (HighPrecMoney, Maybe Text, Maybe Text)
+getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> HighPrecMoney -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount registrationDate driverFee = do
   now <- getCurrentTime
   let dutyDate = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt
@@ -240,7 +240,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   if feeWithoutDiscount == 0
     then do
       updateStatus CLEARED now driverFee.id
-      return (0, Nothing, Nothing)
+      return (0, 0, Nothing, Nothing)
     else do
       offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
@@ -251,10 +251,10 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       let (platformFee, cgst, sgst) = calculatePlatformFeeAttr finalOrderAmount plan -- this should be HighPrecMoney
       updateFee driverFee.id Nothing 0 (round platformFee) cgst sgst now False -- add split logic before update
-      return (finalOrderAmount, offerId, offerTitle)
+      return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
 
-splitPlatformFee :: HighPrecMoney -> Plan -> DriverFee -> [DriverFee]
-splitPlatformFee totalFee plan DriverFee {..} =
+splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> [DriverFee]
+splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} =
   let numEntities = totalFee / plan.maxAmount
       remainingFee = totalFee `mod'` plan.maxAmount
       entityList = replicate (floor numEntities) plan.maxAmount ++ [remainingFee | remainingFee > 0]
@@ -264,6 +264,7 @@ splitPlatformFee totalFee plan DriverFee {..} =
             DriverFee
               { platformFee = PlatformFee {fee = round platformFee_, ..},
                 feeType = feeType,
+                feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
                 ..
               }
         )
@@ -277,11 +278,11 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> DriverFee -> UTCTime -> m ()
-driverFeeSplitter plan totalFee driverFee now = do
+driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> UTCTime -> m ()
+driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
+  let splittedFees = splitPlatformFee feeWithoutDiscount totalFee plan driverFee
   case plan.paymentMode of
     MANUAL -> do
-      let splittedFees = splitPlatformFee totalFee plan driverFee
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
@@ -289,7 +290,6 @@ driverFeeSplitter plan totalFee driverFee now = do
           updRestFees <- mapM (buildRestFees PAYMENT_OVERDUE RECURRING_INVOICE) restFees
           createMany updRestFees
     AUTOPAY -> do
-      let splittedFees = splitPlatformFee totalFee plan driverFee
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do

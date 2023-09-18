@@ -48,7 +48,8 @@ data DriverFee = DriverFee
     planOfferTitle :: Maybe Text,
     billNumber :: Maybe Int,
     autopayPaymentStage :: Maybe AutopayPaymentStage,
-    stageUpdatedAt :: Maybe UTCTime
+    stageUpdatedAt :: Maybe UTCTime,
+    feeWithoutDiscount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show)
 

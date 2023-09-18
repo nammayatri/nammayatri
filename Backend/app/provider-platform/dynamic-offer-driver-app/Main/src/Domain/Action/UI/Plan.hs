@@ -407,7 +407,8 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             planOfferTitle = Nothing,
             autopayPaymentStage = Nothing,
             stageUpdatedAt = Nothing,
-            billNumber = Nothing
+            billNumber = Nothing,
+            feeWithoutDiscount = Nothing
           }
 
 convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Plan -> Flow PlanEntity

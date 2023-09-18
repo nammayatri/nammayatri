@@ -50,6 +50,7 @@ data DriverFeeT f = DriverFeeT
     stageUpdatedAt :: B.C f (Maybe UTCTime),
     billNumber :: B.C f (Maybe Int),
     autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
+    feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
