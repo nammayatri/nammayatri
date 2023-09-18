@@ -45,6 +45,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
     implementation 'com.google.android.play:app-update:2.0.0'
     implementation 'androidx.work:work-runtime:2.7.1'
+    implementation "com.android.installreferrer:installreferrer:2.2"
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.firebase:firebase-analytics'
     implementation platform('com.google.firebase:firebase-bom:32.2.0')
