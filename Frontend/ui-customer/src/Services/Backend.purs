@@ -462,6 +462,26 @@ makeFeedBackReq rating rideId feedback = FeedbackReq
     ,   "feedbackDetails" : feedback
     }
 
+----------------------------------------------------------------------- AppInstalls BT Function ---------------------------------------------------------------------------------------
+
+appInstallsBT :: InstallationSourceReq -> FlowBT String InstallationSourceRes
+appInstallsBT info = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.appInstalls "") (\x -> x)  errorHandler (lift $ lift $ callAPI headers info)
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+makeInstallationSourceReq :: String -> Version -> Version -> InstallationSourceReq
+makeInstallationSourceReq source appVersion bundleVersion = InstallationSourceReq
+    {
+        "deviceToken" : getValueToLocalNativeStore FCM_TOKEN,
+        "source" : Just source,
+        "merchantId" : if ( SC.getMerchantId "")== "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId ""),
+        "appVersion" : Just appVersion,
+        "bundleVersion" : Just bundleVersion,
+        "platform" : Just os
+    }
 
 ----------------------------------------------------------------------- RideBooking BT Function ---------------------------------------------------------------------------------------
 rideBookingBT :: String -> FlowBT String RideBookingRes

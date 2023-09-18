@@ -84,7 +84,7 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..))
 import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..))
-import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
+import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..),Snapped(..),InstallationSourceRes(..))
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -133,6 +133,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
     else do
       _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
       pure unit
+  if getValueToLocalNativeStore REFERRER_DATA == "NATIVE_SUCCESS" then makeAppInstallsCall versionName bundle else pure unit
   _ <- lift $ lift $ setLogField "app_version" $ encode (show versionCode)
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
@@ -169,6 +170,16 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
               liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload { event : "signature_auth_failed", payload : Nothing}
               pure unit
         Nothing -> if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
+    where
+      makeAppInstallsCall :: String -> String -> FlowBT String Unit
+      makeAppInstallsCall versionName bundle = do
+        let sourceUrl = getValueToLocalNativeStore REFERRER_URL
+            Version clientVersion = stringToVersion versionName
+            Version bundleVersion = stringToVersion bundle
+        (InstallationSourceRes resp) <- Remote.appInstallsBT (Remote.makeInstallationSourceReq (sourceUrl) (Version clientVersion) (Version bundleVersion))
+        setValueToLocalNativeStore REFERRER_DATA (if resp.result == "Success" then "API_SUCCESS" else "API_FAILED")
+        pure unit
+
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of

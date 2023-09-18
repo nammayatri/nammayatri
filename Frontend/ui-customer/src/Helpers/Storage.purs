@@ -79,6 +79,8 @@ data KeyStore
   | COUNTRY_CODE
   | DISABILITY_UPDATED
   | DISABILITY_POPUP_TRIGGERED
+  | REFERRER_URL
+  | REFERRER_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -139,6 +139,39 @@ instance showTriggerSignatureOTPReq :: Show TriggerSignatureOTPReq where show = 
 instance decodeTriggerSignatureOTPReq :: Decode TriggerSignatureOTPReq where decode = defaultDecode
 instance encodeTriggerSignatureOTPReq :: Encode TriggerSignatureOTPReq where encode = defaultEncode
 
+newtype InstallationSourceReq = InstallationSourceReq {
+    deviceToken :: String
+  , platform :: Maybe String
+  , source :: Maybe String
+  , bundleVersion :: Maybe Version
+  , appVersion :: Maybe Version
+  , merchantId :: String
+}
+
+newtype InstallationSourceRes = InstallationSourceRes
+  {
+    result :: String
+  }
+
+instance makeInstallationSourceReq :: RestEndpoint InstallationSourceReq InstallationSourceRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.appInstalls "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+
+derive instance genericInstallationSourceReq :: Generic InstallationSourceReq _
+derive instance newtypeInstallationSourceReq :: Newtype InstallationSourceReq _
+instance standardEncodeInstallationSourceReq :: StandardEncode InstallationSourceReq where standardEncode (InstallationSourceReq reqBody) = standardEncode reqBody
+instance decodeInstallationSourceReq :: Decode InstallationSourceReq where decode = defaultDecode
+instance encodeInstallationSourceReq :: Encode InstallationSourceReq where encode = defaultEncode
+
+derive instance genericInstallationSourceRes :: Generic InstallationSourceRes _
+derive instance newtypeInstallationSourceRes :: Newtype InstallationSourceRes _
+instance standardEncodeInstallationSourceRes :: StandardEncode InstallationSourceRes where standardEncode (InstallationSourceRes id) = standardEncode id
+instance showInstallationSourceRes :: Show InstallationSourceRes where show = genericShow
+instance decodeInstallationSourceRes :: Decode InstallationSourceRes where decode = defaultDecode
+instance encodeInstallationSourceRes :: Encode InstallationSourceRes where encode = defaultEncode
+
 -------------------------------------------------- Resend OTP API Types --------------------------------------------
 
 newtype ResendOTPResp = ResendOTPResp {
