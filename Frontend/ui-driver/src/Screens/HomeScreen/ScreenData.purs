@@ -157,6 +157,8 @@ initData = {
         showRideCompleted : false,
         showRideRating : false,
         showContackSupportPopUp : false,
-        showChatBlockerPopUp : false
+        showChatBlockerPopUp : false,
+        driverBlocked : false,
+        showBlockingPopup : false
     }
 }

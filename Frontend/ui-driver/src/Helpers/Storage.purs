@@ -97,6 +97,7 @@ data KeyStore = USER_NAME
                 | SHOW_JOIN_NAMMAYATRI
                 | DRIVER_SUBSCRIBED
                 | KIOSK_LOCATIONS
+                | ENABLE_BLOCKING
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

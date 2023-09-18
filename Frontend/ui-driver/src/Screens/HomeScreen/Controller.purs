@@ -276,6 +276,7 @@ data Action = NoAction
             | RideCompletedAC RideCompletedCard.Action
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
+            | StartEarningPopupAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -299,9 +300,10 @@ eval BackPressed state = do
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
                         else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else do
-                            _ <- pure $ minimizeApp ""
-                            continue state
+                          else if state.props.showBlockingPopup then continue state {props{showBlockingPopup = false}}
+                            else do
+                              _ <- pure $ minimizeApp ""
+                              continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -619,7 +621,8 @@ eval (RideActiveAction activeRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if state.props.rcActive == false then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+  if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
+  else if state.props.rcActive == false then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
@@ -691,6 +694,12 @@ eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
+
+eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { props {showBlockingPopup = false}}
+
+eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
+  _ <- pure $ showDialer "08069490091" false
+  continue state
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ PopUpModalChatBlockerAction PopUpModal.DismissPopup
