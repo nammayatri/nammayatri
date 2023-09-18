@@ -422,7 +422,7 @@ updateRegisterationFeeStatusByDriverId status (Id driverId) = do
 updateCollectedPaymentStatus :: MonadFlow m => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
 updateCollectedPaymentStatus status collectorId now (Id driverFeeId) = do
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId]
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId, Se.Set BeamDF.collectedAt (Just now)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 updateAllExecutionPendingToManualOverdueByDriverId :: MonadFlow m => Id Person -> m ()
@@ -452,6 +452,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             offerId = offerId,
             planOfferTitle,
             autopayPaymentStage,
+            collectedAt = collectedAt,
             createdAt = createdAt,
             updatedAt = updatedAt,
             billNumber,
@@ -483,6 +484,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.autopayPaymentStage = autopayPaymentStage,
         BeamDF.stageUpdatedAt = stageUpdatedAt,
         BeamDF.feeWithoutDiscount = feeWithoutDiscount,
+        BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }
