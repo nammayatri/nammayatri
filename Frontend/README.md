@@ -80,3 +80,4 @@ To start the frontend app for IOS, follow these steps:
 **Starting the Server**
 
     npm run start:ios:<master, sandbox, or prod>
+ 
