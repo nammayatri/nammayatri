@@ -61,25 +61,34 @@ logRequestAndResponse' (EnvR flowRt appEnv) =
 
 logRequestAndResponseGeneric' :: (Text -> Text -> IO ()) -> Application -> Application
 logRequestAndResponseGeneric' logInfoIO f req respF =
-  md $ f req loggedRespF
+  md "measuringAllFunctions" $ f req loggedRespF
   where
-    md k = do
+    md tag k = do
       (res, duration) <- TT.measureDuration k
-      logInfoIO "measuringAllFunctions : Duration : " $ show duration
+      bs <- strictRequestBody req
+      logInfoIO (tag <> " : body : ") $ decodeUtf8 bs
+      logInfoIO (tag <> " : duration : ") $ show duration
       return res
     loggedRespF resp = do
       logInfoIO "Request&Response full" $ "Request: " <> show req
       respF resp
 
 run :: Env -> Application
-run = withModifiedEnv $ \modifiedEnv ->
+run = withModifiedEnv $ \modifiedEnv@(EnvR flowRt appEnv) ->
   BU.run driverOfferAPI driverOfferServer context modifiedEnv
-    & logRequestAndResponse' modifiedEnv
-    & logBecknRequest modifiedEnv
-    & addServantInfo modifiedEnv.appEnv.version driverOfferAPI
-    & hashBodyForSignature
-    & supportProxyAuthorization
+    & md flowRt appEnv "logRequestAndResponse'" . logRequestAndResponse' modifiedEnv
+    & md flowRt appEnv "logBecknRequest" . logBecknRequest modifiedEnv
+    & md flowRt appEnv "addServantInfo" . addServantInfo modifiedEnv.appEnv.version driverOfferAPI
+    & md flowRt appEnv "hashBodyForSignature" . hashBodyForSignature
+    & md flowRt appEnv "supportProxyAuthorization" . supportProxyAuthorization
   where
+    md flowRt appEnv tag f req respF = do
+      (res, duration) <- TT.measureDuration $ f req respF
+      logInfoIO flowRt appEnv (tag <> " : ") $ show duration
+      return res
+
+    logInfoIO flowRt appEnv tag info = runFlowR flowRt appEnv $ logTagInfo tag info
+
     context =
       verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)

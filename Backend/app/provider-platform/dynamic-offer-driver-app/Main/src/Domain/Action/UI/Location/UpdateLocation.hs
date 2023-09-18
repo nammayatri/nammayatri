@@ -118,7 +118,7 @@ buildUpdateLocationHandle driverId = do
   where
     md tag f = do
       (res, duration) <- measureDuration f
-      logDebug $ (tag <> " : ") <> show duration
+      logError $ (tag <> " : ") <> show duration
       pure res
 
 streamLocationUpdates ::
@@ -177,47 +177,38 @@ updateLocationHandler ::
   UpdateLocationHandle m ->
   UpdateLocationReq ->
   m APISuccess
-updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
+updateLocationHandler UpdateLocationHandle {..} waypoints = md "updateLocationHandler : fullFunction" . withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
-    (thresholdConfig, duration1) <- measureDuration $ QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    logDebug $ "findByMerchantId : " <> show duration1
+    thresholdConfig <- md "updateLocationHandler : QTConf.findByMerchantId" $ QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
 
-    (_, duration2) <- measureDuration $ do
+    void . md "updateLocationHandler : handleDriverPayments" $ do
       when (thresholdConfig.subscription) $ do
-        -- window end time over - still ongoing - sendPaymentReminder
-        -- payBy is also over - still ongoing/pending - unsubscribe
         handleDriverPayments driverId thresholdConfig.timeDiffFromUtc
-    logDebug $ "handleDriverPayments : " <> show duration2
 
-    (driverInfo, duration3) <- measureDuration $ DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-    logDebug $ "DInfo.findById : " <> show duration3
+    driverInfo <- md "updateLocationHandler : DInfo.findById" $ DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
 
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
 
-    (_, duration4) <- measureDuration $ checkLocationUpdatesRateLimit driverId
-    logDebug $ "checkLocationUpdatesRateLimit : " <> show duration4
+    void . md "updateLocationHandler : checkLocationUpdatesRateLimit" $ checkLocationUpdatesRateLimit driverId
 
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driverId $ do
-      (mbOldLoc, duration5) <- measureDuration $ findDriverLocation
-      logDebug $ "findDriverLocation : " <> show duration5
+      mbOldLoc <- md "updateLocationHandler : findDriverLocation" $ findDriverLocation
 
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
           filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
-      (mbRideIdAndStatus, duration6) <- measureDuration $ getAssignedRide
-      logDebug $ "getAssignedRide : " <> show duration6
+      mbRideIdAndStatus <- md "updateLocationHandler : getAssignedRide" $ getAssignedRide
 
       case filteredWaypoint of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
-          (_, duration7) <- measureDuration $ upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
-          logDebug $ "upsertDriverLocation : " <> show duration7
+          void . md "updateLocationHandler : upsertDriverLocation" $ upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
 
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
@@ -249,6 +240,11 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           logDebug $ "addIntermediateRoutePoints : " <> show duration10
 
     pure Success
+  where
+    md tag f = do
+      (res, duration) <- measureDuration f
+      logError $ (tag <> " : ") <> show duration
+      pure res
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
