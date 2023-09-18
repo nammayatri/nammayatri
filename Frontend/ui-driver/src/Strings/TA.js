@@ -795,5 +795,6 @@ const tamilStrings = {
   PURPLE_RIDE_CHAMPION : "பர்பிள் ரைடு சாம்பியன்",
   PURPLE_RIDE : "பர்பிள் சவாரி",
   PROCEED_TO_CHAT : "அரட்டையைத் தொடரவும்",
-  PLEASE_CONSIDER_CALLING_THEM : "அவர்களால் உரையாடலைப் படிக்க முடியாமல் போகலாம். தயவுசெய்து அவர்களை அழைக்கவும்"
+  PLEASE_CONSIDER_CALLING_THEM : "அவர்களால் உரையாடலைப் படிக்க முடியாமல் போகலாம். தயவுசெய்து அவர்களை அழைக்கவும்",
+  JOIN_A_PLAN_TO_START_EARNING : "சம்பாதிப்பதைத் தொடங்க ஒரு திட்டத்தில் சேரவும்!"
 }

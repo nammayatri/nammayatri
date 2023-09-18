@@ -9,7 +9,8 @@ type AppConfig =
     popupBackground :: String,
     defaultLanguage :: String,
     imageUploadOptional :: Boolean,
-    leaderBoard :: LeaderBoard
+    leaderBoard :: LeaderBoard,
+    subscriptionConfig :: SubscriptionConfig
   } 
 
 type Language =  {
@@ -21,3 +22,7 @@ type Language =  {
 type LeaderBoard = {
   isMaskedName :: Boolean
 }
+
+type SubscriptionConfig =  {
+  enableBlocking :: Boolean
+ }

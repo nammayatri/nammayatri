@@ -885,6 +885,17 @@ export const isYesterday = function (dateString){
   return false;
 }
 
+export const isDateGreaterThan = function(dateString){
+  try {
+    const currDate = new Date();
+    var futureDate = new Date(dateString);
+    return currDate > futureDate;
+  }catch(error){
+    console.error("error", error);
+  }
+  return false;
+}
+
 export const getPopupObject = function (just, nothing, key){
   try {
     var val = JBridge.getFromSharedPrefs(key);

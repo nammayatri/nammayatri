@@ -907,7 +907,9 @@ type HomeScreenProps =  {
   showRideCompleted :: Boolean,
   showRideRating :: Boolean,
   showContackSupportPopUp :: Boolean,
-  showChatBlockerPopUp :: Boolean
+  showChatBlockerPopUp :: Boolean,
+  driverBlocked :: Boolean,
+  showBlockingPopup :: Boolean
  }
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY

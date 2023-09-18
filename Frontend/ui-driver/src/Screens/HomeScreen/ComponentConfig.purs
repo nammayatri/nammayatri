@@ -897,3 +897,70 @@ getRatingCardConfig state = let
     closeImgVisible = VISIBLE
   }
   in config'
+
+subsBlockerPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+subsBlockerPopUpConfig state = let
+    config = PopUpModal.config
+    popUpConf' = config {
+      cornerRadius = PTD.Corners 15.0 true true true true
+      , buttonLayoutMargin = MarginTop 0
+      , margin = MarginHorizontal 16 16
+      , padding = Padding 16 16 16 16
+      , gravity = CENTER
+      , backgroundColor =  Color.black9000
+      , backgroundClickable = false
+      , optionButtonOrientation = "HORIZONTAL"
+    ,primaryText {
+        text = getString JOIN_A_PLAN_TO_START_EARNING
+      , margin = Margin 16 16 16 0
+      , color = Color.black800
+      , textStyle = Heading2
+     },
+      option1 {
+        text = getString JOIN_NOW
+      , color = Color.yellow900
+      , background = Color.black900
+      , visibility = true
+      , margin = MarginTop 16
+      , width = MATCH_PARENT
+
+      },
+      coverImageConfig {
+        imageUrl = "ny_ic_sub_save_more,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_sub_save_more.png"
+      , visibility = VISIBLE
+      , width = V 280
+      , height = V 250
+      },
+    secondaryText {visibility = GONE},
+    option2 { 
+      visibility = false
+    },
+    optionWithHtml {
+      textOpt1 {
+        color = Color.black650
+        , text = getString NEED_HELP
+        , textStyle = SubHeading2
+        , visibility = VISIBLE
+      }
+      , textOpt2 {
+        color = Color.blue800
+        , textStyle = SubHeading2
+        , text = getString CALL_SUPPORT
+        , visibility = VISIBLE
+      } 
+      , image {
+          imageUrl = "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = Margin 3 1 3 0
+        }
+      , strokeColor = Color.white900
+      , margin = MarginHorizontal 16 16
+      , background = Color.white900
+      , visibility = true
+      , isClickable = true
+      },
+    dismissPopup = false
+    }
+  in popUpConf'

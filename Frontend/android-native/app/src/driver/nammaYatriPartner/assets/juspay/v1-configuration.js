@@ -85,5 +85,8 @@ window.getMerchantConfig = function () {
     , "leaderBoard": {
       "isMaskedName": true
     }
+    , "subscriptionConfig" : {
+      "enableBlocking" : true
+    } 
   })
 }

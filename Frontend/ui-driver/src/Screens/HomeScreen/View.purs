@@ -230,15 +230,17 @@ view push state =
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-  ] <> if state.props.showChatBlockerPopUp then [chatBlockerPopUpView push state] else [])
+  ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
-chatBlockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-chatBlockerPopUpView push state = 
+blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+blockerPopUpView push state = 
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ][PopUpModal.view (push <<< PopUpModalChatBlockerAction) (chatBlockerPopUpConfig state)]
+  ][PopUpModal.view 
+    (push <<< if state.props.showBlockingPopup then StartEarningPopupAC else PopUpModalChatBlockerAction ) 
+    (if state.props.showBlockingPopup then subsBlockerPopUpConfig state else chatBlockerPopUpConfig state)]
   
 accessibilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 accessibilityPopUpView push state =
@@ -574,7 +576,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background Color.darkMint -- Color.yellowText TODO:: Later
+                    , background if state.props.driverBlocked then Color.yellowText else Color.darkMint 
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

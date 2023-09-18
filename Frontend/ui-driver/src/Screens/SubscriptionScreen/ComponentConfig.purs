@@ -210,7 +210,7 @@ popupModalConfig state = let
                   Mb.Just SupportPopup -> getString CALL_SUPPORT
                   Mb.Nothing -> ""
       , color = Color.yellow900
-      , background = Color.black
+      , background = Color.black900
       , visibility =true
       , margin = MarginTop 16
       , width = case state.props.popUpState of

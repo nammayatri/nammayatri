@@ -18,5 +18,8 @@ config =
   , imageUploadOptional : false
   , leaderBoard :{
     isMaskedName : true
+  },
+  subscriptionConfig : {
+    enableBlocking : false
   }
   }

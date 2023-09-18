@@ -826,5 +826,6 @@ const hindiStrings = {
   PURPLE_RIDE_CHAMPION : "पर्पल राइड चैंपियन",
   PURPLE_RIDE : "पर्पल राइड",
   PROCEED_TO_CHAT : "चैट के साथ आगे बढ़ें",
-  PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें"
+  PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
+  JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!"
 }
