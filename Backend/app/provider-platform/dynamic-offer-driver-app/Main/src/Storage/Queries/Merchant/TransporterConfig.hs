@@ -159,8 +159,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
-        BeamTC.cgstPercentage = cgstPercentage,
-        BeamTC.sgstPercentage = sgstPercentage,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,

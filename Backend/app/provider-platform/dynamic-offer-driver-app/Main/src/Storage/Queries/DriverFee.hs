@@ -91,17 +91,17 @@ findOldestFeeByStatus (Id driverId) status =
     Nothing
     <&> listToMaybe
 
-findFeesInRangeWithStatus :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> DriverFeeStatus -> Maybe Int -> m [DriverFee]
-findFeesInRangeWithStatus merchantId startTime endTime status mbLimit =
+findFeesInRangeWithStatus :: MonadFlow m => Maybe (Id Merchant) -> UTCTime -> UTCTime -> DriverFeeStatus -> Maybe Int -> m [DriverFee] -- remove maybe from merchantId later
+findFeesInRangeWithStatus mbMerchantId startTime endTime status mbLimit =
   findAllWithOptionsKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
           Se.Is BeamDF.status $ Se.Eq status,
           Se.Or [Se.Is BeamDF.status (Se.Eq ONGOING), Se.Is BeamDF.payBy (Se.LessThanOrEq endTime)],
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
-          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
+          <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
     ]
     (Se.Desc BeamDF.endTime)
     mbLimit
@@ -137,7 +137,7 @@ findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
 findWindows :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
 findWindows (Id driverId) from to limitVal offsetVal =
   findAllWithOptionsKV
-    [ Se.And $
+    [ Se.And
         [ Se.Is BeamDF.driverId $ Se.Eq driverId,
           Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq from,
           Se.Is BeamDF.createdAt $ Se.LessThanOrEq to

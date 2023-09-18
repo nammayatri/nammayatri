@@ -26,6 +26,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
     makeCachedWeeklyDriverLeaderBoardKey,
     mkDriverFeeCalcJobFlagKey,
     getDriverFeeCalcJobFlagKey,
+    getPlan,
   )
 where
 
@@ -37,11 +38,13 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
+import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
+import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (foldr, id, length, null)
@@ -52,6 +55,7 @@ import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -66,10 +70,12 @@ import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverPlan (findByDriverId)
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
@@ -330,9 +336,21 @@ scheduleJobs transporterConfig driverFee merchantId maxShards now = do
                 { startTime = driverFee.startTime,
                   endTime = driverFee.endTime,
                   timeDiff = transporterConfig.timeDiffFromUtc,
-                  merchantId = merchantId
+                  merchantId = Just merchantId
                 }
             setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
+          _ -> pure ()
+        let overduePaymentJobTs = diffUTCTime driverFee.payBy now
+        isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
+        case isOverduePaymentJobScheduled of
+          Nothing -> do
+            createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
+              UnsubscribeDriverForPaymentOverdueJobData
+                { startTime = driverFee.startTime,
+                  timeDiff = transporterConfig.timeDiffFromUtc,
+                  merchantId = Just merchantId
+                }
+            setOverduePaymentCache driverFee.endTime overduePaymentJobTs
           _ -> pure ()
       Just dfCalcTime -> do
         isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId
@@ -349,21 +367,10 @@ scheduleJobs transporterConfig driverFee merchantId maxShards now = do
             setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
           _ -> pure ()
 
-  let overduePaymentJobTs = diffUTCTime driverFee.payBy now
-  isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
-  case isOverduePaymentJobScheduled of
-    Nothing -> do
-      createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
-        UnsubscribeDriverForPaymentOverdueJobData
-          { startTime = driverFee.startTime,
-            timeDiff = transporterConfig.timeDiffFromUtc,
-            merchantId = merchantId
-          }
-      setOverduePaymentCache driverFee.endTime overduePaymentJobTs
-    _ -> pure ()
-
 mkDriverFee ::
-  ( MonadFlow m
+  ( MonadFlow m,
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   UTCTime ->
   Id Merchant ->
@@ -383,6 +390,8 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
       payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
       platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
+  mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
+  plan <- getPlan mbDriverPlan merchantId
   return $
     DF.DriverFee
       { status = DF.ONGOING,
@@ -392,7 +401,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         updatedAt = now,
         platformFee = platformFee_,
         totalEarnings = fromMaybe 0 rideFare,
-        feeType = DF.RECURRING_INVOICE, -- CHECK THIS
+        feeType = if plan.paymentMode == MANUAL then DF.RECURRING_INVOICE else DF.RECURRING_EXECUTION_INVOICE, -- CHECK THIS
         govtCharges = govtCharges_,
         offerId = Nothing,
         planOfferTitle = Nothing,
@@ -401,6 +410,17 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         billNumber = Nothing,
         ..
       }
+
+getPlan :: (MonadFlow m, CacheFlow m r) => Maybe DriverPlan -> Id Merchant -> m Plan
+getPlan mbDriverPlan merchantId = do
+  case mbDriverPlan of
+    Just dp -> CQP.findByIdAndPaymentMode dp.planId dp.planType >>= fromMaybeM (PlanNotFound dp.planId.getId)
+    Nothing -> do
+      plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
+      case plans of
+        [] -> throwError $ InternalError "No default plan found"
+        [pl] -> pure pl
+        _ -> throwError $ InternalError "Multiple default plans found"
 
 mkPendingPaymentProcessingKey :: UTCTime -> Text
 mkPendingPaymentProcessingKey timestamp = "DriverPendingPaymentProcessing:Timestamp:" <> show timestamp

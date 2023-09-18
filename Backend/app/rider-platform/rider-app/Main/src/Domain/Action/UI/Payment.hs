@@ -118,11 +118,8 @@ getOrder (personId, _) orderId = do
 
 mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
-  case clientAuthToken of
-    Just token -> do
-      clientAuthToken_ <- decrypt token
-      return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Just clientAuthToken_, ..}
-    Nothing -> return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Nothing, ..}
+  clientAuthToken_ <- decrypt `mapM` clientAuthToken
+  return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
 
 -- webhook ----------------------------------------------------------
 

@@ -65,8 +65,6 @@ data TransporterConfigD u = TransporterConfig
     mandateNotificationRescheduleInterval :: NominalDiffTime,
     mandateExecutionRescheduleInterval :: NominalDiffTime,
     driverFeeCalculationTime :: Maybe NominalDiffTime,
-    cgstPercentage :: Double,
-    sgstPercentage :: Double,
     driverFeeCalculatorBatchSize :: Maybe Int,
     driverFeeCalculatorBatchGap :: Maybe NominalDiffTime,
     timeDiffFromUtc :: Seconds,

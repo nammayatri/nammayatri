@@ -64,6 +64,8 @@ instance FromTType' BeamP.Plan Plan where
             planBaseAmount = planBaseAmount,
             freeRideCount = freeRideCount,
             frequency = frequency,
+            cgstPercentage = cgstPercentage,
+            sgstPercentage = sgstPercentage,
             planType = planType
           }
 
@@ -82,5 +84,7 @@ instance ToTType' BeamP.Plan Plan where
         BeamP.planBaseAmount = planBaseAmount,
         BeamP.freeRideCount = freeRideCount,
         BeamP.frequency = frequency,
+        BeamP.cgstPercentage = cgstPercentage,
+        BeamP.sgstPercentage = sgstPercentage,
         BeamP.planType = planType
       }

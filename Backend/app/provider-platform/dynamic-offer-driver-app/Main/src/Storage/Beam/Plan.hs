@@ -41,7 +41,9 @@ data PlanT f = PlanT
     planBaseAmount :: B.C f Domain.PlanBaseAmount,
     freeRideCount :: B.C f Int,
     frequency :: B.C f Domain.Frequency,
-    planType :: B.C f Domain.PlanType
+    planType :: B.C f Domain.PlanType,
+    cgstPercentage :: B.C f HighPrecMoney,
+    sgstPercentage :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 

@@ -45,7 +45,9 @@ data Plan = Plan
     planBaseAmount :: PlanBaseAmount,
     freeRideCount :: Int,
     frequency :: Frequency,
-    planType :: PlanType
+    planType :: PlanType,
+    cgstPercentage :: HighPrecMoney,
+    sgstPercentage :: HighPrecMoney
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 

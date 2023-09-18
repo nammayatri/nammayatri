@@ -347,7 +347,7 @@ validateInActiveMandateExists driverId driverPlan = do
 
 createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder driverId merchantId plan = do
-  driverPendingAndDuesFees <- QDF.findAllByStatusAndDriverId driverId [DF.PAYMENT_OVERDUE, DF.PAYMENT_PENDING]
+  driverPendingAndDuesFees <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime

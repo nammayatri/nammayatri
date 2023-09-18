@@ -64,8 +64,6 @@ data TransporterConfigT f = TransporterConfigT
     mandateNotificationRescheduleInterval :: B.C f Seconds,
     mandateExecutionRescheduleInterval :: B.C f Seconds,
     driverFeeCalculationTime :: B.C f (Maybe Seconds),
-    cgstPercentage :: B.C f Double,
-    sgstPercentage :: B.C f Double,
     driverFeeCalculatorBatchSize :: B.C f (Maybe Int),
     driverFeeCalculatorBatchGap :: B.C f (Maybe Seconds),
     rcLimit :: B.C f Int,

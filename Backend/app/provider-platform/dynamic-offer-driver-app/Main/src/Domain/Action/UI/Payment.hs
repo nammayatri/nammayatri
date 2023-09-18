@@ -21,6 +21,7 @@ module Domain.Action.UI.Payment
   )
 where
 
+import Domain.Action.UI.Ride.EndRide.Internal
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
@@ -47,7 +48,6 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
-import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -83,11 +83,8 @@ getOrder (personId, _) orderId = do
 
 mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
-  case clientAuthToken of
-    Just token -> do
-      clientAuthToken_ <- decrypt token
-      return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Just clientAuthToken_, ..}
-    Nothing -> return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = Nothing, ..}
+  clientAuthToken_ <- decrypt `mapM` clientAuthToken
+  return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
 
 -- order status -----------------------------------------------------
 
@@ -115,6 +112,8 @@ getStatus (personId, merchantId) orderId = do
     DPayment.PaymentStatus _ -> do
       unless (order.status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id True
+    DPayment.PDNNotificationStatusResp {..} ->
+      processNotification notificationId notificationStatus
   notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id order.status Nothing
   pure paymentStatus
 
@@ -170,16 +169,20 @@ processPayment merchantId driverId orderId sendNotification = do
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
-    dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
-    let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
-    when (totalDue <= 0) $ DI.updatePendingPayment False (cast driverId)
-    mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
-    plan <- getPlan mbDriverPlan merchantId
-    when (totalDue < plan.maxAmount) $ DI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
+    updatePaymentStatus driverId merchantId
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
+
+updatePaymentStatus :: Id DP.Person -> Id DM.Merchant -> Flow ()
+updatePaymentStatus driverId merchantId = do
+  dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
+  let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
+  when (totalDue <= 0) $ DI.updatePendingPayment False (cast driverId)
+  mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
+  plan <- getPlan mbDriverPlan merchantId
+  when (totalDue < plan.maxCreditLimit) $ DI.updateSubscription True (cast driverId)
 
 notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
 notifyPaymentSuccessIfNotNotified driver orderId = do

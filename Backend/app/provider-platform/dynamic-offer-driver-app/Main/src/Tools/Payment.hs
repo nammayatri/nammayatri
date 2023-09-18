@@ -42,6 +42,9 @@ mandateRevoke = runWithServiceConfig Payment.mandateRevoke
 mandateNotification :: (ServiceFlow m r) => Id DM.Merchant -> Payment.MandateNotificationReq -> m Payment.MandateNotificationRes
 mandateNotification = runWithServiceConfig Payment.mandateNotification
 
+mandateNotificationStatus :: (ServiceFlow m r) => Id DM.Merchant -> Payment.NotificationStatusReq -> m Payment.NotificationStatusResp
+mandateNotificationStatus = runWithServiceConfig Payment.mandateNotificationStatus
+
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithServiceConfig Payment.mandateExecution
 

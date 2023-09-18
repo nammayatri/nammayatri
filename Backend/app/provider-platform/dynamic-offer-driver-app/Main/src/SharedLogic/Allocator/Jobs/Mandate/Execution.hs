@@ -63,7 +63,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
           ---- driver fee autoPayStage as Execution Attempting -----
           QDF.updateAutopayPayementStageById (Just EXECUTION_ATTEMPTING) driverFee.id
           QINV.create invoice
-          exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) merchantId.getId (TPayment.mandateExecution merchantId))
+          exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
           case exec of
             Left _ -> do
               QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id

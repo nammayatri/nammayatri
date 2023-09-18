@@ -19,7 +19,6 @@ module Lib.Payment.Domain.Action
     juspayWebhookService,
     createNotificationService,
     createExecutionService,
-    notificationStatusService,
   )
 where
 
@@ -55,6 +54,16 @@ data PaymentStatusResp
         bankErrorMessage :: Maybe Text,
         bankErrorCode :: Maybe Text,
         upi :: Maybe Payment.Upi
+      }
+  | PDNNotificationStatusResp
+      { eventName :: Maybe Payment.PaymentStatus,
+        notificationStatus :: Payment.NotificationStatus,
+        sourceObject :: Text,
+        endDate :: Text,
+        sourceInfo :: Payment.SourceInfo,
+        notificationType :: Text,
+        juspayProviedId :: Text,
+        notificationId :: Text
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -387,18 +396,6 @@ createNotificationService ::
 createNotificationService req notificationCall = do
   notificationCall req
 
----- notification status api ----
-notificationStatusService ::
-  ( EncFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Payment.MandateNotificationReq ->
-  (Payment.MandateNotificationReq -> m Payment.MandateNotificationRes) ->
-  m Payment.MandateNotificationRes
-notificationStatusService req notificationCall = do
-  notificationCall req
-
 ----- execution api --------
 
 createExecutionService ::
@@ -407,7 +404,7 @@ createExecutionService ::
     EsqDBFlow m r
   ) =>
   (Payment.MandateExecutionReq, Text) ->
-  Text ->
+  Id Merchant ->
   (Payment.MandateExecutionReq -> m Payment.MandateExecutionRes) ->
   m Payment.MandateExecutionRes
 createExecutionService (request, orderId) merchantId executionCall = do
@@ -430,7 +427,7 @@ createExecutionService (request, orderId) merchantId executionCall = do
             returnUrl = Nothing,
             action = Nothing,
             personId = Id req.customerId,
-            merchantId = Id merchantId,
+            merchantId = merchantId,
             paymentMerchantId = Nothing,
             amount = round req.amount,
             currency = Juspay.INR,

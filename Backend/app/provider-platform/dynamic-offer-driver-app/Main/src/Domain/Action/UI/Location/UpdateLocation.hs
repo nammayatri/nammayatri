@@ -24,8 +24,6 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import qualified Data.List.NonEmpty as NE
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
-import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
@@ -34,7 +32,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import GHC.Records.Extra
 import Kernel.Beam.Functions
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -51,13 +48,9 @@ import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
-import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
-import Storage.Queries.DriverInformation
 import qualified Storage.Queries.DriverInformation as DInfo
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -138,28 +131,6 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
     (topicName, Just (encodeUtf8 $ getId driverId))
     (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
-handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
-handleDriverPayments driverId diffUtc = do
-  now <- getLocalCurrentTime diffUtc
-  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
-    ongoingAfterEndTime <- B.runInReplica $ findOngoingAfterEndTime driverId now
-    overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
-
-    case (ongoingAfterEndTime, overdueFee) of
-      (Nothing, _) -> pure ()
-      (Just df, Nothing) -> do
-        _ <- updateStatus PAYMENT_PENDING now df.id
-        updatePendingPayment True (cast driverId)
-      (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
-
-    unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
-    case unpaidAfterdeadline of
-      Nothing -> pure ()
-      Just df -> do
-        _ <- updateStatus PAYMENT_OVERDUE now df.id
-        QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
-        DInfo.updateSubscription False (cast driverId)
-
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
@@ -176,10 +147,6 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    when (thresholdConfig.subscription && isJust thresholdConfig.driverFeeCalculationTime) $ do
-      -- window end time over - still ongoing - sendPaymentReminder
-      -- payBy is also over - still ongoing/pending - unsubscribe
-      handleDriverPayments driverId thresholdConfig.timeDiffFromUtc
     driverInfo <- DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints

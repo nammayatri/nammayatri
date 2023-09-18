@@ -58,7 +58,7 @@ data SendPaymentReminderToDriverJobData = SendPaymentReminderToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
     timeDiff :: Seconds,
-    merchantId :: Id DM.Merchant
+    merchantId :: Maybe (Id DM.Merchant)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -69,7 +69,7 @@ type instance JobContent 'SendPaymentReminderToDriver = SendPaymentReminderToDri
 data UnsubscribeDriverForPaymentOverdueJobData = UnsubscribeDriverForPaymentOverdueJobData
   { startTime :: UTCTime,
     timeDiff :: Seconds,
-    merchantId :: Id DM.Merchant
+    merchantId :: Maybe (Id DM.Merchant)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
