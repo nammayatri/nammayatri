@@ -203,6 +203,11 @@ profileView push state =
   , orientation VERTICAL
   , visibility $ if state.props.openSettings then GONE else VISIBLE
   ][  headerView state push
+    , linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    ][]
     , scrollView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -1037,8 +1042,14 @@ updateLanguageView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , background Color.white900
   , margin (MarginBottom 10)
   ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+  , linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    ][]
    , languagesSpokenView state push
    , primaryButtons state push
   ]

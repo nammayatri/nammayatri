@@ -125,7 +125,7 @@ getApiIssueList issueList = (map (\(IssueReportDriverListItem issue) -> {
                   "lost and found" -> "Lost Item"
                   "app related" -> "App Related Issue"
                   "ride related" -> "Ride Related Issue"
-                  "fare related" -> "Fare Related Issue"
+                  "fare" -> "Fare Related Issue"
                   _ -> ""
               ),
    createdAt : (getExactTime (differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)))

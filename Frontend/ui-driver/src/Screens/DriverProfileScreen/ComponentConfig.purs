@@ -75,7 +75,7 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = (getString SETTINGS)
+        text = if state.props.updateLanguages then (getString LANGUAGES_SPOKEN) else (getString SETTINGS)
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
