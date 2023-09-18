@@ -352,7 +352,7 @@ driverBottomCardView config push =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , margin $ Margin 12 8 12 8
+          , margin $ Margin 0 8 12 8
           , padding $ PaddingHorizontal 8 8
           , gravity CENTER
           ][

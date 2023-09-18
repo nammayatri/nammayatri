@@ -1883,12 +1883,12 @@ homeScreenFlow = do
           _ <- pure $ printLog "fromLocation lat" (response.fromLocation ^._lat)
           modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
               tripId = response.shortRideId,
-              date =  (convertUTCtoISC (response.createdAt) "ddd, Do MMM"),
-              time = (convertUTCtoISC (fromMaybe (response.createdAt) response.tripStartTime ) "h:mm A"),
+              date = (convertUTCtoISC (response.createdAt) "D MMM"),
+              time = (convertUTCtoISC (response.createdAt )"h:mm A"),
               source = (decodeAddress response.fromLocation false),
               destination = (decodeAddress response.toLocation false),
               totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
-              distance = show $ (toNumber response.estimatedDistance) / 1000.0,
+              distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
               status = response.status,
               rider = (fromMaybe "" response.riderName)
             }})
