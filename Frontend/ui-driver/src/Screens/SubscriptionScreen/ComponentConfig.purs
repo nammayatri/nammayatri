@@ -235,6 +235,7 @@ popupModalConfig state = let
           Mb.Nothing -> ""
       , visibility = case state.props.popUpState of
           Mb.Just SupportPopup -> GONE
+          Mb.Nothing -> GONE
           _                    -> VISIBLE
       , width = V 114
       , height = V 114
