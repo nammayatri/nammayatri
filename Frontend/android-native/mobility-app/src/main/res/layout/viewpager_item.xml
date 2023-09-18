@@ -30,14 +30,12 @@
                 android:gravity="center"
                 android:textSize="26dp"
                 android:fontFamily="@font/plus_jakarta_sans_bold"/>
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvDesc"
                 android:gravity="center"
                 android:layout_marginTop="25dp"
-                android:layout_marginBottom="30dp"
                 android:layout_marginHorizontal="30dp"
                 android:textColor="@color/Black700"
                 android:textSize="16dp"

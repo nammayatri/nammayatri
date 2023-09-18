@@ -127,7 +127,20 @@ type SplashScreenData =  {
 type CarouselModel = {
   image :: String,
   title :: String,
-  description :: String
+  description :: String,
+  imageConfig :: CarouselImageConfig,
+  titleConfig :: CarouselTextConfig,
+  descriptionConfig :: CarouselTextConfig
+}
+
+type CarouselImageConfig = {
+  height :: Int,
+  width :: Int
+}
+
+type CarouselTextConfig = {
+  textSize :: Int,
+  textColor :: String
 }
 
 type WelcomeScreenState = {

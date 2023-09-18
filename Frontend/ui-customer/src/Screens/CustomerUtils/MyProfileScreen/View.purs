@@ -147,6 +147,7 @@ detailsView state push =
 
 personalDetails :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 personalDetails state push =
+  -- PrestoAnim.animationSet [Anim.fadeIn state.props.updateProfile] $ 
   linearLayout
   [ height  MATCH_PARENT
   , width MATCH_PARENT
@@ -255,6 +256,7 @@ horizontalLineView state visible =
 
 updatePersonalDetails :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updatePersonalDetails state push =
+  -- PrestoAnim.animationSet [Anim.fadeIn (not state.props.updateProfile)] $  
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT

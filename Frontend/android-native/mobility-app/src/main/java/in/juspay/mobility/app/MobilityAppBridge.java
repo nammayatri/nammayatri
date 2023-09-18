@@ -327,9 +327,10 @@ public class MobilityAppBridge extends HyperBridge {
         activity.runOnUiThread(() -> {
             ViewPager2 viewPager2 = new ViewPager2(context);
             LinearLayout sliderDotsPanel = new LinearLayout(context);
+            System.out.println("Inside fubctuon +" + finalParentLayout.getWidth() + "jhgvhjvhj" + finalParentLayout.getHeight());
             LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,  LinearLayout.LayoutParams.WRAP_CONTENT);
             LinearLayout linearLayout = new LinearLayout(context);
             linearLayout.setOrientation(LinearLayout.VERTICAL);
             linearLayout.setLayoutParams(linearLayoutParams);
@@ -342,8 +343,17 @@ public class MobilityAppBridge extends HyperBridge {
                 JSONArray jsonArray = new JSONArray(stringifyArray);
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    JSONObject imageConfig = jsonObject.getJSONObject("imageConfig");
+                    JSONObject titleConfig = jsonObject.getJSONObject("titleConfig");
+                    JSONObject descriptionConfig = jsonObject.getJSONObject("descriptionConfig");
                     int imageID = Utils.getResIdentifier(context,jsonObject.getString("image"), "drawable");
-                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, jsonObject.getString("title"), jsonObject.getString("description"));
+                    int imageWidth = Integer.parseInt(imageConfig.getString("width"));
+                    int imageHeight = Integer.parseInt(imageConfig.getString("height"));
+                    float titleTextSize = Integer.parseInt(titleConfig.getString("textSize")) * 1.0f;
+                    String titleTextColor = titleConfig.getString("textColor");
+                    float descTextSize = Integer.parseInt(descriptionConfig.getString("textSize")) * 1.0f;
+                    String descTextColor = descriptionConfig.getString("textColor");
+                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, jsonObject.getString("title"), jsonObject.getString("description"), imageHeight, imageWidth,titleTextColor, titleTextSize, descTextColor, descTextSize);
                     viewPagerItemArrayList.add(viewPagerItem);
                 }
             } catch (Exception e) {
@@ -392,6 +402,7 @@ public class MobilityAppBridge extends HyperBridge {
                     super.onPageScrollStateChanged(state);
                 }
             });
+            viewPager2.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             linearLayout.addView(viewPager2);
             linearLayout.setGravity(Gravity.BOTTOM);
             linearLayout.addView(sliderDotsPanel);

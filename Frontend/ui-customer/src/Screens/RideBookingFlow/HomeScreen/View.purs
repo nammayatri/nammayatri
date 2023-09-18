@@ -362,7 +362,7 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            ] <>[ linearLayout[height MATCH_PARENT, width MATCH_PARENT, gravity CENTER, background Color.blackLessTrans][ carouselView state push ]])
+            ] <> [ linearLayout[height MATCH_PARENT, width MATCH_PARENT, gravity CENTER, background Color.red][ carouselView state push ]])
         ]
     ] 
 
@@ -2259,23 +2259,101 @@ isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar
 carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 
   linearLayout
-    [ height WRAP_CONTENT
+  [height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginHorizontal 16 16
+  , stroke $ "1," <> Color.grey900
+  , orientation VERTICAL
+    , cornerRadius 16.0
+  , padding (Padding 16 16 16 16)][
+  linearLayout
+    [ height $ V 360
     , width MATCH_PARENT
     , orientation VERTICAL
     , id $ getNewIDWithTag "AccessibilityCarouselView"
     , accessibility DISABLE
     , gravity CENTER
-    , background Color.white900
-    , cornerRadius 16.0
-    , margin $ MarginHorizontal 16 16
+    , background Color.green900
+    
     , afterRender (\action -> do
         _ <- push action
         _ <- addCarousel ([
-                  {image : "carousel_1", title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily."},
-                  {image : "carousel_2", title : "No more\nsurge pricing!", description : "Experience fair and consistent fares,\neven during peak hours."},
-                  {image : "carousel_4", title : "Inclusive and accessible for everyone!", description : "We strive to provide all our users an \n even & equal experience."},
-                  {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all."}
+
+          {image : "carousel_4", title : "We strive to provide all our users \nan even & equal experience.", description : "", 
+       imageConfig : {
+        height : 200 , width : 296
+       },
+       titleConfig : {
+        textColor : "#454545",
+        textSize : 16 
+       } ,
+       descriptionConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       }},
+      {image : "ny_ic_blind_pickup", title : "For users with poor vision", description : "Drivers will be prompted to call instead of texting.\nDrivers will be prompted to sound horn once at the pickup.\nDrivers will be sensitised to help them with their needs and requests." , 
+      imageConfig : {
+        height : 154 , width : 200
+       },
+       titleConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       } ,
+       descriptionConfig : {
+        textColor : "#FFFFFF",
+        textSize : 12
+       }},
+      {image : "carousel_4", title : "Inclusive and accessible for everyone!", description : "We strive to provide all our users an \n even & equal experience.",
+      imageConfig : {
+        height : 200 , width : 200
+       },
+       titleConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       },
+       descriptionConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       }},
+      {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.",
+      imageConfig : {
+        height : 200 , width : 200
+       },
+       titleConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       },
+       descriptionConfig : {
+        textColor : "#FFFFFF",
+        textSize : 14 
+       }}
+                  -- {image : "carousel_1", title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.", imageHeight : 100},
+                  -- {image : "carousel_2", title : "No more\nsurge pricing!", description : "Experience fair and consistent fares,\neven during peak hours.", imageHeight : 200},
+                  -- {image : "carousel_4", title : "", description : "We strive to provide all our users an \n even & equal experience.", imageHeight : 20},
+                  -- {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.", imageHeight :150}
                 ]) (getNewIDWithTag "AccessibilityCarouselView")
         pure unit
         ) (const AfterRender)
     ][]
+  -- , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfigSubmit state)
+  -- , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfigSubmit state)
+  ]
+
+-- primaryButtonConfigSubmit :: HomeScreenState -> PrimaryButton.Config
+-- primaryButtonConfigSubmit state = let
+--     config = PrimaryButton.config
+--     primaryButtonConfig' = config
+--       { textConfig
+--         { text = (getString SUBMIT)
+--         , color = state.data.config.primaryTextColor
+--         , accessibilityHint = if state.props.btnActive then "Submit : Button" else "Submit Button Is Disabled"
+--         }
+--       , cornerRadius = 0.0
+--       , background = state.data.config.primaryBackground
+--       , isClickable = state.props.btnActive 
+--       , alpha = 1.0--if state.props.btnActive then 1.0 else 0.5
+--       , margin = (Margin 0 0 0 0)
+--       -- , id = "SubmitButtonContactUsScreen"
+--       -- , enableLoader = (JB.getBtnLoader "SubmitButtonContactUsScreen")
+--       }
+--   in primaryButtonConfig'

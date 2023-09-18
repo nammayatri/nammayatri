@@ -35,6 +35,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
