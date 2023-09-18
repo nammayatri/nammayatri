@@ -412,6 +412,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
     DF.DriverFee
       { status = DF.ONGOING,
         collectedBy = Nothing,
+        collectedAt = Nothing,
         numRides = 1,
         createdAt = now,
         updatedAt = now,

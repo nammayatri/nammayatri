@@ -44,6 +44,7 @@ data DriverFeeT f = DriverFeeT
     numRides :: B.C f Int,
     status :: B.C f Domain.DriverFeeStatus,
     collectedBy :: B.C f (Maybe Text),
+    collectedAt :: B.C f (Maybe Time.UTCTime),
     feeType :: B.C f Domain.FeeType,
     offerId :: B.C f (Maybe Text),
     planOfferTitle :: B.C f (Maybe Text),
