@@ -48,6 +48,7 @@ import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod)
 import MerchantConfig.Utils (getValueFromConfig)
+import Font.Style (Style(..))
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -177,7 +178,6 @@ downloadQRConfig state = let
       , cornerRadius = 10.0
       , background = Color.black900
       , height = (V 48)
-      , isClickable = state.props.btnActive
       , id = "DriverProfileScreenUpdatePrimaryButton"
       }
   in primaryButtonConfig'
@@ -189,7 +189,8 @@ shareOptionButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = "Share Options"
-      , color = Color.black900}
+      , color = Color.black900
+      , textStyle = Tags}
       , isPrefixImage = true
       , prefixImageConfig {
           imageUrl = "ny_ic_share,https://assets.juspay.in/nammayatri/images/driver/ny_ic_qr_code.png"
@@ -200,7 +201,6 @@ shareOptionButtonConfig state = let
       , cornerRadius = 10.0
       , background = Color.white900
       , height = (V 48)
-      , isClickable = state.props.btnActive
       , id = "DriverProfileScreenUpdatePrimaryButton"
       }
   in primaryButtonConfig'

@@ -965,3 +965,8 @@ export const _generateQRCode = function (data) {
     }
   }
 }
+
+export const downloadQR = function (id){
+  if (window.JBridge.downloadLayoutAsImage)
+    return window.JBridge.downloadLayoutAsImage(id);
+}

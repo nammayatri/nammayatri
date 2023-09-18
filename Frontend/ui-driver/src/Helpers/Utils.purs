@@ -130,6 +130,7 @@ foreign import preFetch :: Effect (Array RenewFile)
 
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
+foreign import  downloadQR  :: String -> Effect Unit
 
 foreign import _generateQRCode :: String -> String -> Int -> Int -> (AffSuccess String) -> Effect Unit
 

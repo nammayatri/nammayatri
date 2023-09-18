@@ -18,6 +18,7 @@ module Screens.DriverProfileScreen.View where
 import Common.Types.App
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
+import Screens.SubscriptionScreen.Transformer
 
 import Animation as Anim
 import Animation.Config as AnimConfig
@@ -68,6 +69,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getVehicleType)
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -205,47 +207,57 @@ renderQRView state push =
   , background Color.black9000
   , onClick push $ const DismissQrPopup
   ][linearLayout 
-    [
-      height WRAP_CONTENT
+    [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , background Color.white900
     , orientation VERTICAL
-    , cornerRadius 16.0
     , gravity CENTER
-    , padding $ Padding 16 32 16 16
+    , cornerRadius 16.0
     ][
-      textView $
+      linearLayout
       [
-        text "Get direct payment to your bank account"
-      ] <> FontStyle.subHeading1 TypoGraphy
-      , linearLayout [
-          height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , background Color.white900
-        , orientation HORIZONTAL
-        , gravity CENTER
-        , margin $ MarginTop 15
-      ][
-        imageView
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , id $ getNewIDWithTag "QRpaymentview"
+      , gravity CENTER
+      , orientation VERTICAL
+      , padding $ Padding 16 32 16 16
+      , background Color.white900
+      , cornerRadius 16.0
+      ][ 
+        textView $
         [
-            width $ V 24
-          , height  $ V 24
-          , margin $ MarginRight 6
-          , imageWithFallback $ (Const.getPspIcon "9876543210@ybl")
+          text "Get direct payment to your bank account"
+        ] <> FontStyle.subHeading1 TypoGraphy
+        , linearLayout [
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , background Color.white900
+          , orientation HORIZONTAL
+          , gravity CENTER
+          , margin $ MarginTop 15
+        ][
+          imageView
+          [
+              width $ V 24
+            , height  $ V 24
+            , margin $ MarginRight 6
+            , imageWithFallback $ (Const.getPspIcon "9876543210@ybl")
+          ]
+          , textView $ [
+            text "9876543210@ybl"
+          ] <> FontStyle.body2 TypoGraphy
         ]
-        , textView $ [
-          text "9876543210@ybl"
-        ] <> FontStyle.body2 TypoGraphy
+        , imageView[
+            height $ V 280
+          , width $ V 280
+          , margin $ MarginVertical 15 24
+          , id $ getNewIDWithTag "renderQRView"
+          , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
+        ]
       ]
-      , imageView[
-          height $ V 280
-        , width $ V 280
-        , margin $ MarginVertical 15 24
-        , id $ getNewIDWithTag "renderQRView"
-        , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
-      ]
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (downloadQRConfig state)
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (shareOptionButtonConfig state)
+      , PrimaryButton.view (push <<< DownloadQR) (downloadQRConfig state)
+      , PrimaryButton.view (push <<< ShareQR) (shareOptionButtonConfig state)
     ]
   ]
 
