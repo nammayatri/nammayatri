@@ -104,7 +104,7 @@ import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils as HU
-import Screens.SubscriptionScreen.Transformer
+import Resource.Constants as Const
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -230,7 +230,7 @@ renderQRView state push =
             width $ V 24
           , height  $ V 24
           , margin $ MarginRight 6
-          , imageWithFallback $ (getPspIcon "kavyahsree.s1998@ybl")
+          , imageWithFallback $ (Const.getPspIcon "9876543210@ybl")
         ]
         , textView $ [
           text "9876543210@ybl"

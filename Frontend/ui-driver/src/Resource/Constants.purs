@@ -19,6 +19,8 @@ import Prelude ((==), (&&), (<>))
 import Data.String (trim)
 import Services.API (LocationInfo(..))
 import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Array as DA
+import Data.String (Pattern(..), split, toLower)
 
 type Language =
     {
@@ -62,3 +64,23 @@ decodeAddress ( LocationInfo address) fullAddress =
 
 tripDatesCount :: Int
 tripDatesCount = 15
+
+getPspIcon :: String -> String 
+getPspIcon vpa = do
+    let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
+    case handleName of 
+        Nothing -> "ny_ic_defaultpg,"
+        Just handle -> case handle of
+            "ybl" -> "ny_ic_phonepe,"
+            "ibl" -> "ny_ic_phonepe,"
+            "axl" -> "ny_ic_phonepe,"
+            "okhdfcbank" -> "ny_ic_gpay,"
+            "okicici" -> "ny_ic_gpay,"
+            "oksbi" -> "ny_ic_gpay,"
+            "okaxis" -> "ny_ic_gpay,"
+            "paytm" -> "ny_ic_paytm,"
+            "apl" -> "ny_ic_amazonpay,"
+            "yapl" -> "ny_ic_amazonpay,"
+            "indus" -> "ny_ic_induspay,"
+            "upi" -> "ny_ic_bhim,"
+            _ -> "ny_ic_defaultpg,"

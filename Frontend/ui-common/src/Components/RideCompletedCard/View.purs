@@ -18,6 +18,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
+import Resource.Constants as Const
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -40,7 +41,7 @@ topCardView :: forall w. Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect
 topCardView config push =
   linearLayout
   [ width MATCH_PARENT
-  , height $ V ((screenHeight unit)/ 2)
+  , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ Padding 16 16 16 16
   , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
@@ -66,6 +67,7 @@ topCardView config push =
       , weight 1.0
       , orientation VERTICAL
       , gravity CENTER
+      , padding $ PaddingVertical 30 26
       ][  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -95,7 +97,7 @@ topCardView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
-        , pillView config push
+        -- , pillView config push
 
       ]
     , linearLayout
@@ -133,12 +135,16 @@ bottomCardView config push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 16 16 16 16
-  , background Color.white900
+  , background Color.grey900
+  , gravity CENTER
   , weight 1.0
   ][  if config.customerIssueCard.issueFaced then customerIssueView config push
         else if config.customerBottomCard.visible then customerBottomCardView config push
           else if config.badgeCard.visible then badgeCardView config push 
             else if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView 
+    , driverUpiQrCodeView config push
+    , noVpaView config push
+    , collectCashView config push 
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -438,6 +444,114 @@ badgeCardView config push =
     , margin $ MarginBottom 24
     ] <> FontStyle.body4 TypoGraphy
   ]
+
+driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+driverUpiQrCodeView config push = 
+  linearLayout 
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.white900
+    , orientation VERTICAL
+    , cornerRadius 16.0
+    , gravity CENTER
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginBottom 26
+    ][
+      textView $
+      [
+        text "Get direct payment to your bank account"
+      ] <> FontStyle.subHeading1 TypoGraphy
+      , imageView [
+          height $ V 165
+        , width $ V 165
+        , margin $ MarginVertical 8 13
+        , id $ getNewIDWithTag "renderQRView"
+        , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
+      ]
+      , linearLayout [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , background Color.white900
+        , orientation HORIZONTAL
+        , gravity CENTER
+      ][
+        imageView [
+          width $ V 24
+        , height  $ V 24
+        , margin $ MarginRight 6
+        , imageWithFallback $ (Const.getPspIcon "kavyahsree.s1998@ybl")
+        ]
+        , textView $ [
+          text "9876543210@ybl"
+        ] <> FontStyle.body2 TypoGraphy
+      ]
+    ]
+
+collectCashView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+collectCashView config push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    ][
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        ][
+          linearLayout
+          [ height $ V 1
+          , width $ V ((screenWidth unit)/ 3)
+          , background Color.black500
+          , alpha 0.4
+          ][]
+        , textView
+        [ text "OR"
+        , fontStyle $ FontStyle.regular LanguageStyle
+        , margin $ MarginHorizontal 24 24
+        ]
+        , linearLayout
+        [ height $ V 1
+        , width $ V ((screenWidth unit)/ 3)
+        , background Color.black500
+        , alpha 0.4
+        ][]
+        ]
+      , textView $
+        [ text "Collect cash directly "
+        , margin $ MarginTop 10
+        ]  <> FontStyle.body5 TypoGraphy
+    ]
+
+noVpaView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+noVpaView config push = 
+   linearLayout 
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background  "#FEF1E5"
+    , stroke $ "1," <> "#fad0b4"
+    , cornerRadius 16.0
+    , gravity CENTER
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginBottom 26
+    ][
+        imageView
+        [ height $ V 24
+        , width $ V 24
+        , margin $ MarginVertical 8 13
+        , imageWithFallback "ny_ic_info_orange,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+        ]
+      , textView $
+        [ text "To accept payments directly to your bank account, setup  Autopay on your Plan"
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ PaddingLeft 8
+        , color Color.black800
+        ] <> FontStyle.body2 TypoGraphy
+    ]
 
 topPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 topPillView config push = 
