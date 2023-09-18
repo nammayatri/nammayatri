@@ -9,7 +9,7 @@ To build or develop the project, you need to install the following.
 
 #### Nix
 
-Nix is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these three steps:
+Nix is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these four steps:
 
 1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
     - If you already have Nix installed, you must [enable Flakes](https://nixos.wiki/wiki/Flakes#Enable_flakes) manually.
@@ -19,7 +19,7 @@ Nix is central to building and developing the Namamayatri project. To prepare yo
     ```
     - For this command to succeed, you must have added yourself to the `trusted-users` list of `nix.conf`
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://zero-to-flakes.com/direnv).
-2. Run `nix --accept-flake-config run github:juspay/nix-browser#nix-health` **in nammayatri project root** and make sure that everything is green (✅)
+2. Run `nix --accept-flake-config run github:juspay/nix-browser#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
 [^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
