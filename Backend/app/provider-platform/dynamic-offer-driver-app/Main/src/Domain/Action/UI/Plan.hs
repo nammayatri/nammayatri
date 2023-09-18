@@ -381,6 +381,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             startTime = now,
             endTime = now,
             collectedBy = Nothing,
+            collectedAt = Nothing,
             driverId = cast driverId
           }
 

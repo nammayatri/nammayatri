@@ -39,6 +39,7 @@ data DriverFee = DriverFee
     endTime :: UTCTime,
     status :: DriverFeeStatus,
     collectedBy :: Maybe Text,
+    collectedAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     feeType :: FeeType

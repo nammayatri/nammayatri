@@ -200,7 +200,7 @@ updateRegisterationFeeStatusByDriverId status (Id driverId) = do
 updateCollectedPaymentStatus :: MonadFlow m => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
 updateCollectedPaymentStatus status collectorId now (Id driverFeeId) = do
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId]
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId, Se.Set BeamDF.collectedAt (Just now)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 instance FromTType' BeamDF.DriverFee DriverFee where
@@ -221,6 +221,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             status = status,
             feeType = feeType,
             collectedBy = collectedBy,
+            collectedAt = collectedAt,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -243,6 +244,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.status = status,
         BeamDF.feeType = feeType,
         BeamDF.collectedBy = collectedBy,
+        BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

@@ -344,6 +344,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
       { payBy = addUTCTime transporterConfig.driverPaymentCycleBuffer endTime,
         status = DF.ONGOING,
         collectedBy = Nothing,
+        collectedAt = Nothing,
         numRides = 1,
         createdAt = now,
         updatedAt = now,

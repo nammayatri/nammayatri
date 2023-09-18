@@ -41,6 +41,7 @@ mergeDriverFee oldFee newFee now = do
       endTime = newFee.endTime
       status = DDF.PAYMENT_OVERDUE
       collectedBy = Nothing
+      collectedAt = Nothing
       createdAt = now
       updatedAt = now
       feeType = DDF.RECURRING_INVOICE
