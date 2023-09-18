@@ -90,6 +90,7 @@ view push config =
             DefaultRateCard -> defaultRateCardView push config 
             DriverAddition -> driverAdditionView push config 
             FareUpdate -> fareUpdateView push config
+            WaitingCharges -> waitingChargesView push config
             PaymentFareBreakup -> paymentfareBreakup push config
             _ -> defaultRateCardView push config 
         ]     
@@ -118,25 +119,27 @@ fareList push config =
         , orientation HORIZONTAL
         , margin $ MarginTop 10
         ][ textView
-            [ width $ V ((3 * screenWidth unit) /5 )
+            [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , textSize FontSize.a_16
             , lineHeight "18"
             , singleLine false
             , maxLines 2
             , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.black700
+            , color Color.black900
             , text item.key
             ]
+          , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
           , textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , textSize FontSize.a_16
-            , color Color.black800
+            , color Color.black900
             , text item.val
             , gravity RIGHT
-            , singleLine false
-            , maxLines 2
+            , singleLine true
             , weight 1.0
             ]
           ]
@@ -198,6 +201,7 @@ defaultRateCardView push config =
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
+                        "WAITING_CHARGES" -> GoToWaitingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -276,6 +280,17 @@ fareUpdateView push config =
       , textFromHtml $ getStringByKey config "REASON_CHANGE_IN_ROUTE"
       , margin $ MarginTop 20
       ]
+  ]
+
+waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+waitingChargesView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 180
+  ][  commonTV push (getStringByKey config "WAITING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
+    , commonTV push (getStringByKey config "YOU_WILL_PAY_FOR_EVERY_MINUTE") Color.black650 FontStyle.body3 LEFT 12 NoAction
   ]
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 

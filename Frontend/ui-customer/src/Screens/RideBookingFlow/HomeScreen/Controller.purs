@@ -621,6 +621,8 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | OpenEmergencyHelp
+            | ShareRidePopUpAction PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -754,6 +756,10 @@ eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
   continue state
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ScrollSupportButton )) state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "SupportButtonScrollView") false
+  continue state
+
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }
 
@@ -880,6 +886,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
+                          else if state.props.shareRidePopUp then continue state { props {shareRidePopUp = false}}
                           else do
                               pure $ terminateApp state.props.currentStage false
                               continue state
@@ -897,7 +904,7 @@ eval (UpdateSource lat lng name) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
 
-eval LiveDashboardAction state = do
+eval (DriverInfoCardActionController (DriverInfoCardController.LiveDashboardAction)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_on_ride_live_stats"
   if os == "IOS" then do
       continueWithCmd state [do
@@ -1170,6 +1177,17 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRidePopUp)) state = do
+  continue state{props{shareRidePopUp = true}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) state = do
+  continue state{data{waitTimeInfo  = true }}
+
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {waitTimeInfo =false} }
+
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
 eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
@@ -1189,7 +1207,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
   _ <- pure $ performHapticFeedback unit
   continue state { props { isLocationTracking = true } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
+eval (OpenEmergencyHelp) state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
@@ -1270,8 +1288,9 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.On
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
-eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
-  let issue = (reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+
+eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+  let issue = (reportIssueOptions)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
   exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason, issueDescription = reason},
@@ -1742,6 +1761,8 @@ eval (RateCardAction RateCard.GoToDriverAddition) state = continue state { data{
 
 eval (RateCardAction RateCard.GoToFareUpdate) state = continue state { data{rateCard{currentRateCardType = FareUpdate,onFirstPage = true}}}
 
+eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{rateCard{currentRateCardType = WaitingCharges,onFirstPage = true}}}
+
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false } }
@@ -1768,11 +1789,25 @@ eval (CallSupportAction PopUpModal.OnButton1Click) state= do
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp=false}}
 
+
+
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
+
+eval (ShareRidePopUpAction PopUpModal.DismissPopup) state = do continue state {props { shareRidePopUp=false}}
+
+eval (ShareRidePopUpAction PopUpModal.OnButton2Click) state= do
+  continue state{props{shareRidePopUp=false}}
+
+eval (ShareRidePopUpAction PopUpModal.OnButton1Click) state= do
+ continueWithCmd state
+        [ do
+            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            pure NoAction
+         ]
 
 eval (UpdateETA currentETA currentDistance) state = do
   let initDistance = state.data.driverInfoCardState.initDistance

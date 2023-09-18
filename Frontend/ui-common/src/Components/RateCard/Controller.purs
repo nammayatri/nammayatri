@@ -30,6 +30,7 @@ data Action = Close
               | GoToDriverAddition 
               | GoToFareUpdate 
               | PrimaryButtonAC PrimaryButton.Action
+              | GoToWaitingCharges
 
 
 type Config = {

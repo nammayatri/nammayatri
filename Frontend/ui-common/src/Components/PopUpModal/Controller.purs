@@ -37,6 +37,7 @@ data Action = OnButton1Click
             | OptionWithHtmlClick
 
 type Config = {
+    title :: TextConfig,
     primaryText :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
@@ -162,6 +163,16 @@ config = {
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
   , topTitle : Mb.Nothing
+  , title : {
+      text : "",
+      color : Color.black800,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 0 0 0),
+      visibility : GONE,
+      textStyle : Heading0,
+      accessibilityHint : ""
+    }
   , primaryText : {
       text : "Text1",
       color : Color.black800,

@@ -27,12 +27,12 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility, imageView, imageWithFallback)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare)
+import Helpers.Utils (isHaveFare, getAssetStoreLink)
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant (..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
@@ -77,7 +77,12 @@ view push state =
                 ]
                 []
             , amountBreakupView state
-            ]
+            , imageView
+              [ height $ V 16
+                , width MATCH_PARENT
+                , imageWithFallback $ "ny_ic_canine_lines," <> (getAssetStoreLink FunctionCall) <> "ny_ic_canine_lines.png"
+               ]              
+            ]   
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT

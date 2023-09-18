@@ -127,6 +127,7 @@ initData = {
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
+    , waitTimeInfo : false
     },
     props: {
       rideRequestFlow : false
@@ -222,6 +223,7 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , shareRidePopUp : false
     }
 }
 

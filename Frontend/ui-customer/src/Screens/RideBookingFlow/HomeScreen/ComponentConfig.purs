@@ -343,7 +343,7 @@ reportIssuePopUpConfig state =
     reportIssueConfig = CancelRidePopUpConfig.config
     reportIssueConfig' =
       reportIssueConfig
-        { selectionOptions = reportIssueOptions state
+        { selectionOptions = reportIssueOptions
         , primaryButtonTextConfig
           { firstText = getString GO_BACK_
           , secondText = getString SUBMIT
@@ -614,6 +614,9 @@ rateCardConfig state =
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
+                    {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
+          {key : "WAITING_CHARGE_AFTER_3_MINUTES", val : (getString YOU_WILL_PAY_FOR_EVERY_MINUTE)},
+          {key : "WAITING_CHARGES", val : (getString WAITING_CHARGES)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
         }
   in
@@ -940,6 +943,54 @@ callSupportConfig state = let
   }
   in popUpConfig'
 
+shareRideConfig :: ST.HomeScreenState ->  PopUpModal.Config
+shareRideConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , dismissPopup = true
+  , cornerRadius = (Corners 15.0 true true true true)
+  , padding = (Padding 16 16 16 16)
+  , margin = (MarginHorizontal 16 16)
+  , optionButtonOrientation = "VERTICAL"
+  , primaryText {
+     visibility = GONE
+    }
+  , title {
+    text = getString SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER,
+    visibility = VISIBLE
+   }
+
+  , coverImageConfig {
+    imageUrl = "ny_ic_share_ride," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_ride"
+    , visibility = VISIBLE
+    , width = MATCH_PARENT
+    , height = V 201
+    , margin =  MarginTop 22
+    }
+  , secondaryText {
+     text = getString SHARE_RIDE_DESCRIPTION
+    , margin = Margin 24 12 24 32
+    , color = Color.black700
+    }
+  , option2 {
+      text =  getString MAYBE_LATER
+    , background = state.data.config.popupBackground
+    , strokeColor = state.data.config.primaryBackground
+    , color = state.data.config.primaryBackground
+    , width = MATCH_PARENT
+    , margin = MarginTop 10
+    }
+  , option1 {
+     text =  getString SHARE_THIS_RIDE
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
+    , margin = Margin 0 0 0 0
+    , width = MATCH_PARENT
+    }
+  }
+  in popUpConfig'
 
 zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
 zoneTimerExpiredConfig state = let
@@ -1090,8 +1141,37 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
-reportIssueOptions state =
+waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+waitTimeInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString WAIT_TIMER
+    }
+  , primaryText {
+      text = getString HOW_LONG_DRIVER_WAITED_FOR_PICKUP,
+      padding = Padding 16 16 0 0
+    }
+  , secondaryText {
+      text = getString YOU_WILL_PAY_FOR_EVERY_MINUTE,
+      visibility = VISIBLE,
+      padding = PaddingLeft 16
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_waiter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_waiter.png",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 4 1 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20
+    }
+  }
+  in requestInfoCardConfig'
+
+reportIssueOptions :: Array OptionButtonList -- need to modify
+reportIssueOptions =
   [ { reasonCode: "DRIVER_WAS_NOT_READY_TO_GO"
     , description: getString DRIVER_WAS_NOT_READY_TO_GO
     , textBoxRequired : false

@@ -597,6 +597,7 @@ type HomeScreenStateData =
   , logField :: Object Foreign
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
+  , waitTimeInfo :: Boolean
   }
 
 type DisabilityT = 
@@ -695,6 +696,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , shareRidePopUp :: Boolean
   }
 
 type RouteEndPoints = {

@@ -72,7 +72,7 @@ window.getMerchantConfig = function () {
       "textColor": "#FFFFFF",
       "loaderColor": "#80B2FF",
       "otpTextBackground"  : "#2C2F3A",
-      "otpBackground" : "#F1F1F1",
+      "otpBackground" : "#FFFFFF",
       "otpTextColor" : "#FFFFFF",
       "otpTitleColor"  : "#6D7280",
       "selectRideTextColor": "#2C2F3A",

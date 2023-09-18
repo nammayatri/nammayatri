@@ -90,7 +90,17 @@ view push state =
         , accessibility DISABLE
         , clickable true
         ]
-        [ linearLayout
+        [  textView $
+                [ text $ state.title.text
+                , color $ state.title.color
+                , margin $ state.title.margin
+                , gravity $ state.title.gravity
+                , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
+                , height WRAP_CONTENT
+                , visibility $ state.title.visibility
+                ] <> (FontStyle.getFontStyle state.title.textStyle LanguageStyle)
+            
+            ,linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
