@@ -58,7 +58,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
 import JBridge as JB
 import Language.Strings (getString)
@@ -1687,6 +1687,8 @@ homeScreenFlow = do
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
   let (OrganizationInfo organization) = getDriverInfoResp.organization
   checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
+  appConfig <- getAppConfig Constants.appConfig
+  when appConfig.subscriptionConfig.enableBlocking $ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp)
   let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   case getDriverInfoResp.linkedVehicle of
@@ -2414,3 +2416,15 @@ getUpiApps = do
   pure $ setCleverTapUserProp "appsSupportMandate" appsSupportMandate
   pure $ setCleverTapUserProp "appsNotSupportMandate" appsNotSupportMandate
   void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})
+
+checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
+checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
+  if (  (getValueToLocalStore ENABLE_BLOCKING) == "__failed" &&
+        isDateGreaterThan "2023-09-20T00:00:00" &&
+        (getDriverInfoResp.autoPayStatus == Nothing || getDriverInfoResp.autoPayStatus == Just "MANDATE_FAILURE")
+    ) then do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true }})
+      when (not getDriverInfoResp.onRide && (getDriverInfoResp.mode == Just "ONLINE" || getDriverInfoResp.mode == Just "SILENT")) do
+        void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
+        homeScreenFlow
+  else pure unit

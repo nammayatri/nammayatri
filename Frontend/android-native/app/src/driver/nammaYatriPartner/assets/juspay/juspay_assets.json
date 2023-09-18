@@ -358,6 +358,7 @@
       "ny_ic_start_record" : true,
       "ny_ic_static_record" : true,
       "ny_ic_stop_record" : true,
+      "ny_ic_sub_save_more" : true,
       "ny_ic_submit_issue_arrow" : true,
       "ny_ic_support" : true,
       "ny_ic_text_pointer_right" : true,

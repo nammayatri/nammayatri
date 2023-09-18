@@ -40,4 +40,7 @@ commonConfig =
         , black800 : "#454545"
         , black900 : "#2C2F3A"
         , red : "#E55454"
+        , subscriptionConfig : {
+            enableBlocking : false
+        } 
         }

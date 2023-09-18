@@ -328,6 +328,8 @@ foreign import killPP :: Effect Unit
 
 foreign import consumeBP :: EffectFn1 Unit Unit
 
+foreign import isDateGreaterThan :: String -> Boolean
+
 paymentPageUI :: PaymentPagePayload -> FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
 
