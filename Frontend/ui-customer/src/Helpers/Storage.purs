@@ -80,6 +80,7 @@ data KeyStore
   | DISABILITY_UPDATED
   | DISABILITY_POPUP_TRIGGERED
   | BUNDLE_TIME_OUT
+  | REFERRER_URL
 
 derive instance genericKeyStore :: Generic KeyStore _
 

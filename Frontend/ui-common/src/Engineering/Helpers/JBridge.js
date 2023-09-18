@@ -1773,6 +1773,12 @@ export const cleverTapSetLocation = function () {
     }
 }
 
+export const extractReferrerUrl = function () {
+  if(JBridge.extractReferrerUrl){
+    return window.JBridge.extractReferrerUrl();
+  }
+}
+
 export const launchDateSettings = function (res) {
   if(JBridge.launchDateSettings){
     return JBridge.launchDateSettings();

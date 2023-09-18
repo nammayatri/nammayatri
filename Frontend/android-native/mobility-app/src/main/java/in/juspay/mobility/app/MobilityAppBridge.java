@@ -15,6 +15,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -25,6 +26,10 @@ import android.widget.ScrollView;
 
 import androidx.core.content.ContextCompat;
 import androidx.viewpager2.widget.ViewPager2;
+
+import com.android.installreferrer.api.InstallReferrerClient;
+import com.android.installreferrer.api.InstallReferrerStateListener;
+import com.android.installreferrer.api.ReferrerDetails;
 
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
@@ -62,6 +67,8 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String META_LOG = "META_LOG";
     private static final String CALLBACK = "CALLBACK";
     private static final String UTILS = "UTILS";
+
+    private static final String REFERRER = "REFERRER";
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     CleverTapAPI clevertapDefaultInstance;
@@ -139,6 +146,46 @@ public class MobilityAppBridge extends HyperBridge {
             String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+
+    @JavascriptInterface
+    public void extractReferrerUrl(){
+        InstallReferrerClient referrerClient;
+        referrerClient = InstallReferrerClient.newBuilder(bridgeComponents.getContext()).build();
+        referrerClient.startConnection(new InstallReferrerStateListener() {
+            @Override
+            public void onInstallReferrerSetupFinished(int responseCode) {
+                switch(responseCode){
+                    case InstallReferrerClient.InstallReferrerResponse.OK:
+                        ReferrerDetails response = null;
+                        try {
+                            response = referrerClient.getInstallReferrer();
+                            String referrerUrl = response.getInstallReferrer();
+
+                            SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                            sharedPref.edit().putString("REFERRER_URL", referrerUrl).apply();
+
+
+                        } catch (RemoteException e) {
+                            Log.d(REFERRER, "error occurred in fetching referrer info");
+                            e.printStackTrace();
+                        }
+                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                        Log.i(REFERRER, "Feature not supported");
+
+                        break;
+                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                        Log.i(REFERRER, "Service unavailable");
+
+                        break;
+                }
+            }
+
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+                Log.i(REFERRER, "referrer service disconnected");
+            }
+        });
     }
 
     @JavascriptInterface

@@ -47,7 +47,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent, setFCMTokenWithTimeOut)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent, setFCMTokenWithTimeOut, extractReferrerUrl)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -105,6 +105,10 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   versionName <- lift $ lift $ liftFlow $ getVersionName
   void $ pure $ setCleverTapUserProp "App Version" versionName
   checkVersion versionCode versionName
+  if (getValueToLocalStore REGISTERATION_TOKEN == "__failed" || getValueToLocalStore REGISTERATION_TOKEN == "(null)") then do
+    _ <- pure $ extractReferrerUrl unit
+    pure unit
+  else pure unit
   setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
   void $ pure $ setCleverTapUserProp "Bundle version" bundle
@@ -140,6 +144,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
+  void $ pure $ firebaseLogEvent $ getValueToLocalStore REFERRER_URL
   if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")
   then do
     setValueToLocalStore COUNTRY_CODE "+91"
