@@ -53,7 +53,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         endTime = jobData.endTime
 
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-    let limit = fromInteger $ transporterConfig.driverFeeMandateNotificationBatchSize
+    let limit = transporterConfig.driverFeeMandateNotificationBatchSize
     now <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime DF.PAYMENT_PENDING
     if null driverFees

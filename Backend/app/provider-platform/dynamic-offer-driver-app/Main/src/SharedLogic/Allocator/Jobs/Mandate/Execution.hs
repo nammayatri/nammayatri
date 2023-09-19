@@ -46,7 +46,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         endTime = jobData.endTime
 
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-    let limit = fromInteger $ transporterConfig.driverFeeMandateExecutionBatchSize
+    let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime
     if null driverFees

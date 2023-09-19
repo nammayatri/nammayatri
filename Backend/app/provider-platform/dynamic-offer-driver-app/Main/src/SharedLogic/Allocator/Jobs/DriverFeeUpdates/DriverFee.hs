@@ -23,7 +23,7 @@ import qualified Control.Monad.Catch as C
 import Data.Fixed (mod')
 import qualified Data.Map as M
 import Data.Ord
-import Domain.Action.UI.Ride.EndRide.Internal (getPlan)
+import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPlan, mkDriverFeeBillNumberKey)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
@@ -112,7 +112,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       startTime = jobData.startTime
       endTime = jobData.endTime
       applyOfferCall = TPayment.offerApply merchantId
-  setDriverFeeBillNumberKey merchantId 1 36000 -- check here --
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFees <- findFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
@@ -337,15 +336,6 @@ calcDriverFeeAttr merchantId driverFeeStatus startTime endTime = do
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
-
-mkDriverFeeBillNumberKey :: Id Merchant -> Text
-mkDriverFeeBillNumberKey merchantId = "DriverFeeCalulation:BillNumber:Counter" <> merchantId.getId
-
-getDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> m (Maybe Int)
-getDriverFeeBillNumberKey merchantId = Hedis.get (mkDriverFeeBillNumberKey merchantId)
-
-setDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> Int -> NominalDiffTime -> m ()
-setDriverFeeBillNumberKey merchantId count expTime = Hedis.setExp (mkDriverFeeBillNumberKey merchantId) count (round expTime)
 
 updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r) => Id DriverFee -> Id Merchant -> UTCTime -> UTCTime -> m ()
 updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = do

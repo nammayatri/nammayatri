@@ -27,6 +27,8 @@ module Domain.Action.UI.Ride.EndRide.Internal
     mkDriverFeeCalcJobFlagKey,
     getDriverFeeCalcJobFlagKey,
     getPlan,
+    getDriverFeeBillNumberKey,
+    mkDriverFeeBillNumberKey,
   )
 where
 
@@ -365,6 +367,7 @@ scheduleJobs transporterConfig driverFee merchantId maxShards now = do
                   endTime = driverFee.endTime
                 }
             setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
+            setDriverFeeBillNumberKey merchantId 1 36000
           _ -> pure ()
 
 mkDriverFee ::
@@ -459,3 +462,12 @@ setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -
 setDriverFeeCalcJobCache startTime endTime merchantId expTime = do
   Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantId) True (round $ expTime + 86399)
   Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantId) False (round expTime)
+
+mkDriverFeeBillNumberKey :: Id Merchant -> Text
+mkDriverFeeBillNumberKey merchantId = "DriverFeeCalulation:BillNumber:Counter" <> merchantId.getId
+
+getDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> m (Maybe Int)
+getDriverFeeBillNumberKey merchantId = Hedis.get (mkDriverFeeBillNumberKey merchantId)
+
+setDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> Int -> NominalDiffTime -> m ()
+setDriverFeeBillNumberKey merchantId count expTime = Hedis.setExp (mkDriverFeeBillNumberKey merchantId) count (round expTime)

@@ -75,6 +75,15 @@ update config = do
       Se.Set BeamTC.driverPaymentCycleBuffer (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
       Se.Set BeamTC.driverPaymentReminderInterval (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
       Se.Set BeamTC.driverPaymentCycleDuration (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
+      Se.Set BeamTC.driverAutoPayNotificationTime (nominalDiffTimeToSeconds config.driverAutoPayNotificationTime),
+      Se.Set BeamTC.driverAutoPayExecutionTime (nominalDiffTimeToSeconds config.driverAutoPayExecutionTime),
+      Se.Set BeamTC.driverFeeMandateNotificationBatchSize config.driverFeeMandateNotificationBatchSize,
+      Se.Set BeamTC.driverFeeMandateExecutionBatchSize config.driverFeeMandateExecutionBatchSize,
+      Se.Set BeamTC.mandateNotificationRescheduleInterval (nominalDiffTimeToSeconds config.mandateNotificationRescheduleInterval),
+      Se.Set BeamTC.mandateExecutionRescheduleInterval (nominalDiffTimeToSeconds config.mandateExecutionRescheduleInterval),
+      Se.Set BeamTC.driverFeeCalculationTime (nominalDiffTimeToSeconds <$> config.driverFeeCalculationTime),
+      Se.Set BeamTC.driverFeeCalculatorBatchSize config.driverFeeCalculatorBatchSize,
+      Se.Set BeamTC.driverFeeCalculatorBatchGap (nominalDiffTimeToSeconds <$> config.driverFeeCalculatorBatchGap),
       Se.Set BeamTC.updatedAt now
     ]
     [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
