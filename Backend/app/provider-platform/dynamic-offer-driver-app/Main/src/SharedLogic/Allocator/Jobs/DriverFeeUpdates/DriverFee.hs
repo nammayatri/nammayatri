@@ -40,7 +40,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast, getShortId)
-import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, GuidLike (generateGUID), HasShortDurationRetryCfg, HighPrecMoney (..), Log (withLogTag), MonadFlow, MonadGuid, MonadTime (getCurrentTime), addUTCTime, diffUTCTime, fromMaybeM, generateShortId, getLocalCurrentTime, logError, logInfo, secondsToNominalDiffTime, throwError, withShortRetry)
+import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
@@ -143,10 +143,12 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
           let offerAndPlanTitle = Just plan.description <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
           updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
-          offerTxnId <- getShortId <$> generateShortId
-          let offerApplied = catMaybes [offerId]
-              offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
-          maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
+
+          fork "Applying offer" $ do
+            offerTxnId <- getShortId <$> generateShortId
+            let offerApplied = catMaybes [offerId]
+                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
+            maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
           unless (totalFee == 0) $ do
             driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now

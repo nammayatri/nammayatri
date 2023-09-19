@@ -192,6 +192,7 @@ createDriverDetails personId merchantId = do
             blockExpiryTime = Nothing,
             mode = Just DriverInfo.OFFLINE,
             payerVpa = Nothing,
+            enabledAt = Nothing,
             createdAt = now,
             updatedAt = now,
             compAadhaarImagePath = Nothing,

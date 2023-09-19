@@ -40,6 +40,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
@@ -68,6 +69,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
+import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
@@ -128,7 +130,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
-    createDriverFee merchantId driverId ride.fare newFareParams maxShards
+    createDriverFee merchantId driverId ride.fare newFareParams maxShards driverInfo
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
@@ -299,30 +301,41 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
-createDriverFee merchantId driverId rideFare newFareParams maxShards = do
+createDriverFee ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
+  ) =>
+  Id Merchant ->
+  Id DP.Driver ->
+  Maybe Money ->
+  DFare.FareParameters ->
+  Int ->
+  DI.DriverInformation ->
+  m ()
+createDriverFee merchantId driverId rideFare newFareParams maxShards driverInfo = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  let govtCharges = fromMaybe 0 newFareParams.govtCharges
-  let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> (0, 0, 0)
-        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
-  let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
-  unless (totalDriverFee <= 0) $ do
-    _ <- case lastDriverFee of
-      Just ldFee ->
-        if now >= ldFee.startTime && now < ldFee.endTime
-          then -- then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
-
-            if isNothing transporterConfig.driverFeeCalculationTime
-              then QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
-              else QDF.updateFee ldFee.id rideFare 0 0 0 0 now True
-          else -- else Esq.runNoTransaction $ QDF.create driverFee
-            QDF.create driverFee
-      Nothing -> QDF.create driverFee
-    scheduleJobs transporterConfig driverFee merchantId maxShards now
+  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+  mbDriverPlan <- findByDriverId (cast driverId)
+  unless (freeTrialDaysLeft > 0 || (transporterConfig.isPlanMandatory && isNothing mbDriverPlan)) $ do
+    let govtCharges = fromMaybe 0 newFareParams.govtCharges
+    let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
+          DFare.ProgressiveDetails _ -> (0, 0, 0)
+          DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
+    let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
+    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    lastDriverFee <- QDF.findLatestFeeByDriverId driverId
+    driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
+    when (totalDriverFee > 0 || isJust mbDriverPlan) $ do
+      _ <- case lastDriverFee of
+        Just ldFee ->
+          if now >= ldFee.startTime && now < ldFee.endTime
+            then QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
+            else QDF.create driverFee
+        Nothing -> QDF.create driverFee
+      scheduleJobs transporterConfig driverFee merchantId maxShards now
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId maxShards now = do

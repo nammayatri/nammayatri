@@ -102,6 +102,7 @@ data DriverInformationE e = DriverInformation
     blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
     payerVpa :: Maybe Text,
+    enabledAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     compAadhaarImagePath :: Maybe Text,

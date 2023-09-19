@@ -43,6 +43,11 @@ create = createWithKV
 findById :: MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
+getEnabledAt :: MonadFlow m => Id Person.Driver -> m (Maybe UTCTime)
+getEnabledAt driverId = do
+  dInfo <- findById driverId
+  return (dInfo >>= (.enabledAt))
+
 findAllByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
 findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds = do
   findAllWithKV
@@ -80,23 +85,27 @@ updateActivity (Id driverId) isActive mode = do
 updateEnabledState :: MonadFlow m => Id Driver -> Bool -> m ()
 updateEnabledState (Id driverId) isEnabled = do
   now <- getCurrentTime
+  enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
+        <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 updateEnabledVerifiedState :: MonadFlow m => Id Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
+  enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.verified isVerified,
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
+        <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
@@ -136,30 +145,16 @@ updateBlockedState driverId isBlocked = do
 verifyAndEnableDriver :: MonadFlow m => Id Person -> m ()
 verifyAndEnableDriver (Id driverId) = do
   now <- getCurrentTime
+  enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
-    [ Se.Set BeamDI.enabled True,
-      Se.Set BeamDI.verified True,
-      Se.Set BeamDI.lastEnabledOn $ Just now,
-      Se.Set BeamDI.updatedAt now
-    ]
+    ( [ Se.Set BeamDI.enabled True,
+        Se.Set BeamDI.verified True,
+        Se.Set BeamDI.lastEnabledOn $ Just now,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> ([Se.Set BeamDI.enabledAt (Just now) | isNothing enabledAt])
+    )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
-
-updateEnabledStateReturningIds :: MonadFlow m => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds merchantId driverIds isEnabled = do
-  present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
-  updateEnabledStateForIds present
-  pure present
-  where
-    updateEnabledStateForIds :: MonadFlow m => [Id Driver] -> m ()
-    updateEnabledStateForIds present = do
-      now <- getCurrentTime
-      updateWithKV
-        ( [ Se.Set BeamDI.enabled isEnabled,
-            Se.Set BeamDI.updatedAt now
-          ]
-            <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
-        )
-        [Se.Is BeamDI.driverId (Se.In (getId <$> present))]
 
 updateOnRide :: MonadFlow m => Id Person.Driver -> Bool -> m ()
 updateOnRide (Id driverId) onRide = do

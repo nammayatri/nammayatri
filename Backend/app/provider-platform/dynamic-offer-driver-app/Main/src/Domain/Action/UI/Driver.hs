@@ -156,6 +156,7 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverMode as DMode
+import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -201,8 +202,6 @@ import qualified Tools.Notifications as Notify
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification
 
--- import qualified Data.List as DL
-
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -235,7 +234,8 @@ data DriverInformationRes = DriverInformationRes
     mediaUrl :: Maybe Text,
     aadhaarCardPhoto :: Maybe Text,
     isGoHomeEnabled :: Bool,
-    driverGoHomeInfo :: DDGR.CachedGoHomeRequest
+    driverGoHomeInfo :: DDGR.CachedGoHomeRequest,
+    freeTrialDaysLeft :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -271,7 +271,8 @@ data DriverEntityRes = DriverEntityRes
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
     mediaUrl :: Maybe Text,
-    aadhaarCardPhoto :: Maybe Text
+    aadhaarCardPhoto :: Maybe Text,
+    freeTrialDaysLeft :: Int
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -614,15 +615,16 @@ createDriverDetails personId adminId merchantId = do
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             mode = Just DriverInfo.OFFLINE,
-            lastEnabledOn = Just now,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
-            createdAt = now,
-            updatedAt = now,
             autoPayStatus = Nothing,
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
-            payerVpa = Nothing
+            payerVpa = Nothing,
+            lastEnabledOn = Just now,
+            enabledAt = Just now,
+            createdAt = now,
+            updatedAt = now
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -655,13 +657,16 @@ getInformation (personId, merchantId) = do
   makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
-setActivity (personId, _) isActive mode = do
+setActivity (personId, merchantId) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     mbVehicle <- QV.findById personId
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
+    when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0) $ throwError (NoPlanSelected personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -796,6 +801,7 @@ listDriver admin mbSearchString mbLimit mbOffset = do
 
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
+  transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
@@ -803,6 +809,7 @@ buildDriverEntityRes (person, driverInfo) = do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
   aadhaarCardPhoto <- fetchAndCacheAadhaarImage person driverInfo
+  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   return $
     DriverEntityRes
       { id = person.id,
@@ -832,7 +839,8 @@ buildDriverEntityRes (person, driverInfo) = do
         bundleVersion = person.bundleVersion,
         gender = Just person.gender,
         mediaUrl = mediaUrl,
-        aadhaarCardPhoto = aadhaarCardPhoto
+        aadhaarCardPhoto = aadhaarCardPhoto,
+        freeTrialDaysLeft = freeTrialDaysLeft
       }
 
 changeDriverEnableState ::

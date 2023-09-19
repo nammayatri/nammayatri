@@ -14,7 +14,10 @@
 
 module SharedLogic.DriverOnboarding where
 
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
+import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DTM
@@ -60,3 +63,9 @@ throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
 throwImageError id_ err = do
   _ <- Query.addFailureReason id_ err
   throwError err
+
+getFreeTrialDaysLeft :: MonadFlow m => Int -> DI.DriverInformation -> m Int
+getFreeTrialDaysLeft freeTrialDays driverInfo = do
+  now <- getCurrentTime
+  let driverEnablementDay = utctDay (fromMaybe now (driverInfo.enabledAt <|> driverInfo.lastEnabledOn))
+  return $ max 0 (freeTrialDays - fromInteger (diffDays driverEnablementDay (utctDay now)))

@@ -85,7 +85,9 @@ data TransporterConfigT f = TransporterConfigT
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
-    specialZoneBookingOtpExpiry :: B.C f Int
+    specialZoneBookingOtpExpiry :: B.C f Int,
+    isPlanMandatory :: B.C f Bool,
+    freeTrialDays :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

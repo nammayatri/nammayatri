@@ -32,29 +32,8 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
           { driverId = Id driverId,
             adminId = Id <$> adminId,
             merchantId = Id <$> merchantId,
-            active = active,
-            onRide = onRide,
-            enabled = enabled,
-            blocked = blocked,
-            blockedReason = blockedReason,
-            blockExpiryTime = blockExpiryTime,
-            verified = verified,
-            subscribed = subscribed,
-            paymentPending = paymentPending,
-            aadhaarVerified = aadhaarVerified,
-            numOfLocks = numOfLocks,
             referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
-            lastEnabledOn = lastEnabledOn,
-            canDowngradeToSedan = canDowngradeToSedan,
-            canDowngradeToHatchback = canDowngradeToHatchback,
-            canDowngradeToTaxi = canDowngradeToTaxi,
-            mode = mode,
-            autoPayStatus = autoPayStatus,
-            payerVpa = payerVpa,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            compAadhaarImagePath = compAadhaarImagePath,
-            availableUpiApps = availableUpiApps
+            ..
           }
 
 instance ToTType' BeamDI.DriverInformation DriverInformation where
@@ -82,6 +61,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.payerVpa = payerVpa,
+        BeamDI.enabledAt = enabledAt,
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt,
         BeamDI.compAadhaarImagePath = compAadhaarImagePath,
