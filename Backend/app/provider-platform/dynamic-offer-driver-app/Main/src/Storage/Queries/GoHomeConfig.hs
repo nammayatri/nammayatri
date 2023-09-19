@@ -43,6 +43,7 @@ instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
             goHomeBatchDelay = Seconds goHomeBatchDelay,
             ignoreWaypointsTill = Meters ignoreWaypointsTill,
             addStartWaypointAt = Meters addStartWaypointAt,
+            newLocAllowedRadius = Meters newLocAllowedRadius,
             ..
           }
 
@@ -55,5 +56,6 @@ instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
         BeamGHC.goHomeBatchDelay = getSeconds goHomeBatchDelay,
         BeamGHC.ignoreWaypointsTill = getMeters ignoreWaypointsTill,
         BeamGHC.addStartWaypointAt = getMeters addStartWaypointAt,
+        BeamGHC.newLocAllowedRadius = getMeters newLocAllowedRadius,
         ..
       }
