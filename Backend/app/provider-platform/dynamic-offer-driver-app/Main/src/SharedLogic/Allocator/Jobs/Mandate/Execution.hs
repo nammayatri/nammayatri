@@ -15,7 +15,7 @@ import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
-import Kernel.Types.Id (Id (Id), cast)
+import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
@@ -47,7 +47,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
 
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = fromInteger $ transporterConfig.driverFeeMandateExecutionBatchSize
-    executionDate' <- addUTCTime transporterConfig.driverAutoPayExecutionTime <$> getCurrentTime
+    executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime
     if null driverFees
       then return Complete
@@ -59,10 +59,9 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         let mapDriverFeeById_ = Map.fromList (map (\driverFee_ -> (driverFee_.id, driverFee_)) driverFees)
             mapDriverPlanByDriverId = Map.fromList driverIdsAndDriverPlanToNotify
         driverExecutionRequests <- sequence $ mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications
-        for_ driverExecutionRequests $ \ExecutionData {..} -> do
+        for_ (mapMaybe identity driverExecutionRequests) $ \ExecutionData {..} -> do
           ---- driver fee autoPayStage as Execution Attempting -----
-          QDF.updateAutopayPayementStageById (Just EXECUTION_ATTEMPTING) driverFee.id
-          QINV.create invoice
+          QDF.updateAutopayPaymentStageById (Just EXECUTION_ATTEMPTING) driverFee.id
           exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
           case exec of
             Left _ -> do
@@ -80,7 +79,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
               Just mandateId -> Just (dplan.driverId, (dplan, mandateId))
               Nothing -> Nothing
         )
-    mapExecutionRequestAndInvoice mapDriverFeeById mapDriverPlanByDriverId_ executionDate =
+    mapExecutionRequestAndInvoice mapDriverFeeById mapDriverPlanByDriverId_ executionDate = do
       mapMaybe
         ( \notification -> do
             case mapDriverFeeById Map.!? NTF.driverFeeId notification of
@@ -97,49 +96,29 @@ buildExecutionRequestAndInvoice ::
   NTF.Notification ->
   UTCTime ->
   (DP.DriverPlan, Id Mandate) ->
-  m ExecutionData
+  m (Maybe ExecutionData)
 buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan, mandateId) = do
-  invoice <- mkInvoiceAgainstDriverFee driverFee
-  let executionRequest =
-        PaymentInterface.MandateExecutionReq
-          { orderId = invoice.invoiceShortId,
-            amount = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
-            customerId = driverFee.driverId.getId,
-            notificationId = notification.id.getId,
-            mandateId = mandateId.getId,
-            executionDate
-          }
-  return $
-    ExecutionData
-      { executionRequest,
-        invoice,
-        driverFee,
-        driverPlan
-      }
-
-mkInvoiceAgainstDriverFee ::
-  ( MonadFlow m
-  ) =>
-  DF.DriverFee ->
-  m INV.Invoice
-mkInvoiceAgainstDriverFee driverFee = do
-  invoiceId <- generateGUID
-  shortId <- generateShortId
-  now <- getCurrentTime
-  return $
-    INV.Invoice
-      { id = Id invoiceId,
-        invoiceShortId = shortId.getShortId,
-        driverFeeId = driverFee.id,
-        invoiceStatus = INV.ACTIVE_INVOICE,
-        paymentMode = INV.AUTOPAY_INVOICE,
-        bankErrorCode = Nothing,
-        bankErrorMessage = Nothing,
-        bankErrorUpdatedAt = Nothing,
-        maxMandateAmount = Nothing,
-        updatedAt = now,
-        createdAt = now
-      }
+  invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
+  case invoice' of
+    Just invoice -> do
+      let executionRequest =
+            PaymentInterface.MandateExecutionReq
+              { orderId = invoice.invoiceShortId,
+                amount = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
+                customerId = driverFee.driverId.getId,
+                notificationId = notification.id.getId,
+                mandateId = mandateId.getId,
+                executionDate
+              }
+      return $
+        Just
+          ExecutionData
+            { executionRequest,
+              invoice,
+              driverFee,
+              driverPlan
+            }
+    Nothing -> return Nothing
 
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateExecutionRescheduleInterval <$> getCurrentTime

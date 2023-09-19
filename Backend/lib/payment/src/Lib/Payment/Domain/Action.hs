@@ -351,8 +351,8 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  logInfo $ "Webhook response dump: " <> respDump
-  logInfo $ "Webhook response: " <> show resp
+  logWarning $ "Webhook response dump: " <> respDump --- want this for now that's why changed it to warning
+  logWarning $ "Webhook response: " <> show resp
   case resp of
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)

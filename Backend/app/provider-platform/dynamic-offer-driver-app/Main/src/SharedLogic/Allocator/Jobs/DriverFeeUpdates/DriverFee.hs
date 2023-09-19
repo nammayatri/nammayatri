@@ -26,6 +26,7 @@ import Data.Ord
 import Domain.Action.UI.Ride.EndRide.Internal (getPlan)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
+import qualified Domain.Types.Invoice as INV
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
@@ -38,7 +39,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast, getShortId)
+import Kernel.Types.Id (Id (Id), cast, getShortId)
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, GuidLike (generateGUID), HasShortDurationRetryCfg, HighPrecMoney (..), Log (withLogTag), MonadFlow, MonadGuid, MonadTime (getCurrentTime), addUTCTime, diffUTCTime, fromMaybeM, generateShortId, getLocalCurrentTime, logError, logInfo, secondsToNominalDiffTime, throwError, withShortRetry)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -48,6 +49,7 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
@@ -126,7 +128,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               dutyDate = driverFee.createdAt
               mandateSetupDate = case mbDriverPlan of
                 Nothing -> now
-                Just date -> fromMaybe now date.mandateSetupDate
+                Just driverPlan -> fromMaybe now driverPlan.mandateSetupDate
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
@@ -140,7 +142,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   feeWithoutDiscount = if numRides > 0 then baseAmount else 0
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
-          let offerAndPlanTitle = Just plan.id.getId <> Just "-*$*-" <> offerTitle ---- this we will send in payment history ----
+          let offerAndPlanTitle = Just plan.id.getId <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
           updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
           offerTxnId <- getShortId <$> generateShortId
           let offerApplied = catMaybes [offerId]
@@ -161,7 +163,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             updateSubscription False (cast driverFee.driverId)
             QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
           unless (due + totalFee >= plan.maxCreditLimit) $ do
-            QDF.updateAutopayPayementStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+            QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+            invoice <- mkInvoiceAgainstDriverFee driverFee
+            QINV.create invoice
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
@@ -338,12 +342,38 @@ setDriverFeeBillNumberKey merchantId count expTime = Hedis.setExp (mkDriverFeeBi
 updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r) => Id DriverFee -> Id Merchant -> UTCTime -> UTCTime -> m ()
 updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = do
   Hedis.whenWithLockRedis (billNumberGenerationLockKey driverFeeId.getId) 60 $ do
+    --- change lock based on mechantId --
     counter <- getDriverFeeBillNumberKey merchantId
     when (isNothing counter) $ do
       count <- listToMaybe <$> QDF.findMaxBillNumberInRange merchantId startTime endTime
       void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantId) (maybe 0 toInteger (count >>= (.billNumber)))
     billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantId)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
+
+mkInvoiceAgainstDriverFee ::
+  ( MonadFlow m
+  ) =>
+  DriverFee ->
+  m INV.Invoice
+mkInvoiceAgainstDriverFee driverFee = do
+  invoiceId <- generateGUID
+  shortId <- generateShortId
+  now <- getCurrentTime
+  return $
+    INV.Invoice
+      { id = Id invoiceId,
+        invoiceShortId = shortId.getShortId,
+        driverFeeId = driverFee.id,
+        invoiceStatus = INV.ACTIVE_INVOICE,
+        paymentMode = INV.AUTOPAY_INVOICE,
+        bankErrorCode = Nothing,
+        bankErrorMessage = Nothing,
+        bankErrorUpdatedAt = Nothing,
+        maxMandateAmount = Nothing,
+        driverId = driverFee.driverId,
+        updatedAt = now,
+        createdAt = now
+      }
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do

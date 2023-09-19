@@ -236,7 +236,7 @@ processNotification notificationId notificationStatus = do
       QDF.updateFeeType RECURRING_INVOICE now driverFeeId
     Juspay.SUCCESS -> do
       --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
-      QDF.updateAutopayPayementStageById (Just EXECUTION_SCHEDULED) driverFeeId
+      QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
     _ -> pure ()
   QNTF.updateNotificationStatusById notification.id notificationStatus
 
@@ -260,12 +260,14 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      QM.updateMandateDetails mandateId DM.INACTIVE payerVpa payerApp payerAppName mandatePaymentFlow
+      QM.updateMandateDetails mandateId DM.INACTIVE Nothing Nothing Nothing mandatePaymentFlow --- did this because only update payer vpa on transaction charged
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
-      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa (cast driverPlan.driverId)
-      when (mandateStatus == Payment.PAUSED) $
+      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverPlan.driverId)
+      when (mandateStatus == Payment.PAUSED) $ do
+        QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
         notifyPaymentModeManualOnPause driver.merchantId driver.id driver.deviceToken
-      when (mandateStatus == Payment.REVOKED) $
+      when (mandateStatus == Payment.REVOKED) $ do
+        QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
         notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
   where
     castAutoPayStatus = \case

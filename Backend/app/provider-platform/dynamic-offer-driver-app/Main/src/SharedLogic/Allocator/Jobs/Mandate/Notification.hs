@@ -5,6 +5,7 @@ import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
 import Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan as DPlan
+import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
@@ -25,6 +26,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
 import qualified Tools.Payment as TPayment
 
@@ -58,7 +60,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       then do
         maxShards <- asks (.maxShards)
         scheduleJobs transporterConfig startTime endTime merchantId maxShards now
-        return Complete --- TO DO :- here we will tigger execution scheduler ---
+        return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
         activeSubscribedDrivers <- QDI.findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
@@ -67,16 +69,21 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         for_ driverInfoForPDNotification $ \driverToNotify -> do
           notificationId <- generateGUID
           notificationShortId <- generateShortId
-          ---- notification attempted -----
-          QDF.updateAutopayPayementStageById (Just NOTIFICATION_SCHEDULED) driverToNotify.driverFeeId
-          req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
-          exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
-          case exec of
-            Left _ -> logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)
-            Right res -> do
-              QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
+          invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverToNotify.driverFeeId
+          case invoice' of
+            Just invoice -> do
+              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_ATTEMPTING) driverToNotify.driverFeeId
+              req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
+              exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
+              case exec of
+                Left _ -> do
+                  QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id
+                  logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)
+                Right res -> do
+                  QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
+            Nothing -> logError ("Active autopay invoice not found for driverFeeId" <> driverToNotify.driverFeeId.getId)
         ReSchedule <$> getRescheduledTime transporterConfig
-  logInfo ("duration of job " <> show timetaken)
+  logWarning ("duration of job " <> show timetaken)
   return response
   where
     mandateIdAndDriverId =
@@ -139,7 +146,8 @@ getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
-  let dfCalculationJobTs = diffUTCTime (addUTCTime dfExecutionTime endTime) now
+      dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
+  let dfCalculationJobTs = diffUTCTime (addUTCTime (dfExecutionTime + dfNotificationTime) endTime) now
   createJobIn @_ @'MandateExecution dfCalculationJobTs maxShards $
     MandateExecutionInfo
       { merchantId = merchantId,

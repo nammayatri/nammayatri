@@ -104,6 +104,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
       invoiceStatus = INV.ACTIVE_INVOICE,
+      driverId = driverFee.driverId,
       maxMandateAmount,
       paymentMode,
       bankErrorCode = Nothing,

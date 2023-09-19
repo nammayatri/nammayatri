@@ -73,7 +73,7 @@ mandateProcessingLockKey :: Text -> Text
 mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
 
 billNumberGenerationLockKey :: Text -> Text
-billNumberGenerationLockKey driverFeeId = "DriverFee:Processing:DriverFeeId" <> driverFeeId
+billNumberGenerationLockKey merchantId = "DriverFee:BillNumber:Processing:MerchantId" <> merchantId --- make lock on merchant Id
 
 instance FromHttpApiData DriverFeeStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

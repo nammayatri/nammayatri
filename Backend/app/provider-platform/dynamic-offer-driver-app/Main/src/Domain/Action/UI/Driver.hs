@@ -38,7 +38,8 @@ module Domain.Action.UI.Driver
     ResendAuth (..),
     DriverPaymentHistoryResp,
     MetaDataReq (..),
-    DriverNYPaymentHistoryResponse,
+    NYHistoryEntity (..),
+    NYHistoryEntryDetailsEntity (..),
     ClearDuesRes (..),
     getInformation,
     activateGoHomeFeature,
@@ -65,16 +66,19 @@ module Domain.Action.UI.Driver
     remove,
     getDriverPayments,
     clearDriverDues,
-    getNYDriverPayments,
     DriverInfo.DriverMode,
     updateMetaData,
+    getNYDriverPaymentsHistory,
+    getNYHistoryEntryDetailsEntity,
   )
 where
 
 import AWS.S3 as S3
+import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import Data.List (groupBy, intersect, (\\))
+import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
@@ -445,8 +449,6 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeClearenceMode = EXECUTION_FEE | MANUAL_FEE | MANDATE_REGISTRATION_FEE deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
 data DriverFeeInfo = DriverFeeInfo
   { date :: Day, -- window start day
     driverFeeId :: Id DDF.DriverFee,
@@ -456,7 +458,6 @@ data DriverFeeInfo = DriverFeeInfo
     status :: DDF.DriverFeeStatus,
     paymentAmount :: HighPrecMoney,
     planOfferDetails :: Text,
-    currentDriverFeeMode :: DriverFeeClearenceMode,
     totalRides :: Int,
     totalEarnings :: HighPrecMoney,
     charges :: Money,
@@ -480,8 +481,6 @@ data InvoiceInfo = InvoiceInfo
     numberOfDays :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-type DriverNYPaymentHistoryResponse = [DriverFeeInfo]
 
 data DriverPaymentBreakup = DriverPaymentBreakup
   { component :: Text,
@@ -1644,69 +1643,152 @@ clearDriverDues (personId, _merchantId) = do
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
     groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
 
-getNYDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> m DriverNYPaymentHistoryResponse
-getNYDriverPayments (personId, merchantId_) mbFrom mbTo mbLimit mbOffset = do
-  let defaultLimit = 50
+data NYHistoryEntity = NYHistoryEntity
+  { autoPayInvoices :: [AutoPayInvoiceHistory],
+    manualPayInvoices :: [ManualInvoiceHistory]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data AutoPayInvoiceHistory = AutoPayInvoiceHistory
+  { invoiceId :: Text,
+    amount :: HighPrecMoney,
+    executionAt :: UTCTime,
+    autoPayStage :: Maybe DDF.AutopayPaymentStage,
+    rideTakenOn :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ManualInvoiceHistory = ManualInvoiceHistory
+  { invoiceId :: Text,
+    createdAt :: UTCTime,
+    rideDays :: Int,
+    amount :: HighPrecMoney,
+    feeType :: DDF.FeeType,
+    paymentStatus :: INV.InvoiceStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+getNYDriverPaymentsHistory :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> m NYHistoryEntity
+getNYDriverPaymentsHistory (driverId, merchantId_) mbLimit mbOffset = do
+  let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-      defaultFrom = fromMaybe (fromGregorian 2023 9 23) mbFrom
-  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let today = utctDay now
-      from = fromMaybe defaultFrom mbFrom
-      to = fromMaybe today mbTo
-  let windowStartTime = UTCTime from 0
-      windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  _ <- runInReplica $ QDF.findWindows personId windowStartTime windowEndTime limit offset
-  -- uniqueInvoices <- getUniqueInvoices driverFees
-  return []
+  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset
+  driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
+  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (InternalError "configs do not exist for user") -- check if there is error type already for this
+  let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
+  manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
+  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
+  return NYHistoryEntity {autoPayInvoices, manualPayInvoices}
 
--- mapM buildNYPaymentHistory driverFees
--- where
---   buildNYPaymentHistory DDF.DriverFee {..} = do
---     allInvoices <- QINV.findValidByInvoiceIdWithWindow id invoiceStatus
---     allDriverFeesUnSorted <- mapM (QINV.findByDriverFeeIds . (.driverFeeId)) allInvoices
---     allDriverFees <- sortOn (Down . (.createdAt)) allDriverFeesUnSorted
---     driverFeesResp <- mapM mkDriverFeeResp allDriverFees
+mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)
+mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
+  allEntiresByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
+  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
+  let amount = sum $ mapToAmount allDriverFeeForInvoice
+  case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
+    Just _ ->
+      return $
+        Just
+          ManualInvoiceHistory
+            { invoiceId = manualInvoice.id.getId,
+              rideDays = length allDriverFeeForInvoice,
+              amount,
+              createdAt = manualInvoice.createdAt,
+              feeType = if any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
+              paymentStatus = manualInvoice.invoiceStatus
+            }
+    Nothing -> return Nothing
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
 
---     let driverFees = driverFeesResp
---         debitedOn = updatedAt -- check
---         invoiceAmount = sum (mapM (.paymentAmount) driverFeeResp) -- check
---         numberOfDays = len $ groupBy sameDriverFeeCreatedDate allDriverFees
+mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
+mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
+  now <- getCurrentTime
+  case mapDriverFeeByDriverFeeId' M.!? (autoInvoice.driverFeeId) of
+    Just dfee ->
+      return $
+        Just
+          AutoPayInvoiceHistory
+            { invoiceId = autoInvoice.id.getId,
+              amount = sum $ mapToAmount [dfee],
+              executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
+              autoPayStage = dfee.autopayPaymentStage,
+              rideTakenOn = dfee.createdAt
+            }
+    Nothing -> return Nothing
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
 
---     return DriverNYPaymentHistoryResponse
+data NYHistoryEntryDetailsEntity = NYHistoryEntryDetailsEntity
+  { invoiceId :: Text,
+    amount :: HighPrecMoney,
+    createdAt :: Maybe UTCTime,
+    executionAt :: Maybe UTCTime,
+    feeType :: DDF.FeeType,
+    driverFeeInfo :: [DriverFeeInfoEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
---   sameDriverFeeCreatedDate driverFee1 driverFee2 =
---     let createdAtOne = formatTime defaultTimeLocale "%Y-%m-%d" driverFee1.createdAt
---         createdAtTwo = formatTime defaultTimeLocale "%Y-%m-%d" driverFee2.createdAt
---      in createdAtOne == createdAtTwo
+data DriverFeeInfoEntity = DriverFeeInfoEntity
+  { autoPayStage :: Maybe DDF.AutopayPaymentStage,
+    paymentStatus :: Maybe INV.InvoiceStatus,
+    totalEarnings :: HighPrecMoney,
+    totalRides :: Int,
+    planAmount :: HighPrecMoney,
+    isSplit :: Bool,
+    offerAndPlanDetails :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
---   mkDriverFeeResp DDF.DriverFee {..} = do
---     let ridesTakenOn = now --todo
---         driverFeeId = getId id
---         totalRides = numRides
---         paymentAmount = platformFee
---         planOfferDetails = "" -- todo
---         -- invoiceStatus =  --todo
---     return DriverFeeInfo {..}
+getNYHistoryEntryDetailsEntity :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Text -> m NYHistoryEntryDetailsEntity
+getNYHistoryEntryDetailsEntity (_, merchantId_) invoiceId = do
+  case invoiceId of
+    Just invoiceId' -> do
+      allEntiresByInvoiceId <- QINV.findAllByInvoiceId (Id invoiceId')
+      allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
+      transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (InternalError "configs do not exist for user")
+      let amount = sum $ mapToAmount allDriverFeeForInvoice
+          invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
+          createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+          executionAt =
+            if invoiceType == Just INV.AUTOPAY_INVOICE
+              then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
+              else Nothing
+          feeType
+            | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
+            | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
+            | otherwise = DDF.RECURRING_INVOICE
+      driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
+      return $ NYHistoryEntryDetailsEntity {invoiceId = invoiceId', amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
+    Nothing -> throwError (InternalError "invoice id not present in query params")
+  where
+    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
 
---   mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
+mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> m [DriverFeeInfoEntity]
+mkDriverFeeInfoEntity driverFees invoiceStatus = do
+  mapM
+    ( \driverFee -> do
+        driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
+        return
+          DriverFeeInfoEntity
+            { autoPayStage = driverFee.autopayPaymentStage,
+              paymentStatus = invoiceStatus,
+              totalEarnings = fromIntegral driverFee.totalEarnings,
+              totalRides = driverFee.numRides,
+              planAmount = 0, --- refactor
+              isSplit = not (null driverFeesInWindow),
+              offerAndPlanDetails = driverFee.planOfferTitle
+            }
+    )
+    driverFees
 
---   mkChargesBreakup govtCharges platformFee cgst sgst =
---     [ DriverPaymentBreakup
---         { component = "Government Charges",
---           amount = govtCharges
---         },
---       DriverPaymentBreakup
---         { component = "Platform Fee",
---           amount = platformFee
---         },
---       DriverPaymentBreakup
---         { component = "CGST",
---           amount = cgst
---         },
---       DriverPaymentBreakup
---         { component = "SGST",
---           amount = sgst
---         }
---     ]
+calcExecutionTime :: TransporterConfig -> Maybe DDF.AutopayPaymentStage -> UTCTime -> UTCTime
+calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
+  let notificationTimeDiff = transporterConfig'.driverAutoPayNotificationTime
+      executionTimeDiff = transporterConfig'.driverAutoPayExecutionTime
+  case autopayPaymentStage of
+    Just DDF.NOTIFICATION_SCHEDULED -> addUTCTime (notificationTimeDiff + executionTimeDiff) scheduledAt
+    Just DDF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
+    Just DDF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
+    _ -> scheduledAt

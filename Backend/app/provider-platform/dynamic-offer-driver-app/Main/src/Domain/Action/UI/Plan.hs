@@ -305,7 +305,7 @@ planSuspend isDashboard (driverId, _merchantId) = do
     QM.updateStatus mandate.id DM.INACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
     DI.updateAutoPayStatusAndPayerVpa (Just DI.SUSPENDED) Nothing (cast driverId)
-
+    QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driverId)
   when isDashboard $ notifyPaymentModeManualOnSuspend _merchantId driverId driver.deviceToken
   return Success
 

@@ -4,7 +4,8 @@ module Storage.Queries.Invoice where
 
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Domain.Types.Person (Person)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -29,15 +30,23 @@ findValidByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
-findValidByInvoiceIdWithWindow :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> UTCTime -> m [Domain.Invoice]
-findValidByInvoiceIdWithWindow (Id invoiceId) status from =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamI.id $ Se.Eq invoiceId,
-          Se.Is BeamI.invoiceStatus $ Se.Eq status,
-          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq from
-        ]
-    ]
+-- findValidByInvoiceIdWithWindow :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> UTCTime -> m [Domain.Invoice]
+-- findValidByInvoiceIdWithWindow (Id invoiceId) status from =
+--   findAllWithKV
+--     [ Se.And
+--         [ Se.Is BeamI.id $ Se.Eq invoiceId,
+--           Se.Is BeamI.invoiceStatus $ Se.Eq status,
+--           Se.Is BeamI.createdAt $ Se.GreaterThanOrEq from
+--         ]
+--     ]
+
+findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> Int -> Int -> m [Domain.Invoice]
+findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamI.driverId $ Se.Eq (driverId.getId)]
+    (Se.Desc BeamI.createdAt)
+    (Just limit)
+    (Just offset)
 
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
@@ -69,7 +78,18 @@ findByDriverFeeIds driverFeeIds =
 findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DriverFee] -> Domain.InvoiceStatus -> [Domain.InvoicePaymentMode] -> m [Domain.Invoice]
 findAllByDriverFeeIdAndStatus driverIds status paymentMode = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (driverIds <&> getId), Se.Is BeamI.invoiceStatus $ Se.Eq status, Se.Is BeamI.paymentMode $ Se.In paymentMode]]
 
--- findLatestActiveInvoiceForDriverFee :: MonadFlow m =>
+findLatestAutopayActiveByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findLatestAutopayActiveByDriverFeeId driverFeeId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq (getId driverFeeId),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
+        ]
+    ]
+    (Se.Desc BeamI.createdAt)
+    (Just 1)
+    Nothing
 
 updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
@@ -97,6 +117,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
         Invoice
           { id = Id id,
             invoiceShortId = invoiceShortId,
+            driverId = Id driverId,
             driverFeeId = Id driverFeeId,
             invoiceStatus = invoiceStatus,
             paymentMode = paymentMode,
@@ -114,6 +135,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
       { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
         BeamI.driverFeeId = getId driverFeeId,
+        BeamI.driverId = getId driverId,
         BeamI.paymentMode = paymentMode,
         BeamI.invoiceStatus = invoiceStatus,
         BeamI.maxMandateAmount = maxMandateAmount,
