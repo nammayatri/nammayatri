@@ -337,6 +337,21 @@ updateBillNumberById billNumber driverFeeId = do
     ]
     [Se.Is BeamDF.id $ Se.Eq (driverFeeId.getId)]
 
+updateToManualFeeByDriverFeeIds :: MonadFlow m => [Id DriverFee] -> m ()
+updateToManualFeeByDriverFeeIds driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.feeType Domain.RECURRING_INVOICE,
+      Se.Set BeamDF.status Domain.PAYMENT_OVERDUE,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING,
+          Se.Is BeamDF.feeType $ Se.Eq Domain.RECURRING_EXECUTION_INVOICE
+        ]
+    ]
+
 findAllByStatusAndDriverId :: MonadFlow m => Id Person -> [Domain.DriverFeeStatus] -> m [DriverFee]
 findAllByStatusAndDriverId (Id driverId) driverFeeStatus = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE], Se.Is BeamDF.status $ Se.In driverFeeStatus, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 

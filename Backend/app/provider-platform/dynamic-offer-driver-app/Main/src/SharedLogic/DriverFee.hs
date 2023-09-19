@@ -14,6 +14,7 @@
 
 module SharedLogic.DriverFee where
 
+import Data.List ((\\))
 import qualified Data.List as DL
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
@@ -24,6 +25,7 @@ import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
 
 data DriverFeeByInvoice = DriverFeeByInvoice
@@ -141,3 +143,9 @@ groupDriverFeeByInvoices driverFees_ = do
               Nothing -> maybe DDF.INACTIVE (.status) (listToMaybe invoiceDriverFees)
 
       return $ DriverFeeByInvoice {..}
+
+changeAutoPayFeesAndInvoicesForDriverFeesToManual :: MonadFlow m => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
+changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
+  let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
+  QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
+  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE driverFeeIdsToBeShiftedToManual

@@ -234,6 +234,7 @@ processNotification notificationId notificationStatus = do
       --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
       QDF.updateStatus PAYMENT_OVERDUE now driverFeeId
       QDF.updateFeeType RECURRING_INVOICE now driverFeeId
+      QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
     Juspay.SUCCESS -> do
       --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
       QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
@@ -275,7 +276,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       Payment.ACTIVE -> Just DI.ACTIVE
       Payment.REVOKED -> Just DI.CANCELLED_PSP
       Payment.PAUSED -> Just DI.PAUSED_PSP
-      Payment.FAILURE -> Just DI.MANDATE_FAILURE
+      Payment.FAILURE -> Just DI.MANDATE_FAILED
       Payment.EXPIRED -> Just DI.MANDATE_EXPIRED
     mkMandate payerApp payerAppName mandatePaymentFlow = do
       now <- getCurrentTime

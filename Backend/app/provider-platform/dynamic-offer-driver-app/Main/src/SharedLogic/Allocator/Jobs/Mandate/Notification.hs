@@ -22,6 +22,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -64,23 +65,21 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
         activeAutopayDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee
-        -- handle (driverIdsWithPendingFee - activeAutopayDrivers) drivers
         mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeAutopayDrivers) Plan.AUTOPAY
-        -- handle (activeAutopayDrivers - mandateIdAndDriverIdsToNotify) drivers (drivers who are active autoPay but mandateId is somehow null)
         let driverInfoForPDNotification = mapDriverInfoForPDNNotification (Map.fromList mandateIdAndDriverIdsToNotify) driverFees
-        -- handle (mandateIdAndDriverIdsToNotify - driverInfoForPDNotification) drivers (drivers who are active autoPay but mandateId is somehow null)
+        changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverInfoForPDNotification <&> (.driverFeeId))
         for_ driverInfoForPDNotification $ \driverToNotify -> do
           notificationId <- generateGUID
           notificationShortId <- generateShortId
           invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverToNotify.driverFeeId
           case invoice' of
-            Just invoice -> do
+            Just _ -> do
               QDF.updateAutopayPaymentStageById (Just NOTIFICATION_ATTEMPTING) driverToNotify.driverFeeId
               req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
               exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
               case exec of
                 Left _ -> do
-                  QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id
+                  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
                   QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
                   QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
                   logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)

@@ -168,7 +168,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 case paymentMode of
                   MANUAL -> do
                     updateStatus PAYMENT_OVERDUE now driverFee.id
-                    updateFeeType RECURRING_INVOICE [driverFee.id]
+                    updateFeeType RECURRING_INVOICE now driverFee.id
                   AUTOPAY -> do
                     invoice <- mkInvoiceAgainstDriverFee driverFee
                     QINV.create invoice

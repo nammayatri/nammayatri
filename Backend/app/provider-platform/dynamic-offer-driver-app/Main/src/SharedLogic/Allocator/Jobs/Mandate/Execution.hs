@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -44,7 +45,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         merchantId = jobData.merchantId
         startTime = jobData.startTime
         endTime = jobData.endTime
-
+    now <- getCurrentTime
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
@@ -53,19 +54,20 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
       then return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
-        activeSubscribedDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
+        activeSubscribedDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee
         driverIdsAndDriverPlanToNotify <- driverIdAndDriverPlanTuple <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeSubscribedDrivers) AUTOPAY
         successfulNotifications <- QNTF.findAllByDriverFeeIdAndStatus (driverFees <&> (.id)) JuspayTypes.SUCCESS --- notification_success instead of success in shared kernel---
         let mapDriverFeeById_ = Map.fromList (map (\driverFee_ -> (driverFee_.id, driverFee_)) driverFees)
             mapDriverPlanByDriverId = Map.fromList driverIdsAndDriverPlanToNotify
-        driverExecutionRequests <- sequence $ mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications
-        for_ (mapMaybe identity driverExecutionRequests) $ \ExecutionData {..} -> do
+        driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications)
+        changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverExecutionRequests <&> (.driverFee) <&> (.id))
+        for_ driverExecutionRequests $ \ExecutionData {..} -> do
           ---- driver fee autoPayStage as Execution Attempting -----
           QDF.updateAutopayPaymentStageById (Just EXECUTION_ATTEMPTING) driverFee.id
           exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
           case exec of
             Left _ -> do
-              QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id
+              QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
               QDF.updateStatus PAYMENT_OVERDUE now driverFee.id
               QDF.updateFeeType RECURRING_INVOICE now driverFee.id
               logError ("Execution failed for driverFeeId" <> invoice.driverFeeId.getId)

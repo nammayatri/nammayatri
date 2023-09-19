@@ -100,6 +100,15 @@ updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
 
+updateInvoiceStatusByDriverFeeIds :: MonadFlow m => Domain.InvoiceStatus -> [Id DriverFee] -> m ()
+updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus status,
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
+
 updateBankErrorsByInvoiceId :: MonadFlow m => Maybe Text -> Maybe Text -> Id Domain.Invoice -> m ()
 updateBankErrorsByInvoiceId bankError errorCode invoiceId = do
   now <- getCurrentTime
