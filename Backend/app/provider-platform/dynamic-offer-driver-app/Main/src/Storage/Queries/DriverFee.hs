@@ -278,7 +278,6 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = d
           Se.Set BeamDF.platformFee $ platformFee' + platformFee,
           Se.Set BeamDF.cgst $ cgst' + cgst,
           Se.Set BeamDF.sgst $ sgst' + sgst,
-          Se.Set BeamDF.status ONGOING,
           Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
           Se.Set BeamDF.numRides numRides,
           Se.Set BeamDF.updatedAt now

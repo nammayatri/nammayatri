@@ -182,7 +182,9 @@ updatePaymentStatus driverId merchantId = do
   when (totalDue <= 0) $ DI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
-  when (totalDue < plan.maxCreditLimit) $ DI.updateSubscription True (cast driverId)
+  case plan of
+    Nothing -> DI.updateSubscription True (cast driverId)
+    Just plan_ -> when (totalDue < plan_.maxCreditLimit) $ DI.updateSubscription True (cast driverId)
 
 notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
 notifyPaymentSuccessIfNotNotified driver orderId = do

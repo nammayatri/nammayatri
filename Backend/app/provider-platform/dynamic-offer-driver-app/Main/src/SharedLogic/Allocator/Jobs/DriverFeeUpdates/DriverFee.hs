@@ -23,7 +23,7 @@ import qualified Control.Monad.Catch as C
 import Data.Fixed (mod')
 import qualified Data.Map as M
 import Data.Ord
-import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeCalcJobFlagKey, getPlan, mkDriverFeeCalcJobFlagKey)
+import Domain.Action.UI.Ride.EndRide.Internal (getPlan)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import Domain.Types.Merchant
@@ -91,15 +91,6 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig.driverPaymentReminderInterval
 
-cacheDriverPlan :: (CacheFlow m r) => Id Driver -> UTCTime -> Plan -> m ()
-cacheDriverPlan driverId time driverPlan = Hedis.setExp (makeDriverPlanKey driverId time) driverPlan 86399 -- Hedis.withCrossAppRedis $
-
-makeDriverPlanKey :: Id Driver -> UTCTime -> Text
-makeDriverPlanKey id day = "driver-offer:CachedQueries:DriverPlan:Date" <> show day <> "DriverId-" <> id.getId
-
-getDriverPlanCache :: CacheFlow m r => UTCTime -> Id Driver -> m (Maybe Plan)
-getDriverPlanCache time driverId = Hedis.get (makeDriverPlanKey driverId time)
-
 calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -119,64 +110,60 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       startTime = jobData.startTime
       endTime = jobData.endTime
       applyOfferCall = TPayment.offerApply merchantId
-  firstJobOfWindow <- getDriverFeeCalcJobFlagKey startTime endTime merchantId
-  when (firstJobOfWindow == Just True) $ do
-    driverFees <- findFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING Nothing
-    for_ driverFees $ \driverFee -> do
-      mbDriverPlan <- findByDriverId (cast driverFee.driverId)
-      plan <- getPlan mbDriverPlan merchantId
-      cacheDriverPlan driverFee.driverId endTime plan
-    setDriverFeeBillNumberKey merchantId 1 36000 -- check here --
-    Hedis.del (mkDriverFeeCalcJobFlagKey startTime endTime merchantId)
-  -- Schedule notif job
-
+  setDriverFeeBillNumberKey merchantId 1 36000 -- check here --
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFees <- findFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
 
-  for_ driverFees $ \driverFee -> do
-    plan <- getDriverPlanCache endTime driverFee.driverId >>= fromMaybeM (InternalError ("No plan found for driver" <> driverFee.driverId.getId))
-    driverPlan <- findByDriverId (cast driverFee.driverId) >>= fromMaybeM (InternalError ("No driver plan found for driver" <> driverFee.driverId.getId))
-    let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-        dutyDate = driverFee.createdAt
-        due = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
-        mandateSetupDate = fromMaybe now (driverPlan.mandateSetupDate)
+  flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
+    for_ driverFees $ \driverFee -> do
+      mbDriverPlan <- findByDriverId (cast driverFee.driverId)
+      mbPlan <- getPlan mbDriverPlan merchantId
+      case mbPlan of
+        Nothing -> pure ()
+        Just plan -> do
+          let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
+              dutyDate = driverFee.createdAt
+              mandateSetupDate = case mbDriverPlan of
+                Nothing -> now
+                Just date -> fromMaybe now date.mandateSetupDate
 
-    driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+          driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
-    (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
-      "PER_RIDE" -> do
-        let numRides = driverFee.numRides - plan.freeRideCount
-            feeWithoutDiscount = min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides))
-        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
-      "DAILY" -> do
-        let numRides = driverFee.numRides - plan.freeRideCount
-            feeWithoutDiscount = if numRides > 0 then baseAmount else 0
-        getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
-      _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
-    let offerAndPlanTitle = Just plan.id.getId <> Just "-*$*-" <> offerTitle ---- this we will send in payment history ----
-    updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
-    offerTxnId <- getShortId <$> generateShortId
-    let offerApplied = catMaybes [offerId]
-        offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied due driverPlan dutyDate mandateSetupDate
-    maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
-    ---- here we need the status to notification scheduled ----
-    unless (totalFee == 0) $ do
-      driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now
-      updatePendingPayment True (cast driverFee.driverId)
+          (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
+            "PER_RIDE" -> do
+              let numRides = driverFee.numRides - plan.freeRideCount
+                  feeWithoutDiscount = min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides))
+              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
+            "DAILY" -> do
+              let numRides = driverFee.numRides - plan.freeRideCount
+                  feeWithoutDiscount = if numRides > 0 then baseAmount else 0
+              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
+            _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
+          let offerAndPlanTitle = Just plan.id.getId <> Just "-*$*-" <> offerTitle ---- this we will send in payment history ----
+          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
+          offerTxnId <- getShortId <$> generateShortId
+          let offerApplied = catMaybes [offerId]
+              offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
+          maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
+          ---- here we need the status to notification scheduled ----
+          unless (totalFee == 0) $ do
+            driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now
+            updatePendingPayment True (cast driverFee.driverId)
 
-    -- blocking
-    dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
-    let driverFeeIds = map (.id) dueInvoices
-    when (due + totalFee >= plan.maxCreditLimit) $ do
-      updateStatus PAYMENT_OVERDUE now driverFee.id
-      updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
-      updateSubscription False (cast driverFee.driverId)
-      QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
-    unless (due + totalFee >= plan.maxCreditLimit) $ do
-      QDF.updateAutopayPayementStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+          -- blocking
+          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
+          let driverFeeIds = map (.id) dueDriverFees
+              due = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
+          when (due + totalFee >= plan.maxCreditLimit) $ do
+            updateStatus PAYMENT_OVERDUE now driverFee.id
+            updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
+            updateSubscription False (cast driverFee.driverId)
+            QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
+          unless (due + totalFee >= plan.maxCreditLimit) $ do
+            QDF.updateAutopayPayementStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
-    updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
+          updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
   case listToMaybe driverFees of
     Nothing -> do
@@ -184,30 +171,28 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       maxShards <- asks (.maxShards)
       scheduleJobs transporterConfig startTime endTime merchantId maxShards now
       return Complete
-    _ -> case transporterConfig.driverFeeCalculatorBatchGap of
-      Nothing -> throwError $ InternalError "No batch gap defined for driver fee calculator job"
-      Just gap -> ReSchedule <$> getRescheduledTime gap
+    _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
-    mkApplyOfferRequest offerTxnUUID appliedOfferIds due driverPlan' dutyDate registrationDate =
+    mkApplyOfferRequest offerTxnUUID appliedOfferIds due plan driverId dutyDate registrationDate =
       PaymentInterface.OfferApplyReq
         { txnId = offerTxnUUID,
           offers = appliedOfferIds,
-          customerId = driverPlan'.driverId.getId,
+          customerId = driverId.getId,
           amount = due,
           currency = PaymentInterface.INR,
-          planId = driverPlan'.planId.getId,
+          planId = plan.id.getId,
           registrationDate,
           dutyDate = dutyDate,
-          paymentMode = show $ driverPlan'.planType
+          paymentMode = show $ plan.paymentMode
         }
 
-buildRestFees :: MonadGuid m => DriverFeeStatus -> FeeType -> DriverFee -> m DriverFee
-buildRestFees status_ feeType_ DriverFee {..} = do
+buildRestFees :: MonadGuid m => FeeType -> DriverFee -> m DriverFee
+buildRestFees feeType_ DriverFee {..} = do
   id_ <- generateGUID
   return
     DriverFee
       { id = id_,
-        status = status_,
+        status = ONGOING,
         feeType = feeType_,
         ..
       }
@@ -286,15 +271,17 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
+          updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
           updateStatus PAYMENT_OVERDUE now firstFee.id
-          updRestFees <- mapM (buildRestFees PAYMENT_OVERDUE RECURRING_INVOICE) restFees
+          updRestFees <- mapM (buildRestFees RECURRING_INVOICE) restFees
           createMany updRestFees
     AUTOPAY -> do
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
+          updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
           updateStatus PAYMENT_PENDING now firstFee.id
-          updRestFees <- mapM (buildRestFees PAYMENT_PENDING RECURRING_EXECUTION_INVOICE) restFees
+          updRestFees <- mapM (buildRestFees RECURRING_EXECUTION_INVOICE) restFees
           createMany updRestFees
 
 unsubscribeDriverForPaymentOverdue ::

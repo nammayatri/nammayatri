@@ -401,7 +401,9 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         updatedAt = now,
         platformFee = platformFee_,
         totalEarnings = fromMaybe 0 rideFare,
-        feeType = if plan.paymentMode == MANUAL then DF.RECURRING_INVOICE else DF.RECURRING_EXECUTION_INVOICE, -- CHECK THIS
+        feeType = case plan of
+          Nothing -> DF.RECURRING_INVOICE
+          Just plan_ -> if plan_.paymentMode == MANUAL then DF.RECURRING_INVOICE else DF.RECURRING_EXECUTION_INVOICE,
         govtCharges = govtCharges_,
         offerId = Nothing,
         planOfferTitle = Nothing,
@@ -412,15 +414,15 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         ..
       }
 
-getPlan :: (MonadFlow m, CacheFlow m r) => Maybe DriverPlan -> Id Merchant -> m Plan
+getPlan :: (MonadFlow m, CacheFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
 getPlan mbDriverPlan merchantId = do
   case mbDriverPlan of
-    Just dp -> CQP.findByIdAndPaymentMode dp.planId dp.planType >>= fromMaybeM (PlanNotFound dp.planId.getId)
+    Just dp -> CQP.findByIdAndPaymentMode dp.planId dp.planType
     Nothing -> do
       plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
       case plans of
-        [] -> throwError $ InternalError "No default plan found"
-        [pl] -> pure pl
+        [] -> pure Nothing
+        [pl] -> pure (Just pl)
         _ -> throwError $ InternalError "Multiple default plans found"
 
 mkPendingPaymentProcessingKey :: UTCTime -> Text
