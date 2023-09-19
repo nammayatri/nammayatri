@@ -44,7 +44,7 @@ import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
-import Domain.Types.Invoice (Invoice)
+import Domain.Types.Invoice (Invoice, InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import Environment
@@ -175,6 +175,7 @@ type API =
                :> "payments"
                :> "history"
                :> TokenAuth
+               :> QueryParam "paymentMode" InvoicePaymentMode
                :> QueryParam "limit" Int
                :> QueryParam "offset" Int
                :> Get '[JSON] DDriver.HistoryEntityV2
@@ -305,8 +306,8 @@ getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . D
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.ClearDuesRes
 clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
 
-getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
-getDriverPaymentsHistoryV2 mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 mbLimit mbOffset
+getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
+getDriverPaymentsHistoryV2 pMode mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 pMode mbLimit mbOffset
 
 getDriverPaymentsHistoryEntityDetailsV2 :: Id Invoice -> (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
 getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId) invoiceId

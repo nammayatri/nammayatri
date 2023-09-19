@@ -1670,17 +1670,26 @@ data ManualInvoiceHistory = ManualInvoiceHistory
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDriverPaymentsHistoryV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> m HistoryEntityV2
-getDriverPaymentsHistoryV2 (driverId, merchantId) mbLimit mbOffset = do
+getDriverPaymentsHistoryV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> m HistoryEntityV2
+getDriverPaymentsHistoryV2 (driverId, merchantId) mPaymentMode mbLimit mbOffset = do
   let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset
+      mode = fromMaybe INV.MANUAL_INVOICE mPaymentMode
+  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId mode limit offset
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
-  manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
-  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) (filter (\inv -> inv.paymentMode == INV.AUTOPAY_INVOICE) invoices)
+
+  (manualPayInvoices, autoPayInvoices) <-
+    case mode of
+      INV.MANUAL_INVOICE -> do
+        manualPayInvoices_ <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
+        return (manualPayInvoices_, [])
+      INV.AUTOPAY_INVOICE -> do
+        autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
+        return ([], autoPayInvoices)
+
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
 mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)

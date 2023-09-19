@@ -32,6 +32,8 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
+import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import qualified Storage.CachedQueries.Merchant as Storage
@@ -53,6 +55,9 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
     }
 
 runDriverOfferAllocator ::

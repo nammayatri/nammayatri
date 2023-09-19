@@ -30,20 +30,14 @@ findValidByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
--- findValidByInvoiceIdWithWindow :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> UTCTime -> m [Domain.Invoice]
--- findValidByInvoiceIdWithWindow (Id invoiceId) status from =
---   findAllWithKV
---     [ Se.And
---         [ Se.Is BeamI.id $ Se.Eq invoiceId,
---           Se.Is BeamI.invoiceStatus $ Se.Eq status,
---           Se.Is BeamI.createdAt $ Se.GreaterThanOrEq from
---         ]
---     ]
-
-findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> Int -> Int -> m [Domain.Invoice]
-findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset = do
+findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> Domain.InvoicePaymentMode -> Int -> Int -> m [Domain.Invoice]
+findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentMode limit offset = do
   findAllWithOptionsKV
-    [Se.Is BeamI.driverId $ Se.Eq (driverId.getId)]
+    [ Se.And
+        [ Se.Is BeamI.driverId $ Se.Eq (driverId.getId),
+          Se.Is BeamI.paymentMode $ Se.Eq paymentMode
+        ]
+    ]
     (Se.Desc BeamI.createdAt)
     (Just limit)
     (Just offset)
