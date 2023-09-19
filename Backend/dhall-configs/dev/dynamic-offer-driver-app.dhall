@@ -251,4 +251,6 @@ in  { esqDBCfg
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.DbBased
+    , rideForceEndThresholdTimeMultiplier = +3
+    , rideForceEndMinimumThreshold = +3600
     }

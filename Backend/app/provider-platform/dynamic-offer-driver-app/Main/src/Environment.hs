@@ -122,7 +122,9 @@ data AppCfg = AppCfg
     locationTrackingServiceKey :: Text,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
-    jobInfoMapx :: M.Map AllocatorJobType Bool
+    jobInfoMapx :: M.Map AllocatorJobType Bool,
+    rideForceEndThresholdTimeMultiplier :: Int,
+    rideForceEndMinimumThreshold :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -193,7 +195,9 @@ data AppEnv = AppEnv
     locationTrackingServiceKey :: Text,
     eventRequestCounter :: EventCounterMetric,
     schedulerSetName :: Text,
-    schedulerType :: SchedulerType
+    schedulerType :: SchedulerType,
+    rideForceEndThresholdTimeMultiplier :: Int,
+    rideForceEndMinimumThreshold :: Int
   }
   deriving (Generic)
 
@@ -233,6 +237,8 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
+      rideForceEndThresholdTimeMultiplier = cfg.rideForceEndThresholdTimeMultiplier
+      rideForceEndMinimumThreshold = cfg.rideForceEndMinimumThreshold
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -14,18 +14,23 @@
 module SharedLogic.Allocator.Jobs.EndRideAfterThresholdTimePassed where
 
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
+import qualified Domain.Types.Ride as DRide
 import Environment (AppEnv)
 import Kernel.Prelude hiding (handle)
+import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
+import Kernel.Utils.Error (fromMaybeM)
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified Storage.Queries.Ride as QRide
 
-endRideAfterThresholdTimePassed ::
-  Job 'EndRideAfterThresholdTimePassed ->
-  FlowR AppEnv ExecutionResult
+endRideAfterThresholdTimePassed :: Job 'EndRideAfterThresholdTimePassed -> FlowR AppEnv ExecutionResult
 endRideAfterThresholdTimePassed Job {jobInfo} = do
   let jobData = jobInfo.jobData
   let rideId = jobData.rideId
   let merchantId = jobData.merchantId
-  _ <- RideEnd.buildEndRideHandle merchantId >>= (\hndl -> RideEnd.scheduleBasedEndRide hndl rideId (RideEnd.ScheduledBasedEndRideReq rideId))
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist $ show rideId)
+  when (ride.status == DRide.INPROGRESS) $
+    void $
+      RideEnd.buildEndRideHandle merchantId >>= (\hndl -> RideEnd.scheduleBasedEndRide hndl rideId (RideEnd.ScheduledBasedEndRideReq rideId))
   return Complete
