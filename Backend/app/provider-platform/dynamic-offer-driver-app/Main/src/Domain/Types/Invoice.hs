@@ -31,7 +31,7 @@ data Invoice = Invoice
 
 data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
 
-data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
+data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 $(mkBeamInstancesForEnum ''InvoiceStatus)
 $(mkBeamInstancesForEnum ''InvoicePaymentMode)
