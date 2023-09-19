@@ -2677,3 +2677,111 @@ instance encodeFeeType :: Encode FeeType where
   encode _ = encode {}
 instance eqFeeType :: Eq FeeType where eq = genericEq
 instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data HistoryEntityV2Req = HistoryEntityV2Req String String
+
+newtype HistoryEntityV2Resp = HistoryEntityV2Resp {
+    autoPayInvoices :: Array AutoPayInvoiceHistory,
+    manualPayInvoices :: Array ManualInvoiceHistory
+}
+
+newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
+  invoiceId :: String,
+  amount :: Number,
+  executionAt :: String,
+  autoPayStage :: Maybe String, -- NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+  rideTakenOn :: String
+}
+
+newtype ManualInvoiceHistory = ManualInvoiceHistory {
+  invoiceId :: String,
+  createdAt :: String,
+  rideDays :: Int,
+  amount :: Number,
+  feeType :: FeeType,
+  paymentStatus :: String
+}
+
+instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
+    makeRequest reqBody@(HistoryEntityV2Req limit offset ) headers = defaultMakeRequest GET (EP.paymentHistoryListV2 limit offset) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericHistoryEntityV2Req :: Generic HistoryEntityV2Req _
+instance standardEncodeHistoryEntityV2Req :: StandardEncode HistoryEntityV2Req where standardEncode _ = standardEncode {}
+instance showHistoryEntityV2Req :: Show HistoryEntityV2Req where show = genericShow
+instance decodeHistoryEntityV2Req :: Decode HistoryEntityV2Req where decode = defaultDecode
+instance encodeHistoryEntityV2Req :: Encode HistoryEntityV2Req where encode = defaultEncode
+
+derive instance genericHistoryEntityV2Resp :: Generic HistoryEntityV2Resp _
+derive instance newtypeHistoryEntityV2Resp :: Newtype HistoryEntityV2Resp _
+instance standardEncodeHistoryEntityV2Resp :: StandardEncode HistoryEntityV2Resp where standardEncode (HistoryEntityV2Resp resp) = standardEncode resp
+instance showHistoryEntityV2Resp :: Show HistoryEntityV2Resp where show = genericShow
+instance decodeHistoryEntityV2Resp :: Decode HistoryEntityV2Resp where decode = defaultDecode
+instance encodeHistoryEntityV2Resp :: Encode HistoryEntityV2Resp where encode = defaultEncode
+
+derive instance genericAutoPayInvoiceHistory :: Generic AutoPayInvoiceHistory _
+derive instance newtypeAutoPayInvoiceHistory :: Newtype AutoPayInvoiceHistory _
+instance standardEncodeAutoPayInvoiceHistory :: StandardEncode AutoPayInvoiceHistory where standardEncode (AutoPayInvoiceHistory resp) = standardEncode resp
+instance showAutoPayInvoiceHistory :: Show AutoPayInvoiceHistory where show = genericShow
+instance decodeAutoPayInvoiceHistory :: Decode AutoPayInvoiceHistory where decode = defaultDecode
+instance encodeAutoPayInvoiceHistory :: Encode AutoPayInvoiceHistory where encode = defaultEncode
+
+derive instance genericManualInvoiceHistory :: Generic ManualInvoiceHistory _
+derive instance newtypeManualInvoiceHistory :: Newtype ManualInvoiceHistory _
+instance standardEncodeManualInvoiceHistory :: StandardEncode ManualInvoiceHistory where standardEncode (ManualInvoiceHistory resp) = standardEncode resp
+instance showManualInvoiceHistory :: Show ManualInvoiceHistory where show = genericShow
+instance decodeManualInvoiceHistory :: Decode ManualInvoiceHistory where decode = defaultDecode
+instance encodeManualInvoiceHistory :: Encode ManualInvoiceHistory where encode = defaultEncode
+
+------------------------------------------------------------------------------------------------------------------------
+
+data HistoryEntryDetailsEntityV2Req = HistoryEntryDetailsEntityV2Req String
+
+newtype HistoryEntryDetailsEntityV2Resp = HistoryEntryDetailsEntityV2Resp {
+    invoiceId :: String,
+    amount :: Number,
+    createdAt :: Maybe String,
+    executionAt :: Maybe String,
+    feeType :: FeeType , -- MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE
+    driverFeeInfo :: Array DriverFeeInfoEntity
+}
+
+newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
+    autoPayStage :: Maybe String, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe String, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    totalEarnings :: Number,
+    totalRides :: Int,
+    planAmount :: Number,
+    isSplit :: Boolean,
+    offerAndPlanDetails :: Maybe String
+}
+
+instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where
+    makeRequest reqBody@(HistoryEntryDetailsEntityV2Req id) headers = defaultMakeRequest GET (EP.paymentEntityDetails id) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericHistoryEntryDetailsEntityV2Req :: Generic HistoryEntryDetailsEntityV2Req _
+instance showHistoryEntryDetailsEntityV2Req :: Show HistoryEntryDetailsEntityV2Req where show = genericShow
+instance standardEncodeHistoryEntryDetailsEntityV2Req :: StandardEncode HistoryEntryDetailsEntityV2Req where standardEncode _ = standardEncode {}
+instance decodeHistoryEntryDetailsEntityV2Req :: Decode HistoryEntryDetailsEntityV2Req where decode = defaultDecode
+instance encodeHistoryEntryDetailsEntityV2Req :: Encode HistoryEntryDetailsEntityV2Req where encode = defaultEncode
+
+derive instance genericHistoryEntryDetailsEntityV2Resp :: Generic HistoryEntryDetailsEntityV2Resp _
+derive instance newtypeHistoryEntryDetailsEntityV2Resp :: Newtype HistoryEntryDetailsEntityV2Resp _
+instance standardEncodeHistoryEntryDetailsEntityV2Resp :: StandardEncode HistoryEntryDetailsEntityV2Resp where standardEncode (HistoryEntryDetailsEntityV2Resp req) = standardEncode req
+instance showHistoryEntryDetailsEntityV2Resp :: Show HistoryEntryDetailsEntityV2Resp where show = genericShow
+instance decodeHistoryEntryDetailsEntityV2Resp :: Decode HistoryEntryDetailsEntityV2Resp where decode = defaultDecode
+instance encodeHistoryEntryDetailsEntityV2Resp :: Encode HistoryEntryDetailsEntityV2Resp where encode = defaultEncode
+
+derive instance genericDriverFeeInfoEntity :: Generic DriverFeeInfoEntity _
+derive instance newtypeDriverFeeInfoEntity :: Newtype DriverFeeInfoEntity _
+instance standardEncodeDriverFeeInfoEntity :: StandardEncode DriverFeeInfoEntity where standardEncode (DriverFeeInfoEntity req) = standardEncode req
+instance showDriverFeeInfoEntity :: Show DriverFeeInfoEntity where show = genericShow
+instance decodeDriverFeeInfoEntity :: Decode DriverFeeInfoEntity where decode = defaultDecode
+instance encodeDriverFeeInfoEntity :: Encode DriverFeeInfoEntity where encode = defaultEncode

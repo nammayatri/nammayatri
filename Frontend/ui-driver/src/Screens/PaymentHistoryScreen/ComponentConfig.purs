@@ -61,10 +61,12 @@ getStatusConfig status = case status of
                               Common.Success -> {color : Color.green900, backgroundColor : "#2953BB6F", name : getString SUCCESS}
                               Common.Pending -> {color : Color.yellow900, backgroundColor : "#29FCC32C", name : getString PENDING_CAPS}
                               Common.Failed  -> {color : Color.red, backgroundColor : "#29E55454", name : getString FAILURE}
+                              Common.Scheduled  -> {color : Color.red, backgroundColor : "#29E55454", name : getString FAILURE}
 
 getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String}
 getTransactionConfig status = case status of
                               Common.Success -> {image : "ny_ic_green_tick", title : getString PAYMENT_SUCCESSFUL}
                               Common.Pending -> {image : "ny_ic_transaction_pending", title : getString PAYMENT_PENDING}
                               Common.Failed  -> {image : "ny_ic_payment_failed", title : getString PAYMENT_FAILED}
+                              Common.Scheduled  -> {image : "ny_ic_transaction_pending", title : "Payment Scheduled"}
                               -- {image : "ny_ic_pending", title : getString NOTIFICATION_SCHEDULED}

@@ -1074,3 +1074,17 @@ postRideFeedback rideId rating feedback = do
             ratingValue : rating
         }
         unwrapResponse (x) = x 
+
+paymentHistoryListV2 :: String -> String -> Flow GlobalState (Either ErrorResponse HistoryEntityV2Resp)
+paymentHistoryListV2 limit offset = do 
+    headers <- getHeaders "" false 
+    withAPIResult (EP.paymentHistoryListV2 limit offset) unwrapResponse $ callAPI headers (HistoryEntityV2Req limit offset)
+    where
+        unwrapResponse (x) = x 
+
+paymentEntityDetails :: String -> Flow GlobalState (Either ErrorResponse HistoryEntryDetailsEntityV2Resp)
+paymentEntityDetails id = do 
+    headers <- getHeaders "" false 
+    withAPIResult (EP.paymentEntityDetails id) unwrapResponse $ callAPI headers (HistoryEntryDetailsEntityV2Req id)
+    where
+        unwrapResponse (x) = x 

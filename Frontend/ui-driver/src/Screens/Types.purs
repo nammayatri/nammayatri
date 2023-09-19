@@ -1690,9 +1690,10 @@ type PaymentHistoryScreenState = {
 }
 
 type PaymentHistoryScreenData = {
-  transactions :: Array PaymentListItem,
   transactionDetails :: TransactionInfo,
-  planData :: PlanCardConfig
+  planData :: PlanCardConfig,
+  autoPayList :: Array PaymentListItem,
+  manualPayList :: Array PaymentListItem
 }
 
 type TransactionInfo = {
@@ -1703,15 +1704,11 @@ type TransactionInfo = {
 }
 type PaymentListItem = {
   transactionDate :: String,
-  paymentStatus :: Common.PaymentStatus,
   invoiceId :: String,
-  totalRides :: Int,
-  driverFeeId :: String,
-  totalEarnings :: Int,
-  chargesBreakup :: Array ChargeBreakupItem,
-  totalCharges :: Int,
-  ridesTakenDate :: String,
-  feeType :: FeeType
+  paymentStatus :: Common.PaymentStatus,
+  amount :: Number,
+  feeType :: FeeType,
+  description :: String
 }
 
 type ChargeBreakupItem = {

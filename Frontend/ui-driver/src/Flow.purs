@@ -92,6 +92,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
 import Screens.Types as ST
+import Services.API as API
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -2077,12 +2078,25 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
     Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlanItem = Nothing}}})
+    Scheduled -> pure unit
 
 paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
   action <- UI.paymentHistory
   case action of 
     GoToSetupAutoPay state -> nyPaymentFlow state.data.planData true -- to discuss
+    EntityDetailsAPI state id -> do
+      paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
+      case paymentEntityDetails of
+        Right (API.HistoryEntryDetailsEntityV2Resp resp) -> pure unit
+            -- modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
+            --   data { transactionDetails {
+            --   -- paymentType = resp.feeType
+
+            -- }}
+            -- })
+        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+      paymentHistoryFlow
   pure unit 
 
 ysPaymentFlow :: FlowBT String Unit
@@ -2167,6 +2181,7 @@ setPaymentStatus paymentStatus (PayPayload payload) = do
                     blockedDueToPayment = time2PmTo10Am,
                     actionTextColor = if time2PmTo10Am then Color.dustyRed else Color.selectiveYellow
                     }}})
+        Scheduled -> pure unit
 
 
 ackScreenFlow :: FlowBT String Unit

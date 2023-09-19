@@ -50,7 +50,8 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..))
-import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..)) as SA
+import Services.API (FeeType(..))
+import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -62,12 +63,14 @@ screen initialState =
   , name: "PaymentHistoryScreen"
   , globalEvents: [(\push -> do
       void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-      --   resp <- lift $ lift $ Remote.getPaymentHistory "" "" Nothing
-      --   case resp of
-      --     Right (SA.GetPaymentHistoryResp resp) -> do
-            lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory --resp
-      --     Left err -> pure unit
-      --   pure unit
+        if initialState.props.subView == PaymentHistory then do
+          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" "0"
+          case resp of
+            Right (SA.HistoryEntityV2Resp resp) -> do
+              lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory (SA.HistoryEntityV2Resp resp)
+            Left err -> pure unit
+          pure unit
+        else pure unit
       pure (pure unit)
     )]
   , eval:
@@ -126,8 +129,7 @@ paymentHistoryView push state visibility' =
 
 paymentList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
 paymentList push state = 
-  let transactionSplit = DA.partition (\item -> item.feeType == SA.MANUAL_PAYMENT) state.data.transactions
-      transactionItems = if state.props.autoPayHistory then transactionSplit.no else transactionSplit.yes
+  let transactionItems = if state.props.autoPayHistory then state.data.autoPayList else state.data.manualPayList
   in
   PrestoAnim.animationSet [Anim.fadeIn true] $ 
   if DA.null transactionItems then noPaymentsView state push 
@@ -141,7 +143,7 @@ paymentList push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if DA.length state.data.transactions > 0 then VISIBLE else GONE
+        , visibility if DA.length transactionItems > 0 then VISIBLE else GONE
         ] (DA.mapWithIndex (\index item -> 
           let itemConfig = getStatusConfig item.paymentStatus
           in
@@ -153,7 +155,7 @@ paymentList push state =
             , cornerRadius 8.0
             , margin $ MarginVertical 6 6
             , padding $ Padding 16 16 16 16
-            , onClick push $ const $ ListItemClick index
+            , onClick push $ const $ ListItemClick item
             ][ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -166,7 +168,7 @@ paymentList push state =
                     [ height WRAP_CONTENT
                     , weight 1.0
                     ][]
-                , commonTV push ("₹" <> show item.totalCharges) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT
+                , commonTV push ("₹" <> show item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT
                 , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -180,7 +182,7 @@ paymentList push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][  commonTV push (getString RIDES_TAKEN_ON <> "  " <> (convertUTCtoISC item.ridesTakenDate "Do MMM, YYYY")) Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                ][  commonTV push item.description Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
                     , linearLayout
                         [ height WRAP_CONTENT
                         , weight 1.0
@@ -199,7 +201,7 @@ paymentList push state =
                           , margin (MarginRight 4)
                           , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
                           ]
-                        , commonTV push (if state.props.autoPayHistory then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                        , commonTV push (if item.feeType == AUTOPAY_PAYMENT then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
                         ]
                 ]
             ]

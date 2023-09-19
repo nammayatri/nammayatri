@@ -15,22 +15,24 @@
 
 module Screens.PaymentHistoryScreen.Controller where
 
+import Common.Types.App (PaymentStatus(..))
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array (concatMap, null, (!!), partition)
+import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, map, not, pure, show, unit, ($), (==))
+import Prelude (class Show, bind, map, not, pure, show, unit, ($), (<>), (==), (/=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens.PaymentHistoryScreen.ScreenData (dummyDetails, dummyPaymentListItem)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem)
-import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..)) as SA
+import Services.API (AutoPayInvoiceHistory(..), FeeType(..), ManualInvoiceHistory(..))
+import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -47,18 +49,16 @@ data Action = BackPressed
             | GenericHeaderAC GenericHeader.Action
             | ChangeTab Boolean
             | ViewRideDetails
-            | ListItemClick Int
-            | UpdatePaymentHistory --GetPaymentHistoryResp
+            | ListItemClick PaymentListItem
+            | UpdatePaymentHistory SA.HistoryEntityV2Resp
             | DueDetailsListAction DueDetailsListController.Action
             | Copy String
             | PrimaryButtonActionController PrimaryButtonController.Action
 
 
-data ScreenOutput = 
--- ViewPaymentDetails PaymentHistoryScreenState 
---                     | 
-                    GoBack
+data ScreenOutput =  GoBack
                     | SetupAutoPay PaymentHistoryScreenState
+                    | ShowSummary PaymentHistoryScreenState String
 
 
 eval :: Action -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
@@ -75,59 +75,12 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick )) state = if state.props.
 
 eval (ChangeTab switchToAutoPay) state = continue state { props{ autoPayHistory = switchToAutoPay}}
 
-eval (ListItemClick index) state = do
-  let transactionSplit = partition (\item -> item.feeType == SA.MANUAL_PAYMENT) state.data.transactions
-      details = Mb.fromMaybe dummyDetails ((if state.props.autoPayHistory then transactionSplit.no else transactionSplit.yes) !! index)
-      transactionDetails = {
-        notificationStatus : details.paymentStatus,
-        statusTime : details.transactionDate,
-        details : [
-        {key : "TXN_ID",
-        title : getString TXN_ID,
-        val : details.invoiceId},
-        {
-          key : "AMOUNT_PAID",
-          title : getString AMOUNT_PAID,
-          val : show details.totalCharges
-        },
-        { key : "PAYMENT_MODE",
-        title : getString PAYMENT_MODE,
-        val : if details.feeType == SA.MANUAL_PAYMENT then "UPI" else "UPI AutoPay"}
-        ,
-        {
-          key : "TRIP_DATE",
-          title : getString TRIP_DATE,
-          val : (convertUTCtoISC details.ridesTakenDate "Do MMM, YYYY")
-        },
-        {
-          key : "PLAN",
-          title : getString PLAN,
-          val : "details.invoiceId"
-        },
-        {
-          key : "NUMBER_OF_RIDES",
-          title : getString NUMBER_OF_RIDES,
-          val : show details.totalRides
-        },
-        {key : "YOUR_EARNINGS",
-        title : getString YOUR_EARNINGS,
-        val : show details.totalEarnings},
-        {key : "FEE_BREAKUP",
-        title : getString FEE_BREAKUP,
-        val : "details.invoiceId"},
-        {key : "OFFER",
-        title : getString OFFER,
-        val : details.invoiceId}
-      ],
-      manualSpecificDetails : []}
-  continue state { props{ subView = TransactionDetails}, data{transactionDetails = transactionDetails}}
+eval (ListItemClick item) state = if item.invoiceId /= "" then exit $ ShowSummary state item.invoiceId
+  else continue state
 
 eval ViewRideDetails state = continue state { props{ subView = RideDetails}}
 
--- eval (UpdatePaymentHistory response) state = do
-eval (UpdatePaymentHistory) state = do
-  -- let transactions = concatMap getAllTransactions response
-  continue state{data{ transactions = dummyPaymentListItem }}
+eval (UpdatePaymentHistory response) state = getAllTransactions response state
 
 eval (DueDetailsListAction (DueDetailsListController.SelectDue index)) state = continue state
 
@@ -141,22 +94,36 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exi
 
 eval _ state = continue state
 
--- getAllTransactions :: PaymentDetailsEntity -> Array PaymentListItem
--- getAllTransactions transaction = do
---     let processedTransaction = {
---         invoiceId:transaction.invoiceId,
---         ridesTakenDate : transaction.ridesTakenDate,
---         totalRides: transaction.totalRides,
---         transactionDate : transaction.date,
---         driverFeeId: transaction.driverFeeId,
---         paymentStatus: transaction.status,
---         totalEarnings: transaction.totalEarnings,
---         chargesBreakup: transaction.chargesBreakup,
---         totalCharges: transaction.charges
---     }
---     if null transaction.txn then 
---       [processedTransaction]
---     else do
---       let txns = map (\txn -> processedTransaction{  paymentStatus = txn.status }) transaction.txn
---       txns
-      
+getAllTransactions :: SA.HistoryEntityV2Resp -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
+getAllTransactions (SA.HistoryEntityV2Resp response) state = do
+  let autoPayInvoices = response.autoPayInvoices
+      manualPayInvoices = response.manualPayInvoices
+  continue state {
+    data {
+      autoPayList = map (\ invoice -> getAutoPayInvoice invoice) autoPayInvoices,
+      manualPayList = map (\ invoice -> getManualPayInvoice invoice) manualPayInvoices
+    }
+  }
+getAutoPayInvoice :: AutoPayInvoiceHistory -> PaymentListItem
+getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
+  paymentStatus : case autoPayInvoice.autoPayStage of
+                    Nothing -> Pending
+                    Just status -> case status of
+                      "EXECUTION_SUCCESS" -> Success
+                      _ -> Pending, -- TODO :: SCHEDULED
+  invoiceId : autoPayInvoice.invoiceId,
+  amount : autoPayInvoice.amount,
+  description : (getString RIDES_TAKEN_ON) <> " " <> (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY"),
+  feeType : AUTOPAY_PAYMENT,
+  transactionDate : autoPayInvoice.executionAt
+}
+
+getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
+getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = {
+  invoiceId : manualPayInvoice.invoiceId,
+  paymentStatus : Success,
+  amount : manualPayInvoice.amount,
+  description : (getString RIDES_TAKEN_ON) <> " " <> show manualPayInvoice.rideDays <> " days",
+  feeType : MANUAL_PAYMENT,
+  transactionDate : manualPayInvoice.createdAt
+}

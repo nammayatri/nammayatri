@@ -39,3 +39,6 @@ paymentHistory = do
     SetupAutoPay updatedState -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GoToSetupAutoPay updatedState)
+    ShowSummary updatedState id -> do
+      modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EntityDetailsAPI updatedState id)
