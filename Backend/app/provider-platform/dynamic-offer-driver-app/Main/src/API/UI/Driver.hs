@@ -179,9 +179,9 @@ type API =
              :<|> "v2"
                :> "payments"
                :> "history"
-               :> TokenAuth
                :> Capture "invoiceId" (Id Invoice)
                :> "entity"
+               :> TokenAuth
                :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
          )
 
@@ -306,5 +306,5 @@ clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 mbLimit mbOffset
 
-getDriverPaymentsHistoryEntityDetailsV2 :: (Id SP.Person, Id Merchant.Merchant) -> Id Invoice -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
-getDriverPaymentsHistoryEntityDetailsV2 (driverId, merchantId) = withFlowHandlerAPI . DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId)
+getDriverPaymentsHistoryEntityDetailsV2 :: Id Invoice -> (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
+getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId) invoiceId
