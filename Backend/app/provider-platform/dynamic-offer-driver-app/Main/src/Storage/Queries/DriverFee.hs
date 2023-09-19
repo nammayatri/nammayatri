@@ -107,6 +107,21 @@ findFeesInRangeWithStatus mbMerchantId startTime endTime status mbLimit =
     mbLimit
     Nothing
 
+findAllFeesInRangeWithStatus :: MonadFlow m => Maybe (Id Merchant) -> UTCTime -> UTCTime -> DriverFeeStatus -> Maybe Int -> m [DriverFee] -- remove maybe from merchantId later
+findAllFeesInRangeWithStatus mbMerchantId startTime endTime status mbLimit =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE]
+        ]
+          <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
+    ]
+    (Se.Desc BeamDF.endTime)
+    mbLimit
+    Nothing
+
 findFeesInRangeAndDriverIdsWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> [Id Person] -> m [DriverFee]
 findFeesInRangeAndDriverIdsWithStatus startTime endTime status driverIds =
   findAllWithKV
@@ -207,30 +222,6 @@ findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime e
     (Se.Desc BeamDF.createdAt)
     (Just limit)
     Nothing
-
--- findDriverFeeInRangeWithOrderNotExecutedAndPending :: MonadFlow m => Integer -> UTCTime -> UTCTime -> m [DriverFee]
--- findDriverFeeInRangeWithOrderNotExecutedAndPending limit startTime endTime = do
---   dbConf <- getMasterBeamConfig
---   res <- L.runDB dbConf $
---     L.findRows $
---       B.select $
---         B.limit_ limit $
---           B.filter_
---             ( \(driverFee, invoice) ->
---                 invoice.driverFeeId B./=. driverFee.id
---                   B.&&. driverFee.createdAt B.>=. B.val_ startTime
---                   B.&&. driverFee.createdAt B.<=. B.val_ endTime
---                   B.&&. driverFee.status B.==. B.val_ Domain.PAYMENT_PENDING
---             )
---             do
---               driverFee <- B.all_ (SBC.driverFee SBC.atlasDB)
---               invoices <- B.join_' (SBC.invoice SBC.atlasDB) (\invoice'' -> BeamIN.driverFeeId invoice'' B.==?. BeamDF.id driverFee) --- add the payment mode here after merging branch txn flow capture ---
---               pure (driverFee, invoices)
---   case res of
---     Right res' -> do
---       let driverFee' = fst <$> res'
---       catMaybes <$> mapM fromTType' driverFee'
---     Left _ -> pure []
 
 findDriverFeeInRangeWithOrderNotExecutedAndPending :: MonadFlow m => Id Merchant -> Int -> UTCTime -> UTCTime -> m [DriverFee]
 findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime = do

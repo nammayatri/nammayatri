@@ -114,7 +114,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       applyOfferCall = TPayment.offerApply merchantId
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  driverFees <- findFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
+  driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
 
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFees $ \driverFee -> do
@@ -182,7 +182,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantId)
       maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId maxShards now
+      scheduleJobs transporterConfig startTime endTime merchantId maxShards
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -375,8 +375,9 @@ mkInvoiceAgainstDriverFee driverFee = do
         createdAt = now
       }
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
   createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
