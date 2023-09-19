@@ -44,6 +44,7 @@ import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
+import Domain.Types.Invoice (Invoice)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import Environment
@@ -168,18 +169,20 @@ type API =
              :<|> "cleardues"
                :> TokenAuth
                :> Get '[JSON] DDriver.ClearDuesRes
-             :<|> "ny-payments"
+             :<|> "v2"
+               :> "payments"
                :> "history"
                :> TokenAuth
                :> QueryParam "limit" Int
                :> QueryParam "offset" Int
-               :> Get '[JSON] DDriver.NYHistoryEntity
-             :<|> "ny-payments"
+               :> Get '[JSON] DDriver.HistoryEntityV2
+             :<|> "v2"
+               :> "payments"
                :> "history"
-               :> "entity"
                :> TokenAuth
-               :> QueryParam "invoiceId" Text
-               :> Get '[JSON] DDriver.NYHistoryEntryDetailsEntity
+               :> Capture "invoiceId" (Id Invoice)
+               :> "entity"
+               :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
          )
 
 handler :: FlowServer API
@@ -213,8 +216,8 @@ handler =
                   )
              :<|> getDriverPayments
              :<|> clearDriverDues
-             :<|> getNYDriverPaymentsHistory
-             :<|> getNYDriverPaymentsHistoryEntityDetails
+             :<|> getDriverPaymentsHistoryV2
+             :<|> getDriverPaymentsHistoryEntityDetailsV2
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -300,8 +303,8 @@ getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . D
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.ClearDuesRes
 clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
 
-getNYDriverPaymentsHistory :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler DDriver.NYHistoryEntity
-getNYDriverPaymentsHistory mbLimit mbOffset = withFlowHandlerAPI . DDriver.getNYDriverPaymentsHistory mbLimit mbOffset
+getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
+getDriverPaymentsHistoryV2 mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 mbLimit mbOffset
 
-getNYDriverPaymentsHistoryEntityDetails :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Text -> FlowHandler DDriver.NYHistoryEntryDetailsEntity
-getNYDriverPaymentsHistoryEntityDetails invoiceId = withFlowHandlerAPI . DDriver.getNYHistoryEntryDetailsEntity invoiceId
+getDriverPaymentsHistoryEntityDetailsV2 :: (Id SP.Person, Id Merchant.Merchant) -> Id Invoice -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
+getDriverPaymentsHistoryEntityDetailsV2 (driverId, merchantId) = withFlowHandlerAPI . DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId)

@@ -38,8 +38,8 @@ module Domain.Action.UI.Driver
     ResendAuth (..),
     DriverPaymentHistoryResp,
     MetaDataReq (..),
-    NYHistoryEntity (..),
-    NYHistoryEntryDetailsEntity (..),
+    HistoryEntityV2 (..),
+    HistoryEntryDetailsEntityV2 (..),
     ClearDuesRes (..),
     getInformation,
     activateGoHomeFeature,
@@ -68,8 +68,8 @@ module Domain.Action.UI.Driver
     clearDriverDues,
     DriverInfo.DriverMode,
     updateMetaData,
-    getNYDriverPaymentsHistory,
-    getNYHistoryEntryDetailsEntity,
+    getDriverPaymentsHistoryV2,
+    getHistoryEntryDetailsEntityV2,
   )
 where
 
@@ -1643,7 +1643,7 @@ clearDriverDues (personId, _merchantId) = do
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
     groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
 
-data NYHistoryEntity = NYHistoryEntity
+data HistoryEntityV2 = HistoryEntityV2
   { autoPayInvoices :: [AutoPayInvoiceHistory],
     manualPayInvoices :: [ManualInvoiceHistory]
   }
@@ -1668,23 +1668,23 @@ data ManualInvoiceHistory = ManualInvoiceHistory
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getNYDriverPaymentsHistory :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> m NYHistoryEntity
-getNYDriverPaymentsHistory (driverId, merchantId_) mbLimit mbOffset = do
+getDriverPaymentsHistoryV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> m HistoryEntityV2
+getDriverPaymentsHistoryV2 (driverId, merchantId) mbLimit mbOffset = do
   let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId limit offset
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
-  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (InternalError "configs do not exist for user") -- check if there is error type already for this
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
-  manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
-  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
-  return NYHistoryEntity {autoPayInvoices, manualPayInvoices}
+  manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
+  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
+  return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
 mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)
 mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
-  allEntiresByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
-  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
+  allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
+  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
   let amount = sum $ mapToAmount allDriverFeeForInvoice
   case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
     Just _ ->
@@ -1720,7 +1720,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
   where
     mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
 
-data NYHistoryEntryDetailsEntity = NYHistoryEntryDetailsEntity
+data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
   { invoiceId :: Text,
     amount :: HighPrecMoney,
     createdAt :: Maybe UTCTime,
@@ -1741,27 +1741,24 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getNYHistoryEntryDetailsEntity :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Text -> m NYHistoryEntryDetailsEntity
-getNYHistoryEntryDetailsEntity (_, merchantId_) invoiceId = do
-  case invoiceId of
-    Just invoiceId' -> do
-      allEntiresByInvoiceId <- QINV.findAllByInvoiceId (Id invoiceId')
-      allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
-      transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (InternalError "configs do not exist for user")
-      let amount = sum $ mapToAmount allDriverFeeForInvoice
-          invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
-          createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
-          executionAt =
-            if invoiceType == Just INV.AUTOPAY_INVOICE
-              then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
-              else Nothing
-          feeType
-            | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
-            | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
-            | otherwise = DDF.RECURRING_INVOICE
-      driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
-      return $ NYHistoryEntryDetailsEntity {invoiceId = invoiceId', amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
-    Nothing -> throwError (InternalError "invoice id not present in query params")
+getHistoryEntryDetailsEntityV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id INV.Invoice -> m HistoryEntryDetailsEntityV2
+getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
+  allEntiresByInvoiceId <- QINV.findAllByInvoiceId invoiceId
+  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  let amount = sum $ mapToAmount allDriverFeeForInvoice
+      invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
+      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+      executionAt =
+        if invoiceType == Just INV.AUTOPAY_INVOICE
+          then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
+          else Nothing
+      feeType
+        | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
+        | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
+        | otherwise = DDF.RECURRING_INVOICE
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
+  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceId.getId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + fromIntegral dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
 
