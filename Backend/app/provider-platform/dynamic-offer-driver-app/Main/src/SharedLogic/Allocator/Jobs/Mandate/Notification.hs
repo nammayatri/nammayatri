@@ -63,9 +63,12 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
-        activeSubscribedDrivers <- QDI.findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
-        mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeSubscribedDrivers) Plan.AUTOPAY
+        activeAutopayDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee
+        -- handle (driverIdsWithPendingFee - activeAutopayDrivers) drivers
+        mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeAutopayDrivers) Plan.AUTOPAY
+        -- handle (activeAutopayDrivers - mandateIdAndDriverIdsToNotify) drivers (drivers who are active autoPay but mandateId is somehow null)
         let driverInfoForPDNotification = mapDriverInfoForPDNNotification (Map.fromList mandateIdAndDriverIdsToNotify) driverFees
+        -- handle (mandateIdAndDriverIdsToNotify - driverInfoForPDNotification) drivers (drivers who are active autoPay but mandateId is somehow null)
         for_ driverInfoForPDNotification $ \driverToNotify -> do
           notificationId <- generateGUID
           notificationShortId <- generateShortId
@@ -78,6 +81,8 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
               case exec of
                 Left _ -> do
                   QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id
+                  QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
+                  QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
                   logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)
                 Right res -> do
                   QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
@@ -97,10 +102,10 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       mapMaybe
         ( \driverFee -> mkInfoForPDNNotification driverFee <$> (mapMandateByDriverId Map.!? (cast @P.Driver @P.Person driverFee.driverId))
         )
-    mkInfoForPDNNotification driverFee_ mandate_Id =
+    mkInfoForPDNNotification driverFee_ mandateId_ =
       DriverInfoForPDNotification
         { driverId = driverFee_.driverId,
-          mandateId = mandate_Id,
+          mandateId = mandateId_,
           driverFeeId = driverFee_.id,
           amount = fromIntegral driverFee_.govtCharges + fromIntegral driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }

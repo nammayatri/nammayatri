@@ -53,7 +53,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
       then return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
-        activeSubscribedDrivers <- QDI.findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
+        activeSubscribedDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee True
         driverIdsAndDriverPlanToNotify <- driverIdAndDriverPlanTuple <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeSubscribedDrivers) AUTOPAY
         successfulNotifications <- QNTF.findAllByDriverFeeIdAndStatus (driverFees <&> (.id)) JuspayTypes.SUCCESS --- notification_success instead of success in shared kernel---
         let mapDriverFeeById_ = Map.fromList (map (\driverFee_ -> (driverFee_.id, driverFee_)) driverFees)
@@ -66,6 +66,8 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
           case exec of
             Left _ -> do
               QINV.updateInvoiceStatusByInvoiceId INV.FAILED invoice.id
+              QDF.updateStatus PAYMENT_OVERDUE now driverFee.id
+              QDF.updateFeeType RECURRING_INVOICE now driverFee.id
               logError ("Execution failed for driverFeeId" <> invoice.driverFeeId.getId)
             Right _ -> pure ()
         ReSchedule <$> getRescheduledTime transporterConfig

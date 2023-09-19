@@ -135,20 +135,20 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
             "PER_RIDE" -> do
               let numRides = driverFee.numRides - plan.freeRideCount
-                  feeWithoutDiscount = min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides))
+                  feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides)))
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
             "DAILY" -> do
               let numRides = driverFee.numRides - plan.freeRideCount
                   feeWithoutDiscount = if numRides > 0 then baseAmount else 0
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
-          let offerAndPlanTitle = Just plan.id.getId <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
+          let offerAndPlanTitle = Just plan.description <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
           updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
           offerTxnId <- getShortId <$> generateShortId
           let offerApplied = catMaybes [offerId]
               offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
           maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
-          ---- here we need the status to notification scheduled ----
+
           unless (totalFee == 0) $ do
             driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now
             updatePendingPayment True (cast driverFee.driverId)
@@ -157,15 +157,23 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
               due = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          when (due + totalFee >= plan.maxCreditLimit) $ do
-            updateStatus PAYMENT_OVERDUE now driverFee.id
-            updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
-            updateSubscription False (cast driverFee.driverId)
-            QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
-          unless (due + totalFee >= plan.maxCreditLimit) $ do
-            QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
-            invoice <- mkInvoiceAgainstDriverFee driverFee
-            QINV.create invoice
+          if due + totalFee >= plan.maxCreditLimit
+            then do
+              updateStatus PAYMENT_OVERDUE now driverFee.id
+              updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
+              updateSubscription False (cast driverFee.driverId)
+              QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
+            else do
+              unless (totalFee == 0) $ do
+                let paymentMode = maybe MANUAL (.planType) mbDriverPlan
+                case paymentMode of
+                  MANUAL -> do
+                    updateStatus PAYMENT_OVERDUE now driverFee.id
+                    updateFeeType RECURRING_INVOICE [driverFee.id]
+                  AUTOPAY -> do
+                    invoice <- mkInvoiceAgainstDriverFee driverFee
+                    QINV.create invoice
+                    QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 

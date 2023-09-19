@@ -43,13 +43,12 @@ create = createWithKV
 findById :: MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
-findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> Bool -> m [DriverInformation]
-findAllSubscribedByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds subscribed = do
+findAllByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
+findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId),
           Se.Is BeamDI.autoPayStatus $ Se.Eq autoPayStatus,
-          Se.Is BeamDI.subscribed $ Se.Eq subscribed,
           Se.Is BeamDI.driverId $ Se.In (getId <$> driverIds)
         ]
     ]
