@@ -104,6 +104,7 @@ data KeyStore = USER_NAME
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
                 | BUNDLE_TIME_OUT
+                | SET_PROFILE_IMAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

@@ -22,13 +22,21 @@ import Screens.DriverDetailsScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..),optionList)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Storage (KeyStore(..),getValueToLocalStore)
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Engineering.Helpers.Commons as EHC
 import Animation as Anim
+import Effect.Class (liftEffect)
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Aff (launchAff)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import JBridge as JB
+import Types.App (defaultGlobalState)
 import Common.Types.App
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
@@ -36,9 +44,11 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Debug (spy)
 import Components.SelectListModal.View as SelectListModal
 import Components.SelectListModal.Controller as CancelRideConfig
+import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
+import Components.ValidateProfilePicture as ValidateProfilePicture
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import MerchantConfig.Utils (getValueFromConfig)
 
@@ -53,7 +63,11 @@ screen initialState =
   , name : "DriverDetailsScreen"
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
-    pure $ pure unit)]
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+              $ do 
+                if (initialState.props.validateProfilePicturePopUp == false) then lift $ lift $ doAff do liftEffect $ push $ RenderProfileImage (getValueToLocalStore SET_PROFILE_IMAGE) "EditProfileImage"  else lift $ lift $ doAff do liftEffect $ push $ AfterRender       
+    pure $ pure unit
+        )]
   , eval : (\state  action -> do
       let _ = spy "DriverDetailsScreen state -----" state
       let _ = spy "DriverDetailsScreen --------action" action
@@ -78,10 +92,11 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
-    , afterRender push (const AfterRender)
+    
+    , visibility (if (state.props.validateProfilePicturePopUp ||state.props.imageCaptureLayoutView ) then GONE else VISIBLE)
     ][
-      headerLayout state push,
-      profilePictureLayout state push
+      headerLayout state push
+     , profilePictureLayout state push
      , driverDetailsView push state
     ]
   , if state.props.genderSelectionModalShow && (getValueFromConfig "showGenderBanner") then selectYourGender push state else textView[]
@@ -90,7 +105,10 @@ view push state =
  , if state.props.keyboardModalType == ST.OTP then enterOtpModal push state else textView[height $ V 0,
   width $ V 0]
   ] <> if state.props.otpAttemptsExceeded then [enterOtpExceededModal push state] else []
-  <> if state.props.removeNumberPopup then [removeAlternateNumber push state] else [])
+  <> if state.props.removeNumberPopup then [removeAlternateNumber push state] else []
+  <> if state.props.profilePicturePopUpModal then [addProfilePictureModal push state] else []
+  <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
+  <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else [])
 
 ---------------------------------------------- profilePictureLayout ------------------------------------
 profilePictureLayout :: ST.DriverDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -105,41 +123,42 @@ profilePictureLayout state push =
         , orientation VERTICAL
         , layoutGravity "center"
         ][ frameLayout
-            [ width $ V 90
-            , height $ V 90
-            ][ imageView
-                [ width $ V 90
-                , height $ V 90
+            [ width $ V 150
+            , height $ V 150
+            ][ linearLayout
+                [ width $ V 150
+                , height $ V 150
                 , layoutGravity "center"
-                , cornerRadius 45.0
                 , id (EHC.getNewIDWithTag "EditProfileImage")
+
                 , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
                 -- TODO : after 15 aug
                 -- , afterRender push (const RenderBase64Image)
+
+                
+                ] [
+                    imageView
+                  [ width $ V 115
+                    , height $ V 115
+                    , margin (MarginLeft 18)
+                    , cornerRadius 45.0
+                    , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+                  ]
                 ]
               , linearLayout
                 [ width MATCH_PARENT
-                , height $ V 30
+                , height WRAP_CONTENT
                 , layoutGravity "bottom"
-                ][ linearLayout
-                    [ width MATCH_PARENT
-                    , height $ V 30
-                    , gravity RIGHT
-                    ][ imageView
-                        [ width $ V 30
-                        , height $ V 30
-                        , gravity RIGHT
+                ][ imageView
+                        [ width $ V 35
+                        , height $ V 35
+                        , margin (Margin 93 0 0 38)
                         , cornerRadius 45.0
-                        , imageWithFallback $ "ny_ic_camera_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_white.png"
-                        , visibility GONE 
-                        -- To be added after 15 aug
-                        -- , onClick (\action-> do
-                        --       _ <- liftEffect $ JB.uploadFile unit
-                        --       pure unit)(const UploadFileAction)
+                        , imageWithFallback "ny_ic_blue_camera,https://assets.juspay.in/nammayatri/images/driver/ny_ic_blue_camera.png"
+                        , visibility VISIBLE
+                        , onClick push (const ProfilePicturePopUp)
                         ]
                     ]
-                ]
-
             ]
         ]
     ]
@@ -325,6 +344,36 @@ selectYourGender :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreen
 selectYourGender push state =
   SelectListModal.view (push <<< GenderSelectionModalAction) (selectYourGenderConfig state)
 
+addProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w
+addProfilePictureModal push state =
+  PopUpModal.view (push <<< AddProfilePictureModalAction) (addProfilePictureStateConfig state)
+
+validateProfilePicturePopUp :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w
+validateProfilePicturePopUp push state =
+  ValidateProfilePicture.view (push <<< ValidateProfilePicturePopUpAction) (validateProfilePictureModalState state)
+
+validateProfilePictureModalState :: ST.DriverDetailsScreenState -> ValidateProfilePicture.IssueListFlowState
+validateProfilePictureModalState state = let
+      config' = ValidateProfilePicture.config
+      inAppModalConfig' = config'{
+        background = Color.black,
+        profilePictureCapture =false,
+        verificationStatus=state.props.imageVerificationStatus,
+        failureReason = state.data.profileVerificationText,
+        headerConfig {
+         imageConfig {
+         color = Color.white900
+        },
+          headTextConfig {
+            text = (getString CONFIRM_SELFIE),
+            color = Color.white900
+          }
+        }
+      }
+      in inAppModalConfig'
+
+imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w
+imageCaptureLayout push state  = ValidateProfilePicture.view (push <<< ValidateProfilePicturePopUpAction) (ValidateProfilePicture.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = (getString TAKE_SELFIE)}}})
 
 
 --------------------------------- horizontalLineView and dummyTextView -------------------

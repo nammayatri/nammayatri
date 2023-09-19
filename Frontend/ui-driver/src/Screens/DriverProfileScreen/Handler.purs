@@ -35,7 +35,8 @@ driverProfileScreen = do
   action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen{data{logField = logField_}}
   case action of
     GoToDriverDetailsScreen updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetails ->
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props {  profilePicturePopUpModal =false,imageCaptureLayoutView =false,validateProfilePicturePopUp =false}})
+      modifyScreenState $ DriverDetailsScreenStateType (\driverDetails -> 
         driverDetails { data { driverName = updatedState.data.driverName,
         driverVehicleType = updatedState.data.driverVehicleType,
         driverRating = updatedState.data.driverRating,
@@ -95,5 +96,7 @@ driverProfileScreen = do
                                                 , capacity = driverDetailsScreen.data.capacity
                                                 , downgradeOptions = driverDetailsScreen.data.downgradeOptions
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
-                                                , profileImg = driverDetailsScreen.data.profileImg}})
+                                                , profileImg = driverDetailsScreen.data.profileImg},
+                                           props {  profilePicturePopUpModal =false,imageCaptureLayoutView =false,validateProfilePicturePopUp =false}})
       App.BackT $ pure App.GoBack
+    DriverProfilePicture image fileType state -> App.BackT $ App.NoBack <$> pure (ADDING_DRIVER_PROFILE_PICTURE image fileType state)

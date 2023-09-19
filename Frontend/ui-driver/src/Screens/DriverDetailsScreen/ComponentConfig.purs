@@ -212,3 +212,39 @@ optionList state =
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
       {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
     ] <> if getValueFromConfig "showGenderBanner" then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []
+
+    
+addProfilePictureStateConfig:: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
+addProfilePictureStateConfig state = let
+    config = PopUpModalConfig.config
+    popUpConf' = config {
+      gravity = BOTTOM
+    ,primaryText {
+        text = if((getValueToLocalStore SET_PROFILE_IMAGE) == "") then (getString ADD_PROFILE_PHOTO) else (getString UPDATE_PROFILE_PHOTO)
+      , margin = (Margin 24 24 24 12)
+      , visibility = VISIBLE
+     },
+      secondaryText {
+        text = (getString YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY)
+      , color = Color.black600
+      , margin = (Margin 24 0 24 32)
+      , visibility = VISIBLE
+        },
+      option1 {
+        text = (getString TRY_AGAIN_LATER)
+      , color = Color.black900
+      , strokeColor = Color.black700
+      , visibility =false
+
+      },
+      option2 {text = (getString TAKE_SELFIE)
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , margin = (Margin 16 0 16 0 )
+      , width = (V 50)
+
+      , background = Color.black900
+      }
+    }
+  in popUpConf'
+

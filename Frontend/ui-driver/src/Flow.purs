@@ -90,7 +90,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
 import Screens.Types as ST
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), DriverProfilePictureResp(..))
 import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
@@ -296,6 +296,7 @@ getDriverInfoFlow = do
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = (GetDriverInfoResp getDriverInfoResp)})
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
+      setValueToLocalStore SET_PROFILE_IMAGE (fromMaybe "" getDriverInfoResp.mediaUrl)
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{autoPayBanner = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"}})
       case getDriverInfoResp.mobileNumber of
@@ -366,7 +367,7 @@ getDriverInfoFlow = do
         let optionArr = genders FunctionCall
             element = fromMaybe "UNKNOWN" getDriverInfoResp.gender
             reqIndex = getGenderIndex element optionArr
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber, base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl)   }
                                                                            , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
                                                                                                         (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent])
                                                                                                     else getDriverInfoResp.active
@@ -377,13 +378,13 @@ getDriverInfoFlow = do
          {data = driverDetailsScreen.data { driverName = getDriverInfoResp.firstName,
         driverVehicleType = linkedVehicle.variant,
         driverRating = getDriverInfoResp.rating,
-       -- base64Image = updatedState.data.base64Image,
+        base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl),
         driverMobile = getDriverInfoResp.mobileNumber,
         driverAlternateMobile = getDriverInfoResp.alternateNumber,
         driverGender = getGenderState getDriverInfoResp.gender,
         genderSelectionModal{activeIndex = reqIndex}
         }})
-        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getGenderState getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
+        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getGenderState getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl)}})
         _ <- liftFlowBT $ runEffectFn1 consumeBP unit
         permissionsGiven <- checkAll3Permissions
         if permissionsGiven
@@ -819,7 +820,9 @@ driverProfileFlow = do
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralScreenFlow
-    DRIVER_DETAILS_SCREEN -> driverDetailsFlow
+    DRIVER_DETAILS_SCREEN -> do 
+     modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {profilePicturePopUpModal = false}})
+     driverDetailsFlow
     VEHICLE_DETAILS_SCREEN -> vehicleDetailsFlow
     ABOUT_US_SCREEN -> aboutUsFlow
     SELECT_LANGUAGE_SCREEN -> do
@@ -1119,6 +1122,19 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
       driverProfileFlow
 
+    ADDING_DRIVER_PROFILE_PICTURE image fileType updatedState  -> do 
+        getDriverProfilePictureResp <- lift $ lift $ Remote.addProfilePicture (Remote.addProfilePictureRequest image fileType)
+        case  getDriverProfilePictureResp of
+           Right (DriverProfilePictureResp resp) -> do
+              modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen ->updatedState{props{imageVerificationStatus=true}}) 
+           Left errorPayload -> do
+              if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage == "FAKE_FACE_DETECTED")) then
+                modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen ->updatedState{data {profileVerificationText = "Fake face detected"},props{imageVerificationStatus=true}})
+              else if (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage == "INTERNAL_SERVER_ERROR")) then 
+                modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen ->updatedState{data {profileVerificationText = "Could not verify face. Please try again"},props{imageVerificationStatus=true}})
+              else
+                modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen ->updatedState{data {profileVerificationText = "Unknown error"},props{imageVerificationStatus=true}})
+        driverProfileFlow 
 
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do
@@ -1224,7 +1240,20 @@ driverDetailsFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
         setValueToLocalStore IS_BANNER_ACTIVE "False"
         driverDetailsFlow
-
+    
+    ADDING_PROFILE_PICTURE image fileType updatedState  -> do 
+        getDriverProfilePictureResp <- lift $ lift $ Remote.addProfilePicture (Remote.addProfilePictureRequest image fileType)
+        case  getDriverProfilePictureResp of
+           Right (DriverProfilePictureResp resp) -> do
+              modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState{data {demoImage = image},props{imageVerificationStatus=true}}) 
+           Left errorPayload -> do
+              if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage == "FAKE_FACE_DETECTED")) then 
+                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState{data {profileVerificationText = "Fake face detected",demoImage = image},props{imageVerificationStatus=true}})
+              else if (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage == "INTERNAL_SERVER_ERROR")) then 
+                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState{data {profileVerificationText = "Could not verify face. Please try again",demoImage = image},props{imageVerificationStatus=true}})
+              else
+                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState{data {profileVerificationText = "Unknown error",demoImage = image},props{imageVerificationStatus=true}})
+        driverDetailsFlow 
   pure unit
 
 vehicleDetailsFlow :: FlowBT String Unit
@@ -1731,6 +1760,7 @@ homeScreenFlow = do
   appConfig <- getAppConfig Constants.appConfig
   when appConfig.subscriptionConfig.enableBlocking $ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp)
   when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
+  setValueToLocalStore SET_PROFILE_IMAGE (fromMaybe "" getDriverInfoResp.mediaUrl)
   let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   case getDriverInfoResp.linkedVehicle of
@@ -1768,9 +1798,9 @@ homeScreenFlow = do
                                                                                                 (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[Online, Silent])
                                                                                              else getDriverInfoResp.active
                                                                             , driverStatusSet = getDriverStatus "" }
-                                                                      , data{config = appConfig, vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber, profileImg = getDriverInfoResp.aadhaarCardPhoto}})
-  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp), profileImg = getDriverInfoResp.aadhaarCardPhoto}})
-  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
+                                                                      , data{config = appConfig, vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber, profileImg = getDriverInfoResp.aadhaarCardPhoto, base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl)}})
+  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp), profileImg = getDriverInfoResp.aadhaarCardPhoto, base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl)}})
+  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber, base64Image = (fromMaybe "" getDriverInfoResp.mediaUrl)}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
   let currdate = getcurrentdate ""
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
@@ -1781,9 +1811,10 @@ homeScreenFlow = do
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit
   action <- UI.homeScreen
   case action of
-    GO_TO_PROFILE_SCREEN -> do
-      liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      driverProfileFlow 
+    GO_TO_PROFILE_SCREEN state -> do
+     liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+     modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props {profilePicturePopUpModal = (if ((state.props.profilePicturePopUp) && ((getValueToLocalStore SET_PROFILE_IMAGE) ==""))  then true else false),validateProfilePicturePopUp=false }})
+     driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
       driverProfileFlow

@@ -2596,3 +2596,33 @@ instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackRe
 instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
 instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
 instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode
+---------------------------------------- driverProfilePicture api ---------------------------------------------
+
+newtype DriverProfilePictureReq = DriverProfilePictureReq  
+ {
+    image :: String,
+    fileType :: String
+ }
+
+newtype DriverProfilePictureResp =  DriverProfilePictureResp  ApiSuccessResult
+
+
+instance makeDriverProfilePictureReq :: RestEndpoint DriverProfilePictureReq DriverProfilePictureResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.putProfilePicture "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericDriverProfilePictureReq :: Generic DriverProfilePictureReq _
+derive instance newtypeDriverProfilePictureReq :: Newtype DriverProfilePictureReq _
+instance standardEncodeDriverProfilePictureReq :: StandardEncode DriverProfilePictureReq where standardEncode (DriverProfilePictureReq reqBody) = standardEncode reqBody
+instance showDriverProfilePictureReq :: Show DriverProfilePictureReq where show = genericShow
+instance decodeDriverProfilePictureReq :: Decode DriverProfilePictureReq where decode = defaultDecode
+instance encodeDriverProfilePictureReq :: Encode DriverProfilePictureReq where encode = defaultEncode
+
+derive instance genericDriverProfilePictureResp :: Generic DriverProfilePictureResp _
+derive instance newtypeDriverProfilePictureResp :: Newtype DriverProfilePictureResp _
+instance standardEncodeDriverProfilePictureResp :: StandardEncode DriverProfilePictureResp where standardEncode (DriverProfilePictureResp id) = standardEncode id
+instance showDriverProfilePictureResp :: Show DriverProfilePictureResp where show = genericShow
+instance decodeDriverProfilePictureResp :: Decode DriverProfilePictureResp  where decode = defaultDecode
+instance encodeDriverProfilePictureResp :: Encode DriverProfilePictureResp where encode = defaultEncode

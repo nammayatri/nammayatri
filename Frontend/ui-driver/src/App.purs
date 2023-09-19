@@ -241,6 +241,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
 
+                                    | ADDING_DRIVER_PROFILE_PICTURE String String DriverProfileScreenState
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -249,6 +250,7 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
                                   | ALTERNATE_NUMBER_REMOVE DriverDetailsScreenState
                                   | GO_TO_HOMESCREEN DriverDetailsScreenState
                                   | DRIVER_GENDER DriverDetailsScreenState
+                                  | ADDING_PROFILE_PICTURE String String DriverDetailsScreenState
 
 
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
@@ -260,7 +262,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | REMOVE_ISSUE_SCREEN String HelpAndSupportScreenState
                                     | RESOLVED_ISSUE_SCREEN HelpAndSupportScreenState
                                     | ON_GOING_ISSUE_SCREEN HelpAndSupportScreenState
-                                    | ISSUE_LIST_GO_BACK_SCREEN HelpAndSupportScreenState
+                                    | ISSUE_LIST_GO_BACK_SCREEN  HelpAndSupportScreenState
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
@@ -280,7 +282,7 @@ data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN
 
 data ONBOARDING_SUBSCRIPTION_SCREENOUTPUT = GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN | MAKE_PAYMENT_FROM_ONBOARDING OnBoardingSubscriptionScreenState
 
-data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
+data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_RIDES_SCREEN
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN

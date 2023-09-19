@@ -45,4 +45,7 @@
     <string name="and">ಮತ್ತು</string>
     <string name="no_enabled_browser">ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಯಾವುದೇ ಸಕ್ರಿಯಗೊಳಿಸಿದ ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ, ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅಥವಾ ಸ್ಥಾಪಿಸಿ</string>
     <string name="message_from_customer">ಗ್ರಾಹಕರಿಂದ ಸಂದೇಶ</string>
+    <string name="take_a_clear_selfie">ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದೊಳಗೆ ನಿಮ್ಮ ಮುಖದೊಂದಿಗೆ \nಸ್ಪಷ್ಟವಾದ ಸೆಲ್ಫಿ ತೆಗೆದುಕೊಳ್ಳಿ</string>
+    <string name="need_permission_to_access_the_camera">ಕ್ಯಾಮರಾವನ್ನು ಪ್ರವೇಶಿಸಲು ಅನುಮತಿಯ ಅಗತ್ಯವಿದೆ</string>
+
 </resources>

@@ -111,6 +111,8 @@ foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
+foreign import renderBase64ImageCircular :: String -> String -> Effect Unit
+foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit

@@ -103,6 +103,12 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback, webView, url,clickable)
+import Components.ValidateProfilePicture as ValidateProfilePicture
+import Components.PopUpModal.Controller as PopUpModalConfig
+import Screens.DriverProfileScreen.ComponentConfig
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion,flowRunner)
+
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -113,9 +119,13 @@ screen initialState =
       if initialState.props.openSettings then
       pure unit
       else do
+        _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+              $ do
+                if (initialState.props.validateProfilePicturePopUp == true) then lift $ lift $ doAff do liftEffect $ push $ RenderProfileImage initialState.data.demoImage "ValidateProfileImage" else lift $ lift $ doAff do liftEffect $ push $ RenderProfileImage (getValueToLocalStore SET_PROFILE_IMAGE) "DriverProfileImage"
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
-          lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
+         getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
+         lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
           void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
           EHU.toggleLoader true
@@ -141,13 +151,13 @@ view push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][  linearLayout
+    ]([  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
         , onBackPressed push $ const BackPressed
         , background Color.white900
-        , visibility if state.props.updateLanguages ||  state.props.updateDetails then GONE else VISIBLE
+        , visibility if state.props.updateLanguages ||  state.props.updateDetails || state.props.validateProfilePicturePopUp || state.props.imageCaptureLayoutView then GONE else VISIBLE
         ][  settingsView state push
           , profileView push state]
       , linearLayout
@@ -165,7 +175,10 @@ view push state =
         , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
         , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
         , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
-    ]
+        ]<> if state.props.profilePicturePopUpModal then [addProfilePictureModal push state] else []
+         <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
+         <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
+        )
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
@@ -970,6 +983,95 @@ settingsView state push =
 
 
 ------------------------------------------------- PROFILE OPTIONS LAYOUT ------------------------------
+------------------------------------------------- profilePictureLayout ------------------------------
+profilePictureLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+profilePictureLayout state push =
+    frameLayout
+    [ width MATCH_PARENT
+    , height $ V ((EHC.screenHeight unit)/3 - 10)
+    ][ imageView
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , imageUrl "shape_profile_drawable"
+      ]
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , layoutGravity "center"
+        , padding (PaddingTop 25)
+        ][ linearLayout
+            [ width $ V 150
+            , height $ V 150
+            , padding (Padding 2 26 0 0)
+            , layoutGravity "center"
+            , id (EHC.getNewIDWithTag "DriverProfileImage")
+            , imageUrl "ny_ic_profile_image"
+            ][
+              imageView
+            [ width $ V 100
+            , height $ V 100
+            , margin (MarginLeft 24 )
+            , layoutGravity "center"
+            , cornerRadius 45.0
+            , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+            ]
+            ]
+            , textView
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text (getValueToLocalStore USER_NAME)
+            , layoutGravity "center"
+            , color Color.black800
+            , textSize FontSize.a_17
+            , fontStyle $ FontStyle.medium LanguageStyle
+            ]
+            , textView
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $ getVehicleType state.data.driverVehicleType
+            , layoutGravity "center"
+            , textSize FontSize.a_12
+            , fontStyle $ FontStyle.regular LanguageStyle
+            ]
+            , ratingView state
+        ]
+    ]
+
+addProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+addProfilePictureModal push state =
+  PopUpModal.view (push <<< AddProfilePictureModalAction) (addProfilePictureStateConfig state)
+
+
+
+validateProfilePicturePopUp :: forall w . (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+validateProfilePicturePopUp push state =
+  ValidateProfilePicture.view (push <<< ValidateProfilePicturePopUpAction) (validateProfilePictureModalState state)
+
+validateProfilePictureModalState :: ST.DriverProfileScreenState -> ValidateProfilePicture.IssueListFlowState
+validateProfilePictureModalState state = let
+      config' = ValidateProfilePicture.config
+      inAppModalConfig' = config'{
+        background = Color.black,
+        failureReason = state.data.profileVerificationText,
+        headerConfig {
+         imageConfig {
+         color = Color.white900
+        },
+          headTextConfig {
+            text = (getString CONFIRM_SELFIE),
+            color = Color.white900
+          }
+        }
+      }
+      in inAppModalConfig'
+
+imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+imageCaptureLayout push state  = ValidateProfilePicture.view (push <<< ValidateProfilePicturePopUpAction) (ValidateProfilePicture.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = (getString TAKE_SELFIE)}}})
+
+
+
+------------------------------------------------- profileOptionsLayout ------------------------------
 
 profileOptionsLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 profileOptionsLayout state push =
@@ -1101,8 +1203,22 @@ infoView state push =
                             , separatorColor : Color.grey700
                             , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state)
                                            else (getRcDetails state)
-                            }
-    ]
+                            }]
+--------------------------------------------------------------- ratingView ----------------------------
+ratingView :: ST.DriverProfileScreenState -> forall w . PrestoDOM (Effect Unit) w
+ratingView state=
+ linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , margin $ (Margin 5 5 0 0)
+  , layoutGravity "center"
+  ][imageView
+    [ width $ V 12
+    , height MATCH_PARENT
+    , imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+    , gravity CENTER_VERTICAL
+    ] ]
+
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
 getRcDetails state = do
   let config = state.data.activeRCData

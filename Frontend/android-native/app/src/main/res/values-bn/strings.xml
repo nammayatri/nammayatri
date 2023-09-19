@@ -44,4 +44,7 @@
     <string name="and">এবং</string>
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
+    <string name="take_a_clear_selfie">চিহ্নিত এলাকার ভিতরে আপনার মুখের সাথে একটি \nপরিষ্কার সেলফি তুলুন </string>
+    <string name="need_permission_to_access_the_camera">ক্যামেরা অ্যাক্সেস করতে অনুমতি প্রয়োজন</string>
+
 </resources>

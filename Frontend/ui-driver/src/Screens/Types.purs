@@ -251,6 +251,8 @@ type DriverProfileScreenData = {
   driverVehicleType :: String,
   driverRating :: Maybe Int,
   base64Image :: String,
+  profileVerificationText :: String,
+  demoImage :: String,
   drivingLicenseNo :: String,
   driverMobile :: Maybe String,
   vehicleRegNumber :: String,
@@ -353,7 +355,11 @@ type DriverProfileScreenProps = {
   callDriver :: Boolean,
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean
+  btnActive :: Boolean,
+  profilePicturePopUpModal :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageVerificationStatus :: Boolean,
+  imageCaptureLayoutView :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -650,6 +656,8 @@ type DriverDetailsScreenStateData =  {
   driverVehicleType :: String,
   driverRating :: Maybe Int,
   base64Image :: String,
+  profileVerificationText :: String,
+  demoImage :: String,
   drivingLicenseNo :: String,
   driverMobile :: Maybe String,
   driverAlternateMobile :: Maybe String,
@@ -670,7 +678,11 @@ type DriverDetailsScreenStateProps =  {
   alternateMobileOtp :: String,
   removeNumberPopup :: Boolean,
   isEditAlternateMobile :: Boolean,
-  numberExistError :: Boolean
+  numberExistError :: Boolean,
+  profilePicturePopUpModal :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageVerificationStatus :: Boolean,
+  imageCaptureLayoutView :: Boolean
 }
 
 
@@ -744,6 +756,7 @@ type HomeScreenState = {
 type HomeScreenData =  {
   driverName :: String,
   vehicleType :: String,
+  base64Image :: String,
   activeRide :: ActiveRide,
   cancelRideModal :: CancelRideModalData,
   currentDriverLat :: Number,
@@ -910,7 +923,8 @@ type HomeScreenProps =  {
   showContackSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   driverBlocked :: Boolean,
-  showBlockingPopup :: Boolean
+  showBlockingPopup :: Boolean,
+  profilePicturePopUp :: Boolean
  }
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY

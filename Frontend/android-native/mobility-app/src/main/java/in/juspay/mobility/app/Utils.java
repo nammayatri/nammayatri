@@ -69,12 +69,23 @@ public class Utils {
                 .start(activity);
     }
 
-    public static void encodeImageToBase64(@Nullable Intent data, Context context) {
+    public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         try {
-            CropImage.ActivityResult result = CropImage.getActivityResult(data);
             Uri fileUri = null;
-            if (result != null) fileUri = result.getUri();
+            String path ="";
+            if(imageData == null)
+            {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (result != null)  
+            { fileUri = result.getUri(); 
+              path = result.getUri().getPath();
+            }
+            }
+            else
+            {
+                fileUri = imageData;
+            }
             InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
             Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -110,7 +121,7 @@ public class Utils {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                 for (int i = 0; i < callBack.size(); i++) {
                     if (fileUri != null) {
-                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
+                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", path);
                     }
                 }
             }

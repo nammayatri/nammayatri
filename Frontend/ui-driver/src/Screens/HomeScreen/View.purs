@@ -92,6 +92,9 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+            $ do
+              lift $ lift $ doAff do liftEffect $ push $ RenderProfileImageHome
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
@@ -781,7 +784,7 @@ profileDemoView state push =
       ][ imageView
           [ width $ V 50
           , height $ V 50
-          , margin $ Margin 5 5 5 5
+          , margin $ Margin 2 2 5 5
           , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_profile_shadow.png"
           , onClick push $ const $ GoToProfile
           ]
@@ -807,7 +810,7 @@ clickHereDemoLayout state push =
   ][ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ getString CLICK_TO_ACCESS_YOUR_ACCOUNT
+      , text if (state.props.profilePicturePopUp) then (getString CLICK_TO_ADD_PROFILE_PICTURE) else (getString CLICK_TO_ACCESS_YOUR_ACCOUNT)
       , color Color.white900
       , padding $ Padding 20 12 20 15
       ] <> FontStyle.body13 TypoGraphy

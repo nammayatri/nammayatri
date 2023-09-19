@@ -792,5 +792,19 @@ const mlStrings = {
   PURPLE_RIDE_CHAMPION : "പർപ്പിൾ റൈഡ് ചാമ്പ്യൻ",
   PURPLE_RIDE : "പർപ്പിൾ റൈഡ്",
   PROCEED_TO_CHAT : "ചാറ്റുമായി മുന്നോട്ട് പോകൂ",
-  PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക"
+  PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക",
+  CLICK_TO_ADD_PROFILE_PICTURE : "നിങ്ങളുടെ അക്കൗണ്ടിലേക്ക് നിങ്ങളുടെ പ്രൊഫൈൽ\n ഫോട്ടോ ചേർക്കാൻ ഇവിടെ ക്ലിക്ക് ചെയ്യുക!",
+  ADD_PROFILE_PHOTO : "പ്രൊഫൈൽ ഫോട്ടോ ചേർക്കുക",
+  TAKE_PHOTO : "ഫോട്ടോ എടുക്കുക",
+  TAKE_SELFIE : "സെൽഫി എടുക്കുക",
+  YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY : "നിങ്ങളുടെ ഐഡന്റിറ്റി പരിശോധിച്ചുറപ്പിക്കാനും നമ്മ യാത്രയെ എല്ലാവർക്കും സുരക്ഷിതമായ അനുഭവമാക്കി മാറ്റാനും നിങ്ങളുടെ ഫോട്ടോ ഞങ്ങളെ സഹായിക്കുന്നു.",
+  CONFIRM_SELFIE : "സെൽഫി സ്ഥിരീകരിക്കുക",
+  RETAKE_SELFIE : "സെൽഫി വീണ്ടും എടുക്കുക",
+  CONFIRM_AND_UPLOAD : "സ്ഥിരീകരിച്ച് അപ്‌ലോഡ് ചെയ്യുക",
+  SELFIE_VERIFIED : "സെൽഫി പരിശോധിച്ചു",
+  PLEASE_RETAKE_SELFIE : "അടയാളപ്പെടുത്തിയ സ്ഥലത്തിനുള്ളിൽ മുഖത്തോടുകൂടിയ സെൽഫി വീണ്ടും എടുക്കുക",
+  PROFILE_PICTURE_ADDED_SUCCESSFULLY : "പ്രൊഫൈൽ ചിത്രം ചേർത്തു",
+  PROFILE_PICTURE_UPDATED_SUCCESSFULLY : "പ്രൊഫൈൽ ചിത്രം അപ്‌ഡേറ്റ് ചെയ്‌തു",
+  UPDATE_PROFILE_PHOTO : "പ്രൊഫൈൽ ഫോട്ടോ അപ്ഡേറ്റ് ചെയ്യുക"
+
 }

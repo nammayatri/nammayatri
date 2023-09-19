@@ -380,7 +380,7 @@ const hindiStrings = {
   GO_ONLINE_PROMPT : "आप वर्तमान में ऑफ़लाइन हैं।\nराइड अनुरोध प्राप्त करने के लिए, अभी ऑनलाइन हों!",
   LIVE_DASHBOARD : "लाइव आँकड़े डैशबोर्ड",
   CLICK_TO_ACCESS_YOUR_ACCOUNT : "अपने खाते तक पहुंचने के लिए यहां क्लिक करें",
-  ADD_ALTERNATE_NUMBER : "अपना दूसरा मोबाइल नंबर ऐड करे",
+  ADD_ALTERNATE_NUMBER : "अपना दूसरा मोबाइल नंबर ऐड करे", 
   ENTER_ALTERNATE_MOBILE_NUMBER : "अपना दूसरा मोबाइल नंबर एंटर करे",
   PLEASE_ENTER_A_VALID_10_DIGIT_NUMBER : "कृपया 10 नंबर का सही नंबर एंटर करे",
   ALTERNATE_MOBILE_NUMBER : "दूसरा मोबाइल नंबर",
@@ -848,5 +848,18 @@ const hindiStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
   JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
-  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें"
+  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
+  CLICK_TO_ADD_PROFILE_PICTURE : "अपने खाते में अपनी प्रोफ़ाइल फ़ोटो\n ऐड करने के लिए यहां क्लिक करें!",
+  ADD_PROFILE_PHOTO : "प्रोफ़ाइल फ़ोटो ऐड करे",
+  TAKE_PHOTO : "फोटो लें",
+  TAKE_SELFIE : "सेल्फी लें",
+  YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY : "आपकी फोटो हमें आपकी पहचान वेरीफाई करने और नम्मा यात्री को सभी के लिए एक सुरक्षित अनुभव बनाने में मदद करती है।",
+  CONFIRM_SELFIE : "सेल्फी कन्फर्म करें",
+  RETAKE_SELFIE : "सेल्फी को रीटेक करें",
+  CONFIRM_AND_UPLOAD : "कंफर्म करें और अपलोड करें",
+  SELFIE_VERIFIED : "सेल्फी वेरीफाइड",
+  PLEASE_RETAKE_SELFIE : "कृपया चिह्नित क्षेत्र के अंदर चेहरा लेकर फिर से सेल्फ़ी लें",
+  PROFILE_PICTURE_ADDED_SUCCESSFULLY : "प्रोफ़ाइल फ़ोटो सफलतापूर्वक जोड़ा गया",
+  PROFILE_PICTURE_UPDATED_SUCCESSFULLY : "प्रोफ़ाइल फ़ोटो सफलतापूर्वक अपडेट किया गया",
+  UPDATE_PROFILE_PHOTO : "प्रोफ़ाइल फ़ोटो अपडेट करें"
 }

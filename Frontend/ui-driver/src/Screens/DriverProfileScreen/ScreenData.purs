@@ -33,6 +33,8 @@ initData = {
     driverVehicleType : "",
     driverRating : Just 2,
     base64Image : "",
+    demoImage : "",
+    profileVerificationText : "",
     drivingLicenseNo : "",
     driverMobile : Just "",
     vehicleRegNumber : "",
@@ -111,7 +113,11 @@ initData = {
     callDriver : false,
     openRcView : false,
     detailsUpdationType : Nothing,
-    btnActive : false
+    btnActive : false,
+    profilePicturePopUpModal :false,
+    validateProfilePicturePopUp :false,
+    imageVerificationStatus : true,
+    imageCaptureLayoutView : false
    }
 }
 

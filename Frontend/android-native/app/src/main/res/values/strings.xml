@@ -46,4 +46,6 @@
     <string name="and">and</string>
     <string name="no_enabled_browser">No enabled browser found in your device, please enable or install a browser</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="take_a_clear_selfie"> Take a clear selfie with your face inside the \nmarked area</string>
+    <string name="need_permission_to_access_the_camera">Need Permission To Access The Camera</string>
 </resources>

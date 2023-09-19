@@ -849,5 +849,18 @@ const englishStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
   JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
-  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment"
+  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment",
+  CLICK_TO_ADD_PROFILE_PICTURE : "Click here to add your profile\n photo to your account!",
+  ADD_PROFILE_PHOTO : "Add Profile Photo",
+  TAKE_PHOTO : "Take Photo",
+  TAKE_SELFIE : "Take Selfie",
+  YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY : "Your photo helps us verify your identity and make Namma Yatri a safer experience for everyone.",
+  CONFIRM_SELFIE : "Confirm Selfie",
+  RETAKE_SELFIE : "Retake Selfie",
+  CONFIRM_AND_UPLOAD : "Confirm and Upload",
+  SELFIE_VERIFIED : "Selfie Verified",
+  PLEASE_RETAKE_SELFIE : "Please retake selfie with face inside marked area",
+  PROFILE_PICTURE_ADDED_SUCCESSFULLY : "Profile Picture Added Successfully",
+  PROFILE_PICTURE_UPDATED_SUCCESSFULLY : "Profile Picture Updated Successfully",
+  UPDATE_PROFILE_PHOTO : "Update Profile Photo"
 } 

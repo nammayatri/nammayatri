@@ -32,7 +32,7 @@ driverDetailsScreen = do
   action <- lift $ lift $ runScreen $ DriverDetailsScreen.screen state.driverDetailsScreen
   case action of
     GoBack updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState )
+      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
       App.BackT $ pure App.GoBack
     ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API updatedState)
     VerifyAlternateNumberOTP updatedState -> App.BackT $ App.NoBack <$> pure (VERIFY_OTP updatedState)
@@ -40,3 +40,4 @@ driverDetailsScreen = do
     RemoveAlternateNumber    updatedState -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE updatedState)
     GoToHomeScreen           updatedState -> App.BackT $ App.NoBack <$> pure (GO_TO_HOMESCREEN updatedState)
     UpdateGender             updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER updatedState)
+    AddingProfilePicture     image fileType updatedState -> App.BackT $ App.NoBack <$> pure (ADDING_PROFILE_PICTURE image fileType updatedState)

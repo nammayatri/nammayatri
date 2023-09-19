@@ -1438,6 +1438,18 @@ export const renderBase64Image = function (image) {
   };
 };
 
+export const renderBase64ImageCircular = function (image) {
+  return function (id) {
+      return JBridge.renderBase64ImageCircular(image, id);
+  };
+};
+
+export const renderCameraProfilePicture = function (id) {
+  return function () {
+      return JBridge.renderCameraProfilePicture(id);
+  };
+};
+
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {
     return JBridge.isOverlayPermissionEnabled();

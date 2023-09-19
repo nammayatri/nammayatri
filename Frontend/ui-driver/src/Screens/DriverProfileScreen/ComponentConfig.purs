@@ -28,6 +28,9 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (unit, (/=), (<>), (==))
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), Listtype)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
+import Components.PopUpModal.Controller as PopUpModalConfig
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -429,3 +432,37 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         }
       ]
     )
+addProfilePictureStateConfig:: ST.DriverProfileScreenState -> PopUpModalConfig.Config
+addProfilePictureStateConfig state = let
+    config = PopUpModalConfig.config
+    popUpConf' = config {
+      gravity = BOTTOM
+    ,primaryText {
+        text = if((getValueToLocalStore SET_PROFILE_IMAGE) == "") then (getString ADD_PROFILE_PHOTO) else (getString UPDATE_PROFILE_PHOTO)
+      , margin = (Margin 24 24 24 12)
+      , visibility = VISIBLE
+     },
+      secondaryText {
+        text = (getString YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY)
+      , color = Color.black600
+      , margin = (Margin 24 0 24 32)
+      , visibility = VISIBLE
+        },
+      option1 {
+        text = (getString TRY_AGAIN_LATER)
+      , color = Color.black900
+      , strokeColor = Color.black700
+      , visibility =false
+
+      },
+      option2 {text = (getString TAKE_SELFIE)
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , margin = (Margin 16 0 16 0 )
+      , width = (V 50)
+
+      , background = Color.black900
+      }
+    }
+  in popUpConf'
+

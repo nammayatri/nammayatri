@@ -820,5 +820,19 @@ const kannadaStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ",
   JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
-  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ",
+  JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಸುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
+  CLICK_TO_ADD_PROFILE_PICTURE : "ನಿಮ್ಮ ಖಾತೆಗೆ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಫೋಟೋ ಸೇರಿಸಲು ಇಲ್ಲಿ ಕ್ಲಿಕ್ ಮಾಡಿ!",
+  ADD_PROFILE_PHOTO : "ಪ್ರೊಫೈಲ್ ಫೋಟೋ ಸೇರಿಸಿ",
+  TAKE_PHOTO : "ಫೋಟೋ ತೆಗೆಯಿರಿ",
+  TAKE_SELFIE : "ಸೆಲ್ಫಿ ತೆಗೆದುಕೊಳ್ಳಿ",
+  YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY : "ನಿಮ್ಮ ಗುರುತನ್ನು ಪರಿಶೀಲಿಸಲು ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿಯನ್ನು ಎಲ್ಲರಿಗೂ ಸುರಕ್ಷಿತ ಅನುಭವ ವನ್ನಾಗಿ ಮಾಡಲು ನಿಮ್ಮ ಫೋಟೋ ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.",
+  CONFIRM_SELFIE : "ಸೆಲ್ಫಿಯನ್ನು ದೃಢೀಕರಿಸಿ",
+  RETAKE_SELFIE : "ಸೆಲ್ಫಿ ರೀಟೇಕ್ ಮಾಡಿ",
+  CONFIRM_AND_UPLOAD : "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಅಪ್ಲೋಡ್ ಮಾಡಿ",
+  SELFIE_VERIFIED : "ಸೆಲ್ಫಿ ಪರಿಶೀಲಿಸಲಾಗಿದೆ",
+  PLEASE_RETAKE_SELFIE : "ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದೊಳಗೆ ಮುಖದೊಂದಿಗೆ ಸೆಲ್ಫಿ ತೆಗೆದುಕೊಳ್ಳಿ",
+  PROFILE_PICTURE_ADDED_SUCCESSFULLY : "ಪ್ರೊಫೈಲ್ ಚಿತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ",
+  PROFILE_PICTURE_UPDATED_SUCCESSFULLY : "ಪ್ರೊಫೈಲ್ ಚಿತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ",
+  UPDATE_PROFILE_PHOTO : "ಪ್ರೊಫೈಲ್ ಫೋಟೋವನ್ನು ನವೀಕರಿಸಿ"
 }

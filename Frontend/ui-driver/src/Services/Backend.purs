@@ -1075,3 +1075,16 @@ postRideFeedback rideId rating feedback = do
             ratingValue : rating
         }
         unwrapResponse (x) = x 
+--------------------------------------------------------------- AddProfilePicture Function -------------------------------
+
+addProfilePicture payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.putProfilePicture "") unwrapResponse $ (callAPI headers payload)
+   where
+         unwrapResponse (x) = x
+addProfilePictureRequest :: String -> String -> DriverProfilePictureReq 
+addProfilePictureRequest image fileType = DriverProfilePictureReq  
+ {
+    "image" : image,
+    "fileType" : fileType
+ }

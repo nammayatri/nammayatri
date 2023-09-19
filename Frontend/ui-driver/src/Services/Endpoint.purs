@@ -222,3 +222,6 @@ suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
 
 postRideFeedback :: String -> String 
 postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
+
+putProfilePicture :: String -> String 
+putProfilePicture dummy = (getBaseUrl "") <> "/driver/profile/photo"

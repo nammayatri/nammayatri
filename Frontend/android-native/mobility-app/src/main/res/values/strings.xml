@@ -49,4 +49,5 @@
     <string name="tip">Tip</string>
     <string name="merchant_id">for_compilation</string>
     <string name="client_id">for_compilation</string>
+    <string name="need_permission_to_access_the_camera">Need Permission To Access The Camera</string>
 </resources>

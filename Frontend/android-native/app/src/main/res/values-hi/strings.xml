@@ -45,4 +45,6 @@
     <string name="and">और</string>
     <string name="no_enabled_browser">आपके डिवाइस में कोई सक्षम ब्राउज़र नहीं मिला, कृपया ब्राउज़र को सक्षम या स्थापित करें</string>
     <string name="message_from_customer">ग्राहक की ओर से संदेश </string>
+    <string name="take_a_clear_selfie">चिह्नित क्षेत्र के अंदर अपना चेहरा रखकर \nस्पष्ट सेल्फी लें</string>
+    <string name="need_permission_to_access_the_camera">कैमरे तक पहुँचने के लिए अनुमति की आवश्यकता है</string>
 </resources>

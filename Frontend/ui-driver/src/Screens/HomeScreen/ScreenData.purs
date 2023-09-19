@@ -30,6 +30,7 @@ initData = {
         driverName : "",
         vehicleType : "",
         driverAlternateMobile : Nothing,
+        base64Image : "",
         activeRide : {
           id : "",
           source : "",
@@ -161,6 +162,7 @@ initData = {
         showContackSupportPopUp : false,
         showChatBlockerPopUp : false,
         driverBlocked : false,
-        showBlockingPopup : false
+        showBlockingPopup : false,
+        profilePicturePopUp :true
     }
 }

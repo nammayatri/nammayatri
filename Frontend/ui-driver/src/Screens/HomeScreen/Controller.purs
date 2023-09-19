@@ -48,6 +48,9 @@ import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPos
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
+import Helpers.Utils (currentPosition,convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat, getTime, getCurrentUTC, differenceBetweenTwoUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService,renderBase64ImageCircular, getSuggestionfromKey)
+import Language.Strings (getString,getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
@@ -188,7 +191,9 @@ instance loggableAction :: Loggable Action where
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
+    RenderProfileImageHome -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "render_profile_image"
     _ -> pure unit
+
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -276,6 +281,7 @@ data Action = NoAction
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
 
+            | RenderProfileImageHome
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -643,10 +649,10 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAv
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
 
 eval GoToProfile state =  do
+  let value = (getValueToLocalNativeStore PROFILE_DEMO)
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
-  exit $ GoToProfileScreen state
-
+  exit $ GoToProfileScreen state {props {profilePicturePopUp = (if (value /= "false") then true else false)}}
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then
       exit $ AadhaarVerificationFlow state
@@ -680,6 +686,12 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
+
+eval RenderProfileImageHome state = do
+  let image = (getValueToLocalStore SET_PROFILE_IMAGE)
+  continueWithCmd state {data {base64Image = image}} [do
+    _ <- renderBase64ImageCircular image (getNewIDWithTag "ProfileImage")
+    pure NoAction]
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 

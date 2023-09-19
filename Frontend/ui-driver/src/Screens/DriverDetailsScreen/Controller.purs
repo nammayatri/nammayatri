@@ -24,15 +24,17 @@ import Language.Types(STR(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
 import Effect.Class (liftEffect)
-import JBridge (renderBase64Image, toast)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import JBridge (renderBase64Image, toast, startLottieProcess,uploadFile,renderBase64ImageCircular,renderCameraProfilePicture)
+import Engineering.Helpers.Commons (getNewIDWithTag,getCurrentUTC)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress,trackAppScreenEvent)
 import Helpers.Utils (getTime,differenceBetweenTwoUTC)
 import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  ScreenType(..))
-import Storage (KeyStore(..),getValueToLocalStore)
+import Storage (KeyStore(..),getValueToLocalStore,setValueToLocalStore,deleteValueFromLocalStore)
 import Screens (ScreenName(..), getScreen)
 import Components.InAppKeyboardModal as InAppKeyboardModal
+import Components.ValidateProfilePicture as ValidateProfilePicture
+import Components.PrimaryButton.Controller as PrimaryButtonController
 import Debug (spy)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
@@ -85,11 +87,13 @@ data ScreenOutput = GoBack DriverDetailsScreenState
                     | RemoveAlternateNumber DriverDetailsScreenState
                     | GoToHomeScreen DriverDetailsScreenState
                     | UpdateGender DriverDetailsScreenState
+                    | AddingProfilePicture String String DriverDetailsScreenState
 
 data Action = NoAction
               | BackPressed
               | CallBackImageUpload String String String
               | RenderBase64Image
+              | RenderCameraProfilePicture
               | AfterRender
               | UploadFileAction
               | ClickAddAlternateButton
@@ -101,10 +105,22 @@ data Action = NoAction
               | ClickEditAlternateNumber
               | PopUpModalActions PopUpModal.Action
               | GenderSelectionOpen
+              | AddProfilePictureModalAction PopUpModal.Action
+              | ProfilePicturePopUp
+              | ValidateProfilePicturePopUpAction ValidateProfilePicture.Action
+              | PrimaryButtonActionController PrimaryButtonController.Action 
+              | RenderProfileImage String String
+
+
 
 
 eval :: Action -> DriverDetailsScreenState -> Eval Action ScreenOutput DriverDetailsScreenState
 
+eval (RenderProfileImage image id) state = do
+  continueWithCmd state [do 
+    _ <- renderBase64ImageCircular image (getNewIDWithTag id)
+    pure NoAction]
+     
 eval BackPressed state = do
   if state.props.keyboardModalType /= NONE then continueWithCmd state[
       do 
@@ -122,17 +138,44 @@ eval BackPressed state = do
     removeNumberPopup = false,
     isEditAlternateMobile = false,
     numberExistError = false,
-    genderSelectionModalShow = false}})
+    genderSelectionModalShow = false,
+    profilePicturePopUpModal =false,
+    imageCaptureLayoutView =false,
+    validateProfilePicturePopUp =false}})
 
-eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") then
-                                            continueWithCmd (state { data { base64Image = image}}) [do pure RenderBase64Image]
+eval (CallBackImageUpload image imageName imagePath) state = if (image /="") then do 
+                                             exit  (AddingProfilePicture image "Image" state { data {demoImage = image} , props {validateProfilePicturePopUp = true,profilePicturePopUpModal =false,imageCaptureLayoutView = false}}) 
                                             else
-                                              continue state
+                                             continue state {props {imageCaptureLayoutView = false}}
 
 eval RenderBase64Image state = continueWithCmd state [do
   _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage") true "CENTER_CROP"
   pure NoAction]
 eval AfterRender state = continue state
+eval ProfilePicturePopUp state = continue state {props { profilePicturePopUpModal = true}}
+
+eval AfterRender state = if (state.props.validateProfilePicturePopUp == true) then do 
+  continueWithCmd state [do pure (RenderProfileImage state.data.demoImage "ValidateProfileImage")]  
+  else continue state
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.BackPressed)) state = continue state {props {validateProfilePicturePopUp = false,imageCaptureLayoutView = false}}
+
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.AfterRender)) state = do
+ continueWithCmd state [do pure (RenderProfileImage state.data.demoImage "ValidateProfileImage")]  
+ 
+
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+   if (state.props.imageVerificationStatus) then do
+     if ((getValueToLocalStore SET_PROFILE_IMAGE) /= "") then 
+       pure $ toast (getString PROFILE_PICTURE_UPDATED_SUCCESSFULLY)
+     else 
+       pure $ toast (getString PROFILE_PICTURE_ADDED_SUCCESSFULLY)
+     _ <- pure $ setValueToLocalStore SET_PROFILE_IMAGE state.data.demoImage
+     continueWithCmd state { data {base64Image = state.data.demoImage} , props {validateProfilePicturePopUp = false,profilePicturePopUpModal =false,imageCaptureLayoutView=false}}[do pure (RenderProfileImage state.data.demoImage "EditProfileImage")]
+   else 
+     continueWithCmd state {props {validateProfilePicturePopUp = false,imageCaptureLayoutView = true}} [ do
+     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     pure NoAction
+     ]
 
 eval UploadFileAction state = continue state
 
@@ -221,6 +264,12 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
 
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    exit (GoToHomeScreen state {data = state.data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing } ,props =state.props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(state.props.isEditAlternateMobile == false) }})
+
+eval (AddProfilePictureModalAction (PopUpModal.OnButton2Click)) state = 
+    continueWithCmd state {props {profilePicturePopUpModal = false,imageCaptureLayoutView = true}} [ do
+    _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+    pure NoAction
+  ]
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
     exit (VerifyAlternateNumberOTP state)

@@ -40,6 +40,12 @@ import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchApp
 import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types as STR
+import JBridge (firebaseLogEvent, toast,goBackPrevWebPage,renderBase64Image,startLottieProcess,uploadFile,renderBase64ImageCircular,renderCameraProfilePicture)
+import Effect.Class (liftEffect)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Prelude (class Show, pure, unit, ($), discard, bind,(/=))
+import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||))
@@ -57,7 +63,11 @@ import Services.API as SA
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
-import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Components.ValidateProfilePicture as ValidateProfilePicture
+import Components.PrimaryButton.Controller as PrimaryButtonController
+import Storage (setValueToLocalNativeStore, KeyStore(..),setValueToLocalStore,getValueToLocalStore,deleteValueFromLocalStore)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -159,6 +169,12 @@ instance loggableAction :: Loggable Action where
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
     _ -> pure unit
+    AddProfilePictureModalAction val -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "add_profile_picture_modal_action"
+    ValidateProfilePicturePopUpAction val -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "validate_profile_picture_popup_action"
+    CallBackImageUpload image imageName imagePath -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "call_back_image_upload"
+    RenderBase64Image -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "render_base_64_image"
+    RenderProfileImage image id -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "render_profile_image"
+    _ -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "on_click_done"
 
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToVehicleDetailsScreen DriverProfileScreenState
@@ -183,6 +199,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
+                    | DriverProfilePicture String String DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
@@ -229,10 +246,50 @@ data Action = BackPressed
             | SkipActiveRc
             | RemoveEditRC
             | DirectActivateRc EditRc
+            | AddProfilePictureModalAction PopUpModal.Action
+            | ValidateProfilePicturePopUpAction ValidateProfilePicture.Action
+            | CallBackImageUpload String String String
+            | RenderBase64Image
+            | RenderProfileImage String String 
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
-eval AfterRender state = continue state
+
+eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") then do 
+                                              exit  (DriverProfilePicture image "Image" state { data {demoImage = image} , props {validateProfilePicturePopUp = true,profilePicturePopUpModal =false,imageCaptureLayoutView = false}}) 
+                                            else
+                                              continue state {props {profilePicturePopUpModal = false,imageCaptureLayoutView=false}}
+eval AfterRender state = continue state 
+                                          
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.BackPressed)) state = continue state {props {validateProfilePicturePopUp = false,imageCaptureLayoutView=false}}
+
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.AfterRender)) state = do
+ continueWithCmd state [do pure (RenderProfileImage state.data.demoImage "ValidateProfileImage")]
+
+eval (ValidateProfilePicturePopUpAction (ValidateProfilePicture.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+   if (state.props.imageVerificationStatus) then do
+     if ((getValueToLocalStore SET_PROFILE_IMAGE) /= "") then 
+       pure $ toast (getString STR.PROFILE_PICTURE_UPDATED_SUCCESSFULLY)
+     else 
+       pure $ toast (getString STR.PROFILE_PICTURE_ADDED_SUCCESSFULLY)
+     _ <- pure $ setValueToLocalStore SET_PROFILE_IMAGE state.data.demoImage
+     continueWithCmd state { data {base64Image = state.data.demoImage} , props {validateProfilePicturePopUp = false,profilePicturePopUpModal =false,imageCaptureLayoutView=false}}[do pure (RenderProfileImage state.data.demoImage "DriverProfileImage")]
+   else 
+     continueWithCmd state {props {validateProfilePicturePopUp = false,imageCaptureLayoutView = true}} [ do
+     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     pure NoAction
+     ]
+
+eval (RenderProfileImage image id) state = do
+  continueWithCmd state [do 
+    _ <- renderBase64ImageCircular image (getNewIDWithTag id)
+    pure NoAction]
+
+eval (AddProfilePictureModalAction (PopUpModal.OnButton2Click)) state = 
+    continueWithCmd state {props {profilePicturePopUpModal = false, imageCaptureLayoutView = true}} [ do
+    _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+    pure NoAction
+  ]
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of
@@ -283,7 +340,7 @@ eval (UpdateValue value) state = do
 
 eval (OptionClick optionIndex) state = do
   case optionIndex of
-    Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
+    Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state {props {profilePicturePopUpModal = false}}
     Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     Data.DRIVER_BANK_DETAILS -> continue state
     Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state

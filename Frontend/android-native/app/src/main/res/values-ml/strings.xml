@@ -45,4 +45,6 @@
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
 
+    <string name="take_a_clear_selfie">അടയാളപ്പെടുത്തിയ സ്ഥലത്തിനുള്ളിൽ നിങ്ങളുടെ മുഖം ഉപയോഗിച്ച് \nവ്യക്തമായ സെൽഫി എടുക്കുക</string>
+    <string name="need_permission_to_access_the_camera">ക്യാമറ ആക്‌സസ് ചെയ്യാൻ അനുമതി ആവശ്യമാണ്</string>
 </resources>
