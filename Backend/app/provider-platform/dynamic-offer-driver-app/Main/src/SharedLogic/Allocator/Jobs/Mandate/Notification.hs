@@ -60,7 +60,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     if null driverFees
       then do
         maxShards <- asks (.maxShards)
-        scheduleJobs transporterConfig startTime endTime merchantId maxShards now
+        scheduleJobs transporterConfig startTime endTime merchantId maxShards
         return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
@@ -147,8 +147,9 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> UTCTime -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId maxShards now = do
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let dfCalculationJobTs = diffUTCTime (addUTCTime (dfExecutionTime + dfNotificationTime) endTime) now
