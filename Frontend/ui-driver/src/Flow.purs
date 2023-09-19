@@ -2420,11 +2420,11 @@ getUpiApps = do
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
   if (  (getValueToLocalStore ENABLE_BLOCKING) == "__failed" &&
-        isDateGreaterThan "2023-09-20T00:00:00" &&
-        (getDriverInfoResp.autoPayStatus == Nothing || getDriverInfoResp.autoPayStatus == Just "MANDATE_FAILURE")
+        isDateGreaterThan "2023-09-21T00:00:00" &&
+        getDriverInfoResp.autoPayStatus == Nothing
     ) then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true }})
-      when (not getDriverInfoResp.onRide && (getDriverInfoResp.mode == Just "ONLINE" || getDriverInfoResp.mode == Just "SILENT")) do
+      when (not getDriverInfoResp.onRide && any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]) do
         void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
         homeScreenFlow
   else pure unit
