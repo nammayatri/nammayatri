@@ -620,9 +620,9 @@ eval (RideActiveAction activeRide) state = do
 
 eval RecenterButtonAction state = continue state
 
-eval (SwitchDriverStatus status) state = do
+eval (SwitchDriverStatus status) state =
   if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
-  else if state.props.rcActive == false then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+  else if not state.props.rcActive then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
@@ -648,6 +648,7 @@ eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
   exit $ GoToProfileScreen state
+
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then
       exit $ AadhaarVerificationFlow state
