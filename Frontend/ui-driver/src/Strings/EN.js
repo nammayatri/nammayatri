@@ -828,5 +828,6 @@ const englishStrings = {
   PURPLE_RIDE : "Purple Ride",
   PROCEED_TO_CHAT : "Proceed to Chat",
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
-  JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!"
+  JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
+  GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides"
 } 

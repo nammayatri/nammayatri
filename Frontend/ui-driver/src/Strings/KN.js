@@ -799,5 +799,6 @@ const kannadaStrings = {
   PURPLE_RIDE : "ಪರ್ಪಲ್ ರೈಡ್",
   PROCEED_TO_CHAT : "ಚಾಟ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿರಿ",
   PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ",
-  JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಸುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!"
+  JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
+  GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ"
 }
