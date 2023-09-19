@@ -833,7 +833,7 @@ export const getAvailableUpiApps = function (resultCb) {
             try {
               let resultPayload = JSON.parse(_response)
               resultCb(resultPayload.payload.response.available_apps)();
-              killPP();
+              // killPP(); -- TODO Need to find why it is not working
             } catch (err) {
               console.log("%cUPIINTENT initiate Result error", "background:darkblue;color:white;font-size:13px;padding:2px", err, code);
             }
