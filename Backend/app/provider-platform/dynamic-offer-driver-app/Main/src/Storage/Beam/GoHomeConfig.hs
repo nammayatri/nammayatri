@@ -46,6 +46,7 @@ data GoHomeConfigT f = GoHomeConfigT
     goHomeBatchDelay :: B.C f Int,
     ignoreWaypointsTill :: B.C f Int,
     addStartWaypointAt :: B.C f Int,
+    newLocAllowedRadius :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

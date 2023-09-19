@@ -39,6 +39,7 @@ data GoHomeConfig = GoHomeConfig
     goHomeBatchDelay :: Seconds,
     ignoreWaypointsTill :: Meters,
     addStartWaypointAt :: Meters,
+    newLocAllowedRadius :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
