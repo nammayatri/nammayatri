@@ -707,4 +707,4 @@ separatorConfig =
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) || Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
+isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
