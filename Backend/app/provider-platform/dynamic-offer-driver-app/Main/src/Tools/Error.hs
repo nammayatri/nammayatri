@@ -602,6 +602,9 @@ data DriverHomeLocationError
   | DriverHomeLocationUpdateWhileActiveError
   | DriverHomeLocationDeleteWhileActiveError
   | DriverHomeLocationUpdateBeforeTime
+  | DriverHomeLocationOutsideServiceArea
+  | NewLocationTooCloseToPreviousHomeLocation
+  | DriverHomeLocationDoesNotBelongToDriver
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverHomeLocationError
@@ -614,6 +617,9 @@ instance IsBaseError DriverHomeLocationError where
     DriverHomeLocationUpdateWhileActiveError -> Just "Cannot Update Driver Home Location while Go To feature is active."
     DriverHomeLocationDeleteWhileActiveError -> Just "Cannot Delete Driver Home Location while Go To feature is active."
     DriverHomeLocationUpdateBeforeTime -> Just "Driver trying to update home location before time."
+    DriverHomeLocationOutsideServiceArea -> Just "Driver home location outside service area."
+    NewLocationTooCloseToPreviousHomeLocation -> Just "New location too close to a previously added home location."
+    DriverHomeLocationDoesNotBelongToDriver -> Just "Driver home location does not belong to this driver."
 
 instance IsHTTPError DriverHomeLocationError where
   toErrorCode = \case
@@ -623,6 +629,9 @@ instance IsHTTPError DriverHomeLocationError where
     DriverHomeLocationUpdateWhileActiveError -> "DRIVER_HOME_LOCATION_UPDATE_WHILE_ACTIVE_ERROR"
     DriverHomeLocationDeleteWhileActiveError -> "DRIVER_HOME_LOCATION_DELETE_WHILE_ACTIVE_ERROR"
     DriverHomeLocationUpdateBeforeTime -> "DRIVER_HOME_LOCATION_UPDATE_BEFORE_TIME"
+    DriverHomeLocationOutsideServiceArea -> "DRIVER_HOME_LOCATION_OUTSIDE_SERVICE_AREA"
+    NewLocationTooCloseToPreviousHomeLocation -> "NEW_LOCATION_TOO_CLOSE_TO_PREVIOUS_HOME_LOCATION"
+    DriverHomeLocationDoesNotBelongToDriver -> "DRIVER_HOME_LOCATION_DOES_NOT_BELONG_TO_DRIVER"
   toHttpCode = \case
     DriverHomeLocationNotFound _ -> E500
     DriverHomeLocationDoesNotExist _ -> E400
@@ -630,6 +639,9 @@ instance IsHTTPError DriverHomeLocationError where
     DriverHomeLocationUpdateWhileActiveError -> E400
     DriverHomeLocationDeleteWhileActiveError -> E400
     DriverHomeLocationUpdateBeforeTime -> E400
+    DriverHomeLocationOutsideServiceArea -> E400
+    NewLocationTooCloseToPreviousHomeLocation -> E400
+    DriverHomeLocationDoesNotBelongToDriver -> E400
 
 instance IsAPIError DriverHomeLocationError
 

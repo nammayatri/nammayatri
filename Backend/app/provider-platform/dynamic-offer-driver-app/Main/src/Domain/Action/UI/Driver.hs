@@ -132,6 +132,7 @@ import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.ServantMultipart
+import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -181,6 +182,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
@@ -692,6 +694,7 @@ activateGoHomeFeature (driverId, merchantId) driverHomeLocationId driverLocation
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
   let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
+  when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
   let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
   unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantId (Just goHomeConfig)
@@ -723,8 +726,11 @@ addHomeLocation (driverId, merchantId) req = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
   oldHomeLocations <- QDHL.findAllByDriverId driverId
   unless (length oldHomeLocations < cfg.numHomeLocations) $ throwError DriverHomeLocationLimitReached
+  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= cfg.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
   QDHL.create =<< buildDriverHomeLocation driverId req
   pure APISuccess.Success
 
@@ -752,7 +758,11 @@ updateHomeLocation (driverId, merchantId) homeLocationId req = do
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantId (Just goHomeConfig)
   when (dghInfo.status == Just DDGR.ACTIVE) $ throwError DriverHomeLocationUpdateWhileActiveError
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
   oldHomeLocation <- QDHL.findById homeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist (T.pack "The given driver home location ID is invalid"))
+  oldHomeLocations <- QDHL.findAllByDriverId driverId
+  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= goHomeConfig.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
   currTime <- getCurrentTime
   when (diffUTCTime currTime oldHomeLocation.updatedAt < fromIntegral goHomeConfig.updateHomeLocationAfterSec) $ throwError DriverHomeLocationUpdateBeforeTime
   QDHL.updateHomeLocationById homeLocationId buildDriverHomeLocationUpdate
