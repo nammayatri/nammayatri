@@ -2419,7 +2419,7 @@ getUpiApps = do
 
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
-  if (  (getValueToLocalStore ENABLE_BLOCKING) == "__failed" &&
+  if (  any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] &&
         isDateGreaterThan "2023-09-21T00:00:00" &&
         getDriverInfoResp.autoPayStatus == Nothing
     ) then do
