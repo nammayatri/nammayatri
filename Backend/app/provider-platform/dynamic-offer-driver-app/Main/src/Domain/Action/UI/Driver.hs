@@ -1678,7 +1678,7 @@ getDriverPaymentsHistoryV2 (driverId, merchantId) mbLimit mbOffset = do
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
   manualPayInvoices <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
-  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) (filter (\inv -> inv.paymentMode == INV.MANUAL_INVOICE) invoices)
+  autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) (filter (\inv -> inv.paymentMode == INV.AUTOPAY_INVOICE) invoices)
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
 mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)
