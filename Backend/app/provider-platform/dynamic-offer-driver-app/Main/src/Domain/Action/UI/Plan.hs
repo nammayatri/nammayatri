@@ -19,6 +19,7 @@ import qualified Data.Map as M
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Domain.Action.UI.Driver (calcExecutionTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -26,6 +27,7 @@ import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
 import Environment
@@ -137,10 +139,16 @@ data MandateDetailsEntity = MandateDetails
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverDuesEntity = DriverDuesEntity
-  { date :: UTCTime,
-    amount :: Money,
-    earnings :: Money,
-    offers :: [OfferEntity]
+  { createdAt :: Maybe UTCTime,
+    executionAt :: Maybe UTCTime,
+    feeType :: DF.FeeType,
+    autoPayStage :: Maybe DF.AutopayPaymentStage,
+    paymentStatus :: Maybe INV.InvoiceStatus,
+    totalEarnings :: HighPrecMoney,
+    totalRides :: Int,
+    planAmount :: HighPrecMoney,
+    isSplit :: Bool,
+    offerAndPlanDetails :: Maybe Text
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -161,8 +169,8 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
     mapM
       ( \plan' ->
           if driverInfo.autoPayStatus == Just DI.ACTIVE
-            then do convertPlanToPlanEntity driverId mandateSetupDate plan'
-            else do convertPlanToPlanEntity driverId now plan'
+            then do convertPlanToPlanEntity driverId mandateSetupDate False plan'
+            else do convertPlanToPlanEntity driverId now False plan'
       )
       plans
   return $
@@ -186,7 +194,7 @@ currentPlan (driverId, _merchantId) = do
   now <- getCurrentTime
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
-  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate >=> (pure . Just)) mPlan
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True >=> (pure . Just)) mPlan
 
   orderId <-
     if driverInfo.autoPayStatus == Just DI.PENDING
@@ -411,8 +419,8 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             feeWithoutDiscount = Nothing
           }
 
-convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Plan -> Flow PlanEntity
-convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
+convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanEntity
+convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverId driverId
   transporterConfig_ <- QTC.findByMerchantId plan.merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
@@ -421,13 +429,17 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
   let planFareBreakup = mkPlanFareBreakup offers.offerResp
-      mapDriverFeeByDriverFeeId = M.fromList (map (\df -> (df.id, df)) allPendingAndOverDueDriverfee)
-      errorForDriverFeeAndInvoice = driverFeeAndInvoiceIdsWithValidError transporterConfig_ mapDriverFeeByDriverFeeId now (getLatestInvoice invoicesForDfee)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
   let translatedName = maybe plan.name (.name) mbtranslation
       translatedDescription = maybe plan.description (.description) mbtranslation
       planBaseFrequcency = getPlanBaseFrequency planBaseAmount
+
+  dues <-
+    if isCurrentPlanEntity
+      then do mkDueDriverFeeInfoEntity dueDriverFees transporterConfig_
+      else return []
+
   return
     PlanEntity
       { id = plan.id.getId,
@@ -437,8 +449,7 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
         description = translatedDescription,
         currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueDriverFees,
         totalPlanCreditLimit = round maxCreditLimit,
-        dues = buildDriverDuesEntity <$> dueDriverFees,
-        bankErrors = errorForDriverFeeAndInvoice,
+        bankErrors = if isCurrentPlanEntity then calcBankError allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee else [],
         ..
       }
   where
@@ -495,15 +506,9 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
               (_, _, _, _) -> Nothing
         )
     getLatestInvoice = map (maximumBy (compare `on` INV.createdAt)) . groupBy (\a b -> a.driverFeeId == b.driverFeeId) . sortBy (compare `on` INV.driverFeeId)
-
-buildDriverDuesEntity :: DF.DriverFee -> DriverDuesEntity
-buildDriverDuesEntity DF.DriverFee {..} =
-  DriverDuesEntity
-    { date = createdAt,
-      amount = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
-      earnings = totalEarnings,
-      offers = []
-    }
+    calcBankError allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee = do
+      let mapDriverFeeByDriverFeeId = M.fromList (map (\df -> (df.id, df)) allPendingAndOverDueDriverfee)
+      driverFeeAndInvoiceIdsWithValidError transporterConfig_ mapDriverFeeByDriverFeeId now (getLatestInvoice invoicesForDfee)
 
 getPlanBaseFrequency :: PlanBaseAmount -> Text
 getPlanBaseFrequency planBaseAmount = case planBaseAmount of
@@ -531,3 +536,35 @@ mkMandateDetailEntity mandateId = do
               autopaySetupDate = mandate.createdAt
             }
     Nothing -> return Nothing
+
+mkDueDriverFeeInfoEntity :: MonadFlow m => [DF.DriverFee] -> TransporterConfig -> m [DriverDuesEntity]
+mkDueDriverFeeInfoEntity driverFees transporterConfig = do
+  mapM
+    ( \driverFee -> do
+        driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
+        invoice <- listToMaybe <$> QINV.findByDriverFeeIds [driverFee.id]
+        let invoiceType = invoice <&> (.paymentMode)
+            createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then invoice <&> (.createdAt) else Nothing
+            executionAt =
+              if invoiceType == Just INV.AUTOPAY_INVOICE
+                then calcExecutionTime transporterConfig (driverFee.autopayPaymentStage) <$> (driverFee.stageUpdatedAt)
+                else Nothing
+            feeType
+              | (\dfee -> dfee.feeType == DF.MANDATE_REGISTRATION) driverFee = DF.MANDATE_REGISTRATION
+              | invoiceType == Just INV.AUTOPAY_INVOICE = DF.RECURRING_EXECUTION_INVOICE
+              | otherwise = DF.RECURRING_INVOICE
+        return
+          DriverDuesEntity
+            { autoPayStage = driverFee.autopayPaymentStage,
+              paymentStatus = invoice <&> (.invoiceStatus),
+              totalEarnings = fromIntegral driverFee.totalEarnings,
+              totalRides = driverFee.numRides,
+              planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
+              isSplit = not (null driverFeesInWindow),
+              offerAndPlanDetails = driverFee.planOfferTitle,
+              createdAt,
+              executionAt,
+              feeType
+            }
+    )
+    driverFees

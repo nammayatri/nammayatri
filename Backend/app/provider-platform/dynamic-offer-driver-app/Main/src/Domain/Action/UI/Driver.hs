@@ -70,6 +70,7 @@ module Domain.Action.UI.Driver
     updateMetaData,
     getDriverPaymentsHistoryV2,
     getHistoryEntryDetailsEntityV2,
+    calcExecutionTime,
   )
 where
 
@@ -1781,7 +1782,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
               paymentStatus = invoiceStatus,
               totalEarnings = fromIntegral driverFee.totalEarnings,
               totalRides = driverFee.numRides,
-              planAmount = 0, --- refactor
+              planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = not (null driverFeesInWindow),
               offerAndPlanDetails = driverFee.planOfferTitle
             }
