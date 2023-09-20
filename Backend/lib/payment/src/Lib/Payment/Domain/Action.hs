@@ -58,10 +58,10 @@ data PaymentStatusResp
   | PDNNotificationStatusResp
       { eventName :: Maybe Payment.PaymentStatus,
         notificationStatus :: Payment.NotificationStatus,
-        sourceObject :: Text,
+        sourceObject :: Maybe Text,
         endDate :: Text,
         sourceInfo :: Payment.SourceInfo,
-        notificationType :: Text,
+        notificationType :: Maybe Text,
         juspayProviedId :: Text,
         notificationId :: Text
       }
