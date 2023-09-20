@@ -20,6 +20,7 @@ config =
     isMaskedName : true
   },
   subscriptionConfig : {
-    enableBlocking : false
+    enableBlocking : false,
+    completePaymentPopup : false
   }
   }

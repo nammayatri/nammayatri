@@ -1686,9 +1686,9 @@ homeScreenFlow = do
   modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
   let (OrganizationInfo organization) = getDriverInfoResp.organization
-  checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
   appConfig <- getAppConfig Constants.appConfig
   when appConfig.subscriptionConfig.enableBlocking $ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp)
+  when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
   let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   case getDriverInfoResp.linkedVehicle of
