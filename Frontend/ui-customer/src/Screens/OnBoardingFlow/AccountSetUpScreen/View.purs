@@ -126,7 +126,7 @@ view push state =
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
         , if state.props.backPressed then goBackPopUpView push state else emptyTextView
-        , if state.data.editedDisabilityOptions.isSpecialAssistList then specialAssistanceView state push else emptyTextView
+        , if state.props.isSpecialAssistList then specialAssistanceView state push else emptyTextView
         ])
 
 goBackPopUpView :: forall w. (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
@@ -351,29 +351,25 @@ disabilityOptionView state push =
     , margin $ MarginBottom 16
     ] <> FontStyle.body3 TypoGraphy
   ] <> (DA.mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
+    <> if state.data.disabilityOptions.activeIndex == 1 then [claimerView state push] else []
 
 specialAssistanceView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 specialAssistanceView state push = do 
-  SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)
+  SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.disabilityOptions (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason) state.data.config)
 
-getRadioButtonConfig :: Int -> String -> ST.AccountSetUpScreenState -> GenericRadioButton.Config
-getRadioButtonConfig index item state = GenericRadioButton.config {
-  activeButtonConfig {
-    stroke = Color.blue900
-  , buttonColor = Color.black800
-  , background = Color.blue600
-  },
-  buttonTextConfig {
-    text = item
-  , color = Color.black900
-  }
-  , inActiveButtonConfig {
-    stroke = Color.grey900
-  , buttonColor = Color.black600
-  , background = Color.white900
-  }
-  , isSelected = index == state.data.editedDisabilityOptions.activeIndex
-  , id = index
-}
-
-
+claimerView :: forall w. ST.AccountSetUpScreenState  -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+claimerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 20 16 20 16
+  , cornerRadius 12.0 
+  , background Color.pink
+  , alignParentBottom "true,-1"
+  , gravity CENTER 
+  ][  textView
+      ([ text (getString DISABILITY_CLAIMER_TEXT)
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]

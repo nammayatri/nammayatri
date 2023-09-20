@@ -90,7 +90,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
-      ] <> if state.props.updateProfile && (not state.data.editedDisabilityOptions.isSpecialAssistList) then [adjustViewWithKeyboard "true"] else [] )([
+      ] <> if state.props.updateProfile && (not state.props.isSpecialAssistList) then [adjustViewWithKeyboard "true"] else [] )([
         linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
@@ -99,7 +99,7 @@ view push state =
             , afterRender push (const AfterRender)
             , padding (PaddingBottom (EHC.safeMarginBottom))
             , margin $ MarginBottom if state.props.updateProfile then 16 else 0
-            , accessibility if state.props.showAccessibilityPopUp || state.data.editedDisabilityOptions.isSpecialAssistList then DISABLE_DESCENDANT else DISABLE
+            , accessibility if state.props.showAccessibilityPopUp || state.props.isSpecialAssistList then DISABLE_DESCENDANT else DISABLE
             , background Color.white900
             ][  headerView state push
               , linearLayout
@@ -111,7 +111,7 @@ view push state =
               , detailsView state push
             ]
           , if state.props.updateProfile then updateButtonView state push else textView[height $ V 0]
-          ] <> if state.data.editedDisabilityOptions.isSpecialAssistList then [specialAssistanceView state push] else []
+          ] <> if state.props.isSpecialAssistList then [specialAssistanceView state push] else []
             <> if state.props.showAccessibilityPopUp then 
               [linearLayout
               [ height MATCH_PARENT
@@ -272,8 +272,10 @@ updatePersonalDetails state push =
           , padding $ PaddingBottom 200
           , orientation VERTICAL
           , background Color.white900
-          ]
-          (if state.props.updateProfile then [userNameEditTextView push state, mobileNumberTextView state, emailIdEditTextView push state, genderCaptureView state push ] else [])
+          ][ userNameEditTextView push state
+           , mobileNumberTextView state
+           , emailIdEditTextView push state
+           , genderCaptureView state push ]
         ]
     ]
 
@@ -514,7 +516,8 @@ disabilityOptionView state push =
     , width WRAP_CONTENT
     , margin $ MarginBottom 16
     ] <> FontStyle.body3 TypoGraphy
-  ] <> (mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
+  ] <> (mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)]
+    <> if state.data.editedDisabilityOptions.activeIndex == 1 then [claimerView state push] else [])
   ]
 
 
@@ -525,5 +528,21 @@ specialAssistanceView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.transparent
-  ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions state.data.config)]
+  ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions (fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason) state.data.config)]
 
+claimerView :: forall w. ST.MyProfileScreenState  -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+claimerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 20 16 20 16
+  , cornerRadius 12.0 
+  , background Color.pink
+  , alignParentBottom "true,-1"
+  , gravity CENTER 
+  ][  textView
+      ([ text (getString DISABILITY_CLAIMER_TEXT)
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]

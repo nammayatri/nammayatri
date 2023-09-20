@@ -31,7 +31,9 @@ initData = {
         isBtnEnabled : true,
         showOptions : false,
         fromHomeScreen : false,
-        showAccessibilityPopUp : false
+        showAccessibilityPopUp : false,
+        changeAccessibility : false,
+        isSpecialAssistList : false
     },
     data : {
         name : "",
@@ -49,7 +51,6 @@ initData = {
         hasDisability : Nothing,
         editedDisabilityOptions : {
           activeIndex : 0
-        , isSpecialAssistList : false 
         , specialAssistActiveIndex : 0
         , disabilityOptionList : []
         , selectedDisability : Nothing
@@ -58,7 +59,6 @@ initData = {
         },
         disabilityOptions : {
           activeIndex : 0
-        , isSpecialAssistList : false 
         , specialAssistActiveIndex : 0
         , disabilityOptionList : []
         , selectedDisability : Nothing
