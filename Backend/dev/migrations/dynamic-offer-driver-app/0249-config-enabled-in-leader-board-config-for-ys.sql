@@ -1,0 +1,1 @@
+UPDATE atlas_driver_offer_bpp.leader_board_configs set is_enabled = true where merchant_id = 'd2929b92-8b12-4e21-9efd-d6203940c4c5' -- config enabling for YS
