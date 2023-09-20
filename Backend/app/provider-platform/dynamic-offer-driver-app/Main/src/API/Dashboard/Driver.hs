@@ -16,6 +16,8 @@ module API.Dashboard.Driver where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.UI.Driver as Driver
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -23,10 +25,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (throwError)
-
--- import qualified Domain.Types.Invoice as INV
--- import qualified Domain.Action.UI.Driver as Driver
--- import SharedLogic.Merchant
 
 type API =
   "driver"
@@ -61,8 +59,8 @@ type API =
            :<|> Common.GetDriverHomeLocationAPI
            :<|> Common.UpdateDriverHomeLocationAPI
            :<|> Common.IncrementDriverGoToCountAPI
-           --  :<|> DriverPaymentHistoryAPI
-           --  :<|> DriverPaymentHistoryEntityDetailsAPI
+           :<|> DriverPaymentHistoryAPI
+           :<|> DriverPaymentHistoryEntityDetailsAPI
        )
 
 -- driver cash collection api ----------------------------------------
@@ -83,26 +81,26 @@ type DriverCashExemptionAPI =
     :> ReqBody '[JSON] Text
     :> Post '[JSON] APISuccess
 
--- ----- payment history ----------
--- type DriverPaymentHistoryAPI =
---   Capture "driverId" (Id Common.Driver)
---     :> "payments"
---     :> "history"
---     :> QueryParam "paymentMode" INV.InvoicePaymentMode
---     :> QueryParam "limit" Int
---     :> QueryParam "offset" Int
---     :> Get '[JSON] Driver.HistoryEntityV2
+----- payment history ----------
+type DriverPaymentHistoryAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "payments"
+    :> "history"
+    :> QueryParam "paymentMode" INV.InvoicePaymentMode
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] Driver.HistoryEntityV2
 
--- ----------- payment history entry  -------------
--- type DriverPaymentHistoryEntityDetailsAPI =
---   Capture "driverId" (Id Common.Driver)
---     :> "payments"
---     :> "history"
---     :> Capture "invoiceId" (Id INV.Invoice)
---     :> "entity"
---     :> Get '[JSON] Driver.HistoryEntryDetailsEntityV2
+----------- payment history entry  -------------
+type DriverPaymentHistoryEntityDetailsAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "payments"
+    :> "history"
+    :> Capture "invoiceId" (Id INV.Invoice)
+    :> "entity"
+    :> Get '[JSON] Driver.HistoryEntryDetailsEntityV2
 
--------------------------------------
+-----------------------------------
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -137,9 +135,8 @@ handler merchantId =
     :<|> getDriverHomeLocation merchantId
     :<|> updateDriverHomeLocation merchantId
     :<|> incrementDriverGoToCount merchantId
-
--- :<|> getPaymentHistory merchantId
--- :<|> getPaymentHistoryEntityDetails merchantId
+    :<|> getPaymentHistory merchantId
+    :<|> getPaymentHistoryEntityDetails merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -236,12 +233,9 @@ setRCStatus merchantShortId driverId = withFlowHandlerAPI . DDriver.setRCStatus 
 deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
 deleteRC merchantShortId driverId = withFlowHandlerAPI . DDriver.deleteRC merchantShortId driverId
 
--- getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode  -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
--- getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = do
---   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
---   withFlowHandlerAPI $ Driver.getDriverPaymentsHistoryV2 (cast driverId,m.id) invoicePaymentMode  limit offset
+getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
+getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset
 
--- getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
--- getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
---   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
---   withFlowHandlerAPI $ Driver.getHistoryEntryDetailsEntityV2 (cast driverId,m.id) invoiceId
+getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
+  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId driverId invoiceId

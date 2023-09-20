@@ -44,6 +44,8 @@ module Domain.Action.Dashboard.Driver
     getDriverHomeLocation,
     updateDriverHomeLocation,
     incrementDriverGoToCount,
+    getPaymentHistoryEntityDetails,
+    getPaymentHistory,
   )
 where
 
@@ -52,6 +54,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Com
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
@@ -824,6 +827,22 @@ deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..}) False
+
+getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Flow Driver.HistoryEntityV2
+getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = do
+  merchant <- findMerchantByShortId merchantShortId
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  Driver.getDriverPaymentsHistoryV2 (personId, merchant.id) invoicePaymentMode limit offset
+
+getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Id Common.Driver -> Id INV.Invoice -> Flow Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
+  merchant <- findMerchantByShortId merchantShortId
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes

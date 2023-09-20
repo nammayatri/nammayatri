@@ -32,9 +32,9 @@ import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
--- import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
--- import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
+import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
@@ -92,9 +92,9 @@ data DriversAPIs = DriversAPIs
     updateDriverHomeLocation :: Id Driver.Driver -> Driver.UpdateDriverHomeLocationReq -> Euler.EulerClient APISuccess,
     incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
-    deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess
-    -- getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
-    -- getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice ->  Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2
+    deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
+    getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
+    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2
   }
 
 data RidesAPIs = RidesAPIs
@@ -252,9 +252,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> clearOnRideStuckDrivers
       :<|> getDriverHomeLocation
       :<|> updateDriverHomeLocation
-      :<|> incrementDriverGoToCount = driversClient
-    -- :<|> getPaymentHistory
-    -- :<|> getPaymentHistoryEntityDetails = driversClient
+      :<|> incrementDriverGoToCount
+      :<|> getPaymentHistory
+      :<|> getPaymentHistoryEntityDetails = driversClient
 
     rideList
       :<|> rideStart
