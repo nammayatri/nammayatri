@@ -194,7 +194,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                 res''
             Left _ -> do
               _ <- addValueToErrorQueue C.kafkaUpdateFailedStream [("UpdateCommand", value)]
-              pure $ Left (UnexpectedError "Kafka Error", id)
+              EL.logError ("ERROR:" :: Text) ("Could not find the key in redis to get the updated object" :: Text)
+              void $ publishDBSyncMetric Event.KafkaUpdateMissing
+              pure $ Right id
 
     -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
     runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause model dbConf = do

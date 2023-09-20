@@ -33,4 +33,5 @@ data DBSyncMetric
   | DrainerQueryExecutes Action Word
   | QueryDrainLatency Action Latency
   | DrainerStopStatus Status
+  | KafkaUpdateMissing
   | KafkaPushFailure
