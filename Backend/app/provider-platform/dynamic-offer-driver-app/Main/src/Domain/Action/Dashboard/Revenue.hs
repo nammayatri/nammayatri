@@ -65,7 +65,7 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
     getNumDrivers fee = length $ nub (map driverId fee)
     getFeeWithStatus status = filter (\fee_ -> fee_.status `elem` status)
     getNumRides fee = sum $ map numRides fee
-    getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fromIntegral fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
+    getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 
 getCashCollectionHistory :: ShortId DM.Merchant -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Flow Common.CashCollectionListRes
 getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffset = do
@@ -78,7 +78,7 @@ getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffse
       to = fromMaybe now mbTo
   collections <- findAllByCollectorId merchant.id collectorId from_ to limit_ offset_
   let totalCnt = length collections
-      totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) collections
+      totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) collections
   let limitresp = min maxLimit . fromMaybe defaultLimit $ mbLimit
   let collectionList = map buildCollectionList (limitOffset limitresp offset_ collections)
   let count_ = length collectionList
@@ -92,7 +92,7 @@ getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffse
         { id = cast id,
           merchantId = merchantId.getId,
           driverId = cast driverId,
-          fee = fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
+          fee = fromIntegral govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst,
           ..
         }
 
