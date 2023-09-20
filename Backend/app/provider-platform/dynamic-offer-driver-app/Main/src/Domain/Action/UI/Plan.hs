@@ -359,7 +359,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
-  let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverPendingAndDuesFees
+  let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverPendingAndDuesFees
   case driverRegisterationFee of
     Just registerFee -> do
       invoices <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
@@ -403,7 +403,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             numRides = 0,
             createdAt = now,
             updatedAt = now,
-            platformFee = DF.PlatformFee (round plan.registrationAmount) 0.0 0.0,
+            platformFee = DF.PlatformFee plan.registrationAmount 0.0 0.0,
             totalEarnings = 0,
             feeType = DF.MANDATE_REGISTRATION,
             govtCharges = 0,
@@ -447,7 +447,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
         frequency = planBaseFrequcency,
         name = translatedName,
         description = translatedDescription,
-        currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueDriverFees,
+        currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueDriverFees,
         totalPlanCreditLimit = round maxCreditLimit,
         bankErrors = if isCurrentPlanEntity then calcBankError allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee else [],
         ..
@@ -501,7 +501,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
                   ErrorEntity
                     { message = message,
                       code = code,
-                      amount = fromIntegral dfee.govtCharges + fromIntegral dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst
+                      amount = fromIntegral dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst
                     }
               (_, _, _, _) -> Nothing
         )

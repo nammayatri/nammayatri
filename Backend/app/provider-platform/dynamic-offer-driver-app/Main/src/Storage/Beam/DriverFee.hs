@@ -35,7 +35,7 @@ data DriverFeeT f = DriverFeeT
     driverId :: B.C f Text,
     totalEarnings :: B.C f Money,
     govtCharges :: B.C f Money,
-    platformFee :: B.C f Money,
+    platformFee :: B.C f HighPrecMoney,
     cgst :: B.C f HighPrecMoney,
     sgst :: B.C f HighPrecMoney,
     payBy :: B.C f Time.UTCTime,

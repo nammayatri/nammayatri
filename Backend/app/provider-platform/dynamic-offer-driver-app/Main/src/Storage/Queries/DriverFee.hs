@@ -262,7 +262,7 @@ findUnpaidAfterPayBy (Id driverId) now =
         ]
     ]
 
-updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> m ()
+updateFee :: MonadFlow m => Id DriverFee -> Maybe Money -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> m ()
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of

@@ -68,7 +68,7 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
   now <- getCurrentTime
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
-      amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
+      amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
