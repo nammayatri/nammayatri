@@ -80,14 +80,14 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
               case exec of
                 Left err -> do
                   QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
-                  QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
+                  QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
                   QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
                   logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
                 Right res -> do
                   QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
             Nothing -> do
               QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
-              QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
+              QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
               QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
               logError ("Active autopay invoice not found for driverFeeId" <> driverToNotify.driverFeeId.getId)
         ReSchedule <$> getRescheduledTime transporterConfig

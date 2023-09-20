@@ -206,7 +206,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     case activeExecutionInvoice of
       Just invoice' -> do
-        QDF.updateStatus PAYMENT_OVERDUE now invoice'.driverFeeId
+        QDF.updateStatus PAYMENT_OVERDUE invoice'.driverFeeId now
         QDF.updateFeeType RECURRING_INVOICE now invoice'.driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
       Nothing -> pure ()
@@ -248,7 +248,7 @@ processNotification notificationId notificationStatus = do
   case notificationStatus of
     Juspay.NOTIFICATION_FAILURE -> do
       --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
-      QDF.updateStatus PAYMENT_OVERDUE now driverFeeId
+      QDF.updateStatus PAYMENT_OVERDUE driverFeeId now
       QDF.updateFeeType RECURRING_INVOICE now driverFeeId
       QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
     Juspay.SUCCESS -> do
