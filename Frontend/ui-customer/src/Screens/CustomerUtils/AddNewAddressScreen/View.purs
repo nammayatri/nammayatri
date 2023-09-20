@@ -78,7 +78,7 @@ view push state =
   , accessibility DISABLE
   , afterRender
     (\action -> do
-          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY) HU.mapConfig
+          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
           _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
@@ -123,7 +123,7 @@ view push state =
          ]
        , imageView
          [ width $ V 60
-         , height $ V 60
+         , height $ V 60 
          , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetStoreLink FunctionCall) <> "ny_ic_customer_current_location.png"
          ]
        ]
@@ -172,8 +172,8 @@ recenterButtonView state push =
   , gravity RIGHT
   ][  imageView
       [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
-      , height $ V 40
-      , width $ V 40
+      , height $ V 40 
+      , width $ V 40 
       , onClick (\action -> do
         _ <- push action
         _ <- JB.getCurrentPosition push UpdateCurrentLocation
@@ -418,8 +418,8 @@ searchResultsView state push =
               )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList ))
   ]
 
-bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState
-bottomBtnsData state =
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
+bottomBtnsData state = 
   [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
@@ -510,20 +510,20 @@ savePlaceView state push =
                           _ <- pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
-          ][  textView $
+          ][  textView $ 
               [ text (state.data.selectedItem).description
               , color Color.black600
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
               , maxLines 1
-              , ellipsize true
+              , ellipsize true 
               ] <> FontStyle.body1 LanguageStyle
                 <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0])
             , linearLayout(
               [
                 height WRAP_CONTENT
-              , gravity RIGHT
+              , gravity RIGHT 
               ] <> if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT])
               [  textView $
                 [ text (getString EDIT)
@@ -532,7 +532,7 @@ savePlaceView state push =
                 , color Color.blue900
                 , width MATCH_PARENT
                 , onFocus push $ const $ EditTextFocusChanged
-                , gravity CENTER_VERTICAL
+                , gravity CENTER_VERTICAL 
                 ] <> FontStyle.body1 LanguageStyle
               ]
           ]
@@ -624,7 +624,7 @@ locationUnserviceableView state push =
   , visibility if state.props.isSearchedLocationServiceable then GONE else VISIBLE
   , background "#F5F5F5"
   , gravity CENTER
-  ][  imageView
+  ][  imageView 
       [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
       , height $ V 99
       , width $ V 133

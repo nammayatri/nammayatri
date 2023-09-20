@@ -57,7 +57,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent, MapConfig)
+import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -67,14 +67,14 @@ import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, HotSpotData)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
-import Services.API (Prediction, LatLong)
+import Services.API (Prediction)
+import Services.API (Prediction)
 import Types.App (GlobalState(..))
 import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
-import Styles.Colors as Color
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -176,8 +176,8 @@ foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+
 foreign import getMobileNumber :: EffectFn2 String String String
-foreign import showHotSpots :: EffectFn1 (Array HotSpotData) Unit
 
 data TimeUnit
   = HOUR
@@ -313,9 +313,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr =
+addToRecentSearches prediction predictionArr = 
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr)
+      in (if (checkPrediction prediction' predictionArr) 
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -427,7 +427,7 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getMerchantVechicleSize :: Unit -> Int
-getMerchantVechicleSize unit =
+getMerchantVechicleSize unit = 
  case getMerchant FunctionCall of
    YATRI -> 160
    _ -> 90
@@ -463,29 +463,29 @@ getGlobalPayload _ = do
   pure $ hush payload
 
 getSearchType :: Unit -> String
-getSearchType _ = do
+getSearchType _ = do 
   let payload = unsafePerformEffect $ getGlobalPayload unit
   case payload of
     Just (GlobalPayload payload') -> do
       let (Payload innerPayload) = payload'.payload
       case innerPayload.search_type of
-        Just a -> a
+        Just a -> a 
         Nothing -> "normal_search"
     Nothing -> "normal_search"
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = do
+getPaymentMethod _ = do 
   let payload = unsafePerformEffect $ getGlobalPayload unit
   case payload of
     Just (GlobalPayload payload') -> do
       let (Payload innerPayload) = payload'.payload
       case innerPayload.payment_method of
-        Just a -> a
+        Just a -> a 
         Nothing -> "cash"
     Nothing -> "cash"
 
 
-triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit
+triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
 triggerRideStatusEvent status amount bookingId screen = do
   let (payload :: InnerPayload) = { action : "trip_status"
     , ride_status : Just status
@@ -504,15 +504,3 @@ fetchDefaultPickupPoint locations lati longi =
   case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
     [foundLocation] -> foundLocation.place
     _ -> ""
-    
-mapConfig :: MapConfig
-mapConfig = {
-    dottedLine : {
-        visible : false
-      , range : 100.0
-      , color : Color.charcoalGrey
-    }
-  , animationSpeed : 400
-  , hotSpotRadius : 100
-  , selectNearByPointRadius : 25.0
-}

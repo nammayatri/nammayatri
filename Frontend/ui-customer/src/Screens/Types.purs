@@ -597,7 +597,6 @@ type HomeScreenStateData =
   , logField :: Object Foreign
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
-  , hotSpotInfo :: Array HotSpotData
   }
 
 type DisabilityT = 
@@ -696,7 +695,6 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
-  , hotSpot :: HotSpotProps
   }
 
 type RouteEndPoints = {
@@ -1239,12 +1237,3 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
-
-type HotSpotProps = {
-  manuallyMoved :: Boolean
-}
-
-type HotSpotData = {
-    lat :: Number
-  , lon :: Number
-}
