@@ -108,7 +108,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan
       let executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
-                amount = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
+                amount = fromIntegral driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
                 customerId = driverFee.driverId.getId,
                 notificationId = notification.id.getId,
                 mandateId = mandateId.getId,

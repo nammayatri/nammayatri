@@ -85,7 +85,11 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                   logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)
                 Right res -> do
                   QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
-            Nothing -> logError ("Active autopay invoice not found for driverFeeId" <> driverToNotify.driverFeeId.getId)
+            Nothing -> do
+              QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
+              QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
+              QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
+              logError ("Active autopay invoice not found for driverFeeId" <> driverToNotify.driverFeeId.getId)
         ReSchedule <$> getRescheduledTime transporterConfig
   logWarning ("duration of job " <> show timetaken)
   return response
@@ -106,14 +110,14 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
-          amount = fromIntegral driverFee_.govtCharges + fromIntegral driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
+          amount = fromIntegral driverFee_.govtCharges + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }
     mkNotificationRequest driverInfoForPDN shortId = do
       now <- getCurrentTime
       return
         PaymentInterface.MandateNotificationReq
           { amount = driverInfoForPDN.amount,
-            txnDate = now,
+            txnDate = addUTCTime (3600 * 24) now,
             mandateId = driverInfoForPDN.mandateId.getId, --- not sure regarding this m
             notificationId = shortId,
             description = "" --- to be decided ---

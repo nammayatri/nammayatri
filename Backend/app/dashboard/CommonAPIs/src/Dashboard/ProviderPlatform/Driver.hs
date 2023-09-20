@@ -245,7 +245,7 @@ data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 data PlatformFee = PlatformFee
-  { fee :: Money,
+  { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
     sgst :: HighPrecMoney
   }

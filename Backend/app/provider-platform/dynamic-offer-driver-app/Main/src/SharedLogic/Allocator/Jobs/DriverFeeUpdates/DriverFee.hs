@@ -157,7 +157,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
+              due = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if due + totalFee >= plan.maxCreditLimit
             then do
               updateStatus PAYMENT_OVERDUE now driverFee.id
@@ -247,8 +247,6 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
-      let (platformFee, cgst, sgst) = calculatePlatformFeeAttr finalOrderAmount plan -- this should be HighPrecMoney
-      updateFee driverFee.id Nothing 0 (round platformFee) cgst sgst now False -- add split logic before update
       return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> [DriverFee]
@@ -260,7 +258,7 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} =
         ( \fee -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
             DriverFee
-              { platformFee = PlatformFee {fee = round platformFee_, ..},
+              { platformFee = PlatformFee {fee = platformFee_, ..},
                 feeType = feeType,
                 feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
                 ..

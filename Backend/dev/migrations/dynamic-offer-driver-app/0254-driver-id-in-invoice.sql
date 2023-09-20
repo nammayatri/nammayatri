@@ -22,3 +22,5 @@ SET auto_pay_status = 'MANDATE_FAILED'
 FROM atlas_driver_offer_bpp.driver_plan dp
 WHERE di.driver_id = dp.driver_id
 AND di.auto_pay_status = 'PENDING' and di.created_at <= now() - interval '15 minutes';
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ALTER COLUMN platform_fee type numeric(30,2) USING platform_fee::numeric(30,2);

@@ -244,7 +244,7 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
           ..
         }
 
-    mkPlatformFee SLDriverFee.PlatformFee {..} = Common.PlatformFee {fee = round fee, ..}
+    mkPlatformFee SLDriverFee.PlatformFee {..} = Common.PlatformFee {..}
 
     castStatus status = case status of -- only PENDING and OVERDUE possible
       ONGOING -> Common.ONGOING
@@ -421,7 +421,7 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverId driverId
-  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
   driverInfo_ <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound reqDriverId.getId)
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

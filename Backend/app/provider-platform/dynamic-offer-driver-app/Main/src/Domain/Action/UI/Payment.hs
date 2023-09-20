@@ -178,7 +178,7 @@ processPayment merchantId driverId orderId sendNotification = do
 updatePaymentStatus :: Id DP.Person -> Id DM.Merchant -> Flow ()
 updatePaymentStatus driverId merchantId = do
   dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
-  let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
+  let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
   when (totalDue <= 0) $ DI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
