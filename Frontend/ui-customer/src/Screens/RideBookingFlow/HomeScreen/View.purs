@@ -80,7 +80,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), CarouselModel(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), CarouselModal(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -92,6 +92,7 @@ import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Helpers.Utils (addCarousel)
+import Resources.Constants as Constants
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -362,7 +363,13 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            ] <> [ linearLayout[height MATCH_PARENT, width MATCH_PARENT, gravity CENTER, background Color.red][ carouselView state push ]])
+            ] <> if state.props.showEducationalCarousel then [linearLayout
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , gravity CENTER
+                    , onClick push $ const NoAction
+                    , background Color.black9000
+                    ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] else [])
         ]
     ] 
 
@@ -2258,102 +2265,68 @@ isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar
 
 carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 
+  PrestoAnim.animationSet [ fadeIn true ] $ 
   linearLayout
-  [height WRAP_CONTENT
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginHorizontal 16 16
-  , stroke $ "1," <> Color.grey900
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , cornerRadius 16.0
+  , gravity CENTER
   , orientation VERTICAL
-    , cornerRadius 16.0
-  , padding (Padding 16 16 16 16)][
-  linearLayout
-    [ height $ V 360
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , id $ getNewIDWithTag "AccessibilityCarouselView"
-    , accessibility DISABLE
-    , gravity CENTER
-    , background Color.green900
-    
-    , afterRender (\action -> do
-        _ <- push action
-        _ <- addCarousel ([
+  , margin $ MarginHorizontal 16 16
+  ][  textView(
+      [ text "Inclusive and Accessible, for everyone!"
+      , margin $ MarginBottom 20
+      , color Color.black800
+      ] <> FontStyle.body7 TypoGraphy) 
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , stroke $ "1," <> Color.grey900
+      , background Color.grey700
+      , margin $ MarginBottom 16
+      , orientation VERTICAL
+      , cornerRadius 8.0
+      ][  linearLayout
+          [ height $ V 360
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , id $ getNewIDWithTag "AccessibilityCarouselView"
+          , accessibility DISABLE
+          , gravity CENTER    
+          , afterRender (\action -> do
+              _ <- push action
+              _ <- addCarousel ([
+                  getAccessibilityCarouselData "carousel_4" 250 Color.grey700  "We strive to provide all our users \nan even & equal experience" "" 14,
+                  getAccessibilityCarouselData "ny_ic_blind_pickup" 160 Color.blue600  "For users with poor vision" "&#8226; Drivers will be prompted to call instead of <br> &ensp; texting. <br> &#8226; Drivers will be prompted to sound horn once <br> &ensp; at the pickup. <br> &#8226; Drivers will be sensitised to help them with their <br> &ensp; needs and requests." 12,
+                  getAccessibilityCarouselData "ny_ic_deaf_pickup" 160 Color.blue600  "For users with poor hearing" "&#8226; Drivers will be prompted to text instead of <br> &ensp; calling. <br> &#8226; Drivers will be prompted to message them once <br> &ensp; at the pickup. <br> &#8226; Drivers will be sensitised to help them with their <br> &ensp; needs and requests." 12,
+                  getAccessibilityCarouselData "ny_ic_locomotor_arrival" 160 Color.blue600  "For users with locomotor disability" "&#8226; Drivers will be prompted to come to their exact &ensp; location for pickup. <br> &#8226; Drivers will be prompted to help them with their &ensp; mobility aid. <br>&#8226; Drivers will be sensitised to help them with their &ensp; needs and requests." 12,
+                  getAccessibilityCarouselData "ny_ic_disability_illustration" 160 Color.white900  "For users with other special needs" "&#8226; Drivers will be sensitised to help with their needs &ensp; and requests." 12
+                ]) (getNewIDWithTag "AccessibilityCarouselView") 48
+              pure unit
+            ) (const AfterRender)
+          ][]
+        ]
+    , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
+    , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterConfig state)]
 
-          {image : "carousel_4", title : "We strive to provide all our users \nan even & equal experience.", description : "", 
-       imageConfig : {
-        height : 200 , width : 296
-       },
-       titleConfig : {
-        textColor : "#454545",
-        textSize : 16 
-       } ,
-       descriptionConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       }},
-      {image : "ny_ic_blind_pickup", title : "For users with poor vision", description : "Drivers will be prompted to call instead of texting.\nDrivers will be prompted to sound horn once at the pickup.\nDrivers will be sensitised to help them with their needs and requests." , 
-      imageConfig : {
-        height : 154 , width : 200
-       },
-       titleConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       } ,
-       descriptionConfig : {
-        textColor : "#FFFFFF",
-        textSize : 12
-       }},
-      {image : "carousel_4", title : "Inclusive and accessible for everyone!", description : "We strive to provide all our users an \n even & equal experience.",
-      imageConfig : {
-        height : 200 , width : 200
-       },
-       titleConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       },
-       descriptionConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       }},
-      {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.",
-      imageConfig : {
-        height : 200 , width : 200
-       },
-       titleConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       },
-       descriptionConfig : {
-        textColor : "#FFFFFF",
-        textSize : 14 
-       }}
-                  -- {image : "carousel_1", title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.\nOur speedy booking process means\nyou get a ride quickly and easily.", imageHeight : 100},
-                  -- {image : "carousel_2", title : "No more\nsurge pricing!", description : "Experience fair and consistent fares,\neven during peak hours.", imageHeight : 200},
-                  -- {image : "carousel_4", title : "", description : "We strive to provide all our users an \n even & equal experience.", imageHeight : 20},
-                  -- {image : "carousel_3", title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.", imageHeight :150}
-                ]) (getNewIDWithTag "AccessibilityCarouselView")
-        pure unit
-        ) (const AfterRender)
-    ][]
-  -- , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfigSubmit state)
-  -- , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfigSubmit state)
-  ]
 
--- primaryButtonConfigSubmit :: HomeScreenState -> PrimaryButton.Config
--- primaryButtonConfigSubmit state = let
---     config = PrimaryButton.config
---     primaryButtonConfig' = config
---       { textConfig
---         { text = (getString SUBMIT)
---         , color = state.data.config.primaryTextColor
---         , accessibilityHint = if state.props.btnActive then "Submit : Button" else "Submit Button Is Disabled"
---         }
---       , cornerRadius = 0.0
---       , background = state.data.config.primaryBackground
---       , isClickable = state.props.btnActive 
---       , alpha = 1.0--if state.props.btnActive then 1.0 else 0.5
---       , margin = (Margin 0 0 0 0)
---       -- , id = "SubmitButtonContactUsScreen"
---       -- , enableLoader = (JB.getBtnLoader "SubmitButtonContactUsScreen")
---       }
---   in primaryButtonConfig'
+getAccessibilityCarouselData :: String -> Int -> String -> String -> String -> Int -> CarouselModal
+getAccessibilityCarouselData image imageHeight imageBgColor title description descTextSize = {
+    imageConfig : { image : image , height : imageHeight , width : 200, bgColor : imageBgColor, cornerRadius : 8.0 },
+    titleConfig : {
+      text : title,
+      textSize : 16,
+      textColor : Color.black800,
+      gravity : "CENTER",
+      margin : { top : 16 , bottom : 8 , right : 16 , left : 16 }
+    }, 
+    descriptionConfig : {
+      text : description, 
+      textSize : descTextSize,
+      textColor : Color.black700,
+      gravity : "LEFT",
+      margin : { top : 0 , bottom : 8 , right : 32 , left : 32 }
+    }
+}

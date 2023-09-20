@@ -68,7 +68,7 @@ carouselView state push =
     , margin $ MarginBottom 20
     , afterRender (\action -> do
         _ <- push action
-        _ <- addCarousel state.data.carouselModel (getNewIDWithTag "CarouselView")
+        _ <- addCarousel state.data.carouselModal (getNewIDWithTag "CarouselView") 80
         pure unit
         ) (const AfterRender)
     ][]
