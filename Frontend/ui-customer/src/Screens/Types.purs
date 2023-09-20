@@ -223,6 +223,7 @@ type AccountSetUpScreenStateProps =
     , showOptions :: Boolean
     , activeField :: Maybe ActiveFieldAccountSetup
     , isNameValid :: Boolean
+    , isSpecialAssistList :: Boolean
   }
 
 
@@ -239,7 +240,6 @@ type AccountSetUpScreenStateData =
     , nameErrorMessage :: Maybe ErrorType
     , config :: AppConfig
     , disabilityOptions :: DisabilityData
-    , editedDisabilityOptions :: DisabilityData
   }
 
 
@@ -608,7 +608,6 @@ type DisabilityT =
 
 type DisabilityData = {
     activeIndex :: Int
-  , isSpecialAssistList :: Boolean
   , specialAssistActiveIndex :: Int
   , disabilityOptionList :: Array DisabilityT
   , selectedDisability :: Maybe DisabilityT
@@ -885,7 +884,9 @@ type MyProfileScreenProps = {
   isBtnEnabled :: Boolean,
   showOptions :: Boolean,
   fromHomeScreen :: Boolean,
-  showAccessibilityPopUp :: Boolean
+  showAccessibilityPopUp :: Boolean,
+  changeAccessibility :: Boolean,
+  isSpecialAssistList :: Boolean
 }
 
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE | DISABILITY_TYPE

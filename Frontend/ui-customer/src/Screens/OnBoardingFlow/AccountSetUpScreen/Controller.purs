@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditTextController
 import Components.SelectListModal as SelectListModal
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (length, trim)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (clearCountDownTimer, setText)
@@ -106,7 +106,11 @@ data Action
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  updateAndExit state $ GoHome state
+  if state.data.disabilityOptions.activeIndex == 1 then 
+    continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+    else do 
+      let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
+      updateAndExit newState $ GoHome newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
   continueWithCmd state
@@ -134,7 +138,7 @@ eval NameSectionClick state = continue state {props{genderOptionExpanded = false
 eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 
 eval BackPressed state = do
-  if state.data.editedDisabilityOptions.isSpecialAssistList then continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
+  if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
     else do 
       _ <- pure $ hideKeyboardOnNavigation true
       _ <- pure $ clearCountDownTimer ""
@@ -145,24 +149,26 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { pro
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
 eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
-  let otherDisability = case state.data.disabilityOptions.otherDisabilityReason of 
-                          Just reason -> reason
-                          Nothing -> ""
-  _ <- pure $ setText (getNewIDWithTag "SpecialAssistanceEditText") otherDisability
-  let newState = state{data{editedDisabilityOptions{activeIndex = idx, isSpecialAssistList = idx == 1, selectedDisability = if idx == 0 then Nothing else state.data.editedDisabilityOptions.selectedDisability ,specialAssistActiveIndex = if idx == 0 then 0 else state.data.editedDisabilityOptions.specialAssistActiveIndex}}}
-  continue state{ data = newState.data{disabilityOptions = if idx == 0 then newState.data.editedDisabilityOptions else state.data.disabilityOptions}, props{btnActive = getBtnActive newState }}
-
+  let newState = state{data{disabilityOptions = 
+                      if idx == 0 then 
+                        state.data.disabilityOptions{ activeIndex = idx, specialAssistActiveIndex = 0, editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing }
+                        else state.data.disabilityOptions{ activeIndex = idx}
+                          }}
+      isBtnActive = getBtnActive newState 
+  continue newState{ props{btnActive = isBtnActive }}
 
 eval (SpecialAssistanceListAC action) state = case action of
-  SelectListModal.OnGoBack ->  continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
-  SelectListModal.UpdateIndex idx -> do 
-    let newState = state{data{editedDisabilityOptions{specialAssistActiveIndex = idx , otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason}}}
-    continue state { props{btnActive = getBtnActive newState}, data = newState.data}
-  SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
+  SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+  SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
   SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
-    let newState = state{data{editedDisabilityOptions{otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason, isSpecialAssistList = false, selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) }}}
-        updatedState = state{props{btnActive = getBtnActive newState}, data = newState.data } 
-    continue updatedState{data{disabilityOptions = newState.data.editedDisabilityOptions}}
+    _ <- pure $ hideKeyboardOnNavigation true
+    let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
+        selectedDisabilityTag = case selectedDisability of 
+          Just disability -> disability.tag 
+          Nothing -> ""
+        newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
+    updateAndExit newState $ GoHome newState
   _ -> continue state
 
 eval _ state = continue state
@@ -170,7 +176,7 @@ eval _ state = continue state
 
 getBtnActive :: AccountSetUpScreenState -> Boolean
 getBtnActive state = do 
-  let disabilityOptions = state.data.editedDisabilityOptions
+  let disabilityOptions = state.data.disabilityOptions
       selectedTag  = case disabilityOptions.selectedDisability of 
                       Just disability -> Just disability.tag 
                       _ -> Nothing
