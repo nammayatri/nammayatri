@@ -20,7 +20,7 @@ import Log
 import Common.Styles.Colors as Color
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
+import Common.Types.App (Event, LazyCheck(..), PaymentStatus(..), Version(..))
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT)
@@ -31,7 +31,7 @@ import Data.Either (Either(..))
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, fromJust)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Ord (compare)
@@ -81,6 +81,7 @@ import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
+import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
@@ -90,10 +91,10 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..), PromoConfig)
 import Screens.Types as ST
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), FeeType(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.API as API
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
@@ -2088,13 +2089,12 @@ paymentHistoryFlow = do
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       case paymentEntityDetails of
-        Right (API.HistoryEntryDetailsEntityV2Resp resp) -> pure unit
-            -- modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-            --   data { transactionDetails {
-            --   -- paymentType = resp.feeType
-
-            -- }}
-            -- })
+        Right (API.HistoryEntryDetailsEntityV2Resp resp) -> do
+            _ <- pure $ spy "resp" resp
+            
+            modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
+              data { transactionDetails = (buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp))}
+            })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
   pure unit 

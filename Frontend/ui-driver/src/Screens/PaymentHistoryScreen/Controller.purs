@@ -71,8 +71,6 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick )) state = if state.props.
                          else if state.props.subView == RideDetails then continue state { props{ subView = TransactionDetails}}
                          else exit $ GoBack
 
--- eval ItemClick state = exit $ ViewPaymentDetails state
-
 eval (ChangeTab switchToAutoPay) state = continue state { props{ autoPayHistory = switchToAutoPay}}
 
 eval (ListItemClick item) state = if item.invoiceId /= "" then exit $ ShowSummary state item.invoiceId

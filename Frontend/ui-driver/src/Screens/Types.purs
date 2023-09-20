@@ -36,7 +36,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status)
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status)
 import Styles.Types (FontSize)
 
 type EditTextInLabelState =
@@ -1697,10 +1697,11 @@ type PaymentHistoryScreenData = {
 }
 
 type TransactionInfo = {
-  notificationStatus :: Common.PaymentStatus,
+  notificationStatus :: Maybe AutopayPaymentStage,
+  paymentStatus :: Common.PaymentStatus,
   statusTime :: String,
   details :: Array TransactionListItem,
-  manualSpecificDetails :: Array TransactionListItem
+  manualSpecificDetails :: Array DueCard
 }
 type PaymentListItem = {
   transactionDate :: String,
@@ -1720,6 +1721,19 @@ type TransactionListItem = {
   key :: String,
   title :: String,
   val :: String
+}
+
+type DueCard = {
+  date :: String,
+  planType :: String,
+  offerApplied :: PromoConfig,
+  noOfRides :: Int,
+  totalEarningsOfDay :: Number,
+  dueAmount :: Number,
+  fareBreakup :: String,
+  expanded :: Boolean,
+  isAutoPayFailed :: Boolean,
+  isSplitPayment :: Boolean
 }
 
 type PaymentHistoryScreenProps = {

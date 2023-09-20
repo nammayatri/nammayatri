@@ -2751,8 +2751,8 @@ newtype HistoryEntryDetailsEntityV2Resp = HistoryEntryDetailsEntityV2Resp {
 }
 
 newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
-    autoPayStage :: Maybe String, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
-    paymentStatus :: Maybe String, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe InvoiceStatus, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
     totalEarnings :: Number,
     totalRides :: Int,
     planAmount :: Number,
@@ -2785,3 +2785,24 @@ instance standardEncodeDriverFeeInfoEntity :: StandardEncode DriverFeeInfoEntity
 instance showDriverFeeInfoEntity :: Show DriverFeeInfoEntity where show = genericShow
 instance decodeDriverFeeInfoEntity :: Decode DriverFeeInfoEntity where decode = defaultDecode
 instance encodeDriverFeeInfoEntity :: Encode DriverFeeInfoEntity where encode = defaultEncode
+
+data AutopayPaymentStage =  NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+data InvoiceStatus =  ACTIVE_INVOICE | SUCCESS | FAILED | EXPIRED | INACTIVE
+
+derive instance genericAutopayPaymentStage :: Generic AutopayPaymentStage _
+instance showAutopayPaymentStage :: Show AutopayPaymentStage where show = genericShow
+instance decodeAutopayPaymentStage :: Decode AutopayPaymentStage where decode = defaultEnumDecode
+instance encodeAutopayPaymentStage :: Encode AutopayPaymentStage where encode = defaultEnumEncode
+instance eqAutopayPaymentStage :: Eq AutopayPaymentStage where eq = genericEq
+instance standardEncodeAutopayPaymentStage :: StandardEncode AutopayPaymentStage
+  where
+    standardEncode _ = standardEncode {}
+
+derive instance genericInvoiceStatus :: Generic InvoiceStatus _
+instance showInvoiceStatus :: Show InvoiceStatus where show = genericShow
+instance decodeInvoiceStatus :: Decode InvoiceStatus where decode = defaultEnumDecode
+instance encodeInvoiceStatus :: Encode InvoiceStatus where encode = defaultEnumEncode
+instance eqInvoiceStatus :: Eq InvoiceStatus where eq = genericEq
+instance standardEncodeInvoiceStatus :: StandardEncode InvoiceStatus
+  where
+    standardEncode _ = standardEncode {}

@@ -18,7 +18,7 @@ module Screens.PaymentHistoryScreen.ScreenData where
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, TransactionListItem, PlanCardConfig)
-import Services.API (FeeType(..))
+import Services.API (AutopayPaymentStage(..), FeeType(..))
 
 initData :: PaymentHistoryScreenState
 initData = {
@@ -26,7 +26,8 @@ initData = {
         autoPayList : [],
         manualPayList : [],
         transactionDetails : {
-            notificationStatus : Pending,
+            notificationStatus : Mb.Just NOTIFICATION_SCHEDULED,
+            paymentStatus : Pending,
             statusTime : "",
             details : [],
             manualSpecificDetails : []
