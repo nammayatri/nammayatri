@@ -40,7 +40,7 @@ handler origin destination key _alternatives mode waypoints avoid = withFlowHand
     throwError $ NotImplemented $ "directions API is not implemented: mode: " <> show mode
   unless (isEmptyWaypoint waypoints) $
     throwError $ NotImplemented $ "directions API is not implemented: waypoints: " <> show waypoints
-  unless (isNothing avoid || avoid == Just "tolls") $
+  unless (isNothing avoid || avoid == Just "tolls" || avoid == Just "tolls|ferries") $
     throwError $ NotImplemented $ "directions API is not implemented: avoid: " <> show avoid
   case (origin, destination) of
     (GoogleMaps.Location origin', GoogleMaps.Location destination') -> do

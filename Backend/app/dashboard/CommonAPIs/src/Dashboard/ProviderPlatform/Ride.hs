@@ -146,7 +146,7 @@ newtype MultipleRideEndReq = MultipleRideEndReq
 
 data MultipleRideEndItem = MultipleRideEndItem
   { rideId :: Id Ride,
-    point :: Maybe LatLong
+    point :: Maybe LatLong -- FIXME not used for distance calculation, remove when possible
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
