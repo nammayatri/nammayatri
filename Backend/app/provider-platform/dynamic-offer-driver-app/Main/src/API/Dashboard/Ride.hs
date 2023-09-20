@@ -107,12 +107,12 @@ multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let rideId = cast @Common.Ride @DRide.Ride reqItem.rideId
-      let dashboardReq =
-            EHandler.DashboardEndRideReq
+      let cronJobReq =
+            EHandler.CronJobEndRideReq
               { point = reqItem.point,
                 merchantId = merchant.id
               }
-      Success <- EHandler.dashboardEndRide shandle rideId dashboardReq
+      Success <- EHandler.cronJobEndRide shandle rideId cronJobReq
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
