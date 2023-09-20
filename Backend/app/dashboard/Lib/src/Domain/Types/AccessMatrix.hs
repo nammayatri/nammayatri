@@ -158,6 +158,8 @@ data UserActionType
   | SUSPEND_PLAN
   | SUBSCRIBE_PLAN
   | CURRENT_PLAN
+  | PAYMENT_HISTORY
+  | PAYMENT_HISTORY_ENTITY_DETAILS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
