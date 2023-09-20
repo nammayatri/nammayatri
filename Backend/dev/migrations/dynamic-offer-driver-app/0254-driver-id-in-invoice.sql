@@ -1,3 +1,21 @@
+CREATE TABLE atlas_driver_offer_bpp.notification (
+    id CHARACTER(36) PRIMARY KEY NOT NULL,
+    short_id CHARACTER VARYING(255) NOT NULL,
+    source_amount numeric (30,2) NOT NULL,
+    mandate_id CHARACTER VARYING(255) NOT NULL,
+    driver_fee_id CHARACTER VARYING(255) NOT NULL,
+    txn_date timestamp with time zone NOT NULL,
+    juspay_provided_id CHARACTER VARYING(255) NOT NULL,
+    provider_name text,
+    notification_type text,
+    description text not null,
+    status text not null,
+    date_created timestamp with time zone NOT NULL,
+    last_updated timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN driver_id text; -- refill it after release
 
 UPDATE atlas_driver_offer_bpp.invoice as inv
