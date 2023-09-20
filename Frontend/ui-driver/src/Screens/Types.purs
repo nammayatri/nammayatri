@@ -1654,7 +1654,7 @@ instance eqSubscribePopupType :: Eq SubscribePopupType where eq = genericEq
 instance decodeSubscribePopupType :: Decode SubscribePopupType where decode = defaultEnumDecode
 instance encodeSubscribePopupType :: Encode SubscribePopupType where encode = defaultEnumEncode
 
-data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING
+data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING | MANDATE_FAILED
 
 derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
