@@ -52,9 +52,15 @@ commonConfig =
         , callOptions : ["ANONYMOUS"]
         , autoVariantEnabled : true
         , showNearByDrivers : false
-        , navigationAppConfig :
-            { query : "google.navigation:q=%f,%f"
+        , navigationAppConfig : {
+            android : {  
+              query : "google.navigation:q=%f,%f"
             , packageName : "com.google.android.apps.maps"
             , walkQuery : "google.navigation:q=%f,%f&mode=w"
             }
+          , ios : {
+              query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
+            , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
+            }
+          }
         }
