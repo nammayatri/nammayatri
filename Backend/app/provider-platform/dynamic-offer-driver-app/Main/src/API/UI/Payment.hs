@@ -21,6 +21,7 @@ where
 import qualified Domain.Action.UI.Payment as DPayment
 import Domain.Types.Invoice (Invoice)
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -34,13 +35,14 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "invoiceId" Invoice
+    :> Payment.API "invoiceId" "notificationId" Invoice Notification
 
 handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
     :<|> getOrder authInfo
+    :<|> getNotificationStatus authInfo
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
@@ -51,3 +53,6 @@ getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDe
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
+
+getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
+getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId

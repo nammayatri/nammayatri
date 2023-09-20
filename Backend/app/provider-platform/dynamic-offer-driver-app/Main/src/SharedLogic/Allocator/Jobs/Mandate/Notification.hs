@@ -120,7 +120,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             txnDate = addUTCTime (3600 * 24) now,
             mandateId = driverInfoForPDN.mandateId.getId, --- not sure regarding this m
             notificationId = shortId,
-            description = "" --- to be decided ---
+            description = "Driver fee mandate notification"
           }
     buildNotificationEntity response id_ driverFeeId mandateId now =
       NTF.Notification
