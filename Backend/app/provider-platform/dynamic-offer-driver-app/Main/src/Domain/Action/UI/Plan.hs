@@ -145,6 +145,8 @@ data DriverDuesEntity = DriverDuesEntity
     autoPayStage :: Maybe DF.AutopayPaymentStage,
     paymentStatus :: Maybe INV.InvoiceStatus,
     totalEarnings :: HighPrecMoney,
+    rideTakenOn :: UTCTime,
+    driverFeeAmount :: HighPrecMoney,
     totalRides :: Int,
     planAmount :: HighPrecMoney,
     isSplit :: Bool,
@@ -562,6 +564,8 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = not (null driverFeesInWindow),
               offerAndPlanDetails = driverFee.planOfferTitle,
+              rideTakenOn = driverFee.createdAt,
+              driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
               createdAt,
               executionAt,
               feeType

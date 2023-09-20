@@ -110,7 +110,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan
               { orderId = invoice.invoiceShortId,
                 amount = fromIntegral driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
                 customerId = driverFee.driverId.getId,
-                notificationId = notification.id.getId,
+                notificationId = notification.shortId,
                 mandateId = mandateId.getId,
                 executionDate
               }
