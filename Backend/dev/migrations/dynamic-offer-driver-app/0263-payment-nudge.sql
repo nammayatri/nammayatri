@@ -41,5 +41,10 @@ INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (merchant_id, lang
 
 ALTER TABLE atlas_driver_offer_bpp.payment_order ALTER COLUMN amount type numeric(30,2);
 
+---- pls validate and run these ----
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cache_offer_list_by_driver_id type boolean default false not null;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_offer_list_cache type boolean default true not null;
+----- pls validate and run if required ---
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN created_at timestamp with time zone NOT NULL DEFAULT now();
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN updated_at timestamp with time zone NOT NULL DEFAULT now();
+

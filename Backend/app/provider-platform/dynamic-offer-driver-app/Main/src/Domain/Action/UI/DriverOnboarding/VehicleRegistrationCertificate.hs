@@ -349,13 +349,11 @@ activateRC driverId merchantId now rc = do
   where
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
-      fleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
       transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
           DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi
-      Redis.del $ makeFleetOwnerKey rcNumber
-      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc fleetOwnerId
+      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()
@@ -411,7 +409,8 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
-  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
+  let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
+  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity manufacturer
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -433,8 +432,8 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry
       updatedAt = now
     }
 
-validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
-validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity = do
+validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
+validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity manufacturer = do
   case mbVariant of
     Just variant -> (Domain.VALID, Just variant)
     Nothing -> do
@@ -442,7 +441,7 @@ validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity
         ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
         ODC.RCValidClasses vehicleClassVariantMap -> do
           let validCOVsCheck = rcconfigs.vehicleClassCheckType
-          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck) cov
+          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC capacity manufacturer vehicleClassVariantMap validCOVsCheck) cov
           let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
           if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
         _ -> (Domain.INVALID, Nothing)
@@ -452,8 +451,8 @@ convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Maybe Int -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
-isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck cov = do
+isValidCOVRC :: Maybe Int -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
+isValidCOVRC capacity manufacturer vehicleClassVariantMap validCOVsCheck cov = do
   let vehicleClassVariant = find checkIfMatch vehicleClassVariantMap
   case vehicleClassVariant of
     Just obj -> (True, Just obj.vehicleVariant)
@@ -462,7 +461,8 @@ isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck cov = do
     checkIfMatch obj = do
       let classMatched = classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) (T.toUpper cov)
       let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
-      classMatched && capacityMatched
+      let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
+      classMatched && capacityMatched && manufacturerMatched
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool

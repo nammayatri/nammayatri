@@ -17,7 +17,6 @@ module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -93,7 +92,9 @@ data TransporterConfigT f = TransporterConfigT
     cacheOfferListByDriverId :: B.C f Bool,
     useOfferListCache :: B.C f Bool,
     updateNotificationStatusBatchSize :: B.C f Int,
-    updateOrderStatusBatchSize :: B.C f Int
+    updateOrderStatusBatchSize :: B.C f Int,
+    updatedAt :: B.C f UTCTime,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
