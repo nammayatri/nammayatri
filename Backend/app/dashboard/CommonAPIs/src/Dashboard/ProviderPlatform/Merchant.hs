@@ -518,7 +518,8 @@ modifier = \case
 data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
-    vehicleVariant :: Variant
+    vehicleVariant :: Variant,
+    manufacturer :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
