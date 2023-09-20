@@ -59,3 +59,8 @@ driver_kafka_push_failure :: PromRep 'Counter "driver_kafka_push_failure" '[]
 driver_kafka_push_failure =
   counter #driver_kafka_push_failure
     .& build
+
+driver_kafka_update_missing :: PromRep 'Counter "driver_kafka_update_missing" '[]
+driver_kafka_update_missing =
+  counter #driver_kafka_update_missing
+    .& build
