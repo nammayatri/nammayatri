@@ -2427,4 +2427,4 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
       when (not getDriverInfoResp.onRide && any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]) do
         void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
         homeScreenFlow
-  else pure unit
+  else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = false }})
