@@ -1747,6 +1747,8 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     totalEarnings :: HighPrecMoney,
     totalRides :: Int,
     planAmount :: HighPrecMoney,
+    rideTakenOn :: UTCTime,
+    driverFeeAmount :: HighPrecMoney,
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text
   }
@@ -1783,9 +1785,11 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = fromIntegral driverFee.totalEarnings,
+              driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = not (null driverFeesInWindow),
+              rideTakenOn = driverFee.createdAt,
               offerAndPlanDetails = driverFee.planOfferTitle
             }
     )
