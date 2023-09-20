@@ -220,6 +220,7 @@ data Action = BackPressed
             | GetRcsDataResponse SA.GetAllRcDataResp
             | UpdateRC String Boolean
             | ActivateOrDeactivateRcPopUpModalAction PopUpModal.Action
+            | PaymentInfoPopUpModalAction PopUpModal.Action
             | DeleteRcPopUpModalAction PopUpModal.Action
             | CallDriverPopUpModalAction PopUpModal.Action
             | AddRc
@@ -232,6 +233,7 @@ data Action = BackPressed
             | DirectActivateRc EditRc
             | UpiQrRendered String
             | DismissQrPopup
+            | PayemntInfo
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -307,6 +309,8 @@ eval (UpiQrRendered id) state = do
                     pure $ NoAction
                 ]
 eval (DismissQrPopup) state = continue state {props { upiQrView = false}}
+
+eval (PayemntInfo) state = continue state {props { paymentInfoView = true }}
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
@@ -484,6 +488,10 @@ eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state 
 eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}}
 
 eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{activateOrDeactivateRcView=false}}
+
+eval (PaymentInfoPopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ paymentInfoView = false}}
+
+eval (PaymentInfoPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{ paymentInfoView = false}}
 
 eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ DeletingRc state
 

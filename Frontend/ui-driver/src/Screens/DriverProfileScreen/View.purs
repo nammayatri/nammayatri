@@ -168,6 +168,7 @@ view push state =
         , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
         , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
         , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
+        , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     ]
 
 
@@ -1356,9 +1357,9 @@ detailsListViewComponent state push config =
                     [ height $ V 12
                     , width $ V 12
                     , margin $ Margin 7 3 0 0
-                    , onClick push $ const item.action
+                    , onClick push $ const PayemntInfo
                     , visibility if item.keyInfo then VISIBLE else GONE
-                    , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/driver/ic_edit_pencil.png"
+                    , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
                     ]
                 ]
               , linearLayout
@@ -1682,6 +1683,14 @@ trackingCardRcEditView push state item =
          ]
       ]
     ]
+
+paymentInfoPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+paymentInfoPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< PaymentInfoPopUpModalAction) (paymentInfoPopUpConfig push state) ]
 
 activateAndDeactivateRcConfirmationPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 activateAndDeactivateRcConfirmationPopUpView push state =

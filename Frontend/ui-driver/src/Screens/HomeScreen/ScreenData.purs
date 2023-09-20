@@ -132,7 +132,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : true,
-        currentStage : HomeScreen,
+        currentStage : HomeScreen, -- RideCompleted,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,

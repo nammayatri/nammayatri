@@ -355,6 +355,32 @@ activateAndDeactivateRcPopUpConfig push state =
   in
     popUpConfig'
 
+paymentInfoPopUpConfig :: forall w. (Action -> Effect Unit) ->  ST.DriverProfileScreenState -> PopUpModal.Config
+paymentInfoPopUpConfig push state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { 
+         buttonLayoutMargin = Margin 16 24 16 20 ,
+         primaryText {
+          visibility = GONE },
+         secondaryText {
+            visibility = GONE },
+         option1 {
+           text = getString GOT_IT
+         , background = Color.black900
+         , color = Color.yellow900
+         },
+         option2 {
+           visibility = false
+         },
+         backgroundClickable = false,
+        listViewArray = ["You can use this QR Code to collect payment after the ride ends." , "The amount will be deposited into the bank account that you are using for UPI Autopay" ]
+        }
+  in
+    popUpConfig'
+
 callDriverPopUpConfig :: forall w. (Action -> Effect Unit) ->  ST.DriverProfileScreenState -> PopUpModal.Config
 callDriverPopUpConfig push state =
   let

@@ -112,7 +112,8 @@ initData = {
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false,
-    upiQrView : false
+    upiQrView : false,
+    paymentInfoView : false
    }
 }
 

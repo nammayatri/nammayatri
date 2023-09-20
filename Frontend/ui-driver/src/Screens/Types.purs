@@ -354,7 +354,8 @@ type DriverProfileScreenProps = {
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
   btnActive :: Boolean,
-  upiQrView :: Boolean
+  upiQrView :: Boolean,
+  paymentInfoView :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
