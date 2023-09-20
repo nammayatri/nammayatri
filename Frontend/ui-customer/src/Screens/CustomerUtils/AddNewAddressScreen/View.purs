@@ -104,7 +104,7 @@ view push state =
       , height MATCH_PARENT
       , background Color.transparent
       , accessibility DISABLE_DESCENDANT
-      , padding (PaddingBottom if showLabel then 80 else 44)
+      , padding (PaddingBottom if showLabel then (if EHC.os == "IOS" then 40 else 70) else (if EHC.os == "IOS" then 5 else 34))
       , gravity CENTER
       , orientation VERTICAL
       ][ textView

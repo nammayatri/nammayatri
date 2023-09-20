@@ -56,4 +56,7 @@ commonConfig =
             showVehicleVariant : true
           }
         , referralType : "QRScreen"
+        , mapConfig : 
+            { animationDuration : 400
+            }
         }
