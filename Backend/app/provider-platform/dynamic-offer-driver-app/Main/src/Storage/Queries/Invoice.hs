@@ -35,7 +35,8 @@ findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentMode limit offset = 
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (driverId.getId),
-          Se.Is BeamI.paymentMode $ Se.Eq paymentMode
+          Se.Is BeamI.paymentMode $ Se.Eq paymentMode,
+          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
         ]
     ]
     (Se.Desc BeamI.createdAt)

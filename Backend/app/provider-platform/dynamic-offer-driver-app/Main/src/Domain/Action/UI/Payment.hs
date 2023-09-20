@@ -208,6 +208,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
       Just invoice' -> do
         QDF.updateStatus PAYMENT_OVERDUE now invoice'.driverFeeId
         QDF.updateFeeType RECURRING_INVOICE now invoice'.driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
       Nothing -> pure ()
     let key = "driver-offer:FailedNotif-" <> orderId.getId
     sendNotificationIfNotSent key $ do
