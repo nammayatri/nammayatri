@@ -169,9 +169,15 @@ window.getMerchantConfig = function () {
   , "defaultLanguage" : "FR_FR"
   , "enableMockLocation" : false
   , "navigationAppConfig" : {
-    "query" : "https://waze.com/ul?ll=%f,%f"
-  , "packageName" : "com.waze"
+      android : {
+        "query" : "https://waze.com/ul?ll=%f,%f"
+      , "packageName" : "com.waze"
+      }
+    , ios : {
+        "query" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17"
+      , "walkQuery" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17" // Waze not supports walk mode
+      }
+    }
   , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
-}
   })
 }
