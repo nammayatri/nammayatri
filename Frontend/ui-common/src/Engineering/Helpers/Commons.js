@@ -274,7 +274,6 @@ export const setText = function (id) {
 }
 
 function setTextImpl(id, text, pos) {
-  console.log("Inside setText" + id + "Text is" + text);
   if (__OS === "ANDROID") {
       var cmd = "set_view=ctx->findViewById:i_" + id + ";";
       cmd += "get_view->setText:cs_" + text + ";";
