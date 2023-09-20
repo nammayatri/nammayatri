@@ -78,11 +78,11 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
               req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
               exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
               case exec of
-                Left _ -> do
+                Left err -> do
                   QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
                   QDF.updateStatus PAYMENT_OVERDUE now driverToNotify.driverFeeId
                   QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
-                  logError ("Notification failed for driverFeeId" <> driverToNotify.driverFeeId.getId)
+                  logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
                 Right res -> do
                   QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
             Nothing -> do

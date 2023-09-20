@@ -18,10 +18,14 @@ module API.ProviderPlatform.DynamicOfferDriver.Driver
   )
 where
 
+-- import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
+
+import qualified "dynamic-offer-driver-app" API.Dashboard.Driver as ADDriver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
+import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
--- import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -34,9 +38,6 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
-
--- import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
--- import qualified "dynamic-offer-driver-app" API.Dashboard.Driver as ADDriver
 
 type API =
   "driver"
@@ -71,9 +72,8 @@ type API =
            :<|> GetDriverHomeLocationAPI
            :<|> UpdateDriverHomeLocationAPI
            :<|> IncrementDriverGoToCountAPI
-           --  :<|> DriverPaymentHistoryAPI
-           --  :<|> DriverPaymentHistoryEntityDetailsAPI
-           --  --
+           :<|> DriverPaymentHistoryAPI
+           :<|> DriverPaymentHistoryEntityDetailsAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -200,13 +200,13 @@ type IncrementDriverGoToCountAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INCREMENT_DRIVER_GO_TO_COUNT
     :> Common.IncrementDriverGoToCountAPI
 
--- type DriverPaymentHistoryAPI =
---   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY
---     :> ADDriver.DriverPaymentHistoryAPI
+type DriverPaymentHistoryAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY
+    :> ADDriver.DriverPaymentHistoryAPI
 
--- type DriverPaymentHistoryEntityDetailsAPI =
---   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY_ENTITY_DETAILS
---     :> ADDriver.DriverPaymentHistoryEntityDetailsAPI
+type DriverPaymentHistoryEntityDetailsAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY_ENTITY_DETAILS
+    :> ADDriver.DriverPaymentHistoryEntityDetailsAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -241,9 +241,8 @@ handler merchantId =
     :<|> getDriverHomeLocation merchantId
     :<|> updateDriverHomeLocation merchantId
     :<|> incrementDriverGoToCount merchantId
-
--- :<|> getPaymentHistory merchantId
--- :<|> getPaymentHistoryEntityDetails merchantId
+    :<|> getPaymentHistory merchantId
+    :<|> getPaymentHistoryEntityDetails merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -465,12 +464,12 @@ incrementDriverGoToCount merchantShortId apiTokenInfo driverId = withFlowHandler
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.incrementDriverGoToCount) driverId
 
--- getPaymentHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
--- getPaymentHistory merchantShortId apiTokenInfo driverId paymentMode limit offset = withFlowHandlerAPI $ do
---   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
---   Client.callDriverOfferBPP checkedMerchantId (.drivers.getHistory) driverId paymentMode limit offset
+getPaymentHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
+getPaymentHistory merchantShortId apiTokenInfo driverId paymentMode limit offset = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getPaymentHistory) driverId paymentMode limit offset
 
--- getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
--- getPaymentHistoryEntityDetails merchantShortId apiTokenInfo driverId invoiceId = do
---   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
---   Client.callDriverOfferBPP checkedMerchantId (.drivers.getPaymentHistoryEntityDetails) driverId invoiceId
+getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetails merchantShortId apiTokenInfo driverId invoiceId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getPaymentHistoryEntityDetails) driverId invoiceId

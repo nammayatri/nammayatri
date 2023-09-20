@@ -66,11 +66,11 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
           QDF.updateAutopayPaymentStageById (Just EXECUTION_ATTEMPTING) driverFee.id
           exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
           case exec of
-            Left _ -> do
+            Left err -> do
               QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
               QDF.updateStatus PAYMENT_OVERDUE now driverFee.id
               QDF.updateFeeType RECURRING_INVOICE now driverFee.id
-              logError ("Execution failed for driverFeeId" <> invoice.driverFeeId.getId)
+              logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
             Right _ -> pure ()
         ReSchedule <$> getRescheduledTime transporterConfig
   logInfo ("duration of job " <> show timetaken)
