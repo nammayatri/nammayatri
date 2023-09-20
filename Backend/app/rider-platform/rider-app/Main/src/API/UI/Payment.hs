@@ -34,13 +34,14 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "rideId" DRide.Ride
+    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp
 
 handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
     :<|> getOrder authInfo
+    :<|> createOrder authInfo -- Fix properly
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId

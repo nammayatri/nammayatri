@@ -35,7 +35,7 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "invoiceId" "notificationId" Invoice Notification
+    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp
 
 handler :: FlowServer API
 handler authInfo =
