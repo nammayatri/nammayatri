@@ -907,7 +907,12 @@ export const showMapImpl = function (id) {
                 window.y = action;
                 cb(action (key) (lat) (lon))();
               });
-              window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+              const mapConfig = window?.appConfig?.mapConfig ? JSON.stringify(window.appConfig.mapConfig) : "{}";
+              try {
+                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback, mapConfig);
+              } catch (err) {
+                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+              }
               return true;
             };
           };

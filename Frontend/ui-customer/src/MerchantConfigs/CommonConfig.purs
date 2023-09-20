@@ -70,4 +70,14 @@ commonConfig =
                 , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV", "TAXI"]
                 }
             }
+        , mapConfig : 
+            { locateOnMapConfig : 
+                { dottedLineConfig : 
+                    { visible : true
+                    , range : 100
+                    , color : "#323643"
+                    }
+                }
+            , animationDuration : 400
+            }
         }

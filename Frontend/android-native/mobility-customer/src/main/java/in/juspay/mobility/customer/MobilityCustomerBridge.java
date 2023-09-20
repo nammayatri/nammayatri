@@ -272,6 +272,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
         try {
+            final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
+            final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
+            final double dottedLineRange = dottedLineConfig != null ? dottedLineConfig.optDouble("range", 100.0f) : 100.0f;
+            final boolean dottedLineVisible = dottedLineConfig != null && dottedLineConfig.optBoolean("visible", false);
             ExecutorManager.runOnMainThread(() -> {
                 removeMarker("ny_ic_customer_current_location");
                 LatLng position = new LatLng(0.0, 0.0);
@@ -289,6 +293,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
+
+                googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                    @Override
+                    public void onCameraMove() {
+                        dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
+                    }
+                });
+
                 googleMap.setOnCameraIdleListener(() -> {
                     double lat1 = (googleMap.getCameraPosition().target.latitude);
                     double lng = (googleMap.getCameraPosition().target.longitude);
@@ -518,6 +530,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             ExecutorManager.runOnMainThread(new Runnable() {
                 double x = 0.0;
                 double y = 0.0;
+                final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
+                final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
+                final double dottedLineRange = dottedLineConfig != null ? dottedLineConfig.optDouble("range", 100.0f) : 100.0f;
+                final boolean dottedLineVisible = dottedLineConfig != null && dottedLineConfig.optBoolean("visible", false);
                 @Override
                 public void run() {
                     try {
@@ -544,7 +560,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             double currentLon = goToCurrentLocation ? lastLongitudeValue : Double.parseDouble(lon);
 
                             LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(currentLat - y/2, currentLon - x/2)).include(new LatLng(currentLat + y/2, currentLon + x/2)).build();
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0));
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0), animationDuration, null);
                         }
 
                         removeMarker("ny_ic_customer_current_location");
@@ -557,6 +573,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         e.printStackTrace();
                         e.printStackTrace();
                     }
+
+                    googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                        @Override
+                        public void onCameraMove() {
+                            dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
+                        }
+                    });
 
                     googleMap.setOnCameraIdleListener(() -> {
                         double lat1 = (googleMap.getCameraPosition().target.latitude);
@@ -590,13 +613,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                                     if(SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude()))>1){
                                                         double latitude = nearestPickupPoint.getLatitude();
                                                         double longitude = nearestPickupPoint.getLongitude();
-                                                        LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(latitude - y/2, longitude - x/2)).include(new LatLng(latitude + y/2, longitude + x/2)).build();
-                                                        LatLng newLatLng = new LatLng(latitude, longitude); // Los Angeles coordinates
-                                                        CameraPosition cameraPosition = new CameraPosition.Builder()
-                                                                .target(newLatLng)
-                                                                .zoom(googleMap.getCameraPosition().zoom)
-                                                                .build();
-                                                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                                                        animateCamera(latitude, longitude, 20.0f, ZoomType.NO_ZOOM);
                                                     }
                                                 }
                                                 else {
@@ -710,18 +727,23 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
     }
 
-    // TODO :: Will use this function in future with hotspots
-    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon) {
-        if (googleMap != null) {
+    private void dottedLineFromCurrentPosition(Double lat,Double lon,Boolean dottedLineVisible,Double dottedLineRange,String dottedLineColor) {
+        if (googleMap != null && dottedLineVisible) {
             if (polyline != null) {
                 polyline.remove();
                 polyline = null;
             }
+            if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(lastLatitudeValue, lastLongitudeValue)) < dottedLineRange)
+                drawDottedLine(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, lastLatitudeValue, lastLongitudeValue, dottedLineColor);
+        }
+    }
+    
+    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon, String color) {
+        if (googleMap != null) {
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.add(new LatLng(srcLat, srcLon));
             polylineOptions.add(new LatLng(destLat, destLon));
-            int color = Color.parseColor("#323643");
-            polyline = setRouteCustomTheme(polylineOptions, color, "DOT", 8);
+            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8);
         }
     }
     //endregion

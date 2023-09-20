@@ -204,8 +204,9 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
-
     protected  Receivers receivers;
+    protected int animationDuration = 400;
+    protected JSONObject locateOnMapConfig = null;
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -343,15 +344,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                     userPositionMarker.setPosition(latLng);
                                 }
                                 try {
-                                    if (zoomType.equals(ZoomType.NO_ZOOM)) {
-                                        CameraPosition cameraPosition = new CameraPosition.Builder()
-                                                .target(latLng)
-                                                .zoom(googleMap.getCameraPosition().zoom)
-                                                .build();
-                                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-                                    } else {
-                                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
-                                    }
+                                    animateCamera(lat, lng, zoom, zoomType);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
@@ -394,7 +387,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                             userPositionMarker.setVisible(true);
                                         userPositionMarker.setPosition(latLng);
                                     }
-                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                    animateCamera(lat, lng, 17.0f, "ZOOM");
                                 }
                             }
                         })
@@ -510,9 +503,9 @@ public class MobilityCommonBridge extends HyperBridge {
                                                 .target(latLngObj)
                                                 .zoom(googleMap.getCameraPosition().zoom)
                                                 .build();
-                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), animationDuration, null);
                     } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom));
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom), animationDuration, null);
                     }
                     Log.i(MAPS, "Animated Camera");
                 }
@@ -828,7 +821,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
                         MarkerOptions markerObj = new MarkerOptions()
-                                .title(destMarker)
+                                .title("")
                                 .position(dest)
                                 .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon)));
 
@@ -850,7 +843,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             markers.put(sourceMarker, currMarker);
                         } else {
                             MarkerOptions markerObj = new MarkerOptions()
-                                    .title(sourceMarker)
+                                    .title("")
                                     .position(source)
                                     .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
@@ -886,7 +879,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             removeMarker(sourceMarker);
                             LatLng sourceLatLng = new LatLng(sourceCoordinates.getDouble("lat"), sourceCoordinates.getDouble("lng"));
                             MarkerOptions markerObj = new MarkerOptions()
-                                    .title(sourceMarker)
+                                    .title("")
                                     .position(sourceLatLng)
                                     .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag)));
                             Marker marker = googleMap.addMarker(markerObj);
@@ -896,7 +889,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             removeMarker(destinationMarker);
                             LatLng destinationLatLng = new LatLng(destCoordinates.getDouble("lat"), destCoordinates.getDouble("lng"));
                             MarkerOptions markerObj = new MarkerOptions()
-                                    .title(destinationMarker)
+                                    .title("")
                                     .position(destinationLatLng)
                                     .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag)));
                             Marker marker = googleMap.addMarker(markerObj);
@@ -996,70 +989,74 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude, final JSONArray json_coordinates) {
         ExecutorManager.runOnMainThread(() -> {
-            double source_lat, source_lng, destination_lat, destination_lng;
+            try {
+                double source_lat, source_lng, destination_lat, destination_lng;
 
-            Log.i(MAPS, "json_coordinates" + json_coordinates);
-            ArrayList<Double> all_latitudes = new ArrayList<>();
-            ArrayList<Double> all_longitudes = new ArrayList<>();
-            for (int i = 0; i < json_coordinates.length(); i++) {
-                JSONObject each_json_coordinates;
-                try {
-                    each_json_coordinates = (JSONObject) json_coordinates.get(i);
-                    double lon = each_json_coordinates.getDouble("lng");
-                    double lat = each_json_coordinates.getDouble("lat");
-                    all_latitudes.add(lat);
-                    all_longitudes.add(lon);
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                Log.i(MAPS, "json_coordinates" + json_coordinates);
+                ArrayList<Double> all_latitudes = new ArrayList<>();
+                ArrayList<Double> all_longitudes = new ArrayList<>();
+                for (int i = 0; i < json_coordinates.length(); i++) {
+                    JSONObject each_json_coordinates;
+                    try {
+                        each_json_coordinates = (JSONObject) json_coordinates.get(i);
+                        double lon = each_json_coordinates.getDouble("lng");
+                        double lat = each_json_coordinates.getDouble("lat");
+                        all_latitudes.add(lat);
+                        all_longitudes.add(lon);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-            Log.i(MAPS, "all_latitudes" + (all_latitudes));
-            Log.i(MAPS, "all_longitudes" + (all_longitudes));
-            double minimum_latitude = Collections.min(all_latitudes);
-            double maximum_latitude = Collections.max(all_latitudes);
-            double minimum_longitude = Collections.min(all_longitudes);
-            double maximum_longitude = Collections.max(all_longitudes);
-            Log.i(MAPS, String.valueOf(minimum_latitude));
-            Log.i(MAPS, String.valueOf(maximum_latitude));
+                Log.i(MAPS, "all_latitudes" + (all_latitudes));
+                Log.i(MAPS, "all_longitudes" + (all_longitudes));
+                double minimum_latitude = Collections.min(all_latitudes);
+                double maximum_latitude = Collections.max(all_latitudes);
+                double minimum_longitude = Collections.min(all_longitudes);
+                double maximum_longitude = Collections.max(all_longitudes);
+                Log.i(MAPS, String.valueOf(minimum_latitude));
+                Log.i(MAPS, String.valueOf(maximum_latitude));
 
-            if (source_latitude <= destination_latitude) {
-                source_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
-                destination_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
-            } else {
-                source_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
-                destination_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
-            }
-            if (source_longitude <= destination_longitude) {
-                source_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
-                destination_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
-            } else {
-                source_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
-                destination_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
-            }
-            Log.i(MAPS, "Coordinates Points" + json_coordinates);
-            if (googleMap != null) {
-                try {
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                    if (json_coordinates.length() < 5) {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                    }
-                } catch (IllegalArgumentException e) {
-                    Log.i(MAPS, "Exception in Move camera" + e);
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                    if (json_coordinates.length() < 5) {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                    }
-                } catch (Exception e) {
-                    Log.i(MAPS, "Exception in Move camera" + e);
+                if (source_latitude <= destination_latitude) {
+                    source_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
+                    destination_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
+                } else {
+                    source_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
+                    destination_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
                 }
+                if (source_longitude <= destination_longitude) {
+                    source_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
+                    destination_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
+                } else {
+                    source_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
+                    destination_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
+                }
+                Log.i(MAPS, "Coordinates Points" + json_coordinates);
+                if (googleMap != null) {
+                    try {
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                        if (json_coordinates.length() < 5) {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400), animationDuration, null);
+                        } else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150), animationDuration, null);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        Log.i(MAPS, "Exception in Move camera" + e);
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                        if (json_coordinates.length() < 5) {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400), animationDuration, null);
+                        } else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150), animationDuration, null);
+                        }
+                    } catch (Exception e) {
+                        Log.i(MAPS, "Exception in Move camera" + e);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
@@ -1087,11 +1084,14 @@ public class MobilityCommonBridge extends HyperBridge {
     // endregion
 
     @JavascriptInterface
-    public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback) {
+    public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
             ExecutorManager.runOnMainThread(() -> {
                 if (bridgeComponents.getActivity() != null) {
                     try {
+                        JSONObject googleMapConfig = new JSONObject(mapConfig);
+                        animationDuration = googleMapConfig.optInt("animationDuration", 400);
+                        locateOnMapConfig = googleMapConfig.optJSONObject("locateOnMapConfig");
                         SupportMapFragment mapFragment = SupportMapFragment.newInstance();
                         FragmentManager supportFragmentManager = ((FragmentActivity) bridgeComponents.getActivity()).getSupportFragmentManager();
                         FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
