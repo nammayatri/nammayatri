@@ -18,6 +18,7 @@ module Domain.Action.UI.Payment
     getStatus,
     getOrder,
     juspayWebhookHandler,
+    pdnNotificationStatus,
   )
 where
 
@@ -28,11 +29,13 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface as DPayments
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
@@ -223,6 +226,18 @@ sendNotificationIfNotSent key actions = do
   unless isNotificationSent $ do
     Hedis.setExp key True 86400 -- 24 hours
     actions
+
+pdnNotificationStatus :: (Id DP.Person, Id DM.Merchant) -> Id Notification -> Flow DPayments.NotificationStatusResp
+pdnNotificationStatus (_, merchantId) notificationId = do
+  pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
+  resp <- Payment.mandateNotificationStatus merchantId (mkNotificationRequest pdnNotification.shortId)
+  processNotification pdnNotification.shortId resp.status
+  return resp
+  where
+    mkNotificationRequest shortNotificationId =
+      DPayments.NotificationStatusReq
+        { notificationId = shortNotificationId
+        }
 
 processNotification :: Text -> Payment.NotificationStatus -> Flow ()
 processNotification notificationId notificationStatus = do
