@@ -458,6 +458,24 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
+export const storeCallbackScrollView = function (cb) {
+  console.log("storeCallbackScrollView 1");
+  return function (action) {
+    return function () {
+      try {
+        console.log("storeCallbackScrollView 12");
+        var callback = callbackMapper.map (function (isScrollUp) {
+          cb(action (isScrollUp))();
+        });
+        JBridge.storeCallbackScrollView(callback);
+      }
+      catch (error) {
+        console.log("Error occurred in storeCallbackScrollView ------", error);
+      }
+    }
+  }
+}
+
 export const drawPolygon = function(geoJson) {
   return function (locationName) {
     return function() {

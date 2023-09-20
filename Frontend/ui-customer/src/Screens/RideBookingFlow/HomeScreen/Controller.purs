@@ -81,7 +81,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, ScrollState(..),Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -626,6 +626,9 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | Scroll String
+            | OnScrollListner String
+            | WhereToClick 
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -678,6 +681,13 @@ eval OnResumeCallback state =
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
       _ -> continue state
+
+eval (OnScrollListner isScrollUp) state = do
+  _ <- pure $ spy "isScrollUp " (if isScrollUp == "true" then "up" else "down")
+  if isScrollUp == "true" then
+    continue state{props{homescreensheetState = true}}
+  else
+    continue state {props{homescreensheetState = false}}
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -761,6 +771,32 @@ eval (ChatViewActionController (ChatView.BackPressed)) state = do
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
   continue state
+
+-- eval (Scroll item) state = do
+--   _ <- pure $ spy "scroll check " item
+--   let sheetState = true -- this can be true or false to make visbility gone/visble of the layout + if animation will be FadeIn/Fadeout
+--   let currStateNumber  = 3.0 -- this is for state of bottom sheet which we recieve in 'item' variabe as 1.0(Transitioning),2.0(Released in between so colapsed),3.0(Expanded),4.0(collapsed) 
+--   -- so if I am scrolling i'll get 1.0 in item, as soon as I release it I'll get 2.0 and then 4.0
+--   continue state{props{homescreensheetState = sheetState, currentItem = curr}}
+
+eval (Scroll item) state = do
+  _ <- pure $ spy "scroll check " item
+
+  -- Define a flag to control the visibility of the headerLayout
+  let sheetState =
+        case item of
+          "3" -> false  -- Bottom Sheet is expanded, so headerLayout should fade out (visible)
+          "4" -> true -- Bottom Sheet is collapsed, so headerLayout should fade in (invisible)
+          "1" -> state.props.homescreensheetState  -- Default to visible if the state is not 3 or 4
+          "2" -> true  -- Default to visible if the state is not 3 or 4
+          _ -> false
+
+  -- Update the current state number based on the item received
+  let currStateNumber = item
+      updatedState = state { props { homescreensheetState = sheetState, currentItem = currStateNumber } }
+  _ <- pure $ spy "scroll check state" updatedState
+  -- Continue with the updated state
+  continue updatedState
 
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }
@@ -1071,6 +1107,10 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
 
+eval WhereToClick state = do
+  _ <- pure $ performHapticFeedback unit
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+  exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source=(getString CURRENT_LOCATION)}}
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state =
   case state.data.ratingViewState.issueFacedView of

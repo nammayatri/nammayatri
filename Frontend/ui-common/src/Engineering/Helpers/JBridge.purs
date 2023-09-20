@@ -209,6 +209,7 @@ foreign import generateSessionId :: Unit -> String
 
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
+foreign import scrollDirectionListner :: String -> Effect Unit
 foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
 foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit

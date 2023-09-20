@@ -165,6 +165,16 @@ window.getMerchantConfig = function () {
       "title" : "Namma Yatri",
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
   }
+  , "suggestedDestinations" : {
+      "frequencyWeight" : 0.7
+    , "itemsToShow" : 5
+    , "geohashPrecision" : 7
+  }
+  , "recentTrips" : {
+      "itemsToShow" : 5
+    , "geohashPrecision" : 7
+    , "rideSuggestionRadius" : 0.015
+  }
   , "showDeleteAccount" : true
   , "fontName" : "PlusJakartaSans"
   , "fontKannada" : "NotoSansKannada"

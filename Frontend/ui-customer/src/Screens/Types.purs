@@ -607,7 +607,6 @@ type HomeScreenStateData =
   , suggestedDestinations :: SuggestedDestinationsObj
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
-  , suggestedDestinations :: SuggestedDestinationsObj
   }
 
 type DisabilityT = 
@@ -704,7 +703,10 @@ type HomeScreenStateProps =
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
+  , homeSheet :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , homescreensheetState :: Boolean
+  , currentItem :: String
   }
 
 type RouteEndPoints = {

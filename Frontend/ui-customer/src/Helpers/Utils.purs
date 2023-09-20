@@ -109,6 +109,8 @@ foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit
 
 foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
+foreign import storeCallbackScrollView :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String

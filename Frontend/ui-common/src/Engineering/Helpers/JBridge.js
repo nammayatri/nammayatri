@@ -1909,3 +1909,13 @@ export const scrollViewFocus = function (parentID) {
     return false;
   }
 }
+
+export const scrollDirectionListner = function (parentID) {
+
+    if (JBridge.scrollDirectionListner){
+      console.log("calling scrollDirectionListner")
+      return JBridge.scrollDirectionListner(parentID);
+    } else{
+      console.log("error")
+    }
+}

@@ -9,6 +9,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -29,10 +30,13 @@ import android.os.Looper;
 import android.provider.ContactsContract;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.animation.LinearInterpolator;
 import android.webkit.JavascriptInterface;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.core.app.ActivityCompat;
@@ -99,6 +103,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     // CallBacks Strings
     private static String storeContactsCallBack = null;
     private static String storeCustomerCallBack = null;
+    private static String storeCallbackScrollView = null;
+    private static Boolean scrollIndex = false;
+    private static int oldScrollIndex = 0;
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -168,6 +175,94 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void storeCallBackCustomer(String callback) {
         storeCustomerCallBack = callback;
+    }
+    @JavascriptInterface
+    public void storeCallbackScrollView(String callback) {
+        storeCallbackScrollView = callback;
+    }
+
+    @JavascriptInterface
+    public void scrollDirectionListner (String viewId) {
+        System.out.println("scrollDirectionListner triggered" );
+        Activity activity = bridgeComponents.getActivity();
+        ScrollView scrollView = null;
+        if (activity != null) {
+            scrollView = activity.findViewById(Integer.parseInt(viewId));
+        }
+        ScrollView finalScrollView = scrollView;
+        Boolean isScrollUp = false;
+
+//        scrollView.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                switch(event.getAction()) {
+//                    case MotionEvent.ACTION_DOWN: {
+//                        String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "false");
+//                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                    }
+//
+//                    case MotionEvent.ACTION_UP: {
+//                        String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "true");
+//                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                    }
+//                }
+//
+//                return false;
+//            }
+//        });
+        scrollView.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+
+
+
+            @Override
+            public void onScrollChanged() {
+                System.out.println("scrollDirectionListner triggered onScrollChanged -> "+ finalScrollView.getScrollY() );
+                if(finalScrollView.getScrollY() < 90 && !scrollIndex) {
+                    scrollIndex = true;
+                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "true");
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+                if(finalScrollView.getScrollY() >90 && scrollIndex){
+                    scrollIndex = false;
+                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "false");
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+//                if (finalScrollView.getScrollY() > scrollIndex) {
+//                    scrollIndex = finalScrollView.getScrollY();
+//                    Log.v("Message", "Scrolls Down");
+//                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "false");
+//                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                } else {
+//                    Log.v("Message", "Scrolls Up");
+//                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "true");
+//                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                }
+            }
+        });
+//        scrollView.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+//            @Override
+//            public void onScrollChange(View view, int x, int y, int oldX, int oldY) {
+//                System.out.println("onscroll y -> "+ (y - oldY) + ((y - oldY) >0 ? " false" : " true"));
+//                System.out.println("onscroll y -> "+ y + " - "+ oldY);
+//
+//                int diff = y - oldY;
+//                if (diff >0  && scrollIndex) {
+//                    scrollIndex = false;
+//                    Log.v("Message", "Scrolls Down -> " + y);
+//                    Log.v("Message", "Scrolls Down old -> " + oldY);
+//                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "false");
+//                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                }
+//                if (diff < 0 && !scrollIndex) {
+//                    scrollIndex = true;
+//                    Log.v("Message", "Scrolls Up -> " + y);
+//                    Log.v("Message", "Scrolls Up old -> " + oldY);
+//                    String javascript = String.format("window.callUICallback('%s','%s');", storeCallbackScrollView, "true");
+//                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+//                }
+//
+//            }
+//        });
     }
 
     public void callingStoreCallCustomer(String notificationType) {
