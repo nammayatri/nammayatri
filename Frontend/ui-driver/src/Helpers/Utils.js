@@ -833,7 +833,7 @@ export const getAvailableUpiApps = function (resultCb) {
             try {
               let resultPayload = JSON.parse(_response)
               resultCb(resultPayload.payload.response.available_apps)();
-              // killPP(); -- TODO Need to find why it is not working
+              killPP();
             } catch (err) {
               console.log("%cUPIINTENT initiate Result error", "background:darkblue;color:white;font-size:13px;padding:2px", err, code);
             }
@@ -856,7 +856,10 @@ export const getAvailableUpiApps = function (resultCb) {
       };
       console.log("%cUPIINTENT initiate Result - Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", payload); 
       JOS.startApp("in.juspay.upiintent")(payload)(cb)();
-      window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
+      let process = function() {
+        window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
+      }
+      callUpiProcess(process,["in.juspay.upiintent"]);
     } catch (err) {
       console.error("UPIINTENT initiate Request not sent : ", err);
     }
@@ -911,11 +914,11 @@ export const getPopupObject = function (just, nothing, key){
   return nothing;
 }
 
-export const checkPPInitiateStatus = function (cb) {
-  if (JOS.isMAppPresent("in.juspay.hyperpay")() && window.isPPInitiated) {
+export const checkPPInitiateStatus = function (cb,services = microapps) {
+  if (window.isPPInitiated && checkPPLoadStatus(services)) {
     cb()();
   } else {
-    window.ppInitiateCallback = cb;
+    waitTillPPLoaded(cb,services);
   }
 }
 
@@ -955,3 +958,35 @@ function getStringFromCommon(key) {
       return englishStrings.getStringValue(key);
   }
 }
+
+function checkPPLoadStatus(services) {
+  let result = false;
+  services.forEach(key => {
+    if (top.mapps[key]) {
+      if (top.mapps[key].contentWindow["onMerchantEvent"]) {
+        result = true;
+      } else {
+        result = false;
+      }
+    }
+  })
+  return result;
+}
+
+function waitTillSeviceLoad (cb,serives,statusChecker) {
+  let checkPP = function () {
+    console.log("waitTillSeviceLoad");
+    statusChecker(cb,serives);
+  }
+  setTimeout(checkPP,10);
+}
+
+function callUpiProcess(process,service) {
+  if (checkPPLoadStatus(service)) {
+    process();
+  } else {
+    waitTillSeviceLoad(process,service,callUpiProcess);
+  }
+}
+
+let microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
