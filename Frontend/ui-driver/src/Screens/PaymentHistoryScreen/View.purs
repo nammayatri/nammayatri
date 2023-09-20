@@ -321,7 +321,7 @@ tabView state push =
 
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 transactionDetails push state visibility' = 
-  let config = getTransactionConfig state.data.transactionDetails.notificationStatus
+  let config = getTransactionConfig state.data.transactionDetails.paymentStatus
   in
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   scrollView
@@ -485,7 +485,7 @@ manualPaymentRidesList push state =
           , width $ V (screenwidth/3)
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ getString AMOUNT
+          [ text $ "₹" <> getString AMOUNT
           , width $ V (screenwidth/3)
           , color Color.black700
           , gravity RIGHT
@@ -503,17 +503,17 @@ manualPaymentRidesList push state =
             , gravity CENTER
             , margin $ MarginBottom 12
             ][ textView $
-                [ text item.key
+                [ text item.date
                 , color Color.black800
                 , width $ V (screenwidth/3)
                 ] <> FontStyle.tags TypoGraphy
               , textView $
-                [ text item.title
+                [ text item.planType
                 , width $ V (screenwidth/3)
                 , color Color.black800
                 ] <> FontStyle.tags TypoGraphy
               , textView $
-                [ text item.val
+                [ text ("₹" <> show item.dueAmount)
                 , color Color.black800
                 , width $ V (screenwidth/3)
                 , gravity RIGHT
@@ -542,68 +542,68 @@ rideDetails push state visibility' =
   , height MATCH_PARENT
   , visibility if visibility' then VISIBLE else GONE
   ][
-    DueDetailsList.view (push <<< DueDetailsListAction) dummyData
+    DueDetailsList.view (push <<< DueDetailsListAction) {dues : state.data.transactionDetails.manualSpecificDetails}
   ]
 
-dummyData :: DueDetailsListState
-dummyData = {
-  dues : [{
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : 
-                {
-                title : Just "Freedom Offer: 76% off APPLIED",
-                offerDescription : Nothing,
-                isGradient : true,
-                gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
-                hasImage : true,
-                imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
-                addedFromUI : true
-                },
-    noOfRides : "04",
-    totalEarningsOfDay : "210",dueAmount : "25",
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : true,
-    isSplitPayment : true
-  },
-  {
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : {
-                title : Just "First Ride FREE",
-                offerDescription : Nothing,
-                isGradient : false,
-                gradient : [],
-                hasImage : false,
-                imageURL : "",
-                addedFromUI : true
-                },
-    noOfRides : "04",
-    totalEarningsOfDay : "210",dueAmount : "25",
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : true,
-    isSplitPayment : true
-  },
-  {
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : {
-                title : Just "First Ride FREE",
-                offerDescription : Nothing,
-                isGradient : false,
-                gradient : [],
-                hasImage : false,
-                imageURL : "",
-                addedFromUI : true
-                },
-    noOfRides : "04",
-    totalEarningsOfDay : "210",
-    dueAmount : "25",
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : true,
-    isSplitPayment : true
-  }]
-}
+-- dummyData :: DueDetailsListState
+-- dummyData = {
+--   dues : [{
+--     date : "05 Oct 2023",
+--     planType : "DAILY UNLIMITED PLAN",
+--     offerApplied : 
+--                 {
+--                 title : Just "Freedom Offer: 76% off APPLIED",
+--                 offerDescription : Nothing,
+--                 isGradient : true,
+--                 gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
+--                 hasImage : true,
+--                 imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
+--                 addedFromUI : true
+--                 },
+--     noOfRides : "04",
+--     totalEarningsOfDay : "210",dueAmount : "25",
+--     fareBreakup : "-",
+--     expanded : true,
+--     isAutoPayFailed : true,
+--     isSplitPayment : true
+--   },
+--   {
+--     date : "05 Oct 2023",
+--     planType : "DAILY UNLIMITED PLAN",
+--     offerApplied : {
+--                 title : Just "First Ride FREE",
+--                 offerDescription : Nothing,
+--                 isGradient : false,
+--                 gradient : [],
+--                 hasImage : false,
+--                 imageURL : "",
+--                 addedFromUI : true
+--                 },
+--     noOfRides : "04",
+--     totalEarningsOfDay : "210",dueAmount : "25",
+--     fareBreakup : "-",
+--     expanded : true,
+--     isAutoPayFailed : true,
+--     isSplitPayment : true
+--   },
+--   {
+--     date : "05 Oct 2023",
+--     planType : "DAILY UNLIMITED PLAN",
+--     offerApplied : {
+--                 title : Just "First Ride FREE",
+--                 offerDescription : Nothing,
+--                 isGradient : false,
+--                 gradient : [],
+--                 hasImage : false,
+--                 imageURL : "",
+--                 addedFromUI : true
+--                 },
+--     noOfRides : "04",
+--     totalEarningsOfDay : "210",
+--     dueAmount : "25",
+--     fareBreakup : "-",
+--     expanded : true,
+--     isAutoPayFailed : true,
+--     isSplitPayment : true
+--   }]
+-- }

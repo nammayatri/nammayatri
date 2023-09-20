@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==))
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
 import Styles.Colors as Color
@@ -90,7 +90,7 @@ view push state =
                 , gravity CENTER_VERTICAL
               ][
                 textView $ [
-                  text $ "₹" <> item.dueAmount
+                  text $ "₹" <> show item.dueAmount
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
@@ -127,8 +127,8 @@ view push state =
                   ] <> FontStyle.body3 TypoGraphy
                   , promoCodeView push item.offerApplied
                 ]
-                , keyValueView (getString NUMBER_OF_RIDES) item.noOfRides
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> item.totalEarningsOfDay)
+                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides)
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay)
                 , keyValueView (getString FARE_BREAKUP) item.fareBreakup
                 , textView $ [
                     text $ getString SWITCHED_TO_MANUAL
