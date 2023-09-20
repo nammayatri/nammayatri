@@ -68,7 +68,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
           case exec of
             Left _ -> do
               QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
-              QDF.updateStatus PAYMENT_OVERDUE now driverFee.id
+              QDF.updateStatus PAYMENT_OVERDUE driverFee.id now
               QDF.updateFeeType RECURRING_INVOICE now driverFee.id
               logError ("Execution failed for driverFeeId" <> invoice.driverFeeId.getId)
             Right _ -> pure ()

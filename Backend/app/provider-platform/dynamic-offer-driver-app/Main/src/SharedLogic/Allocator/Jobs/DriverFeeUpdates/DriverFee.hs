@@ -83,7 +83,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
-        updateStatus PAYMENT_PENDING now driverFee.id
+        updateStatus PAYMENT_PENDING driverFee.id now
         updatePendingPayment True (cast person.id)
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
@@ -160,7 +160,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               due = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if due + totalFee >= plan.maxCreditLimit
             then do
-              updateStatus PAYMENT_OVERDUE now driverFee.id
+              updateStatus PAYMENT_OVERDUE driverFee.id now
               updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
               updateSubscription False (cast driverFee.driverId)
               QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
@@ -169,7 +169,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 let paymentMode = maybe MANUAL (.planType) mbDriverPlan
                 case paymentMode of
                   MANUAL -> do
-                    updateStatus PAYMENT_OVERDUE now driverFee.id
+                    updateStatus PAYMENT_OVERDUE driverFee.id now
                     updateFeeType RECURRING_INVOICE now driverFee.id
                   AUTOPAY -> do
                     invoice <- mkInvoiceAgainstDriverFee driverFee
@@ -237,7 +237,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
   if feeWithoutDiscount == 0
     then do
-      updateStatus CLEARED now driverFee.id
+      updateStatus CLEARED driverFee.id now
       return (0, 0, Nothing, Nothing)
     else do
       offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal) -- handle UDFs
@@ -283,7 +283,7 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
-          updateStatus PAYMENT_OVERDUE now firstFee.id
+          updateStatus PAYMENT_OVERDUE firstFee.id now
           updRestFees <- mapM (buildRestFees RECURRING_INVOICE) restFees
           createMany updRestFees
     AUTOPAY -> do
@@ -291,7 +291,7 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
-          updateStatus PAYMENT_PENDING now firstFee.id
+          updateStatus PAYMENT_PENDING firstFee.id now
           updRestFees <- mapM (buildRestFees RECURRING_EXECUTION_INVOICE) restFees
           createMany updRestFees
 
@@ -320,7 +320,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
       -- Esq.runTransaction $ do
-      _ <- updateStatus PAYMENT_OVERDUE now driverFee.id
+      _ <- updateStatus PAYMENT_OVERDUE driverFee.id now
       whenJust mbPerson $ \person -> do
         QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
       whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
