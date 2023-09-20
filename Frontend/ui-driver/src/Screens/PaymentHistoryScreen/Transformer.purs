@@ -74,7 +74,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
             manualSpecificDetails : map (\(API.DriverFeeInfoEntity driverFee) ->  {
                                         date : fromMaybe "" resp.createdAt,
                                         planType : fromMaybe "" driverFee.offerAndPlanDetails,
-                                        offerApplied : {
+                                        offerApplied : Just {
                                                         title : Just "Freedom Offer: 76% off APPLIED",
                                                         offerDescription : Nothing,
                                                         isGradient : true,
@@ -89,7 +89,8 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                                         fareBreakup : show driverFee.planAmount,
                                         expanded : false,
                                         isAutoPayFailed : driverFee.autoPayStage == Just API.EXECUTION_ATTEMPTING && resp.feeType /= AUTOPAY_PAYMENT,
-                                        isSplitPayment : driverFee.isSplit
+                                        isSplitPayment : driverFee.isSplit,
+                                        id : ""
                                       }
                                        ) resp.driverFeeInfo
         }

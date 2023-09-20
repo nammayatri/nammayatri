@@ -2273,7 +2273,22 @@ newtype PlanEntity = PlanEntity {
   offers :: Array OfferEntity,
   planFareBreakup :: Array PaymentBreakUp,
   totalPlanCreditLimit :: Number,
-  currentDues :: Number
+  currentDues :: Number,
+  dues :: Array DriverDuesEntity,
+  bankErrors :: Array BankError
+}
+
+newtype DriverDuesEntity = DriverDuesEntity {
+    autoPayStage :: Maybe String, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe String, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    totalEarnings :: Number,
+    totalRides :: Int,
+    planAmount :: Number,
+    isSplit :: Boolean,
+    offerAndPlanDetails :: Maybe String,
+    createdAt :: Maybe String,
+    feeType :: FeeType,
+    executionAt :: Maybe String
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2307,6 +2322,13 @@ instance standardEncodeUiPlansReq :: StandardEncode UiPlansReq where standardEnc
 instance showUiPlansReq :: Show UiPlansReq where show = genericShow
 instance decodeUiPlansReq :: Decode UiPlansReq where decode = defaultDecode
 instance encodeUiPlansReq :: Encode UiPlansReq where encode = defaultEncode
+
+derive instance genericDriverDuesEntity :: Generic DriverDuesEntity _
+derive instance newtypeDriverDuesEntity :: Newtype DriverDuesEntity _
+instance standardEncodeDriverDuesEntity :: StandardEncode DriverDuesEntity where standardEncode (DriverDuesEntity body) = standardEncode body
+instance showDriverDuesEntity :: Show DriverDuesEntity where show = genericShow
+instance decodeDriverDuesEntity :: Decode DriverDuesEntity  where decode = defaultDecode
+instance encodeDriverDuesEntity :: Encode DriverDuesEntity where encode = defaultEncode
 
 
 derive instance genericUiPlansResp :: Generic UiPlansResp _
@@ -2488,8 +2510,6 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean
-  -- ,
-  -- bankErrors :: Array BankError
 }
 
 newtype MandateData = MandateData {
@@ -2680,7 +2700,7 @@ instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
-data HistoryEntityV2Req = HistoryEntityV2Req String String
+data HistoryEntityV2Req = HistoryEntityV2Req String String String
 
 newtype HistoryEntityV2Resp = HistoryEntityV2Resp {
     autoPayInvoices :: Array AutoPayInvoiceHistory,
@@ -2705,7 +2725,7 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
-    makeRequest reqBody@(HistoryEntityV2Req limit offset ) headers = defaultMakeRequest GET (EP.paymentHistoryListV2 limit offset) headers reqBody Nothing
+    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType) headers = defaultMakeRequest GET (EP.paymentHistoryListV2 limit offset historyType) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = standardEncode req
 
@@ -2806,3 +2826,30 @@ instance eqInvoiceStatus :: Eq InvoiceStatus where eq = genericEq
 instance standardEncodeInvoiceStatus :: StandardEncode InvoiceStatus
   where
     standardEncode _ = standardEncode {}
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+newtype ClearDuesReq = ClearDuesReq String
+
+newtype ClearDuesResp = ClearDuesResp {
+  orderResp :: CreateOrderRes,
+  orderId :: String
+}
+
+instance makeClearDuesReq :: RestEndpoint ClearDuesReq ClearDuesResp where
+    makeRequest reqBody@(ClearDuesReq id) headers = defaultMakeRequest GET (EP.cleardues id) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericClearDuesReq :: Generic ClearDuesReq _
+instance showClearDuesReq :: Show ClearDuesReq where show = genericShow
+instance standardEncodeClearDuesReq :: StandardEncode ClearDuesReq where standardEncode _ = standardEncode {}
+instance decodeClearDuesReq :: Decode ClearDuesReq where decode = defaultDecode
+instance encodeClearDuesReq :: Encode ClearDuesReq where encode = defaultEncode
+
+derive instance genericClearDuesResp :: Generic ClearDuesResp _
+derive instance newtypeClearDuesResp :: Newtype ClearDuesResp _
+instance standardEncodeClearDuesResp :: StandardEncode ClearDuesResp where standardEncode (ClearDuesResp req) = standardEncode req
+instance showClearDuesResp :: Show ClearDuesResp where show = genericShow
+instance decodeClearDuesResp :: Decode ClearDuesResp where decode = defaultDecode
+instance encodeClearDuesResp :: Encode ClearDuesResp where encode = defaultEncode

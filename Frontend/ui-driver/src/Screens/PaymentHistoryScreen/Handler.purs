@@ -42,3 +42,6 @@ paymentHistory = do
     ShowSummary updatedState id -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EntityDetailsAPI updatedState id)
+    SwitchTab updatedState -> do
+      modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SWITCH_TAB)

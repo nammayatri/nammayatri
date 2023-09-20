@@ -22,13 +22,14 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (PaymentStatus(..))
+import Components.DueDetailsList (DueDetailsListState)
 import Components.OptionsMenu as OptionsMenuConfig
 import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Data.Function.Uncurried (runFn1)
 import Data.Int as DI
-import Data.Maybe (isNothing)
+import Data.Maybe (Maybe(..), isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
 import Engineering.Helpers.Commons (screenWidth)
@@ -37,7 +38,7 @@ import Font.Style (Style(..))
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
+import Prelude (map, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
 import Screens.Types as ST
@@ -408,3 +409,21 @@ getHeaderConfig subView isAutoPayDue =
     _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
+
+
+dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
+dueDetailsListState state = {
+  dues : map (\ item -> {
+    date : item.tripDate,
+    planType : item.plan,
+    offerApplied : Nothing,
+    noOfRides : item.noOfRides,
+    totalEarningsOfDay : item.earnings,
+    dueAmount : item.amount,
+    fareBreakup : item.feeBreakup,
+    expanded : item.randomId == state.data.myPlanData.selectedDue,
+    isAutoPayFailed : false,
+    isSplitPayment : false,
+    id : item.randomId
+  }) state.data.myPlanData.dueItems
+}

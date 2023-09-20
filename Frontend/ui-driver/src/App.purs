@@ -352,6 +352,7 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | REFRESH_SUSCRIPTION
                                   | RETRY_PAYMENT_AC SubscriptionScreenState String
                                   | REFRESH_HELP_CENTRE SubscriptionScreenState
+                                  | CLEAR_DUES_ACT
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory
@@ -361,5 +362,6 @@ data NAVIGATION_ACTIONS = HomeScreenNav
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
+                                    | SWITCH_TAB
 
 data APP_UPDATE_POPUP = Later | UpdateNow

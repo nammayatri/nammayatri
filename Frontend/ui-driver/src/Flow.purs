@@ -2071,14 +2071,14 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
       _ <- pure $ JB.metaLogEvent "ny_driver_subscription_success"
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
-      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup, paymentStatus = Just paymentStatus }})
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup}})
     Failed -> do
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "failure_code" (show apiPaymentStatus)
       liftFlowBT $ metaLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
       liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
-      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
-    Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlanItem = Nothing}}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup}})
+    Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {joinPlanProps {selectedPlanItem = Nothing}}})
     Scheduled -> pure unit
 
 paymentHistoryFlow :: FlowBT String Unit
@@ -2089,14 +2089,13 @@ paymentHistoryFlow = do
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       case paymentEntityDetails of
-        Right (API.HistoryEntryDetailsEntityV2Resp resp) -> do
-            _ <- pure $ spy "resp" resp
-            
+        Right (API.HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
               data { transactionDetails = (buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp))}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
+    SWITCH_TAB -> paymentHistoryFlow
   pure unit 
 
 ysPaymentFlow :: FlowBT String Unit
@@ -2210,7 +2209,8 @@ subScriptionFlow = do
           nyPaymentFlow selectedPlan true
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
-      modifyScreenState $ PaymentHistoryScreenStateType(\paymentHistory -> paymentHistory{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}, data{planData = state.data.myPlanData.planEntity}})
+      let (GlobalState defGlobalState) = defaultGlobalState
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
@@ -2263,7 +2263,7 @@ subScriptionFlow = do
         Right (OrderStatusRes statusResp) -> do
             let status = if statusResp.status == PS.CHARGED then Success else if any (_ == statusResp.status) [PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Failed else Pending
                 popupState = if status == Success then Just SuccessPopup else if status == Failed then Just FailedPopup else Nothing
-            modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{paymentStatus = Just status, popUpState = popupState}})
+            modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{ popUpState = popupState}})
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     REFRESH_SUSCRIPTION -> do
@@ -2287,6 +2287,36 @@ subScriptionFlow = do
       subScriptionFlow
     GO_TO_OPEN_GOOGLE_MAPS state -> do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
+      subScriptionFlow
+    CLEAR_DUES_ACT -> do
+      clearduesResp' <- lift $ lift $ Remote.cleardues ""
+      case clearduesResp' of
+        Right (API.ClearDuesResp clearduesResp) -> do
+          let (CreateOrderRes orderResp) = clearduesResp.orderResp
+              (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+              (PayPayload innerpayload) = sdk_payload.payload
+              finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+              sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+          setValueToLocalStore DISABLE_WIDGET "true"
+          _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
+          _ <- pure $ metaLogEvent "ny_driver_payment_page_opened"
+          liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
+          lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+          _ <- paymentPageUI sdkPayload
+          pure $ toggleBtnLoader "" false
+          liftFlowBT $ runEffectFn1 consumeBP unit
+          setValueToLocalStore DISABLE_WIDGET "false"
+          orderStatus <- lift $ lift $ Remote.paymentOrderStatus $ fromMaybe "" innerpayload.orderId
+          case orderStatus of
+            Right (OrderStatusRes statusResp) -> do
+              let popUpState = if statusResp.status == PS.CHARGED then Just SuccessPopup
+                                else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
+                                else Nothing
+              case popUpState of
+                Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState'}})
+                Nothing -> pure unit
+            Left err -> pure unit 
+        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     _ -> subScriptionFlow
 

@@ -905,10 +905,10 @@ duesView push state =
                                 else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
                                 else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
           ]
-        , tripList state.data.myPlanData.dueItems (state.props.myPlanProps.dueType == MANUAL_PAYMENT) state.props.myPlanProps.isDuesExpanded
+        , tripList push state.data.myPlanData.dueItems (state.props.myPlanProps.dueType == MANUAL_PAYMENT) state.props.myPlanProps.isDuesExpanded true
       ] 
    ]
-   , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING, NO_AUTOPAY] then  PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView
+   , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING, NO_AUTOPAY] then  PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView -- 
    , if true then arrowButtonView push (getString SETUP_AUTOPAY) false NoAction state.props.isSelectedLangTamil else dummyView
   ]
 
@@ -1703,7 +1703,7 @@ dueOverViewCard push state isManual =
           , margin $ Margin 16 4 0 0
           , visibility if isManual then VISIBLE else GONE
         ] <> FontStyle.tags TypoGraphy
-    , tripList state.data.myPlanData.dueItems isManual true
+    , tripList push state.data.myPlanData.dueItems isManual true false
     , linearLayout
         [ height $ V 2
         , width MATCH_PARENT
@@ -1722,8 +1722,8 @@ dueOverViewCard push state isManual =
         , padding $ PaddingVertical 16 16
         ] <> FontStyle.body1 TypoGraphy
   ]
-tripList :: forall w. Array DueItem -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-tripList trips isManual isExpanded = 
+tripList :: forall w. (Action -> Effect Unit) -> Array DueItem -> Boolean -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+tripList push trips isManual isExpanded viewDatailsText = 
   linearLayout [
       height WRAP_CONTENT
       , width MATCH_PARENT
@@ -1768,9 +1768,17 @@ tripList trips isManual isExpanded =
               , color Color.black700
               ] <> FontStyle.body15 TypoGraphy
             ]
-            ) trips)
-      
-
+            ) trips)  
+      , textView $
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , textFromHtml $ "<u>"<>(getString VIEW_DETAILS)<>"</u>"
+        , color Color.black650
+        , onClick push $ const ViewDueDetails
+        , padding $ PaddingVertical 16 16
+        , visibility if viewDatailsText then VISIBLE else GONE
+        ] <> FontStyle.body1 TypoGraphy
   ]
   
 dueDetails :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -1780,7 +1788,7 @@ dueDetails push state visibility'=
   , height MATCH_PARENT
   , visibility if visibility' then VISIBLE else GONE
   ][
-    DueDetailsList.view (push <<< DueDetailsListAction) dummyData
+    DueDetailsList.view (push <<< DueDetailsListAction) (dueDetailsListState state)
   ]
 
 textView' :: forall w. (Action -> Effect Unit) -> Maybe Action -> String -> String -> FontStyle.Style -> Maybe Padding -> Maybe Margin -> PrestoDOM (Effect Unit) w
@@ -1833,66 +1841,3 @@ commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPaddin
       , margin imageViewMargin
       , padding imageViewPadding
       ]
-
-dummyData :: DueDetailsListState
-dummyData = {
-  dues : [{
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : 
-                {
-                title : Just "Freedom Offer: 76% off APPLIED",
-                offerDescription : Nothing,
-                isGradient : true,
-                gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
-                hasImage : true,
-                imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
-                addedFromUI : true
-                },
-    noOfRides : 4,
-    totalEarningsOfDay : 210.0,dueAmount : 25.0,
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : true,
-    isSplitPayment : false
-  },
-  {
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : {
-                title : Just "First Ride FREE",
-                offerDescription : Nothing,
-                isGradient : false,
-                gradient : [],
-                hasImage : false,
-                imageURL : "",
-                addedFromUI : true
-                },
-    noOfRides : 4,
-    totalEarningsOfDay : 210.0,dueAmount : 25.0,
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : false,
-    isSplitPayment : true
-  },
-  {
-    date : "05 Oct 2023",
-    planType : "DAILY UNLIMITED PLAN",
-    offerApplied : {
-                title : Just "First Ride FREE",
-                offerDescription : Nothing,
-                isGradient : false,
-                gradient : [],
-                hasImage : false,
-                imageURL : "",
-                addedFromUI : true
-                },
-    noOfRides : 4,
-    totalEarningsOfDay : 210.0,
-    dueAmount : 25.0,
-    fareBreakup : "-",
-    expanded : true,
-    isAutoPayFailed : true,
-    isSplitPayment : true
-  }]
-}

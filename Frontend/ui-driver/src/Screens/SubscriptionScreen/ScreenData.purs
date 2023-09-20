@@ -42,7 +42,8 @@ initData = {
             switchAndSave : false,
             maxDueAmount : 0.0,
             currentDueAmount : 0.0,
-            mandateStatus : ""
+            mandateStatus : "",
+            selectedDue : ""
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
@@ -59,7 +60,6 @@ initData = {
         isSelectedLangTamil : false,
         subView : NoSubView,
         popUpState : Mb.Nothing,
-        paymentStatus : Mb.Nothing,
         resumeBtnVisibility : false,
         showError : false,
         showShimmer : true ,
@@ -73,7 +73,7 @@ initData = {
             isDuesExpanded : false,
             isDueViewExpanded : false,
             overDue : false,
-            multiTypeDues : true,
+            multiTypeDues : false,
             dueType : MANUAL_PAYMENT
         },
         managePlanProps : {
@@ -121,7 +121,8 @@ dummyDues = [
     amount: 25.0,
     earnings: 200.0,
     noOfRides: 5,
-    scheduledAt: "2023-09-11T12:34:56Z",
+    randomId : "",
+    scheduledAt : "2023-09-11T12:34:56Z",
     paymentStatus: "Paid",
     feeBreakup: "Breakup",
     plan: "Plan",
@@ -132,6 +133,7 @@ dummyDues = [
     amount: 20.0,
     earnings: 300.0,
     noOfRides: 16,
+    randomId : "",
     scheduledAt: "2023-09-11T12:34:57Z",
     paymentStatus: "Paid",
     feeBreakup: "Breakup",
@@ -143,6 +145,7 @@ dummyDues = [
     amount: 35.0,
     earnings: 500.0,
     noOfRides: 9,
+    randomId : "",
     scheduledAt: "2023-09-11T12:34:58Z",
     paymentStatus: "Paid",
     feeBreakup: "Breakup",

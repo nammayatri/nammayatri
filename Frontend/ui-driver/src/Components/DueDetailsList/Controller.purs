@@ -17,7 +17,7 @@ module Components.DueDetailsList.Controller where
 
 import Screens.Types(DueCard)
 
-data Action = SelectDue Int
+data Action = SelectDue DueCard
 
 type DueDetailsListState = {
   dues :: Array DueCard

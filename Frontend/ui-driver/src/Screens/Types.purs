@@ -1554,7 +1554,6 @@ type SubscriptionScreenProps = {
   managePlanProps :: ManagePlanProps,
   joinPlanProps :: JoinPlanProps,
   popUpState :: Maybe SubscribePopupType,
-  paymentStatus :: Maybe Common.PaymentStatus,
   resumeBtnVisibility :: Boolean,
   showError :: Boolean,
   showShimmer :: Boolean,
@@ -1600,7 +1599,8 @@ type MyPlanData = {
   paymentMethodWarning :: Boolean,
   maxDueAmount :: Number,
   currentDueAmount :: Number,
-  mandateStatus :: String
+  mandateStatus :: String,
+  selectedDue :: String
 }
 
 type MyPlanProps = {
@@ -1612,6 +1612,7 @@ type MyPlanProps = {
 }
 
 type DueItem = {
+  randomId :: String,
   tripDate :: String,
   amount :: Number,
   earnings :: Number,
@@ -1726,14 +1727,15 @@ type TransactionListItem = {
 type DueCard = {
   date :: String,
   planType :: String,
-  offerApplied :: PromoConfig,
+  offerApplied :: Maybe PromoConfig,
   noOfRides :: Int,
   totalEarningsOfDay :: Number,
   dueAmount :: Number,
   fareBreakup :: String,
   expanded :: Boolean,
   isAutoPayFailed :: Boolean,
-  isSplitPayment :: Boolean
+  isSplitPayment :: Boolean,
+  id :: String
 }
 
 type PaymentHistoryScreenProps = {

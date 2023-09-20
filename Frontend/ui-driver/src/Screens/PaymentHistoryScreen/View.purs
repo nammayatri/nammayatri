@@ -35,6 +35,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, screenWidth)
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
@@ -64,11 +65,15 @@ screen initialState =
   , globalEvents: [(\push -> do
       void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         if initialState.props.subView == PaymentHistory then do
-          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" "0"
+          lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+          lift $ lift $ EHU.toggleLoader true
+          let tab = if initialState.props.autoPayHistory then "AUTOPAY_INVOICE" else "MANUAL_INVOICE"
+          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" "0" tab
           case resp of
             Right (SA.HistoryEntityV2Resp resp) -> do
               lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory (SA.HistoryEntityV2Resp resp)
             Left err -> pure unit
+          lift $ lift $ EHU.toggleLoader false
           pure unit
         else pure unit
       pure (pure unit)
@@ -123,7 +128,7 @@ paymentHistoryView push state visibility' =
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
   , visibility if visibility' then VISIBLE else GONE
-  ][ if visibility' then tabView state push else emptyView
+  ][ tabView state push
    , paymentList push state
   ]
 
@@ -329,6 +334,7 @@ transactionDetails push state visibility' =
     , height MATCH_PARENT
     , scrollBarY false
     , visibility if visibility' then VISIBLE else GONE
+    , background Color.white900
     ][  linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -544,66 +550,3 @@ rideDetails push state visibility' =
   ][
     DueDetailsList.view (push <<< DueDetailsListAction) {dues : state.data.transactionDetails.manualSpecificDetails}
   ]
-
--- dummyData :: DueDetailsListState
--- dummyData = {
---   dues : [{
---     date : "05 Oct 2023",
---     planType : "DAILY UNLIMITED PLAN",
---     offerApplied : 
---                 {
---                 title : Just "Freedom Offer: 76% off APPLIED",
---                 offerDescription : Nothing,
---                 isGradient : true,
---                 gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
---                 hasImage : true,
---                 imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
---                 addedFromUI : true
---                 },
---     noOfRides : "04",
---     totalEarningsOfDay : "210",dueAmount : "25",
---     fareBreakup : "-",
---     expanded : true,
---     isAutoPayFailed : true,
---     isSplitPayment : true
---   },
---   {
---     date : "05 Oct 2023",
---     planType : "DAILY UNLIMITED PLAN",
---     offerApplied : {
---                 title : Just "First Ride FREE",
---                 offerDescription : Nothing,
---                 isGradient : false,
---                 gradient : [],
---                 hasImage : false,
---                 imageURL : "",
---                 addedFromUI : true
---                 },
---     noOfRides : "04",
---     totalEarningsOfDay : "210",dueAmount : "25",
---     fareBreakup : "-",
---     expanded : true,
---     isAutoPayFailed : true,
---     isSplitPayment : true
---   },
---   {
---     date : "05 Oct 2023",
---     planType : "DAILY UNLIMITED PLAN",
---     offerApplied : {
---                 title : Just "First Ride FREE",
---                 offerDescription : Nothing,
---                 isGradient : false,
---                 gradient : [],
---                 hasImage : false,
---                 imageURL : "",
---                 addedFromUI : true
---                 },
---     noOfRides : "04",
---     totalEarningsOfDay : "210",
---     dueAmount : "25",
---     fareBreakup : "-",
---     expanded : true,
---     isAutoPayFailed : true,
---     isSplitPayment : true
---   }]
--- }

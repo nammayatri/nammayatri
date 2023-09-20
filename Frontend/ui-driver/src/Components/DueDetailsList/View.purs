@@ -19,6 +19,7 @@ import Common.Types.App
 import Components.DueDetailsList.Controller
 
 import Data.Array (mapWithIndex)
+import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Debug (spy)
 import Effect (Effect)
@@ -52,7 +53,7 @@ view push state =
           , padding $ Padding 16 20 16 8
           , gravity CENTER
           , stroke if item.expanded == true then ("1,"<>Color.blue800) else ("1,"<>Color.grey900)
-          , onClick push (const (SelectDue index))
+          , onClick push $ const $ SelectDue item
           , margin $ MarginBottom 16
           , cornerRadius 10.0
           , background if item.expanded == true then Color.blue600 else Color.white900
@@ -125,7 +126,9 @@ view push state =
                     , margin $ MarginRight 8
                     , color Color.black700
                   ] <> FontStyle.body3 TypoGraphy
-                  , promoCodeView push item.offerApplied
+                  , case item.offerApplied of
+                      Just offerConfig -> promoCodeView push offerConfig
+                      Nothing -> linearLayout[visibility GONE][]
                 ]
                 , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides)
                 , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay)

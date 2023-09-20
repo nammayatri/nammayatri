@@ -28,7 +28,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, map, not, pure, show, unit, ($), (<>), (==), (/=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem)
 import Services.API (AutoPayInvoiceHistory(..), FeeType(..), ManualInvoiceHistory(..))
@@ -59,6 +59,7 @@ data Action = BackPressed
 data ScreenOutput =  GoBack
                     | SetupAutoPay PaymentHistoryScreenState
                     | ShowSummary PaymentHistoryScreenState String
+                    | SwitchTab PaymentHistoryScreenState
 
 
 eval :: Action -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
@@ -71,7 +72,9 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick )) state = if state.props.
                          else if state.props.subView == RideDetails then continue state { props{ subView = TransactionDetails}}
                          else exit $ GoBack
 
-eval (ChangeTab switchToAutoPay) state = continue state { props{ autoPayHistory = switchToAutoPay}}
+-- eval ItemClick state = exit $ ViewPaymentDetails state
+
+eval (ChangeTab switchToAutoPay) state = exit $ SwitchTab state { props{ autoPayHistory = switchToAutoPay}}
 
 eval (ListItemClick item) state = if item.invoiceId /= "" then exit $ ShowSummary state item.invoiceId
   else continue state
@@ -88,7 +91,7 @@ eval (Copy val) state = continueWithCmd state [ do
     pure NoAction
   ]
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exit $ SetupAutoPay state
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state  $ SetupAutoPay state
 
 eval _ state = continue state
 
