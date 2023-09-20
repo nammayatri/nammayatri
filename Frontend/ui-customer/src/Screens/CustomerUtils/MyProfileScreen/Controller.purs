@@ -91,7 +91,7 @@ eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScre
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
 eval (BackPressed backpressState) state = do
-  if state.data.editedDisabilityOptions.isSpecialAssistList then continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
+  if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
     else if state.props.updateProfile && state.props.fromHomeScreen then do
       _ <- pure $ hideKeyboardOnNavigation true
       exit $ GoToHomeScreen
@@ -110,10 +110,9 @@ eval (EditProfile fieldType) state = do
   let disability = case state.data.disabilityType of 
         Just disabilityT -> Just (Constants.getDisabilityType disabilityT.tag state.data.disabilityOptions.disabilityOptionList)
         _ -> Nothing
-  continue state {  props { isBtnEnabled = (isNothing state.data.hasDisability) , updateProfile = true , isEmailValid = true}
+  continue state {  props { isBtnEnabled = (isNothing state.data.hasDisability) , updateProfile = true , isEmailValid = true, isSpecialAssistList = false}
                   , data {  editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender
-                          , editedDisabilityOptions{ activeIndex = if (isJust state.data.disabilityType) then 1 else 0 
-                          , isSpecialAssistList = false, specialAssistActiveIndex = (getActiveIndex disability state.data.disabilityOptions.disabilityOptionList)}}}
+                          , editedDisabilityOptions = state.data.disabilityOptions}}
 
 eval ShowOptions state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -136,7 +135,7 @@ eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   let isButtonActive = (state.data.nameErrorMessage == Nothing && checkValid state.data.emailId value && (state.data.emailId /= Just value || state.data.name /= state.data.editedName))
   if value == fromMaybe "" state.data.emailId then continue state 
     else if (state.data.emailId == Nothing) then  continue state {  data { editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}
-                    , props { isEmailValid = checkValid state.data.emailId value, isBtnEnabled = isButtonActive || isNothing state.data.disabilityOptions.selectedDisability}}
+                    , props { isEmailValid = checkValid state.data.emailId value, isBtnEnabled = isButtonActive}}
     else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
       continue state{props  { isEmailValid = false, isBtnEnabled = isNothing state.data.disabilityOptions.selectedDisability, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
     else continue state { data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value }
@@ -149,30 +148,39 @@ eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField $ if state.props.fromHomeScreen then "banner_gender_selected" else "profile_gender_selected"
       pure unit
     else pure unit
-  updateAndExit state $ UpdateProfile state
+  if state.data.editedDisabilityOptions.activeIndex == 1 && state.props.changeAccessibility then 
+    continue state{props{isSpecialAssistList = true}, data{editedDisabilityOptions{editedDisabilityReason = fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason}}}
+    else do 
+      let newState = state{data{editedDisabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
+      updateAndExit state $ UpdateProfile state
 
 eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
-  let otherDisability = case state.data.disabilityOptions.otherDisabilityReason of 
-                          Just reason -> reason
-                          Nothing -> ""
-  _ <- pure $ setText (getNewIDWithTag "SpecialAssistanceEditText") otherDisability
-  let newState = state{data{editedDisabilityOptions{activeIndex = idx, isSpecialAssistList = idx == 1, selectedDisability = if idx == 0 then Nothing else state.data.editedDisabilityOptions.selectedDisability ,specialAssistActiveIndex = if idx == 0 then 0 else state.data.disabilityOptions.specialAssistActiveIndex }}}
-  continue state{ data = newState.data{disabilityOptions = if idx == 0 then newState.data.editedDisabilityOptions else state.data.disabilityOptions}, props{isBtnEnabled = isInputValid state}}
+  let newState = state{data{editedDisabilityOptions = 
+                      if idx == 0 then 
+                        state.data.editedDisabilityOptions{ activeIndex = idx, specialAssistActiveIndex = 0, otherDisabilityReason = Nothing, selectedDisability = Nothing, editedDisabilityReason = "" }
+                        else state.data.editedDisabilityOptions{ activeIndex = idx}
+                          }}
+      isBtnActive = isInputValid newState 
+  continue newState{props{isBtnEnabled = isBtnActive, changeAccessibility = true}}
 
-eval (SpecialAssistanceListAC action) state = case action of
-  SelectListModal.OnGoBack ->  continue state {data{editedDisabilityOptions = state.data.disabilityOptions}}
-  SelectListModal.UpdateIndex idx -> do 
-    let editedDisability = state.data.editedDisabilityOptions{specialAssistActiveIndex = idx , otherDisabilityReason = if state.data.editedDisabilityOptions.editedDisabilityReason == "" then Nothing else Just state.data.editedDisabilityOptions.editedDisabilityReason}
-    continue state { data{editedDisabilityOptions = editedDisability}}
-  SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{ editedDisabilityReason = input}}}
-  SelectListModal.Button2 (PrimaryButton.OnClick) -> do 
-    let editedDisability = state.data.editedDisabilityOptions
-                                { otherDisabilityReason = Just state.data.editedDisabilityOptions.editedDisabilityReason
-                                , isSpecialAssistList = false
-                                , selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex) 
-                                }
-    continue state{data{disabilityOptions = editedDisability, editedDisabilityOptions = editedDisability}}
-  _ -> continue state
+eval (SpecialAssistanceListAC action) state = do 
+  let editedDisabilityOptions = state.data.editedDisabilityOptions
+  case action of
+    SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+    SelectListModal.UpdateIndex idx -> continue state { data{editedDisabilityOptions{specialAssistActiveIndex = idx , editedDisabilityReason = fromMaybe "" editedDisabilityOptions.otherDisabilityReason } }}
+    SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{otherDisabilityReason = Just input}}}
+    SelectListModal.Button2 (PrimaryButton.OnClick) -> do 
+      _ <- pure $ hideKeyboardOnNavigation true
+      let selectedDisability = (state.data.editedDisabilityOptions.disabilityOptionList DA.!! state.data.editedDisabilityOptions.specialAssistActiveIndex)
+          selectedDisabilityTag = case selectedDisability of 
+            Just disability -> disability.tag 
+            Nothing -> ""
+      let newState = state{data{editedDisabilityOptions
+                                  { otherDisabilityReason = if selectedDisabilityTag == "OTHER" then editedDisabilityOptions.otherDisabilityReason else Nothing
+                                  , selectedDisability = selectedDisability 
+                                  }}, props {isSpecialAssistList = false}}
+      updateAndExit newState $ UpdateProfile newState
+    _ -> continue state
 
 eval (MoreInfo fieldType) state = continue state {props { showAccessibilityPopUp = true}}
 
@@ -225,10 +233,12 @@ updateProfile (GetProfileRes profile) state = do
       disability = case profile.disability of 
         Just disabilityT -> Just (Constants.getDisabilityType disabilityT state.data.disabilityOptions.disabilityOptionList)
         _ -> Nothing
+      disabilityOptions = state.data.disabilityOptions{ activeIndex = if hasDisability == Just true then 1 else 0 
+                                              , selectedDisability = disability
+                                              , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email
                         , hasDisability = hasDisability
                         , disabilityType = disability
-                        , disabilityOptions {   activeIndex = if hasDisability == Just true then 1 else 0 
-                                              , selectedDisability = disability
-                                              , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}} }
+                        , editedDisabilityOptions = disabilityOptions
+                        , disabilityOptions = disabilityOptions } }

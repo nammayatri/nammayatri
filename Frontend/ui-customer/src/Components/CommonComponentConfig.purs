@@ -90,8 +90,8 @@ getAccessibilityPopupData pwdtype  =
 accessibilityConfig :: Common.LazyCheck -> ContentConfig
 accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_disability_illustration.png", listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)]}
 
-accessibilityListConfig :: ST.DisabilityData -> AppConfig -> SelectListModal.Config
-accessibilityListConfig disabilityData config = 
+accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
+accessibilityListConfig disabilityData otherDisability config = 
   SelectListModal.config
         { selectionOptions = getDisabilityList disabilityData.disabilityOptionList
         , primaryButtonTextConfig
@@ -104,7 +104,7 @@ accessibilityListConfig disabilityData config =
                                 Mb.Just activeOption -> Mb.Just activeOption.tag
                                 _ -> Mb.Nothing
         , isLimitExceeded = false
-        , isSelectButtonActive = if disabilityData.specialAssistActiveIndex == DA.length (disabilityData.disabilityOptionList) - 1 then (DS.length (disabilityData.editedDisabilityReason) >= 3) else true
+        , isSelectButtonActive = if disabilityData.specialAssistActiveIndex == DA.length (disabilityData.disabilityOptionList) - 1 then (DS.length (otherDisability) >= 3) else true
         , headingTextConfig{
           text = (getString SPECIAL_ASSISTANCE)
         , gravity = LEFT
@@ -116,16 +116,13 @@ accessibilityListConfig disabilityData config =
         , padding = (PaddingHorizontal 24 24)
         , text = (getString SELECT_THE_CONDITION_THAT_IS_APPLICABLE)
         }
-        , hint = if Mb.isNothing disabilityData.otherDisabilityReason then "Enter nature of condition" else ""
+        , hint = if disabilityData.editedDisabilityReason == "" then "Enter nature of condition" else ""
         , config = config
         , hideOthers = false
         , topLeftIcon = true
         , showBgColor = true
         , editTextBgColor = Color.white900
-        , defaultText = Mb.fromMaybe "" disabilityData.otherDisabilityReason
-        , showAdditionalInfo = true 
-        , additionalInfoBg = Color.pink 
-        , additionalInfoText = (getString DISABILITY_CLAIMER_TEXT)
+        , defaultText = disabilityData.editedDisabilityReason
         }
 
 getDisabilityList :: Array ST.DisabilityT ->  Array Common.OptionButtonList

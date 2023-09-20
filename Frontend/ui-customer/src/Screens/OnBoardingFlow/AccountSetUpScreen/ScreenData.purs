@@ -29,22 +29,12 @@ initData =
       , config : DC.config
       , disabilityOptions : {
           activeIndex : 0
-        , isSpecialAssistList : false 
         , specialAssistActiveIndex : 0
         , disabilityOptionList : []
         , selectedDisability : Nothing
         , otherDisabilityReason : Nothing
         , editedDisabilityReason : ""
-      }
-      , editedDisabilityOptions : {
-         activeIndex : 0
-        , isSpecialAssistList : false 
-        , specialAssistActiveIndex : 0
-        , disabilityOptionList : []
-        , selectedDisability : Nothing
-        , otherDisabilityReason : Nothing
-        , editedDisabilityReason : ""
-      }
+        }
       }
   , props:
       { btnActive: false
@@ -55,5 +45,6 @@ initData =
       , showOptions : false
       , activeField : Nothing
       , isNameValid : false
+      , isSpecialAssistList : false
       }
   }

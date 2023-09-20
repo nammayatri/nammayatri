@@ -615,7 +615,7 @@ accountSetUpScreenFlow = do
   config <- getAppConfig Constants.appConfig
   modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{config = config}})
   disabilityListT <- updateDisabilityList "Account_Set_Up_Screen"
-  modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{disabilityOptions{disabilityOptionList = disabilityListT }, editedDisabilityOptions{disabilityOptionList = disabilityListT}}})
+  modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{disabilityOptions{disabilityOptionList = disabilityListT }}})
   flow <- UI.accountSetUpScreen
   case flow of
     GO_HOME state -> do
@@ -623,7 +623,7 @@ accountSetUpScreenFlow = do
       let gender = getGenderValue state.data.gender
           selectedDisability = state.data.disabilityOptions.selectedDisability
           (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-          requiredData = initialData{firstName = (Just state.data.name),gender = gender, hasDisability = if (isJust selectedDisability) then Just true else Just false , disability = case selectedDisability of 
+          requiredData = initialData{firstName = (Just state.data.name),gender = gender, hasDisability = Just (isJust selectedDisability), disability = case selectedDisability of 
             Just disability -> Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason))
             _ -> Nothing  }
       setValueToLocalStore DISABILITY_UPDATED "true"
@@ -695,7 +695,7 @@ homeScreenFlow = do
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE  updateProfile -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ (if updateProfile then "safety_banner_clicked" else "ny_user_profile_click")
-        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{fromHomeScreen = updateProfile , isBtnEnabled = true , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
+        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{fromHomeScreen = updateProfile , updateProfile = updateProfile, isBtnEnabled = true , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState-> do
       let currentLocationText = getString CURRENT_LOCATION
@@ -1745,7 +1745,7 @@ myProfileScreenFlow = do
                                   then Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason))
                                   else Nothing
             _ -> Nothing
-          hasDisability = Just (state.data.editedDisabilityOptions.activeIndex == 1)
+          hasDisability = if state.props.changeAccessibility then (Just (isJust disability)) else Nothing
       resp <- if nameLength > 2 then
                 lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (name !! 1) (name !! (nameLength - 1)) (email) gender hasDisability disability)
                 else if nameLength == 2 then
