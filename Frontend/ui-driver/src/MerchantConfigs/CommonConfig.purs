@@ -41,6 +41,7 @@ commonConfig =
         , black900 : "#2C2F3A"
         , red : "#E55454"
         , subscriptionConfig : {
-            enableBlocking : false
+            enableBlocking : false,
+            completePaymentPopup : false
         } 
         }
