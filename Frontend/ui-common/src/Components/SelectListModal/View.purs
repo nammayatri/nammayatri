@@ -54,7 +54,10 @@ view push config =
       , clickable true
       , background Color.black9000
       , disableClickFeedback true
-      , onClick push (const OnGoBack)
+      , onClick (\action -> do
+           _ <- push action
+           pure $ hideKeyboardOnNavigation true
+           ) (const OnGoBack)
       , accessibility DISABLE
       ][ linearLayout
           [ width MATCH_PARENT

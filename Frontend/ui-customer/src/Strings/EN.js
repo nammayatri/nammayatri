@@ -607,7 +607,7 @@ const englishStrings = {
   "SELECT_THE_CONDITION_THAT_IS_APPLICABLE" : "Select the condition that is applicable to you\n(As per RPWD act 2016)",
   "DISABILITY_CLAIMER_TEXT" : "By continuing, you are declaring your status as a person with disability under the RPWD act of 2016",
   "ARE_YOU_A_PERSON_WITH_DISABILITY" : "Are you a person with disability?",
-  "DO_YOU_NEEED_SPECIAL_ASSISTANCE" : "Do you require special assitance (Person With Disability)?",
+  "DO_YOU_NEEED_SPECIAL_ASSISTANCE" : "Do you require special assistance (Person With Disability)?",
   "ASSISTANCE_REQUIRED" : "Assistance Required (Person with Disability)",
   "NO_DISABILITY" : "No Disability",
   "LEARN_HOW_TEXT" : "Learn how Namma Yatri caters to your needs",
