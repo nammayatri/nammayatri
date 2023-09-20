@@ -992,11 +992,17 @@ export const openNavigation = function (slat) {
     return function (dlat) {
       return function (dlong) {
         return function (mode) {
-          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
-            var query = mode == "WALK" ? window.appConfig.navigationAppConfig.walkQuery : window.appConfig.navigationAppConfig.query;
-            var packageName = window.appConfig.navigationAppConfig.packageName;
-            return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
+            if(window.__OS == "IOS"){
+              let query = mode == "WALK" ? window.appConfig.navigationAppConfig.ios.walkQuery : window.appConfig.navigationAppConfig.ios.query;
+              return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
+            }else{
+              let query = mode == "WALK" ? window.appConfig.navigationAppConfig.android.walkQuery : window.appConfig.navigationAppConfig.android.query;
+              let packageName = window.appConfig.navigationAppConfig.android.packageName;
+              return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+            }
           } else {
+            // deprecated 
             return window.JBridge.openNavigation(slat, slong, dlat, dlong);
           }
         };
