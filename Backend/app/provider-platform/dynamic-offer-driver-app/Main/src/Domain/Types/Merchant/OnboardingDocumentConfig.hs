@@ -33,7 +33,8 @@ data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleCl
 data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
-    vehicleVariant :: Variant
+    vehicleVariant :: Variant,
+    manufacturer :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
