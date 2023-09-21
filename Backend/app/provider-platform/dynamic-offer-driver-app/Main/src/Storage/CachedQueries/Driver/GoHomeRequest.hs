@@ -45,7 +45,10 @@ getDriverGoHomeRequestInfo driverId merchantId goHomeCfg = do
           else checkInvalidReqData ghrData currTime ghkey driverId merchantId ghCfg expTime
       Nothing -> do
         logDebug $ "Setting new CachedGoHomeRequest data as old data not found for driverId :" <> show driverId
-        flip whenJust (flip QDGR.finishWithStatus DDGR.FAILED . (.id)) =<< QDGR.findActive driverId
+        mbDghr <- QDGR.findActive driverId
+        whenJust mbDghr $ \dghr -> do
+          succRide <- Ride.findCompletedRideByGHRId dghr.id
+          finishWithStatus dghr.id (bool DDGR.FAILED DDGR.SUCCESS (isJust succRide)) (bool Nothing (Just False) (isJust succRide))
         withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
         return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
@@ -59,16 +62,18 @@ checkInvalidReqData ghrData currTime ghkey driverId merchantId goHomeCfg expTime
         succRide <- Ride.findCompletedRideByGHRId ghrId
         if isJust succRide
           then do
-            deactivateDriverGoHomeRequest merchantId driverId SUCCESS ghrData
+            deactivateDriverGoHomeRequest merchantId driverId SUCCESS ghrData (Just False)
             return (templateGoHomeData Nothing (ghrData.cnt - 1) Nothing Nothing False (Just ghrData.goHomeReferenceTime) currTime)
           else do
-            deactivateDriverGoHomeRequest merchantId driverId FAILED ghrData
+            deactivateDriverGoHomeRequest merchantId driverId FAILED ghrData Nothing
             return (templateGoHomeData Nothing ghrData.cnt Nothing Nothing False (Just ghrData.goHomeReferenceTime) currTime)
       Nothing -> do
         return ghrData
     else do
       logDebug $ "Setting new CachedGoHomeRequest data as old data is expired for driverId :" <> show driverId
-      whenJust (ghrData.driverGoHomeRequestId) $ flip QDGR.finishWithStatus DDGR.FAILED --Failing it as a default case as it's already a new day and old count does not matter.
+      whenJust (ghrData.driverGoHomeRequestId) $ \id -> do
+        succRide <- Ride.findCompletedRideByGHRId id
+        QDGR.finishWithStatus id (bool DDGR.FAILED DDGR.SUCCESS (isJust succRide)) (bool Nothing (Just False) (isJust succRide))
       withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
@@ -103,18 +108,19 @@ activateDriverGoHomeRequest merchantId driverId driverHomeLoc goHomeConfig ghInf
             lon = driverHomeLocation.lon,
             status = DDGR.ACTIVE,
             numCancellation = 0,
+            mbReachedHome = Nothing,
             createdAt = now,
             updatedAt = now,
             ..
           }
 
-deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> m ()
-deactivateDriverGoHomeRequest merchantId driverId stat ghInfo = do
+deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
+deactivateDriverGoHomeRequest merchantId driverId stat ghInfo mbReachedHome = do
   currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantId merchantId >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   driverGoHomeReqId <- fromMaybeM (InternalError "Could not Find DriverGoHomeRequestId") ghInfo.driverGoHomeRequestId
-  QDGR.finishWithStatus driverGoHomeReqId stat
+  QDGR.finishWithStatus driverGoHomeReqId stat mbReachedHome
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData Nothing (bool ghInfo.cnt (ghInfo.cnt - 1) (stat == DDGR.SUCCESS)) Nothing Nothing False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
 resetDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> GoHomeConfig -> CachedGoHomeRequest -> m ()

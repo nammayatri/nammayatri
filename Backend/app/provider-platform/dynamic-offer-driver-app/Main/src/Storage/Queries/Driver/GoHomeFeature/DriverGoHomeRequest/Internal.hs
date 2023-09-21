@@ -37,6 +37,7 @@ instance FromTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest wher
         Domain.DriverGoHomeRequest
           { id = Id id,
             driverId = Id driverId,
+            mbReachedHome = reachedHome,
             ..
           }
 
@@ -46,5 +47,6 @@ instance ToTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest where
       { id = getId id,
         driverId = getId driverId,
         point = Point,
+        reachedHome = mbReachedHome,
         ..
       }

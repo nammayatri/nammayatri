@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_go_home_request ADD COLUMN reached_home boolean;

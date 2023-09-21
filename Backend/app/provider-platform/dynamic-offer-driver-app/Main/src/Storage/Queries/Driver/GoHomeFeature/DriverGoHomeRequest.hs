@@ -37,7 +37,7 @@ create newDriverGoHomeRequest = do
       L.insertRows $
         B.insert (BeamCommon.driverGoHomeRequest BeamCommon.atlasDB) $
           B.insertExpressions
-            [BeamDHR.toRowExpression (newDriverGoHomeRequest.id.getId) (getId newDriverGoHomeRequest.driverId) newDriverGoHomeRequest.lat newDriverGoHomeRequest.lon newDriverGoHomeRequest.status newDriverGoHomeRequest.numCancellation newDriverGoHomeRequest.createdAt newDriverGoHomeRequest.updatedAt]
+            [BeamDHR.toRowExpression (newDriverGoHomeRequest.id.getId) (getId newDriverGoHomeRequest.driverId) newDriverGoHomeRequest.lat newDriverGoHomeRequest.lon newDriverGoHomeRequest.status newDriverGoHomeRequest.numCancellation newDriverGoHomeRequest.mbReachedHome newDriverGoHomeRequest.createdAt newDriverGoHomeRequest.updatedAt]
 
 findById :: (MonadFlow m) => Id DDGR.DriverGoHomeRequest -> m (Maybe DDGR.DriverGoHomeRequest)
 findById (Id.Id driverGoHomeRequestId) = findOneWithKV [Se.Is BeamDHR.id $ Se.Eq driverGoHomeRequestId]
@@ -45,11 +45,11 @@ findById (Id.Id driverGoHomeRequestId) = findOneWithKV [Se.Is BeamDHR.id $ Se.Eq
 findActive :: (MonadFlow m, Log m) => Id Driver -> m (Maybe DDGR.DriverGoHomeRequest)
 findActive (Id.Id driverId) = findAllWithOptionsKV [Se.And [Se.Is BeamDHR.driverId $ Se.Eq driverId, Se.Is BeamDHR.status $ Se.Eq DDGR.ACTIVE]] (Se.Desc BeamDHR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-finishWithStatus :: MonadFlow m => Id DDGR.DriverGoHomeRequest -> DDGR.DriverGoHomeRequestStatus -> m ()
-finishWithStatus (Id.Id driverGoHomeRequestId) status = do
+finishWithStatus :: MonadFlow m => Id DDGR.DriverGoHomeRequest -> DDGR.DriverGoHomeRequestStatus -> Maybe Bool -> m ()
+finishWithStatus (Id.Id driverGoHomeRequestId) status mbReachedHome = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamDHR.status status, Se.Set BeamDHR.updatedAt now]
+    [Se.Set BeamDHR.status status, Se.Set BeamDHR.reachedHome mbReachedHome, Se.Set BeamDHR.updatedAt now]
     [Se.Is BeamDHR.id $ Se.Eq driverGoHomeRequestId]
 
 todaySuccessCount :: (MonadFlow m) => Id Driver -> m Int
