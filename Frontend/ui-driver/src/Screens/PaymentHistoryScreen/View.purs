@@ -29,7 +29,8 @@ import Control.Monad.Except (lift, runExcept, runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Data.String.CodeUnits (takeRight)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -50,9 +51,12 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..))
-import Services.API (FeeType(..))
+import Screens.PaymentHistoryScreen.ScreenData (dummyPromoConfig)
+import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus)
+import Screens.SubscriptionScreen.Transformer (getPromoConfig)
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PromoConfig)
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
+import Services.API (FeeType(..), OfferEntity(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -357,7 +361,7 @@ transactionDetails push state visibility' =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              , margin $ Margin 16 20 16 24
+              , margin $ Margin 16 20 16 0
               , padding $ Padding 16 8 16 8
               , cornerRadius  10.0
               , gravity CENTER_VERTICAL
@@ -369,7 +373,7 @@ transactionDetails push state visibility' =
                 , padding $ PaddingVertical 8 8
                 ](DA.mapWithIndex (\ index item -> 
                   transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) $ case item.key of
-                    "OFFER" -> promoCodeView item.val
+                    "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing}]) DA.!! 0)) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT
@@ -377,6 +381,39 @@ transactionDetails push state visibility' =
                   ) state.data.transactionDetails.details)
             , manualPaymentRidesList push state -- if manualPayment
               ]
+            , linearLayout [
+                      width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , background Color.blue600
+                    , margin $ Margin 16 8 16 24
+                    , cornerRadius 4.0
+                    , orientation VERTICAL
+                 ][
+                      textView $ [
+                        text $ getString SWITCHED_TO_MANUAL
+                        , width MATCH_PARENT
+                        , margin $ MarginRight 8
+                        , color Color.black600
+                        , visibility if state.data.transactionDetails.isAutoPayFailed then VISIBLE else GONE
+                        , padding $ Padding 8 8 8 8
+                      ] <> FontStyle.tags TypoGraphy
+                    , linearLayout
+                      [
+                        height $ V 1
+                        , width MATCH_PARENT
+                        , background Color.grey900
+                        , margin $ MarginHorizontal 8 16
+                        , visibility if state.data.transactionDetails.isAutoPayFailed && state.data.transactionDetails.isSplit then VISIBLE else GONE
+                      ][]
+                    , textView $ [
+                        text $ getString SPLIT_PAYMENT
+                        , width MATCH_PARENT
+                        , margin $ MarginRight 8
+                        , color Color.black600
+                        , visibility if state.data.transactionDetails.isSplit then VISIBLE else GONE
+                        , padding $ Padding 8 8 8 8
+                      ] <> FontStyle.tags TypoGraphy
+                 ]
         ]
     ]
   
@@ -412,28 +449,33 @@ separatorView visible =
       , background Color.white900
       , visibility if visible then VISIBLE else GONE
       ][]
-promoCodeView :: forall w. String -> PrestoDOM (Effect Unit) w 
-promoCodeView val =
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
+promoCodeView push config =
   linearLayout
-  [ height WRAP_CONTENT
+  ([ height WRAP_CONTENT
   , width WRAP_CONTENT
   , cornerRadius 100.0
   , padding $ Padding 10 4 10 4
   , stroke $ "1," <> Color.grey900
   , background Color.white900
+  , margin $ MarginRight 4
   , gravity CENTER_VERTICAL
-  , gradient (Linear 90.0 ["#FFE7C2", "#FFFFFF", "#DDFFEB"])
-  ][ imageView
+  ]<> if config.isGradient then [gradient (Linear 90.0 config.gradient)] else [])
+   [ imageView
      [ width $ V 12
      , height $ V 12
      , margin (MarginRight 4)
-     , imageWithFallback "ny_ic_discount,"
+     , visibility if config.hasImage then VISIBLE else GONE
+     , imageWithFallback config.imageURL
      ] 
    , textView $
-     [ text val
+     [ textSize FontSize.a_10
+     , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.blue900
      , padding $ PaddingBottom 3
-     ] <> FontStyle.body16 TypoGraphy
+     ] <> case config.title of
+          Nothing -> [visibility GONE]
+          Just txt -> [text txt]
   ]
 
 rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
@@ -451,7 +493,7 @@ rightItem push val prefixImage postfixImage =
      , imageWithFallback "ny_ic_upi_logo,"
      ] 
    , textView $
-     [ text val
+     [ text if postfixImage then ("..." <> takeRight 10 val) else val
      , color Color.black900
      , padding $ PaddingBottom 3
      ] <> FontStyle.body6 TypoGraphy
@@ -548,5 +590,5 @@ rideDetails push state visibility' =
   , height MATCH_PARENT
   , visibility if visibility' then VISIBLE else GONE
   ][
-    DueDetailsList.view (push <<< DueDetailsListAction) {dues : state.data.transactionDetails.manualSpecificDetails}
+    DueDetailsList.view (push <<< DueDetailsListAction) {dues : map (\item -> item{expanded = item.id == state.props.selectedDue}) state.data.transactionDetails.manualSpecificDetails}
   ]

@@ -1702,7 +1702,9 @@ type TransactionInfo = {
   paymentStatus :: Common.PaymentStatus,
   statusTime :: String,
   details :: Array TransactionListItem,
-  manualSpecificDetails :: Array DueCard
+  manualSpecificDetails :: Array DueCard,
+  isSplit :: Boolean,
+  isAutoPayFailed :: Boolean
 }
 type PaymentListItem = {
   transactionDate :: String,
@@ -1735,13 +1737,17 @@ type DueCard = {
   expanded :: Boolean,
   isAutoPayFailed :: Boolean,
   isSplitPayment :: Boolean,
-  id :: String
+  id :: String,
+  scheduledAt :: Maybe String,
+  paymentMode :: FeeType,
+  paymentStatus :: Maybe String
 }
 
 type PaymentHistoryScreenProps = {
   subView :: PaymentHistorySubview,
   autoPayHistory :: Boolean,
-  autoPaySetup :: Boolean
+  autoPaySetup :: Boolean,
+  selectedDue :: String
 }
 
 data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails

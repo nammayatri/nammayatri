@@ -424,6 +424,9 @@ dueDetailsListState state = {
     expanded : item.randomId == state.data.myPlanData.selectedDue,
     isAutoPayFailed : false,
     isSplitPayment : false,
-    id : item.randomId
+    id : item.randomId,
+    paymentMode : item.mode,
+    scheduledAt : Nothing,
+    paymentStatus : Nothing
   }) state.data.myPlanData.dueItems
 }

@@ -2,13 +2,16 @@ module Screens.PaymentHistoryScreen.Transformer where
 
 import Prelude
 
-import Common.Types.App (PaymentStatus(..))
-import Data.Array (length, (!!))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Common.Types.App (PaymentStatus(..), PaymentStatus(..))
+import Data.Array (length, mapWithIndex, (!!))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
+import Screens.Types (PromoConfig)
 import Screens.Types as ST
-import Services.API (FeeType(..))
+import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> ST.TransactionInfo
@@ -17,6 +20,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
                                                   Nothing -> dummyDriverFee
         autoPaySpecificKeys = do
+          let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
           case (length resp.driverFeeInfo == 1) of
               true -> [
                   {
@@ -27,7 +31,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "PLAN",
                     title : getString PLAN,
-                    val : "details.invoiceId"
+                    val : planOfferData.plan
                   },
                   {
                     key : "NUMBER_OF_RIDES",
@@ -39,22 +43,19 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   val : "₹" <> show driverFee'.totalEarnings},
                   {key : "FEE_BREAKUP",
                   title : getString FEE_BREAKUP,
-                  val : "details.invoiceId"},
+                  val : ""<> getString GST_INCLUDE},
                   {key : "OFFER",
                   title : getString OFFER,
-                  val : "details.invoiceId"}
+                  val : planOfferData.offer}
                 ]
               false -> []
-        manualDetails = map (\(API.DriverFeeInfoEntity driverFee) -> {
-                                    tripDate : "",
-                                    plan : "",
-                                    amount : driverFee.planAmount
-                                  }) resp.driverFeeInfo
  
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
             statusTime : fromMaybe "" resp.executionAt,
+            isSplit : (length resp.driverFeeInfo == 1) && driverFee'.isSplit,
+            isAutoPayFailed : (length resp.driverFeeInfo == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
             details : [
               {
                 key : "TXN_ID",
@@ -71,28 +72,28 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                 val : if resp.feeType == API.MANUAL_PAYMENT then "UPI" else "UPI AutoPay"
               }
             ] <> autoPaySpecificKeys,
-            manualSpecificDetails : map (\(API.DriverFeeInfoEntity driverFee) ->  {
-                                        date : fromMaybe "" resp.createdAt,
-                                        planType : fromMaybe "" driverFee.offerAndPlanDetails,
-                                        offerApplied : Just {
-                                                        title : Just "Freedom Offer: 76% off APPLIED",
-                                                        offerDescription : Nothing,
-                                                        isGradient : true,
-                                                        gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
-                                                        hasImage : true,
-                                                        imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
-                                                        addedFromUI : true
-                                                        },
-                                        noOfRides : driverFee.totalRides,
-                                        totalEarningsOfDay : driverFee.totalEarnings,
-                                        dueAmount : driverFee.planAmount,
-                                        fareBreakup : show driverFee.planAmount,
-                                        expanded : false,
-                                        isAutoPayFailed : driverFee.autoPayStage == Just API.EXECUTION_ATTEMPTING && resp.feeType /= AUTOPAY_PAYMENT,
-                                        isSplitPayment : driverFee.isSplit,
-                                        id : ""
-                                      }
-                                       ) resp.driverFeeInfo
+            manualSpecificDetails : do
+                    case (length resp.driverFeeInfo /= 1) of
+                        true -> mapWithIndex (\ ind (API.DriverFeeInfoEntity driverFee) ->  do
+                            let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
+                            {
+                                date : convertUTCtoISC (fromMaybe "" resp.createdAt) "Do MMM, YYYY",
+                                planType : planOfferData.plan,
+                                offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing}]) !! 0,
+                                noOfRides : driverFee.totalRides,
+                                totalEarningsOfDay : driverFee.totalEarnings,
+                                dueAmount : driverFee.planAmount,
+                                fareBreakup : (show driverFee.planAmount),
+                                expanded : false,
+                                isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
+                                isSplitPayment : driverFee.isSplit,
+                                id : show ind,
+                                scheduledAt : if resp.feeType == AUTOPAY_REGISTRATION then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY") else Nothing,
+                                paymentMode : resp.feeType,
+                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (getAutoPayStageData driverFee.autoPayStage) else Nothing
+                            }
+                            ) resp.driverFeeInfo
+                        false -> []          
         }
         in transactionDetails
 
@@ -105,6 +106,17 @@ getAutoPayPaymentStatus status' = do
     API.EXECUTION_SCHEDULED -> Scheduled
     API.EXECUTION_ATTEMPTING -> Pending
     API.EXECUTION_SUCCESS -> Success
+
+getAutoPayStageData :: Maybe API.AutopayPaymentStage -> String
+getAutoPayStageData stage = 
+  let status = fromMaybe API.NOTIFICATION_SCHEDULED stage
+  in
+  case status of 
+    API.NOTIFICATION_SCHEDULED -> getString NOTIFICATION_SCHEDULED
+    API.NOTIFICATION_ATTEMPTING -> getString NOTIFICATION_ATTEMPTING
+    API.EXECUTION_SCHEDULED -> getString EXECUTION_SCHEDULED
+    API.EXECUTION_ATTEMPTING -> getString EXECUTION_ATTEMPTING
+    API.EXECUTION_SUCCESS -> getString EXECUTION_SUCCESS
 
 getInvoiceStatus :: Maybe API.InvoiceStatus -> PaymentStatus
 getInvoiceStatus status' = do
@@ -127,3 +139,4 @@ dummyDriverFee =
       isSplit : false,
       offerAndPlanDetails : Just ""
   }
+

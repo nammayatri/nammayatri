@@ -19,7 +19,7 @@ import Common.Types.App (PaymentStatus(..))
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Data.Array (concatMap, null, (!!), partition)
+import Data.Array (concatMap, nubBy, nubByEq, null, partition, (!!))
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Engineering.Helpers.Commons (convertUTCtoISC)
@@ -27,9 +27,10 @@ import JBridge (copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, map, not, pure, show, unit, ($), (<>), (==), (/=))
+import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
+import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInvoiceStatus)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem)
 import Services.API (AutoPayInvoiceHistory(..), FeeType(..), ManualInvoiceHistory(..))
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
@@ -83,7 +84,7 @@ eval ViewRideDetails state = continue state { props{ subView = RideDetails}}
 
 eval (UpdatePaymentHistory response) state = getAllTransactions response state
 
-eval (DueDetailsListAction (DueDetailsListController.SelectDue index)) state = continue state
+eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {props {selectedDue = dueItem.id}}
 
 eval (Copy val) state = continueWithCmd state [ do 
     _ <- pure $ copyToClipboard val
@@ -98,7 +99,7 @@ eval _ state = continue state
 getAllTransactions :: SA.HistoryEntityV2Resp -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
 getAllTransactions (SA.HistoryEntityV2Resp response) state = do
   let autoPayInvoices = response.autoPayInvoices
-      manualPayInvoices = response.manualPayInvoices
+      manualPayInvoices = nubByEq (\(ManualInvoiceHistory a) (ManualInvoiceHistory b) -> a.invoiceId == b.invoiceId) response.manualPayInvoices
   continue state {
     data {
       autoPayList = map (\ invoice -> getAutoPayInvoice invoice) autoPayInvoices,
@@ -107,11 +108,7 @@ getAllTransactions (SA.HistoryEntityV2Resp response) state = do
   }
 getAutoPayInvoice :: AutoPayInvoiceHistory -> PaymentListItem
 getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
-  paymentStatus : case autoPayInvoice.autoPayStage of
-                    Nothing -> Pending
-                    Just status -> case status of
-                      "EXECUTION_SUCCESS" -> Success
-                      _ -> Pending, -- TODO :: SCHEDULED
+  paymentStatus : getAutoPayPaymentStatus autoPayInvoice.autoPayStage,
   invoiceId : autoPayInvoice.invoiceId,
   amount : autoPayInvoice.amount,
   description : (getString RIDES_TAKEN_ON) <> " " <> (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY"),
@@ -122,7 +119,7 @@ getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
 getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
 getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = {
   invoiceId : manualPayInvoice.invoiceId,
-  paymentStatus : Success,
+  paymentStatus : getInvoiceStatus (Mb.Just manualPayInvoice.paymentStatus),
   amount : manualPayInvoice.amount,
   description : (getString RIDES_TAKEN_ON) <> " " <> show manualPayInvoice.rideDays <> " days",
   feeType : MANUAL_PAYMENT,

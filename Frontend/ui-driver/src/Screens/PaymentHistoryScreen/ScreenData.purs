@@ -17,7 +17,7 @@ module Screens.PaymentHistoryScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, TransactionListItem, PlanCardConfig)
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
 import Services.API (AutopayPaymentStage(..), FeeType(..))
 
 initData :: PaymentHistoryScreenState
@@ -30,7 +30,9 @@ initData = {
             paymentStatus : Pending,
             statusTime : "",
             details : [],
-            manualSpecificDetails : []
+            manualSpecificDetails : [],
+            isSplit : false,
+            isAutoPayFailed : false
         },
         planData : dummyPlanConfig
     },
@@ -38,7 +40,8 @@ initData = {
     props: {
         subView : PaymentHistory,
         autoPayHistory : true,
-        autoPaySetup : false
+        autoPaySetup : false,
+        selectedDue : ""
     }
 }
 
@@ -103,3 +106,14 @@ dummyPlanConfig =
     , freeRideCount : 1
     , showOffer : true
 }
+
+dummyPromoConfig :: PromoConfig
+dummyPromoConfig = {
+                        title : Mb.Just "Freedom Offer: 76% off APPLIED",
+                        offerDescription : Mb.Nothing,
+                        isGradient : true,
+                        gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
+                        hasImage : true,
+                        imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
+                        addedFromUI : true
+                    }

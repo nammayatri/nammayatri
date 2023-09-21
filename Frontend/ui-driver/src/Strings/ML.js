@@ -791,5 +791,14 @@ const mlStrings = {
   MANUAL_DUE_DETAILS : "Manual Due Details",
   AUTOPAY_DUE_DETAILS : "Autopay Due Details",
   SWITCHED_TO_MANUAL : "*Payment mode switched to manual since autopay could not be fulfilled",
-  SPLIT_PAYMENT : "*Payment has been split to execute autopay"
+  SPLIT_PAYMENT : "*Payment has been split to execute autopay",
+  GST_INCLUDE : "(incl. 18% GST)",
+  SCHEDULED_AT : "Scheduled at",
+  PAYMENT_STATUS : "Payment Status",
+  NOTIFICATION_SCHEDULED :  "Notification Scheduled", 
+  NOTIFICATION_ATTEMPTING :  "Notification Attempting", 
+  EXECUTION_SCHEDULED :  "Execution Scheduled", 
+  EXECUTION_ATTEMPTING : "Execution Attempting", 
+  EXECUTION_SUCCESS : "Execution Success",
+  SCHEDULED : "SCHEDULED"
 }

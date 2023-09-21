@@ -19,9 +19,8 @@ import Common.Types.App
 import Components.DueDetailsList.Controller
 
 import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe as Mb
-import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -30,6 +29,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==))
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
+import Services.API (FeeType(..))
 import Styles.Colors as Color
 
 
@@ -130,9 +130,12 @@ view push state =
                       Just offerConfig -> promoCodeView push offerConfig
                       Nothing -> linearLayout[visibility GONE][]
                 ]
-                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides)
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay)
-                , keyValueView (getString FARE_BREAKUP) item.fareBreakup
+                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides) true false
+                , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
+                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
+                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay) true false
+                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <> getString GST_INCLUDE) true false
                 , textView $ [
                     text $ getString SWITCHED_TO_MANUAL
                     , width MATCH_PARENT
@@ -165,19 +168,28 @@ view push state =
          )
     ]
 
-keyValueView :: String -> String ->  forall w . PrestoDOM (Effect Unit) w
-keyValueView key value = 
+keyValueView :: String -> String -> Boolean -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+keyValueView key value visibility' prefixImage = 
   linearLayout 
   [
     height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginBottom 16
+    , visibility if visibility' then VISIBLE else GONE
+    , gravity CENTER_VERTICAL
   ][ 
     textView $ [
       text key
       , margin $ MarginRight 8
       , color Color.black700
     ] <> FontStyle.body3 TypoGraphy
+    , imageView
+    [ width $ V 12
+    , height $ V 12
+    , margin (Margin 0 1 4 0)
+    , visibility if prefixImage then VISIBLE else GONE
+    , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
+    ]
     , textView $ [
       text value
       , color Color.black800

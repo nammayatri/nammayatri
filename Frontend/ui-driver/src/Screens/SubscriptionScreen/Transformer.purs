@@ -84,6 +84,10 @@ decodeOfferDescription str = do
                 "ML_IN" | len > 4 -> 4
                 _ -> 0
     
+decodeOfferPlan :: String -> {plan :: String, offer :: String}
+decodeOfferPlan str = do
+    let strArray = split (Pattern "-*@*-") str
+    {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
 freeRideOfferConfig :: LazyCheck -> PromoConfig
 freeRideOfferConfig lazy = 
@@ -202,7 +206,7 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  {
     noOfRides: item.totalRides,
     scheduledAt: fromMaybe "" item.executionAt,
     paymentStatus: "", --Paid
-    feeBreakup: "", --Breakup
+    feeBreakup: "" <> getString GST_INCLUDE, --Breakup
     plan: fromMaybe "" item.offerAndPlanDetails,--"Plan",
     mode: MANUAL_PAYMENT,
     randomId : (getCurrentUTC "") <> show ind

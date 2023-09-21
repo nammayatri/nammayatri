@@ -2711,7 +2711,7 @@ newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
   invoiceId :: String,
   amount :: Number,
   executionAt :: String,
-  autoPayStage :: Maybe String, -- NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+  autoPayStage :: Maybe AutopayPaymentStage, -- NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
   rideTakenOn :: String
 }
 
@@ -2721,7 +2721,7 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
   rideDays :: Int,
   amount :: Number,
   feeType :: FeeType,
-  paymentStatus :: String
+  paymentStatus :: InvoiceStatus
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
