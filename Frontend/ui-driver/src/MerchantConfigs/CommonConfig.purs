@@ -43,5 +43,12 @@ commonConfig =
         , subscriptionConfig : {
             enableBlocking : false,
             completePaymentPopup : false
-        } 
+        }
+        , navigationAppConfig : {
+            android : {  
+              query : "google.navigation:q=%f,%f"
+            , packageName : "com.google.android.apps.maps"
+            , walkQuery : "google.navigation:q=%f,%f&mode=w"
+            }
+          } 
         }
