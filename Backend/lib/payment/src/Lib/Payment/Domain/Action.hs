@@ -59,7 +59,6 @@ data PaymentStatusResp
       { eventName :: Maybe Payment.PaymentStatus,
         notificationStatus :: Payment.NotificationStatus,
         sourceObject :: Maybe Text,
-        endDate :: Text,
         sourceInfo :: Payment.SourceInfo,
         notificationType :: Maybe Text,
         juspayProviedId :: Text,
