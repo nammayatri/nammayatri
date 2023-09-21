@@ -25,5 +25,6 @@ type LeaderBoard = {
 
 type SubscriptionConfig =  {
   enableBlocking :: Boolean,
-  completePaymentPopup :: Boolean
+  completePaymentPopup :: Boolean,
+  onBoardingSubscription :: Boolean
  }

@@ -40,7 +40,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -662,11 +662,11 @@ autopayBannerConfig state configureImage =
     config' = config
       {
         backgroundColor = "#269574",
-        title = (getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS),
+        title = if onBoardingSubscriptionScreenCheck 0 true then getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES else getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS,
         titleColor = Color.white900,
         actionText = (getString SETUP_NOW),
         actionTextColor = Color.white900,
-        imageUrl = "ny_ic_autopay_setup_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_autopay_setup_banner.png",
+        imageUrl = if onBoardingSubscriptionScreenCheck 0 true then "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" else "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
         isBanner = state.props.autoPayBanner,
         imageHeight = if configureImage then (V 75) else (V 95),
         imageWidth = if configureImage then (V 98) else (V 118),

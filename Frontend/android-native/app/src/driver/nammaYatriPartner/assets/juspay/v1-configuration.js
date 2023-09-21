@@ -86,7 +86,8 @@ window.getMerchantConfig = function () {
       "isMaskedName": true
     }
     , "subscriptionConfig" : {
-      "enableBlocking" : true
+      "enableBlocking" : true,
+      "onBoardingSubscription" : true
     } 
   })
 }

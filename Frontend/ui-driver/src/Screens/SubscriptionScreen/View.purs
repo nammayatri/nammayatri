@@ -43,10 +43,10 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, screenHeight, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, screenHeight, screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getImageUrl, getValueBtwRange)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getImageUrl, getValueBtwRange, getAssetsBaseUrl)
 import Helpers.Utils as HU
 import JBridge (getWidthFromPercent)
 import JBridge as JB
@@ -55,7 +55,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, lottieAnimationView, id)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -65,7 +65,7 @@ import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, ge
 import Screens.Types (AutoPayStatus(..), GlobalProps, KioskLocation(..), MyPlanData, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 
@@ -198,7 +198,14 @@ joinPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ relativeLayout
+  ][ 
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    ][
+      lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0)
+    , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , background Color.blue600
@@ -211,7 +218,7 @@ joinPlanView push state visibility' =
         , enjoyBenefitsView push state
         , plansBottomView push state
       ]
-
+    ]
   ]
 
 enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -221,7 +228,7 @@ enjoyBenefitsView push state =
     , height MATCH_PARENT
     , gravity RIGHT
     , orientation VERTICAL
-    , margin $ Margin 116 (screenHeight unit / 30) 10 0
+    , margin $ Margin 116 10 10 0
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -604,19 +611,7 @@ myPlanBodyview push state =
            ]
          , paymentMethodView push state.data.myPlanData
        ]
-      , textView [
-          textFromHtml $ getString NO_RIDES_NO_CHARGE
-          , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.white900
-          , background if state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing then Color.greenDisabled else Color.greenDull
-          , cornerRadius 4.0
-          , width MATCH_PARENT
-          , height WRAP_CONTENT
-          , margin $ Margin 16 0 16 16
-          , padding $ PaddingVertical 8 8
-          , gravity CENTER
-         ]
+     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
      , planDescriptionView push state.data.myPlanData.planEntity  (state.data.myPlanData.autoPayStatus == PENDING) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_about,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_about.png") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true
      , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false
@@ -1231,7 +1226,7 @@ offerCountView count isSelected =
      , margin $ MarginRight 4
      ]
    , textView
-     [ text $ show count <> " " <> "Offer" <> if count == 1 then "" else "s"
+     [ text $ show count <> " " <> if count == 1 then getString OFFER else getString OFFERS
      , textSize FontSize.a_10
      , fontStyle $ FontStyle.semiBold LanguageStyle
      , color Color.blue900
@@ -1696,3 +1691,32 @@ commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPaddin
       , margin imageViewMargin
       , padding imageViewPadding
       ]
+
+lottieView :: SubscriptionScreenState -> String -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
+lottieView state viewId margin' padding'= 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin margin'
+  , padding padding'
+  , cornerRadius 4.0
+  , background Color.blue600
+  , alpha if state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing then 0.4 else 1.0
+  ][
+    lottieAnimationView
+    [ id (getNewIDWithTag viewId)
+    , afterRender (\action-> do
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall), lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP"}
+                  )(const NoAction)
+    , height $ V 35
+    , width MATCH_PARENT
+    ]
+  ]
+
+lottieJsonAccordingToLang :: Boolean -> String
+lottieJsonAccordingToLang isOnFreeTrial = (getAssetsBaseUrl FunctionCall) <>
+  case getValueToLocalStore LANGUAGE_KEY of 
+    "HI_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" else "lottie/ny_ic_subscription_info_hindi_02.json"
+    "KN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" else "lottie/ny_ic_subscription_info_kannada_02.json"
+    "TA_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" else "lottie/ny_ic_subscription_info_tamil_02.json"
+    _ -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" else "lottie/ny_ic_subscription_info_02.json"

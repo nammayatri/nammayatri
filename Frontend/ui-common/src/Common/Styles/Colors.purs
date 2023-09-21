@@ -138,3 +138,12 @@ darkCharcoal = "#333333"
 
 pink :: Color 
 pink = "#FEF1E5"
+
+blue650 :: Color
+blue650 = "#E3EAFF"
+
+yellow500 :: Color
+yellow500 = "#F5C061"
+
+yellow700 :: Color
+yellow700 = "#F09A01"

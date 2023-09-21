@@ -1117,6 +1117,24 @@ type PermissionsScreenProps = {
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
 }
+
+------------------------------------------- OnBoardingSubscriptionScreenState ---------------------------
+type OnBoardingSubscriptionScreenState = {
+  data :: OnBoardingSubscriptionScreenData
+  , props :: OnBoardingSubscriptionScreenProps
+}
+
+type OnBoardingSubscriptionScreenData = {
+  plansList :: Array PlanCardConfig,
+  selectedPlanItem :: Maybe PlanCardConfig
+}
+
+type OnBoardingSubscriptionScreenProps = {
+  isSelectedLangTamil :: Boolean,
+  screenCount :: Int
+}
+
+
 --------------------------------------------- RideDetailScreenState ---------------------------------------------
 
 type RideDetailScreenState = {
