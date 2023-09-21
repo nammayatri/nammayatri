@@ -282,7 +282,9 @@ data EndRideRequest = EndRideRequest String EndRideReq
 newtype EndRideReq = EndRideReq
     {
       point :: Point,
-      numberOfDeviation :: Maybe Boolean
+      numberOfDeviation :: Maybe Boolean,
+      uiDistanceCalculationWithAccuracy :: Int,
+      uiDistanceCalculationWithoutAccuracy :: Int
     }
 
 newtype EndRideResponse = EndRideResponse ApiSuccessResult

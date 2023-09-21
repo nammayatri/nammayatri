@@ -1689,6 +1689,7 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1730,7 +1731,9 @@ homeScreenFlow = do
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
       let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3
-      void $ Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
+          tripDistanceWithAcc = fromMaybe 0 $ fromString $ getValueToLocalNativeStore TRIP_DISTANCE_ACC
+          tripDistance = fromMaybe 0 $ fromString $ getValueToLocalNativeStore TRIP_DISTANCE
+      void $ Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc)-- driver's  lat long during ending ride
       _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
       _ <- pure $ metaLogEvent "ny_driver_ride_ended"
       liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
@@ -1741,6 +1744,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       _ <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+      _ <- pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
       liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
       resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
       modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverRideStats = resp}

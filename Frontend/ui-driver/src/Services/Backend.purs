@@ -292,14 +292,16 @@ endRide productId payload = do
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 
-makeEndRideReq :: Number -> Number -> Maybe Boolean -> EndRideReq
-makeEndRideReq lat lon numDeviation = EndRideReq {
+makeEndRideReq :: Number -> Number -> Maybe Boolean -> Int -> Int -> EndRideReq
+makeEndRideReq lat lon numDeviation tripDistance tripDistanceWithAcc = EndRideReq {
     "point" :  Point
     {
         "lat" : lat,
         "lon" : lon
     },
-    "numberOfDeviation" : numDeviation
+    "numberOfDeviation" : numDeviation,
+    "uiDistanceCalculationWithAccuracy" : tripDistanceWithAcc,
+    "uiDistanceCalculationWithoutAccuracy" : tripDistance
 }
 
 --------------------------------- driverCancelRide ---------------------------------------------------------------------------------------------------------------------------------

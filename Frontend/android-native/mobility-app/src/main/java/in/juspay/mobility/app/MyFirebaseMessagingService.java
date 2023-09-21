@@ -249,6 +249,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             startMainActivity();
                             break;
 
+                        case NotificationTypes.TRIP_STARTED:
+                            if (payload.get("show_notification").equals("true")) {
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            }
+                            break;
+
                         case NotificationTypes.BUNDLE_UPDATE:
                             try {
                                 if (bundleUpdate.size() != 0) {
@@ -537,6 +543,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
         private static final String TRIP_FINISHED = "TRIP_FINISHED";
         private static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
+        private static final String TRIP_STARTED = "TRIP_STARTED";
         private static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
         private static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
         private static final String NEW_MESSAGE = "NEW_MESSAGE";
