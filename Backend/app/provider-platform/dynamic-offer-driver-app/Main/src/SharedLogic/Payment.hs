@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import SharedLogic.DriverFee (roundToHalf)
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -68,7 +69,7 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
   now <- getCurrentTime
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
-      amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
+      amount = sum $ (\pendingFees -> roundToHalf (fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
