@@ -669,7 +669,7 @@ setActivity (personId, merchantId) isActive mode = do
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
     when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0) $ throwError (NoPlanSelected personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-    unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+    unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive mode
   enableLocationTrackingService <- asks (.enableLocationTrackingService)

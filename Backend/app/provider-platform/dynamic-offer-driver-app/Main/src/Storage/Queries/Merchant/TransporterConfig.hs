@@ -177,6 +177,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
         BeamTC.isPlanMandatory = isPlanMandatory,
         BeamTC.freeTrialDays = freeTrialDays,
+        BeamTC.openMarketUnBlocked = openMarketUnBlocked,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
