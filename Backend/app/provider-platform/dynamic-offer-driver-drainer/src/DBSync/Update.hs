@@ -4,11 +4,11 @@
 module DBSync.Update where
 
 import Config.Env
-import qualified Constants as C
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
 import Data.Text as T
@@ -29,7 +29,6 @@ import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
 import Types.Event as Event
-import Utils.Redis
 import Utils.Utils
 
 updateDB ::
@@ -171,7 +170,8 @@ runUpdateCommands (cmd, val) dbStreamKey = do
   where
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
-      runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
+      Env {..} <- ask
+      if model `elem` _dontEnableDbTables then pure $ Right id else runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
     -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
     runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
       isPushToKafka' <- EL.runIO isPushToKafka
@@ -187,16 +187,23 @@ runUpdateCommands (cmd, val) dbStreamKey = do
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Update Error " :: Text)
-                    pure $ Left (UnexpectedError "Kafka Error", id)
+                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
             Left _ -> do
-              _ <- addValueToErrorQueue C.kafkaUpdateFailedStream [("UpdateCommand", value)]
-              EL.logError ("ERROR:" :: Text) ("Could not find the key in redis to get the updated object" :: Text)
-              void $ publishDBSyncMetric Event.KafkaUpdateMissing
-              pure $ Right id
+              let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+              Env {..} <- ask
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              either
+                ( \_ -> do
+                    void $ publishDBSyncMetric Event.KafkaPushFailure
+                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
+                )
+                (\_ -> pure $ Right id)
+                res''
 
     -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
     runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause model dbConf = do
@@ -249,3 +256,15 @@ getDbUpdateDataJson model a =
       "tag" .= T.pack (pascal (T.unpack model) <> "Object"),
       "type" .= ("UPDATE" :: Text)
     ]
+
+updValToJSON :: [(Text, A.Value)] -> A.Value
+updValToJSON keyValuePairs = A.Object $ HM.fromList keyValuePairs
+
+getPKeyandValuesList :: Text -> [(Text, A.Value)]
+getPKeyandValuesList pKeyAndValue = go (splitOn "_" pKeyTrimmed) []
+  where
+    go (tName : k : v : rest) acc = go (tName : rest) ((k, A.String v) : acc)
+    go _ acc = acc
+    pKeyTrimmed = case splitOn "{" pKeyAndValue of
+      [] -> ""
+      (x : _) -> x

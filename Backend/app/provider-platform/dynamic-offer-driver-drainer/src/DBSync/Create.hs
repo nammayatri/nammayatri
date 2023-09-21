@@ -113,8 +113,9 @@ runCreateCommands cmds streamKey = do
           byteStream = map (\(_, bts, _, _) -> bts) object
           entryIds = map (\(_, _, entryId, _) -> entryId) object
           cmdsToErrorQueue = map ("command" :: String,) byteStream
+      Env {..} <- ask
       maxRetries <- EL.runIO getMaxRetries
-      if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
+      if null object || model `elem` _dontEnableDbTables then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
     -- If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
     runCreateInKafka dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka

@@ -31,7 +31,8 @@ import Types.Event as Event
 data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
-    _kafkaConnection :: Producer.KafkaProducer
+    _kafkaConnection :: Producer.KafkaProducer,
+    _dontEnableDbTables :: [Text]
   }
 
 type Flow = EL.ReaderFlow Env

@@ -77,7 +77,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
-      runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
+      Env {..} <- ask
+      if model `elem` _dontEnableDbTables then pure $ Right id else runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
     -- If KAFKA_PUSH is false then entry will be there in DB Else Delete entry in Kafka only.
     runDeleteInKafka id value dbstremKey whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
