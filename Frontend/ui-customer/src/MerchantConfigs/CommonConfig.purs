@@ -57,4 +57,11 @@ commonConfig =
             , packageName : "com.google.android.apps.maps"
             , walkQuery : "google.navigation:q=%f,%f&mode=w"
             }
+        , estimateAndQuoteConfig : 
+            { variants :
+                { acVariant : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV"]
+                , nonAcVariant : ["TAXI"]
+                , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV", "TAXI"]
+                }
+            }
         }
