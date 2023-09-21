@@ -84,7 +84,7 @@ eval ViewRideDetails state = continue state { props{ subView = RideDetails}}
 
 eval (UpdatePaymentHistory response) state = getAllTransactions response state
 
-eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {props {selectedDue = dueItem.id}}
+eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {props {selectedDue = if state.props.selectedDue == dueItem.id then "" else dueItem.id}}
 
 eval (Copy val) state = continueWithCmd state [ do 
     _ <- pure $ copyToClipboard val

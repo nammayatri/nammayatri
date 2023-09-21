@@ -801,5 +801,6 @@ const mlStrings = {
   EXECUTION_ATTEMPTING : "Execution Attempting", 
   EXECUTION_SUCCESS : "Execution Success",
   SCHEDULED : "SCHEDULED",
-  ONE_TIME_SETTLEMENT : "ഒറ്റത്തവണ സെറ്റിൽമെന്റ് നടത്തുക"
+  ONE_TIME_SETTLEMENT : "ഒറ്റത്തവണ സെറ്റിൽമെന്റ് നടത്തുക",
+  PAYMENT_SCHEDULED : "Payment Scheduled"
 }

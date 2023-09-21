@@ -32,7 +32,7 @@ import Data.Int as DI
 import Data.Maybe (Maybe(..), isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
 import Helpers.Utils as HU
@@ -41,7 +41,10 @@ import Language.Types (STR(..))
 import Prelude (map, not, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (AutoPayStatus(..), OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
+import Screens.PaymentHistoryScreen.Transformer (getAutoPayStageData)
+import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
 import Screens.Types as ST
+import Services.API (FeeType(..), OfferEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 
@@ -421,21 +424,24 @@ type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
 
 dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
-dueDetailsListState state = {
-  dues : map (\ item -> {
-    date : item.tripDate,
-    planType : item.plan,
-    offerApplied : Nothing,
-    noOfRides : item.noOfRides,
-    totalEarningsOfDay : item.earnings,
-    dueAmount : item.amount,
-    fareBreakup : item.feeBreakup,
-    expanded : item.randomId == state.data.myPlanData.selectedDue,
-    isAutoPayFailed : false,
-    isSplitPayment : false,
-    id : item.randomId,
-    paymentMode : item.mode,
-    scheduledAt : Nothing,
-    paymentStatus : Nothing
-  }) state.data.myPlanData.dueItems
+dueDetailsListState state = 
+  {
+  dues : map (\ item -> do
+    let planOfferData = decodeOfferPlan item.plan
+    {
+      date : convertUTCtoISC item.tripDate "Do MMM, YYYY",
+      planType : planOfferData.plan,
+      offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing}]) DA.!! 0,
+      noOfRides : item.noOfRides,
+      totalEarningsOfDay : item.earnings,
+      dueAmount : item.amount,
+      fareBreakup : item.feeBreakup,
+      expanded : item.randomId == state.data.myPlanData.selectedDue,
+      isAutoPayFailed : Mb.isJust item.autoPayStage && item.mode == MANUAL_PAYMENT,
+      isSplitPayment : item.isSplit,
+      id : item.randomId,
+      paymentMode : item.mode,
+      scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
+      paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (getAutoPayStageData item.autoPayStage) else Nothing
+    }) state.data.myPlanData.dueItems
 }

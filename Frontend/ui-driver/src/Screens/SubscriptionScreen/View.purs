@@ -755,6 +755,7 @@ duesView push state =
           , fontStyle $ FontStyle.bold LanguageStyle
           , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
           , padding $ PaddingBottom 2
+          , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
           ]
         , imageView [
           imageWithFallback if state.props.myPlanProps.isDueViewExpanded 
@@ -811,7 +812,9 @@ duesView push state =
             [ text $  "₹" <> show state.data.myPlanData.totalDueAmount
             , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
             , fontStyle $ FontStyle.bold LanguageStyle
-            , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
+            , color if state.props.myPlanProps.overDue then Color.red 
+                    else if state.props.myPlanProps.multiTypeDues then Color.black900 
+                    else Color.blue800
             , weight 1.0
             ] 
           , textView
@@ -1658,6 +1661,8 @@ duesOverView push state visibility' =
 
 dueOverViewCard :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 dueOverViewCard push state isManual =
+  let items = filter (\item -> if isManual then item.mode /= AUTOPAY_PAYMENT else item.mode == AUTOPAY_PAYMENT) state.data.myPlanData.dueItems
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1706,7 +1711,7 @@ dueOverViewCard push state isManual =
           , margin $ Margin 16 4 0 0
           , visibility if isManual then VISIBLE else GONE
         ] <> FontStyle.tags TypoGraphy
-    , tripList push state.data.myPlanData.dueItems isManual true false
+    , tripList push items isManual true false
     , linearLayout
         [ height $ V 2
         , width MATCH_PARENT
@@ -1767,7 +1772,7 @@ tripList push trips isManual isExpanded viewDatailsText =
               , weight 1.0
               ] <> FontStyle.body15 TypoGraphy
             , textView $
-              [ text $ show item.amount
+              [ text $ "₹" <>  show item.amount
               , color Color.black700
               ] <> FontStyle.body15 TypoGraphy
             ]

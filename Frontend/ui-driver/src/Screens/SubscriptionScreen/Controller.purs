@@ -27,7 +27,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>))
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -268,8 +268,10 @@ eval (LoadMyPlans plans) state = do
           requiredBalance = case (planEntity.bankErrors DA.!! 0) of
                               Mb.Just (BankError error) -> Mb.Just error.amount
                               Mb.Nothing -> Mb.Nothing
+          isOverdue = planEntity.currentDues >= 100.0
+          multiTypeDues = planEntity.currentDues - planEntity.autopayDues /= 0.0
           newState = state{ 
-            props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType }, 
+            props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
             data{ orderId = currentPlanResp.orderId, 
                   planId = planEntity.id, myPlanData{
                       planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized,
@@ -344,7 +346,7 @@ eval ViewDueDetails state = continue state{props{subView = DueDetails}}
 
 eval (ClearManualDues PrimaryButton.OnClick) state = continue state
 
-eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = dueItem.id}}}
+eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = if state.data.myPlanData.selectedDue == dueItem.id then "" else dueItem.id}}}
 
 eval _ state = continue state
 

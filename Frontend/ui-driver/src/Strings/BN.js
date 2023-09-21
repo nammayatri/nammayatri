@@ -843,5 +843,6 @@ const bengaliStrings = {
   EXECUTION_SCHEDULED :  "Execution Scheduled", 
   EXECUTION_ATTEMPTING : "Execution Attempting", 
   EXECUTION_SUCCESS : "Execution Success",
-  SCHEDULED : "SCHEDULED"
+  SCHEDULED : "SCHEDULED",
+  PAYMENT_SCHEDULED : "Payment Scheduled"
 }

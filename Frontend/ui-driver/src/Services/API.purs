@@ -34,7 +34,6 @@ import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
-import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
@@ -2281,8 +2280,8 @@ newtype PlanEntity = PlanEntity {
 }
 
 newtype DriverDuesEntity = DriverDuesEntity {
-    autoPayStage :: Maybe String, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
-    paymentStatus :: Maybe String, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe InvoiceStatus, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
     totalEarnings :: Number,
     totalRides :: Int,
     planAmount :: Number,
@@ -2782,7 +2781,9 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     totalRides :: Int,
     planAmount :: Number,
     isSplit :: Boolean,
-    offerAndPlanDetails :: Maybe String
+    offerAndPlanDetails :: Maybe String,
+    rideTakenOn :: String,
+    driverFeeAmount :: Number
 }
 
 instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where
