@@ -37,6 +37,7 @@ import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Control.Lens ((%~))
+import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Text as T
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.Booking as DRB
@@ -163,7 +164,8 @@ sendRideAssignedUpdateToBAP booking ride = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  image <- fetchAndCacheAadhaarImage driver driverInfo
+  resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
+  let image = join (eitherToMaybe resp)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 

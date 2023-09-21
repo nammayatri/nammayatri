@@ -78,6 +78,7 @@ import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
+import Data.Either.Extra (eitherToMaybe)
 import Data.List (groupBy, intersect, (\\))
 import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
@@ -802,7 +803,8 @@ buildDriverEntityRes (person, driverInfo) = do
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
-  aadhaarCardPhoto <- fetchAndCacheAadhaarImage person driverInfo
+  aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
+  let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   return $
     DriverEntityRes
