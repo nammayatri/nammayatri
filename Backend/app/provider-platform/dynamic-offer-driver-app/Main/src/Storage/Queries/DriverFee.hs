@@ -58,7 +58,12 @@ findPendingFeesByDriverId (Id driverId) =
 findLatestFeeByDriverId :: MonadFlow m => Id Driver -> m (Maybe DriverFee)
 findLatestFeeByDriverId (Id driverId) =
   findAllWithOptionsKV
-    [Se.Is BeamDF.driverId $ Se.Eq driverId]
+    [ Se.And
+        [ Se.Is BeamDF.driverId (Se.Eq driverId),
+          Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION),
+          Se.Is BeamDF.status (Se.Eq ONGOING)
+        ]
+    ]
     (Se.Desc BeamDF.createdAt)
     (Just 1)
     Nothing

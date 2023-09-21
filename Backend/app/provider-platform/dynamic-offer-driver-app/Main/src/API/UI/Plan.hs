@@ -14,16 +14,20 @@
 
 module API.UI.Plan where
 
+import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Plan as DPlan
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Storage.Queries.DriverInformation as DI
 import Tools.Auth
 
 type API =
@@ -74,7 +78,14 @@ currentPlan :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.CurrentPlanRe
 currentPlan = withFlowHandlerAPI . DPlan.currentPlan
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.PlanSubscribeRes
-planSubscribe planId = withFlowHandlerAPI . DPlan.planSubscribe planId False
+planSubscribe planId (personId, merchantId) = withFlowHandlerAPI $ do
+  driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  if driverInfo.autoPayStatus == Just DI.SUSPENDED
+    then do
+      void $ DPlan.planResume (personId, merchantId)
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId)
+      return $ DPlan.PlanSubscribeRes {..}
+    else do DPlan.planSubscribe planId False (personId, merchantId) driverInfo
 
 planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
 planSelect planId = withFlowHandlerAPI . DPlan.planSelect planId
