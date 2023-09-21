@@ -4,9 +4,11 @@ module Screens.PaymentHistoryScreen.ComponentConfig
 import Prelude
 
 import Common.Styles.Colors as Color
+import Common.Types.App (LazyCheck(..))
 import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Helpers.Utils (getAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -66,7 +68,7 @@ getStatusConfig status = case status of
 getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String}
 getTransactionConfig status = case status of
                               Common.Success -> {image : "ny_ic_green_tick", title : getString PAYMENT_SUCCESSFUL}
-                              Common.Pending -> {image : "ny_ic_transaction_pending", title : getString PAYMENT_PENDING}
-                              Common.Failed  -> {image : "ny_ic_payment_failed", title : getString PAYMENT_FAILED}
+                              Common.Pending -> {image : "ny_ic_transaction_pending," <> (getAssetStoreLink FunctionCall) <> "ny_ic_transaction_pending.png", title : getString PAYMENT_PENDING}
+                              Common.Failed  -> {image : "ny_ic_payment_failed," <> (getAssetStoreLink FunctionCall) <> "ny_ic_payment_failed.png", title : getString PAYMENT_FAILED}
                               Common.Scheduled  -> {image : "ny_ic_pending", title : getString PAYMENT_SCHEDULED}
                               -- {image : "ny_ic_pending", title : getString NOTIFICATION_SCHEDULED}

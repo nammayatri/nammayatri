@@ -32,7 +32,8 @@ initData = {
             details : [],
             manualSpecificDetails : [],
             isSplit : false,
-            isAutoPayFailed : false
+            isAutoPayFailed : false,
+            feeType : AUTOPAY_PAYMENT
         },
         planData : dummyPlanConfig
     },

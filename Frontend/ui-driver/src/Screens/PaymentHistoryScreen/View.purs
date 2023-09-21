@@ -42,9 +42,10 @@ import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
 import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (decode)
+import Helpers.Utils (getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=))
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=), (||))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, VDom, Visibility(..), afterRender, alignParentBottom, background, backgroundColor, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -52,7 +53,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.PaymentHistoryScreen.ScreenData (dummyPromoConfig)
-import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus)
+import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (getPromoConfig)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PromoConfig)
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
@@ -171,13 +172,13 @@ paymentList push state =
                 , gravity CENTER_VERTICAL
                 , orientation HORIZONTAL
                 , margin $ MarginVertical 0 6
-                ][ commonTV push (getString PAID_ON <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT
-                , commonTV push (convertUTCtoISC item.transactionDate "Do MMM, YYYY") Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT -- convertUTCtoISC config.date "Do MMM YYYY"
+                ][ commonTV push (getString PAID_ON <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
+                , commonTV push (convertUTCtoISC item.transactionDate "Do MMM, YYYY") Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
                 , linearLayout
                     [ height WRAP_CONTENT
                     , weight 1.0
                     ][]
-                , commonTV push ("₹" <> show item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT
+                , commonTV push ("₹" <> show item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
                 , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -191,7 +192,7 @@ paymentList push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][  commonTV push item.description Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                ][  commonTV push item.description Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
                     , linearLayout
                         [ height WRAP_CONTENT
                         , weight 1.0
@@ -210,7 +211,7 @@ paymentList push state =
                           , margin (MarginRight 4)
                           , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
                           ]
-                        , commonTV push (if item.feeType == AUTOPAY_PAYMENT then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                        , commonTV push (if item.feeType == AUTOPAY_PAYMENT then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
                         ]
                 ]
             ]
@@ -231,7 +232,7 @@ noPaymentsView state push =
     , imageWithFallback case state.props.autoPayHistory of
                           true -> case state.props.autoPaySetup of 
                                     true -> "ny_no_automatic_payments," 
-                                    false -> "ny_ic_enable_autopay,"
+                                    false -> "ny_ic_enable_autopay," <> (getAssetStoreLink FunctionCall) <> "ny_ic_enable_autopay.png"
                           false -> "ny_no_manual_payments,"
     ]
   , textView
@@ -262,8 +263,8 @@ noPaymentsView state push =
   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)
   ]
 
-commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> PrestoDOM (Effect Unit) w
-commonTV push text' color' fontStyle marginTop gravity' =
+commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Boolean -> PrestoDOM (Effect Unit) w
+commonTV push text' color' fontStyle marginTop gravity' visibility'=
   textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -271,6 +272,7 @@ commonTV push text' color' fontStyle marginTop gravity' =
   , color color'
   , gravity gravity'
   , margin $ MarginTop marginTop
+  , visibility if visibility' then VISIBLE else GONE
   ] <> fontStyle
 
 textView' :: forall w. (Action -> Effect Unit) -> Maybe Action -> String -> String -> Style -> Maybe Padding -> Maybe Margin -> PrestoDOM (Effect Unit) w
@@ -331,6 +333,7 @@ tabView state push =
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 transactionDetails push state visibility' = 
   let config = getTransactionConfig state.data.transactionDetails.paymentStatus
+      autopayStageTitle = getAutoPayStageData state.data.transactionDetails.notificationStatus
   in
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   scrollView
@@ -354,8 +357,8 @@ transactionDetails push state visibility' =
                 , height $ V 114
                 , imageWithFallback config.image
                 ]
-              , commonTV push config.title Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER
-              , commonTV push ((getString TRANSACTION_ON) <> " " <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER
+              , commonTV push (if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.title else autopayStageTitle) Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER true
+              , commonTV push ((getString TRANSACTION_ON) <> " " <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER (state.data.transactionDetails.statusTime /= "")
             ]
           , linearLayout
               [ width MATCH_PARENT
@@ -371,13 +374,12 @@ transactionDetails push state visibility' =
                 , height WRAP_CONTENT
                 , orientation VERTICAL
                 , padding $ PaddingVertical 8 8
-                ](DA.mapWithIndex (\ index item -> 
-                  transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) $ case item.key of
+                ](DA.mapWithIndex (\ index item ->
+                  transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) (item.val /= "") $ case item.key of
                     "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing}]) DA.!! 0)) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
-                    _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT
-              
+                    _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
                   ) state.data.transactionDetails.details)
             , manualPaymentRidesList push state -- if manualPayment
               ]
@@ -418,12 +420,13 @@ transactionDetails push state visibility' =
     ]
   
 
-transactionHistoryRow ∷ ∀ (a ∷ Type). (Action → Effect Unit) -> String -> Int -> Int -> VDom (Array (Prop (Effect Unit))) a -> VDom (Array (Prop (Effect Unit))) a
-transactionHistoryRow push item index length rightLayout = 
+transactionHistoryRow ∷ ∀ (a ∷ Type). (Action → Effect Unit) -> String -> Int -> Int -> Boolean -> VDom (Array (Prop (Effect Unit))) a -> VDom (Array (Prop (Effect Unit))) a 
+transactionHistoryRow push item index length visibility' rightLayout  = 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , visibility if visibility' || item == getString OFFER then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -431,7 +434,7 @@ transactionHistoryRow push item index length rightLayout =
       , background Color.blue600
       , padding $ PaddingVertical 8 8
       , gravity CENTER_VERTICAL
-      ][ commonTV push item Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT
+      ][ commonTV push item Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
       , linearLayout
           [ weight 1.0
           , height WRAP_CONTENT
@@ -502,7 +505,7 @@ rightItem push val prefixImage postfixImage =
      , height $ V 16
      , margin (MarginLeft 3)
      , visibility if postfixImage then VISIBLE else GONE
-     , imageWithFallback "ny_ic_copy_blue,"
+     , imageWithFallback $ "ny_ic_copy_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_copy_blue.png"
      ] 
   ]
 

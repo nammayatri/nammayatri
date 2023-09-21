@@ -497,7 +497,7 @@ myPlanView push state visibility' =
 
 headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
 headerView push state =
-  let config = getHeaderConfig state.props.subView (state.props.myPlanProps.dueType == MANUAL_PAYMENT)
+  let config = getHeaderConfig state.props.subView (state.props.myPlanProps.dueType /= AUTOPAY_PAYMENT)
   in 
     linearLayout
     [ height $ V 55
@@ -739,7 +739,7 @@ duesView push state =
         , height $ V 16
         , margin (MarginRight 4)
         , visibility if state.props.myPlanProps.overDue then VISIBLE else GONE
-        , imageWithFallback "ny_ic_warning_unfilled_red,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
+        , imageWithFallback $ "ny_ic_warning_unfilled_red," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_warning_unfilled_red.png"
         ]
         , textView
           [ text (getString YOUR_DUES)
@@ -813,7 +813,7 @@ duesView push state =
             , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
             , fontStyle $ FontStyle.bold LanguageStyle
             , color if state.props.myPlanProps.overDue then Color.red 
-                    else if state.props.myPlanProps.multiTypeDues then Color.black900 
+                    else if state.data.myPlanData.manualDueAmount > 0.0 then Color.black900 
                     else Color.blue800
             , weight 1.0
             ] 
@@ -841,13 +841,13 @@ duesView push state =
             , orientation HORIZONTAL
             ][ linearLayout
                 [ height $ V 4
-                , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.totalDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
+                , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.manualDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
                 , background if state.props.myPlanProps.overDue then Color.red else Color.orange900
                 , cornerRadius 4.0
                 ][]
                 , linearLayout
                   [ height $ V 4
-                  , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.totalDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
+                  , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.autoPayDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
                   , background if state.props.myPlanProps.overDue then Color.red else Color.blue800
                   , cornerRadius 4.0
                   ][]
@@ -911,7 +911,7 @@ duesView push state =
                                 else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
                                 else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
           ]
-        , tripList push state.data.myPlanData.dueItems (state.props.myPlanProps.dueType == MANUAL_PAYMENT) state.props.myPlanProps.isDuesExpanded true
+        , tripList push state.data.myPlanData.dueItems (state.data.myPlanData.manualDueAmount /= 0.0) state.props.myPlanProps.isDuesExpanded true
       ] 
    ]
    , if (isNothing state.data.orderId && (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY || state.data.myPlanData.manualDueAmount > 0.0)) then PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView -- 
@@ -1699,7 +1699,7 @@ dueOverViewCard push state isManual =
           ) (const NoAction)
         ]
       , textView $
-        [ text $  "₹" <> show state.data.myPlanData.totalDueAmount
+        [ text $  "₹" <> show if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
         , weight 1.0
         , gravity RIGHT
         , color if isManual then Color.orange900 else Color.blue800
@@ -1708,7 +1708,7 @@ dueOverViewCard push state isManual =
     , textView $ [
           text $ getString MANUAL_DUE_AS_AUTOPAY_EXECUTION_FAILED
           , color Color.black600        
-          , margin $ Margin 16 4 0 0
+          , margin $ Margin 16 4 0 12
           , visibility if isManual then VISIBLE else GONE
         ] <> FontStyle.tags TypoGraphy
     , tripList push items isManual true false
@@ -1726,7 +1726,7 @@ dueOverViewCard push state isManual =
         , gravity CENTER
         , textFromHtml $ "<u>"<>(getString VIEW_DETAILS)<>"</u>"
         , color Color.black650
-        , onClick push $ const ViewDueDetails
+        , onClick push $ const $ ViewDueDetails if isManual then MANUAL_PAYMENT else AUTOPAY_PAYMENT
         , padding $ PaddingVertical 16 16
         ] <> FontStyle.body1 TypoGraphy
   ]
@@ -1736,7 +1736,7 @@ tripList push trips isManual isExpanded viewDatailsText =
       height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ MarginTop 16
+      , margin $ MarginTop 4
       , padding $ PaddingHorizontal 16 16
       , visibility if isExpanded then VISIBLE else GONE
     ][ linearLayout
@@ -1758,7 +1758,7 @@ tripList push trips isManual isExpanded viewDatailsText =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , margin $ MarginBottom 16
+        , margin $ MarginBottom 12
         ] (map
             (\item -> 
             linearLayout
@@ -1783,8 +1783,8 @@ tripList push trips isManual isExpanded viewDatailsText =
         , gravity CENTER
         , textFromHtml $ "<u>"<>(getString VIEW_DETAILS)<>"</u>"
         , color Color.black650
-        , onClick push $ const ViewDueDetails
-        , padding $ PaddingBottom 5
+        , onClick push $ const $ ViewDueDetails if isManual then MANUAL_PAYMENT else AUTOPAY_PAYMENT
+        , padding $ PaddingVertical 4 20
         , visibility if viewDatailsText then VISIBLE else GONE
         ] <> FontStyle.body1 TypoGraphy
   ]

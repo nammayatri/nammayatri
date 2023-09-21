@@ -19,6 +19,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
     let (API.DriverFeeInfoEntity driverFee') = case (resp.driverFeeInfo !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
                                                   Nothing -> dummyDriverFee
+        execTime = fromMaybe "" resp.executionAt
         autoPaySpecificKeys = do
           let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
           case (length resp.driverFeeInfo == 1) of
@@ -26,7 +27,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "TRIP_DATE",
                     title : getString TRIP_DATE,
-                    val : (convertUTCtoISC driverFee'.rideTakenOn "Do MMM, YYYY")
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else (convertUTCtoISC driverFee'.rideTakenOn "Do MMM, YYYY")
                   },
                   {
                     key : "PLAN",
@@ -36,11 +37,11 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "NUMBER_OF_RIDES",
                     title : getString NUMBER_OF_RIDES,
-                    val : show driverFee'.totalRides
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else show driverFee'.totalRides
                   },
                   {key : "YOUR_EARNINGS",
                   title : getString YOUR_EARNINGS,
-                  val : "₹" <> show driverFee'.totalEarnings},
+                  val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "₹" <> show driverFee'.totalEarnings},
                 --   {key : "FEE_BREAKUP",  -- TO BE ADDED
                 --   title : getString FEE_BREAKUP,
                 --   val : ""<> getString GST_INCLUDE},
@@ -53,9 +54,10 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
-            statusTime : convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A",
+            statusTime : if execTime == "" then "" else  convertUTCtoISC execTime "Do MMM YYYY, h:mm A",
             isSplit : (length resp.driverFeeInfo == 1) && driverFee'.isSplit,
             isAutoPayFailed : (length resp.driverFeeInfo == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
+            feeType : resp.feeType,
             details : [
               {
                 key : "TXN_ID",

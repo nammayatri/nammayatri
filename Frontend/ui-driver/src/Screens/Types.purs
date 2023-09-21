@@ -1605,9 +1605,7 @@ type MyPlanData = {
   autoPayDueAmount :: Number,
   manualDueAmount :: Number,
   mandateStatus :: String,
-  selectedDue :: String,
-  autopayDues :: Number,
-  currentDues :: Number
+  selectedDue :: String
 }
 
 type MyPlanProps = {
@@ -1713,7 +1711,8 @@ type TransactionInfo = {
   details :: Array TransactionListItem,
   manualSpecificDetails :: Array DueCard,
   isSplit :: Boolean,
-  isAutoPayFailed :: Boolean
+  isAutoPayFailed :: Boolean,
+  feeType :: FeeType
 }
 type PaymentListItem = {
   transactionDate :: String,

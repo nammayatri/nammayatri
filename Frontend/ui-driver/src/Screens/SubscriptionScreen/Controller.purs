@@ -27,14 +27,14 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=))
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (BankError(..), GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
@@ -83,7 +83,7 @@ data Action = BackPressed
             | OpenGoogleMap Number Number
             | CheckPaymentStatusButton PrimaryButton.Action
             | ViewDuesOverView
-            | ViewDueDetails
+            | ViewDueDetails FeeType
             | ClearManualDues PrimaryButton.Action
             | DueDetailsListAction DueDetailsListController.Action
 
@@ -269,7 +269,7 @@ eval (LoadMyPlans plans) state = do
                               Mb.Just (BankError error) -> Mb.Just error.amount
                               Mb.Nothing -> Mb.Nothing
           isOverdue = planEntity.currentDues >= 100.0
-          multiTypeDues = planEntity.currentDues - planEntity.autopayDues /= 0.0
+          multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
           newState = state{ 
             props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
             data{ orderId = currentPlanResp.orderId, 
@@ -342,9 +342,9 @@ eval (CheckPaymentStatusButton PrimaryButton.OnClick) state = continueWithCmd st
 
 eval ViewDuesOverView state = continue state{props{subView = DuesView}}
 
-eval ViewDueDetails state = continue state{props{subView = DueDetails}}
+eval (ViewDueDetails dueType) state = continue state{props{subView = DueDetails, myPlanProps {dueType = dueType}}}
 
-eval (ClearManualDues PrimaryButton.OnClick) state = continue state
+eval (ClearManualDues PrimaryButton.OnClick) state = updateAndExit state $ ClearDues state
 
 eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = if state.data.myPlanData.selectedDue == dueItem.id then "" else dueItem.id}}}
 

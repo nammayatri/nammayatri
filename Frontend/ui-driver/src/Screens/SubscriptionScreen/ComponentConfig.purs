@@ -40,9 +40,9 @@ import JBridge as JB
 import Language.Types (STR(..))
 import Prelude (map, not, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (AutoPayStatus(..), OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
+import Screens.Types (AutoPayStatus(..), OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -417,7 +417,7 @@ getHeaderConfig subView isAutoPayDue =
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
     ST.FindHelpCentre -> {title : (getString FIND_HELP_CENTRE), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
-    ST.DueDetails -> {title : getString if isAutoPayDue then AUTOPAY_DUE_DETAILS else MANUAL_DUE_DETAILS , actionText : "", backbutton : true}
+    ST.DueDetails -> {title : getString if isAutoPayDue then MANUAL_DUE_DETAILS else AUTOPAY_DUE_DETAILS , actionText : "", backbutton : true}
     _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
@@ -443,5 +443,5 @@ dueDetailsListState state =
       paymentMode : item.mode,
       scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
       paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (getAutoPayStageData item.autoPayStage) else Nothing
-    }) state.data.myPlanData.dueItems
+    }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
