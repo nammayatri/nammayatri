@@ -237,7 +237,8 @@ data DriverInformationRes = DriverInformationRes
     aadhaarCardPhoto :: Maybe Text,
     isGoHomeEnabled :: Bool,
     driverGoHomeInfo :: DDGR.CachedGoHomeRequest,
-    freeTrialDaysLeft :: Int
+    freeTrialDaysLeft :: Int,
+    maskedDeviceToken :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -274,7 +275,8 @@ data DriverEntityRes = DriverEntityRes
     gender :: Maybe SP.Gender,
     mediaUrl :: Maybe Text,
     aadhaarCardPhoto :: Maybe Text,
-    freeTrialDaysLeft :: Int
+    freeTrialDaysLeft :: Int,
+    maskedDeviceToken :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -800,6 +802,7 @@ buildDriverEntityRes (person, driverInfo) = do
   vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
+  let maskedDeviceToken = maskText . (.getFCMRecipientToken) <$> person.deviceToken
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
@@ -836,7 +839,8 @@ buildDriverEntityRes (person, driverInfo) = do
         gender = Just person.gender,
         mediaUrl = mediaUrl,
         aadhaarCardPhoto = aadhaarCardPhoto,
-        freeTrialDaysLeft = freeTrialDaysLeft
+        freeTrialDaysLeft = freeTrialDaysLeft,
+        maskedDeviceToken = maskedDeviceToken
       }
 
 changeDriverEnableState ::
