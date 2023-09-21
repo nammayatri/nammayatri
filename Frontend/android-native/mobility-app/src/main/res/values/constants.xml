@@ -11,6 +11,7 @@
     <string name="DRIVER_STATUS" translatable="false">DRIVER_STATUS</string>
     <string name="WIDGET_MESSAGE" translatable="false">widgetMessage</string>
     <string name="IS_RIDE_ACTIVE" translatable="false">IS_RIDE_ACTIVE</string>
+    <string name="TRIP_STATUS" translatable="false">TRIP_STATUS</string>
     <string name="ACTIVITY_STATUS" translatable="false">ACTIVITY_STATUS</string>
     <string name="REGISTERATION_TOKEN" translatable="false">REGISTERATION_TOKEN</string>
     <string name="ERROR_MESSAGE" translatable="false">errorMessage</string>

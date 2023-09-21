@@ -106,6 +106,10 @@ data KeyStore = USER_NAME
                 | BUNDLE_TIME_OUT
                 | APP_SESSION_TRACK_COUNT
                 | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
+                | TRIP_DISTANCE_ACC
+                | TRIP_DISTANCE
+                | TRIP_STATUS
+                | TRIP_STARTED
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
