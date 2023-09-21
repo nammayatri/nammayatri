@@ -99,7 +99,7 @@ cancel req merchant booking = do
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
     enableLocationTrackingService <- asks (.enableLocationTrackingService)
     when enableLocationTrackingService $
-      void $ LF.rideDetails ride.id ride.status merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
