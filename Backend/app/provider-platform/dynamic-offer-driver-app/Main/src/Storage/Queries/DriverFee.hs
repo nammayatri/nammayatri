@@ -305,6 +305,13 @@ updateAutopayPaymentStageById autopayPaymentStage driverFeeId = do
     [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
+updateAutopayPaymentStageByIds :: MonadFlow m => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
+updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+
 updateStatusByIds :: MonadFlow m => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now =
   updateWithKV
