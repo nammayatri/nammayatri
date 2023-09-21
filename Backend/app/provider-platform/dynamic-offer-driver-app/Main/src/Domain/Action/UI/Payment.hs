@@ -95,29 +95,22 @@ getStatus :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DP
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
-  mOrder <- QOrder.findById orderId
-  order <-
-    case mOrder of -- handling backward compatibility case of jatri saathi
-      Just _order -> return _order
-      Nothing -> do
-        invoices <- QIN.findById (cast orderId)
-        invoice <- listToMaybe invoices & fromMaybeM (PaymentOrderNotFound orderId.getId)
-        QOrder.findById (cast invoice.id) >>= fromMaybeM (PaymentOrderNotFound invoice.id.getId)
-
-  paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
+  paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
 
   case paymentStatus of
     DPayment.MandatePaymentStatus {..} -> do
-      unless (order.status /= Payment.CHARGED) $ do
+      unless (status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
       processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
       QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
-    DPayment.PaymentStatus _ -> do
-      unless (order.status /= Payment.CHARGED) $ do
+      notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
+    DPayment.PaymentStatus {..} -> do
+      unless (status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id True
+      notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
     DPayment.PDNNotificationStatusResp {..} ->
       processNotification notificationId notificationStatus
-  notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id order.status Nothing
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
