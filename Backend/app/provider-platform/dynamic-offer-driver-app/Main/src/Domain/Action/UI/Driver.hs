@@ -1711,7 +1711,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
             }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkAutoPayPaymentEntity :: MonadFlow m => Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> INV.Invoice -> m (Maybe AutoPayInvoiceHistory)
 mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice = do
@@ -1729,7 +1729,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
             }
     Nothing -> return Nothing
   where
-    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 data HistoryEntryDetailsEntityV2 = HistoryEntryDetailsEntityV2
   { invoiceId :: Text,
@@ -1773,7 +1773,7 @@ getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceId.getId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
-    mapToAmount = map (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+    mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
 mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> m [DriverFeeInfoEntity]
 mkDriverFeeInfoEntity driverFees invoiceStatus = do

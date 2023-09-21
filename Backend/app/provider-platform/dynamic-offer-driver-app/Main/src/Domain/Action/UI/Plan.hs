@@ -42,6 +42,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
+import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
@@ -372,7 +373,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
-  let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverManualDuesFees
+  let currentDues = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverManualDuesFees
   case driverRegisterationFee of
     Just registerFee -> do
       invoices <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
@@ -577,10 +578,10 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
               totalEarnings = fromIntegral driverFee.totalEarnings,
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
-              isSplit = not (null driverFeesInWindow),
+              isSplit = length driverFeesInWindow > 1,
               offerAndPlanDetails = driverFee.planOfferTitle,
               rideTakenOn = driverFee.createdAt,
-              driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
+              driverFeeAmount = (\dueDfee -> roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
               createdAt,
               executionAt,
               feeType
