@@ -2596,3 +2596,32 @@ instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackRe
 instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
 instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
 instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode
+
+---------------------------------------------------------------------------------------------------------------
+
+
+newtype GenerateReferralCodeReq = GenerateReferralCodeReq {}
+
+newtype GenerateReferralCodeRes = GenerateReferralCodeRes {
+  referralCode :: String
+}
+
+instance makeGenerateReferralCodeReq :: RestEndpoint GenerateReferralCodeReq GenerateReferralCodeRes where
+    makeRequest reqBody@(GenerateReferralCodeReq date) headers = defaultMakeRequest POST (EP.generateReferralCode "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGenerateReferralCodeReq :: Generic GenerateReferralCodeReq _
+instance showGenerateReferralCodeReq :: Show GenerateReferralCodeReq where show = genericShow
+instance standardGenerateReferralCodeReq :: StandardEncode GenerateReferralCodeReq where standardEncode (GenerateReferralCodeReq req) = standardEncode req
+instance decodeGenerateReferralCodeReq :: Decode GenerateReferralCodeReq where decode = defaultDecode
+instance encodeGenerateReferralCodeReq :: Encode GenerateReferralCodeReq where encode = defaultEncode
+
+derive instance genericGenerateReferralCodeRes :: Generic GenerateReferralCodeRes _
+derive instance newtypeGenerateReferralCodeRes :: Newtype GenerateReferralCodeRes _
+instance showGenerateReferralCodeRes :: Show GenerateReferralCodeRes where show = genericShow
+instance standardEncodeGenerateReferralCodeRes :: StandardEncode GenerateReferralCodeRes where standardEncode (GenerateReferralCodeRes req) = standardEncode req
+instance decodeGenerateReferralCodeRes :: Decode GenerateReferralCodeRes where decode = defaultDecode
+instance encodeGenerateReferralCodeRes :: Encode GenerateReferralCodeRes where encode = defaultEncode
+
+
