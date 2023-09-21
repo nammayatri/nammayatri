@@ -392,6 +392,7 @@ library
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
+      Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.DriverReferral
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy

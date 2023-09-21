@@ -27,6 +27,11 @@ data LeaderBoardType
 
 $(mkBeamInstancesForEnum ''LeaderBoardType)
 
+data DriverLeaderBoardType
+  = RIDE
+  | REFERRAL
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,
     leaderBoardType :: LeaderBoardType,

@@ -21,7 +21,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
     safeMod,
     makeWeeklyDriverLeaderBoardKey,
     getCurrentDate,
-    getRidesAndDistancefromZscore,
+    getParamsfromZscore,
     makeCachedDailyDriverLeaderBoardKey,
     makeCachedWeeklyDriverLeaderBoardKey,
     mkDriverFeeCalcJobFlagKey,
@@ -135,26 +135,93 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
 
-  sendReferralFCM ride mbRiderDetailsId
-  updateLeaderboardZScore merchantId ride
+  -- sendReferralFCM ride mbRiderDetailsId
+  -- updateLeaderboardZScore merchantId ride mbRiderDetailsId
+  updateLeaderboardZScoreAndSendReferralFCM merchantId ride mbRiderDetailsId
   DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
 
-sendReferralFCM ::
+-- sendReferralFCM ::
+--   ( CacheFlow m r,
+--     EsqDBFlow m r,
+--     Esq.EsqDBReplicaFlow m r,
+--     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+--   ) =>
+--   Ride.Ride ->
+--   Maybe (Id RD.RiderDetails) ->
+--   m ()
+-- sendReferralFCM ride mbRiderDetailsId = do
+--   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+--   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+--   let shouldUpdateRideComplete =
+--         case minTripDistanceForReferralCfg of
+--           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
+--           Nothing -> True
+--   when shouldUpdateRideComplete $
+--     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
+--       whenJust mbRiderDetails $ \riderDetails -> do
+--         QRD.updateHasTakenValidRide riderDetails.id
+--         case riderDetails.referredByDriver of
+--           Just referredDriverId -> do
+--             let referralMessage = "Congratulations!"
+--             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
+--             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+--             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+--           Nothing -> pure ()
+
+-- updateLeaderboardZScore ::
+--   ( CacheFlow m r,
+--     EsqDBFlow m r,
+--     Esq.EsqDBReplicaFlow m r,
+--     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+--   ) =>
+--   Id Merchant ->
+--   Ride.Ride ->
+--   Maybe (Id RD.RiderDetails) ->
+--   m ()
+-- updateLeaderboardZScore merchantId ride mbRiderDetailsId = do
+--   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
+--     mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+--     minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+--     let shouldUpdateRideComplete = case minTripDistanceForReferralCfg of
+--                                       Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
+--                                       Nothing -> True
+--     nowUtc <- getCurrentTime
+--     let rideDate = getCurrentDate nowUtc
+--     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate LConfig.RIDE) $ ride.driverId.getId
+--     updateDriverDailyZscore ride.driverId rideDate driverZscore ride.chargeableDistance merchantId LConfig.RIDE shouldUpdateRideComplete
+--     let (_, currDayIndex) = sundayStartWeek rideDate
+--     let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
+--     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
+--     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate LConfig.RIDE) $ ride.driverId.getId
+--     updateDriverWeeklyZscore ride.driverId rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId LConfig.RIDE shouldUpdateRideComplete
+
+--     whenJust mbRiderDetails $ \riderDetails -> do
+--       case riderDetails.referredByDriver of
+--         Just referredDriverId -> do
+--           driverReferralZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate LConfig.REFERRAL) $ referredDriverId.getId
+--           updateDriverDailyZscore referredDriverId rideDate driverReferralZscore ride.chargeableDistance merchantId LConfig.REFERRAL shouldUpdateRideComplete
+--           driveReferralrWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate LConfig.REFERRAL) $ ride.driverId.getId
+--           updateDriverWeeklyZscore referredDriverId rideDate weekStartDate weekEndDate driveReferralrWeeklyZscore ride.chargeableDistance merchantId LConfig.REFERRAL shouldUpdateRideComplete
+--         Nothing -> pure ()
+
+updateLeaderboardZScoreAndSendReferralFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
+  Id Merchant ->
   Ride.Ride ->
   Maybe (Id RD.RiderDetails) ->
   m ()
-sendReferralFCM ride mbRiderDetailsId = do
+updateLeaderboardZScoreAndSendReferralFCM merchantId ride mbRiderDetailsId = do
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
+
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
       whenJust mbRiderDetails $ \riderDetails -> do
@@ -167,21 +234,28 @@ sendReferralFCM ride mbRiderDetailsId = do
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
 
-updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Ride.Ride -> m ()
-updateLeaderboardZScore merchantId ride = do
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     nowUtc <- getCurrentTime
     let rideDate = getCurrentDate nowUtc
-    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
-    updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId
+    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate LConfig.RIDE) $ ride.driverId.getId
+    updateDriverDailyZscore ride.driverId rideDate driverZscore ride.chargeableDistance merchantId LConfig.RIDE shouldUpdateRideComplete
     let (_, currDayIndex) = sundayStartWeek rideDate
     let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
-    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) $ ride.driverId.getId
-    updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
+    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate LConfig.RIDE) $ ride.driverId.getId
+    updateDriverWeeklyZscore ride.driverId rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId LConfig.RIDE shouldUpdateRideComplete
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
-updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
+    whenJust mbRiderDetails $ \riderDetails -> do
+      case riderDetails.referredByDriver of
+        Just referredDriverId -> do
+          driverReferralZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate LConfig.REFERRAL) $ referredDriverId.getId
+          updateDriverDailyZscore referredDriverId rideDate driverReferralZscore ride.chargeableDistance merchantId LConfig.REFERRAL shouldUpdateRideComplete
+          driveReferralrWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate LConfig.REFERRAL) $ ride.driverId.getId
+          updateDriverWeeklyZscore referredDriverId rideDate weekStartDate weekEndDate driveReferralrWeeklyZscore ride.chargeableDistance merchantId LConfig.REFERRAL shouldUpdateRideComplete
+        Nothing -> pure ()
+
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id DP.Person -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> LConfig.DriverLeaderBoardType -> Bool -> m ()
+updateDriverDailyZscore driverId rideDate driverZscore chargeableDistance merchantId driverLeaderBoardType validCustomer = do
   mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
     when dailyLeaderBoardConfig.isEnabled $ do
@@ -191,17 +265,23 @@ updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId
             case driverZscore of
               Nothing -> dailyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 chargeableDistance)
               Just zscore -> do
-                let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore dailyLeaderBoardConfig.zScoreBase
-                let currTotalRides = prevTotalRides + 1
-                let currTotalDist = prevTotalDistance + fromMaybe 0 chargeableDistance
-                currTotalRides * dailyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
-      Hedis.zAddExp (makeDailyDriverLeaderBoardKey merchantId rideDate) ride.driverId.getId (fromIntegral currZscore) lbExpiry.getSeconds
+                let (prevTotalRides, prevTotalDistance, prevTotalValidCustomers, prevTotalReferrals) = getParamsfromZscore zscore dailyLeaderBoardConfig.zScoreBase driverLeaderBoardType
+                case driverLeaderBoardType of
+                  LConfig.RIDE -> do
+                    let currTotalRides = prevTotalRides + 1
+                    let currTotalDist = prevTotalDistance + fromMaybe 0 chargeableDistance
+                    currTotalRides * dailyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
+                  LConfig.REFERRAL -> do
+                    let currTotalValidCustomers = prevTotalValidCustomers + (if validCustomer then 1 else 0)
+                    let currTotalReferrals = prevTotalReferrals + 1
+                    currTotalValidCustomers * dailyLeaderBoardConfig.zScoreBase + currTotalReferrals
+      Hedis.zAddExp (makeDailyDriverLeaderBoardKey merchantId rideDate driverLeaderBoardType) driverId.getId (fromIntegral currZscore) lbExpiry.getSeconds
       let limit = dailyLeaderBoardConfig.leaderBoardLengthLimit
-      driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey merchantId rideDate) 0 (limit -1)
-      Hedis.setExp (makeCachedDailyDriverLeaderBoardKey merchantId rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
+      driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey merchantId rideDate driverLeaderBoardType) 0 (limit -1)
+      Hedis.setExp (makeCachedDailyDriverLeaderBoardKey merchantId rideDate driverLeaderBoardType) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
 
-updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
-updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId = do
+updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id DP.Person -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> LConfig.DriverLeaderBoardType -> Bool -> m ()
+updateDriverWeeklyZscore driverId rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId driverLeaderBoardType validCustomer = do
   mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantId
   whenJust mbWeeklyLeaderBoardConfig $ \weeklyLeaderBoardConfig -> do
     when weeklyLeaderBoardConfig.isEnabled $ do
@@ -212,34 +292,52 @@ updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore ri
             case driverZscore of
               Nothing -> weeklyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 rideChargeableDistance)
               Just zscore -> do
-                let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore weeklyLeaderBoardConfig.zScoreBase
-                let currTotalRides = prevTotalRides + 1
-                let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
-                currTotalRides * weeklyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
-      Hedis.zAddExp (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) ride.driverId.getId (fromIntegral currZscore) (lbExpiry.getSeconds)
+                let (prevTotalRides, prevTotalDistance, prevTotalValidCustomers, prevTotalReferrals) = getParamsfromZscore zscore weeklyLeaderBoardConfig.zScoreBase driverLeaderBoardType
+                case driverLeaderBoardType of
+                  LConfig.RIDE -> do
+                    let currTotalRides = prevTotalRides + 1
+                    let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
+                    currTotalRides * weeklyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
+                  LConfig.REFERRAL -> do
+                    let currTotalValidCustomers = prevTotalValidCustomers + (if validCustomer then 1 else 0)
+                    let currTotalReferrals = prevTotalReferrals + 1
+                    currTotalValidCustomers * weeklyLeaderBoardConfig.zScoreBase + currTotalReferrals
+
+      Hedis.zAddExp (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate driverLeaderBoardType) driverId.getId (fromIntegral currZscore) (lbExpiry.getSeconds)
       let limit = weeklyLeaderBoardConfig.leaderBoardLengthLimit
-      driversListWithScores' <- Hedis.zrevrangeWithscores (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) 0 (limit -1)
-      Hedis.setExp (makeCachedWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) driversListWithScores' (weeklyLeaderBoardConfig.leaderBoardExpiry.getSeconds * weeklyLeaderBoardConfig.numberOfSets)
+      driversListWithScores' <- Hedis.zrevrangeWithscores (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate driverLeaderBoardType) 0 (limit -1)
+      Hedis.setExp (makeCachedWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate driverLeaderBoardType) driversListWithScores' (weeklyLeaderBoardConfig.leaderBoardExpiry.getSeconds * weeklyLeaderBoardConfig.numberOfSets)
 
-makeCachedDailyDriverLeaderBoardKey :: Id Merchant -> Day -> Text
-makeCachedDailyDriverLeaderBoardKey merchantId rideDate = "DDLBCK:" <> merchantId.getId <> ":" <> show rideDate
+makeCachedDailyDriverLeaderBoardKey :: Id Merchant -> Day -> LConfig.DriverLeaderBoardType -> Text
+makeCachedDailyDriverLeaderBoardKey merchantId rideDate leaderBoardType =
+  case leaderBoardType of
+    LConfig.RIDE -> "DDLBCK:" <> merchantId.getId <> ":" <> show rideDate
+    LConfig.REFERRAL -> "DDREFRLBCK:" <> merchantId.getId <> ":" <> show rideDate
 
-makeDailyDriverLeaderBoardKey :: Id Merchant -> Day -> Text
-makeDailyDriverLeaderBoardKey merchantId rideDate =
-  "DDLBK:" <> merchantId.getId <> ":" <> show rideDate
+makeDailyDriverLeaderBoardKey :: Id Merchant -> Day -> LConfig.DriverLeaderBoardType -> Text
+makeDailyDriverLeaderBoardKey merchantId rideDate leaderBoardType =
+  case leaderBoardType of
+    LConfig.RIDE -> "DDLBK:" <> merchantId.getId <> ":" <> show rideDate
+    LConfig.REFERRAL -> "DDREFRLBK:" <> merchantId.getId <> ":" <> show rideDate
 
-makeCachedWeeklyDriverLeaderBoardKey :: Id Merchant -> Day -> Day -> Text
-makeCachedWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate =
-  "DWLBCK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+makeCachedWeeklyDriverLeaderBoardKey :: Id Merchant -> Day -> Day -> LConfig.DriverLeaderBoardType -> Text
+makeCachedWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate leaderBoardType =
+  case leaderBoardType of
+    LConfig.RIDE -> "DWLBCK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+    LConfig.REFERRAL -> "DWREFRLBCK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
 
-makeWeeklyDriverLeaderBoardKey :: Id Merchant -> Day -> Day -> Text
-makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate =
-  "DWLBK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+makeWeeklyDriverLeaderBoardKey :: Id Merchant -> Day -> Day -> LConfig.DriverLeaderBoardType -> Text
+makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate leaderBoardType =
+  case leaderBoardType of
+    LConfig.RIDE -> "DWLBK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
+    LConfig.REFERRAL -> "DWREFRLBK:" <> merchantId.getId <> ":" <> show weekStartDate <> ":" <> show weekEndDate
 
-getRidesAndDistancefromZscore :: Double -> Int -> (Int, Meters)
-getRidesAndDistancefromZscore dzscore dailyZscoreBase =
-  let (totalRides, totalDistance) = quotRem (double2Int dzscore) dailyZscoreBase
-   in (totalRides, Meters totalDistance)
+getParamsfromZscore :: Double -> Int -> LConfig.DriverLeaderBoardType -> (Int, Meters, Int, Int)
+getParamsfromZscore dzscore dailyZscoreBase leaderBoardType = do
+  let (val1, val2) = quotRem (double2Int dzscore) dailyZscoreBase
+  case leaderBoardType of
+    LConfig.RIDE -> (val1, Meters val2, 0, 0)
+    LConfig.REFERRAL -> (0, Meters 0, val1, val2)
 
 getCurrentDate :: UTCTime -> Day
 getCurrentDate time =
