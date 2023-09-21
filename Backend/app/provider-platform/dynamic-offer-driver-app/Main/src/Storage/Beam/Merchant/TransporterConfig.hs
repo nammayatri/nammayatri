@@ -87,7 +87,8 @@ data TransporterConfigT f = TransporterConfigT
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
     specialZoneBookingOtpExpiry :: B.C f Int,
     isPlanMandatory :: B.C f Bool,
-    freeTrialDays :: B.C f Int
+    freeTrialDays :: B.C f Int,
+    openMarketUnBlocked :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 
