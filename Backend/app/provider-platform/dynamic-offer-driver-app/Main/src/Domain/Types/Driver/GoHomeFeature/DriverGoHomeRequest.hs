@@ -30,6 +30,7 @@ data DriverGoHomeRequest = DriverGoHomeRequest
     lon :: Double,
     status :: DriverGoHomeRequestStatus,
     numCancellation :: Int,
+    mbReachedHome :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
