@@ -86,7 +86,8 @@ data TransporterConfigD u = TransporterConfig
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
     specialZoneBookingOtpExpiry :: Int,
     isPlanMandatory :: Bool,
-    freeTrialDays :: Int
+    freeTrialDays :: Int,
+    openMarketUnBlocked :: Bool
   }
   deriving (Generic, Show)
 

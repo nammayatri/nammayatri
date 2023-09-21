@@ -47,6 +47,7 @@ import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLocation as QDrLoc
@@ -130,7 +131,15 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+  openMarketAllow <-
+    maybe
+      (pure False)
+      ( \merchantId -> do
+          transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
+          pure $ transporterConfig.openMarketUnBlocked
+      )
+      driverInfo.merchantId
+  unless (driverInfo.subscribed || openMarketAllow) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor

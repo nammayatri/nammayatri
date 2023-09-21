@@ -674,7 +674,7 @@ setActivity (personId, merchantId) isActive mode = do
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
     when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0) $ throwError (NoPlanSelected personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-    unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+    unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive mode
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
@@ -1763,8 +1763,6 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     totalEarnings :: HighPrecMoney,
     totalRides :: Int,
     planAmount :: HighPrecMoney,
-    rideTakenOn :: UTCTime,
-    driverFeeAmount :: HighPrecMoney,
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text
   }
@@ -1801,11 +1799,9 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = fromIntegral driverFee.totalEarnings,
-              driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
-              isSplit = length driverFeesInWindow > 1,
-              rideTakenOn = driverFee.createdAt,
+              isSplit = not (null driverFeesInWindow),
               offerAndPlanDetails = driverFee.planOfferTitle
             }
     )
