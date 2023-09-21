@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual)
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -101,7 +101,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan
       let executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
-                amount = fromInteger (round $ (fromIntegral driverFee.govtCharges) + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst),
+                amount = roundToHalf $ (fromIntegral driverFee.govtCharges) + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
                 customerId = driverFee.driverId.getId,
                 notificationId = notification.shortId,
                 mandateId = mandateId.getId,

@@ -149,3 +149,6 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDr
   let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
   QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE driverFeeIdsToBeShiftedToManual
+
+roundToHalf :: HighPrecMoney -> HighPrecMoney
+roundToHalf x = fromInteger (round (x * 2)) / 2
