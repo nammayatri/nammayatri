@@ -92,37 +92,43 @@ accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondar
 
 accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
 accessibilityListConfig disabilityData otherDisability config = 
-  SelectListModal.config
-        { selectionOptions = getDisabilityList disabilityData.disabilityOptionList
-        , primaryButtonTextConfig
-          { secondText = getString SUBMIT
-          , width = V (EHC.screenWidth unit - 40)
+  let 
+    selectedDisability = (disabilityData.disabilityOptionList DA.!! disabilityData.specialAssistActiveIndex)
+    selectedDisabilityTag = case selectedDisability of 
+              Mb.Just ( disability) -> disability.tag 
+              Mb.Nothing -> ""
+  in SelectListModal.config
+        { 
+          selectionOptions = getDisabilityList disabilityData.disabilityOptionList
+          , primaryButtonTextConfig
+            { secondText = getString SUBMIT
+            , width = V (EHC.screenWidth unit - 40)
 
+            }
+          , activeIndex = Mb.Just disabilityData.specialAssistActiveIndex
+          , activeReasonCode = case (disabilityData.disabilityOptionList DA.!! disabilityData.specialAssistActiveIndex) of 
+                                  Mb.Just activeOption -> Mb.Just activeOption.tag
+                                  _ -> Mb.Nothing
+          , isLimitExceeded = false
+          , isSelectButtonActive = if selectedDisabilityTag == "OTHER" then (DS.length (otherDisability) >= 3) else true
+          , headingTextConfig{
+            text = (getString SPECIAL_ASSISTANCE)
+          , gravity = LEFT
           }
-        , activeIndex = Mb.Just disabilityData.specialAssistActiveIndex
-        , activeReasonCode = case (disabilityData.disabilityOptionList DA.!! disabilityData.specialAssistActiveIndex) of 
-                                Mb.Just activeOption -> Mb.Just activeOption.tag
-                                _ -> Mb.Nothing
-        , isLimitExceeded = false
-        , isSelectButtonActive = if disabilityData.specialAssistActiveIndex == DA.length (disabilityData.disabilityOptionList) - 1 then (DS.length (otherDisability) >= 3) else true
-        , headingTextConfig{
-          text = (getString SPECIAL_ASSISTANCE)
-        , gravity = LEFT
-        }
-        , primaryButtonVisibility = false
-        , subHeadingTextConfig{
-          gravity = LEFT
-        , margin = MarginTop 36
-        , padding = (PaddingHorizontal 24 24)
-        , text = (getString SELECT_THE_CONDITION_THAT_IS_APPLICABLE)
-        }
-        , hint = if disabilityData.editedDisabilityReason == "" then "Enter nature of condition" else ""
-        , config = config
-        , hideOthers = false
-        , topLeftIcon = true
-        , showBgColor = true
-        , editTextBgColor = Color.white900
-        , defaultText = disabilityData.editedDisabilityReason
+          , primaryButtonVisibility = false
+          , subHeadingTextConfig{
+            gravity = LEFT
+          , margin = MarginTop 36
+          , padding = (PaddingHorizontal 24 24)
+          , text = (getString SELECT_THE_CONDITION_THAT_IS_APPLICABLE)
+          }
+          , hint = if disabilityData.editedDisabilityReason == "" then "Enter nature of condition" else ""
+          , config = config
+          , hideOthers = false
+          , topLeftIcon = true
+          , showBgColor = true
+          , editTextBgColor = Color.white900
+          , defaultText = disabilityData.editedDisabilityReason
         }
 
 getDisabilityList :: Array ST.DisabilityT ->  Array Common.OptionButtonList
