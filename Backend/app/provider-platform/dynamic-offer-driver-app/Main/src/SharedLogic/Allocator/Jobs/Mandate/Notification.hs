@@ -163,17 +163,17 @@ sendAsyncNotification driverToNotify merchantId = do
       NTF.Notification
         { id = id_,
           shortId = response.notificationId,
-          sourceAmount = response.sourceInfo.sourceAmount,
+          sourceAmount = fromMaybe 0 response.sourceInfo.sourceAmount,
           mandateId = mandateId,
           driverFeeId = driverFeeId,
           juspayProvidedId = response.juspayProvidedId,
-          txnDate = response.sourceInfo.txnDate,
+          txnDate = fromMaybe now response.sourceInfo.txnDate,
           providerName = response.providerName,
           notificationType = response.notificationType,
           description = response.description,
           status = response.status,
-          dateCreated = response.dateCreated,
-          lastUpdated = response.lastUpdated,
+          dateCreated = fromMaybe now response.dateCreated,
+          lastUpdated = fromMaybe now response.lastUpdated,
           createdAt = now,
           updatedAt = now
         }
