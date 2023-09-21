@@ -135,11 +135,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             "PER_RIDE" -> do
               let numRides = driverFee.numRides - plan.freeRideCount
                   feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides)))
-              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
+              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             "DAILY" -> do
               let numRides = driverFee.numRides - plan.freeRideCount
                   feeWithoutDiscount = if numRides > 0 then baseAmount else 0
-              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount mandateSetupDate driverFee
+              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
           let offerAndPlanTitle = Just plan.description <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
           updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
@@ -230,8 +230,8 @@ makeOfferReq totalFee driver plan dutyDate registrationDate = do
       dutyDate
     }
 
-getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> HighPrecMoney -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan baseAmount registrationDate driverFee = do
+getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
+getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate driverFee = do
   now <- getCurrentTime
   let dutyDate = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
@@ -243,7 +243,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
-          then pure (baseAmount, Nothing, Nothing)
+          then pure (feeWithoutDiscount, Nothing, Nothing)
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)

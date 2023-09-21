@@ -23,7 +23,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual)
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -107,7 +107,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
-          amount = fromInteger (round $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst)
+          amount = roundToHalf $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
         }
 
 data DriverInfoForPDNotification = DriverInfoForPDNotification
