@@ -153,6 +153,8 @@ let tables =
       , enableKVForRead = [] : List Text
       }
 
+let dontEnableForDb = [] : List Text
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -208,4 +210,5 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , tables
+    , dontEnableForDb
     }

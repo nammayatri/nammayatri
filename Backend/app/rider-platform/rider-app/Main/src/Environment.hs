@@ -111,7 +111,8 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables
+    tables :: Tables,
+    dontEnableForDb :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -168,7 +169,8 @@ data AppEnv = AppEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    eventRequestCounter :: EventCounterMetric
+    eventRequestCounter :: EventCounterMetric,
+    dontEnableForDb :: [Text]
   }
   deriving (Generic)
 
