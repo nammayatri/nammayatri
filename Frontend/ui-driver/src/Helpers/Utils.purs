@@ -28,7 +28,7 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 
 import MerchantConfig.Utils
 
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), fold) as DA
@@ -396,3 +396,11 @@ fetchFiles = do
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
+
+getStatus :: String -> PaymentStatus
+getStatus status = case status of
+  "Success" -> Success
+  "Pending" -> Pending
+  "Failed" -> Failed
+  "Scheduled" -> Scheduled
+  _ -> Pending

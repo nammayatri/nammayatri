@@ -15,28 +15,30 @@
 
 module Services.API where
 
-import Common.Types.App (Version(..),APIPaymentStatus(..)) as Common
+import Data.Maybe
+
+import Common.Types.App (Version(..), APIPaymentStatus(..)) as Common
 import Control.Alt ((<|>))
+import Control.Monad.Except (except, runExcept)
 import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
 import Data.Either as Either
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail)
+import Debug (spy)
+import Foreign (ForeignError(..), fail, unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
+import Foreign.Index (readProp)
 import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
-import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
-import Data.Either as Either
-import Data.Maybe
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -2272,7 +2274,25 @@ newtype PlanEntity = PlanEntity {
   offers :: Array OfferEntity,
   planFareBreakup :: Array PaymentBreakUp,
   totalPlanCreditLimit :: Number,
-  currentDues :: Number
+  currentDues :: Number,
+  autopayDues :: Number,
+  dues :: Array DriverDuesEntity,
+  bankErrors :: Array BankError
+}
+
+newtype DriverDuesEntity = DriverDuesEntity {
+    autoPayStage :: Maybe String, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe String, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    totalEarnings :: Number,
+    totalRides :: Int,
+    planAmount :: Number,
+    isSplit :: Boolean,
+    offerAndPlanDetails :: Maybe String,
+    createdAt :: Maybe String,
+    feeType :: FeeType,
+    executionAt :: Maybe String,
+    rideTakenOn :: String,
+    driverFeeAmount :: Number
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2306,6 +2326,13 @@ instance standardEncodeUiPlansReq :: StandardEncode UiPlansReq where standardEnc
 instance showUiPlansReq :: Show UiPlansReq where show = genericShow
 instance decodeUiPlansReq :: Decode UiPlansReq where decode = defaultDecode
 instance encodeUiPlansReq :: Encode UiPlansReq where encode = defaultEncode
+
+derive instance genericDriverDuesEntity :: Generic DriverDuesEntity _
+derive instance newtypeDriverDuesEntity :: Newtype DriverDuesEntity _
+instance standardEncodeDriverDuesEntity :: StandardEncode DriverDuesEntity where standardEncode (DriverDuesEntity body) = standardEncode body
+instance showDriverDuesEntity :: Show DriverDuesEntity where show = genericShow
+instance decodeDriverDuesEntity :: Decode DriverDuesEntity  where decode = defaultDecode
+instance encodeDriverDuesEntity :: Encode DriverDuesEntity where encode = defaultEncode
 
 
 derive instance genericUiPlansResp :: Generic UiPlansResp _
@@ -2486,7 +2513,8 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   mandateDetails :: Maybe MandateData,
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
-  isLocalized :: Maybe Boolean
+  isLocalized :: Maybe Boolean,
+  lastPaymentType :: Maybe String
 }
 
 newtype MandateData = MandateData {
@@ -2497,6 +2525,12 @@ newtype MandateData = MandateData {
   payerVpa :: Maybe String,
   frequency :: String,
   maxAmount :: Number
+}
+
+newtype BankError = BankError {
+  message :: String,
+  code :: String,
+  amount :: Number
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where
@@ -2523,6 +2557,13 @@ instance standardEncodeMandateData :: StandardEncode MandateData where standardE
 instance showMandateData :: Show MandateData where show = genericShow
 instance decodeMandateData :: Decode MandateData where decode = defaultDecode
 instance encodeMandateData :: Encode MandateData where encode = defaultEncode
+
+derive instance genericBankError :: Generic BankError _
+derive instance newtypeBankError:: Newtype BankError _
+instance standardEncodeBankError :: StandardEncode BankError where standardEncode (BankError res) = standardEncode res
+instance showBankError :: Show BankError where show = genericShow
+instance decodeBankError :: Decode BankError where decode = defaultDecode
+instance encodeBankError :: Encode BankError where encode = defaultEncode
 
 ---------------------------------------------- KioskLocations ---------------------------------------------------
 
@@ -2586,3 +2627,234 @@ instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackRe
 instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
 instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
 instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode
+
+---------------------------------------------- NY-PaymentHistory ---------------------------------------------------
+
+-- data InvoiceInfo = InvoiceInfo
+--   { id :: Id Invoice,
+--     paymentMode :: MANUAL | AUTOPAY,
+--     debitedOn :: ,
+--     invoiceAmount ::
+--     numberOfDays ::
+--     invoiceStatus :: {
+--       status = SUCCESS | FAILED | NOTIFICATION_SCHEDULED | NOTIFICATION_SENT | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTED | PAYMENT_OVERDUE
+--       time = UTCTime
+--     },
+--     driverFees :: [DriverFeeInfo]
+--   }
+-- data DriverFeeInfo = DriverFeeInfo
+--   { ridesTakenOn :: UTCTime,
+--     driverFeeId :: Id DDF.DriverFee,
+--     totalRides :: Int,
+--     paymentAmount :: Money,
+--     chargesBreakup :: [DriverPaymentBreakup],
+--     planOfferDetails :: ""
+--   }
+
+-- data GetNYPaymentHistoryReq = GetNYPaymentHistoryReq String String (Maybe String)
+
+-- newtype GetNYPaymentHistoryResp = GetNYPaymentHistoryResp (Array PaymentHistoryItem)
+
+-- newtype PaymentHistoryItem = PaymentHistoryItem {
+--     date :: String
+--   , totalRides :: Int
+--   , totalEarnings :: Int
+--   , charges :: Int
+--   , chargesBreakup :: Array PaymentBreakUp
+--   , txnInfo :: Array TxnInfo
+--   , driverFeeId :: String
+-- }
+
+-- newtype PaymentBreakUp = PaymentBreakUp {
+--     component :: String
+--   , amount :: Number
+-- }
+
+-- newtype TxnInfo = TxnInfo {
+--     id :: String
+--   , status :: Common.APIPaymentStatus
+-- }
+
+
+-- instance makeGetNYPaymentHistoryReq :: RestEndpoint GetNYPaymentHistoryReq GetPaymentHistoryResp where
+--  makeRequest reqBody@(GetNYPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
+--  decodeResponse = decodeJSON
+--  encodeRequest req = standardEncode req
+
+-- derive instance genericGetGetNYPaymentHistoryReq :: Generic GetGetNYPaymentHistoryReq _
+-- instance standardEncodeGetGetNYPaymentHistoryReq :: StandardEncode GetGetNYPaymentHistoryReq where standardEncode res = standardEncode {}
+-- instance showGetGetNYPaymentHistoryReq :: Show GetGetNYPaymentHistoryReq where show = genericShow
+-- instance decodeGetGetNYPaymentHistoryReq :: Decode GetGetNYPaymentHistoryReq where decode = defaultDecode
+-- instance encodeGetGetNYPaymentHistoryReq :: Encode GetGetNYPaymentHistoryReq where encode = defaultEncode
+
+
+data FeeType = AUTOPAY_REGISTRATION | MANUAL_PAYMENT | AUTOPAY_PAYMENT
+
+derive instance genericFeeType :: Generic FeeType _
+instance showFeeType :: Show FeeType where show = genericShow
+instance decodeFeeType :: Decode FeeType where 
+  decode body = case unsafeFromForeign body of
+                  "MANDATE_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION 
+                  "RECURRING_INVOICE"           -> except $ Right MANUAL_PAYMENT 
+                  "RECURRING_EXECUTION_INVOICE" -> except $ Right AUTOPAY_PAYMENT 
+                  _                             -> fail $ ForeignError "Unknown response"
+instance encodeFeeType :: Encode FeeType where 
+  encode _ = encode {}
+instance eqFeeType :: Eq FeeType where eq = genericEq
+instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data HistoryEntityV2Req = HistoryEntityV2Req String String String
+
+newtype HistoryEntityV2Resp = HistoryEntityV2Resp {
+    autoPayInvoices :: Array AutoPayInvoiceHistory,
+    manualPayInvoices :: Array ManualInvoiceHistory
+}
+
+newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
+  invoiceId :: String,
+  amount :: Number,
+  executionAt :: String,
+  autoPayStage :: Maybe AutopayPaymentStage, -- NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+  rideTakenOn :: String
+}
+
+newtype ManualInvoiceHistory = ManualInvoiceHistory {
+  invoiceId :: String,
+  createdAt :: String,
+  rideDays :: Int,
+  amount :: Number,
+  feeType :: FeeType,
+  paymentStatus :: InvoiceStatus
+}
+
+instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
+    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType) headers = defaultMakeRequest GET (EP.paymentHistoryListV2 limit offset historyType) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericHistoryEntityV2Req :: Generic HistoryEntityV2Req _
+instance standardEncodeHistoryEntityV2Req :: StandardEncode HistoryEntityV2Req where standardEncode _ = standardEncode {}
+instance showHistoryEntityV2Req :: Show HistoryEntityV2Req where show = genericShow
+instance decodeHistoryEntityV2Req :: Decode HistoryEntityV2Req where decode = defaultDecode
+instance encodeHistoryEntityV2Req :: Encode HistoryEntityV2Req where encode = defaultEncode
+
+derive instance genericHistoryEntityV2Resp :: Generic HistoryEntityV2Resp _
+derive instance newtypeHistoryEntityV2Resp :: Newtype HistoryEntityV2Resp _
+instance standardEncodeHistoryEntityV2Resp :: StandardEncode HistoryEntityV2Resp where standardEncode (HistoryEntityV2Resp resp) = standardEncode resp
+instance showHistoryEntityV2Resp :: Show HistoryEntityV2Resp where show = genericShow
+instance decodeHistoryEntityV2Resp :: Decode HistoryEntityV2Resp where decode = defaultDecode
+instance encodeHistoryEntityV2Resp :: Encode HistoryEntityV2Resp where encode = defaultEncode
+
+derive instance genericAutoPayInvoiceHistory :: Generic AutoPayInvoiceHistory _
+derive instance newtypeAutoPayInvoiceHistory :: Newtype AutoPayInvoiceHistory _
+instance standardEncodeAutoPayInvoiceHistory :: StandardEncode AutoPayInvoiceHistory where standardEncode (AutoPayInvoiceHistory resp) = standardEncode resp
+instance showAutoPayInvoiceHistory :: Show AutoPayInvoiceHistory where show = genericShow
+instance decodeAutoPayInvoiceHistory :: Decode AutoPayInvoiceHistory where decode = defaultDecode
+instance encodeAutoPayInvoiceHistory :: Encode AutoPayInvoiceHistory where encode = defaultEncode
+
+derive instance genericManualInvoiceHistory :: Generic ManualInvoiceHistory _
+derive instance newtypeManualInvoiceHistory :: Newtype ManualInvoiceHistory _
+instance standardEncodeManualInvoiceHistory :: StandardEncode ManualInvoiceHistory where standardEncode (ManualInvoiceHistory resp) = standardEncode resp
+instance showManualInvoiceHistory :: Show ManualInvoiceHistory where show = genericShow
+instance decodeManualInvoiceHistory :: Decode ManualInvoiceHistory where decode = defaultDecode
+instance encodeManualInvoiceHistory :: Encode ManualInvoiceHistory where encode = defaultEncode
+
+------------------------------------------------------------------------------------------------------------------------
+
+data HistoryEntryDetailsEntityV2Req = HistoryEntryDetailsEntityV2Req String
+
+newtype HistoryEntryDetailsEntityV2Resp = HistoryEntryDetailsEntityV2Resp {
+    invoiceId :: String,
+    amount :: Number,
+    createdAt :: Maybe String,
+    executionAt :: Maybe String,
+    feeType :: FeeType , -- MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE
+    driverFeeInfo :: Array DriverFeeInfoEntity
+}
+
+newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
+    autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+    paymentStatus :: Maybe InvoiceStatus, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    totalEarnings :: Number,
+    totalRides :: Int,
+    planAmount :: Number,
+    isSplit :: Boolean,
+    offerAndPlanDetails :: Maybe String
+}
+
+instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where
+    makeRequest reqBody@(HistoryEntryDetailsEntityV2Req id) headers = defaultMakeRequest GET (EP.paymentEntityDetails id) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericHistoryEntryDetailsEntityV2Req :: Generic HistoryEntryDetailsEntityV2Req _
+instance showHistoryEntryDetailsEntityV2Req :: Show HistoryEntryDetailsEntityV2Req where show = genericShow
+instance standardEncodeHistoryEntryDetailsEntityV2Req :: StandardEncode HistoryEntryDetailsEntityV2Req where standardEncode _ = standardEncode {}
+instance decodeHistoryEntryDetailsEntityV2Req :: Decode HistoryEntryDetailsEntityV2Req where decode = defaultDecode
+instance encodeHistoryEntryDetailsEntityV2Req :: Encode HistoryEntryDetailsEntityV2Req where encode = defaultEncode
+
+derive instance genericHistoryEntryDetailsEntityV2Resp :: Generic HistoryEntryDetailsEntityV2Resp _
+derive instance newtypeHistoryEntryDetailsEntityV2Resp :: Newtype HistoryEntryDetailsEntityV2Resp _
+instance standardEncodeHistoryEntryDetailsEntityV2Resp :: StandardEncode HistoryEntryDetailsEntityV2Resp where standardEncode (HistoryEntryDetailsEntityV2Resp req) = standardEncode req
+instance showHistoryEntryDetailsEntityV2Resp :: Show HistoryEntryDetailsEntityV2Resp where show = genericShow
+instance decodeHistoryEntryDetailsEntityV2Resp :: Decode HistoryEntryDetailsEntityV2Resp where decode = defaultDecode
+instance encodeHistoryEntryDetailsEntityV2Resp :: Encode HistoryEntryDetailsEntityV2Resp where encode = defaultEncode
+
+derive instance genericDriverFeeInfoEntity :: Generic DriverFeeInfoEntity _
+derive instance newtypeDriverFeeInfoEntity :: Newtype DriverFeeInfoEntity _
+instance standardEncodeDriverFeeInfoEntity :: StandardEncode DriverFeeInfoEntity where standardEncode (DriverFeeInfoEntity req) = standardEncode req
+instance showDriverFeeInfoEntity :: Show DriverFeeInfoEntity where show = genericShow
+instance decodeDriverFeeInfoEntity :: Decode DriverFeeInfoEntity where decode = defaultDecode
+instance encodeDriverFeeInfoEntity :: Encode DriverFeeInfoEntity where encode = defaultEncode
+
+data AutopayPaymentStage =  NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+data InvoiceStatus =  ACTIVE_INVOICE | SUCCESS | FAILED | EXPIRED | INACTIVE
+
+derive instance genericAutopayPaymentStage :: Generic AutopayPaymentStage _
+instance showAutopayPaymentStage :: Show AutopayPaymentStage where show = genericShow
+instance decodeAutopayPaymentStage :: Decode AutopayPaymentStage where decode = defaultEnumDecode
+instance encodeAutopayPaymentStage :: Encode AutopayPaymentStage where encode = defaultEnumEncode
+instance eqAutopayPaymentStage :: Eq AutopayPaymentStage where eq = genericEq
+instance standardEncodeAutopayPaymentStage :: StandardEncode AutopayPaymentStage
+  where
+    standardEncode _ = standardEncode {}
+
+derive instance genericInvoiceStatus :: Generic InvoiceStatus _
+instance showInvoiceStatus :: Show InvoiceStatus where show = genericShow
+instance decodeInvoiceStatus :: Decode InvoiceStatus where decode = defaultEnumDecode
+instance encodeInvoiceStatus :: Encode InvoiceStatus where encode = defaultEnumEncode
+instance eqInvoiceStatus :: Eq InvoiceStatus where eq = genericEq
+instance standardEncodeInvoiceStatus :: StandardEncode InvoiceStatus
+  where
+    standardEncode _ = standardEncode {}
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+newtype ClearDuesReq = ClearDuesReq String
+
+newtype ClearDuesResp = ClearDuesResp {
+  orderResp :: CreateOrderRes,
+  orderId :: String
+}
+
+instance makeClearDuesReq :: RestEndpoint ClearDuesReq ClearDuesResp where
+    makeRequest reqBody@(ClearDuesReq id) headers = defaultMakeRequest GET (EP.cleardues id) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+
+derive instance genericClearDuesReq :: Generic ClearDuesReq _
+instance showClearDuesReq :: Show ClearDuesReq where show = genericShow
+instance standardEncodeClearDuesReq :: StandardEncode ClearDuesReq where standardEncode _ = standardEncode {}
+instance decodeClearDuesReq :: Decode ClearDuesReq where decode = defaultDecode
+instance encodeClearDuesReq :: Encode ClearDuesReq where encode = defaultEncode
+
+derive instance genericClearDuesResp :: Generic ClearDuesResp _
+derive instance newtypeClearDuesResp :: Newtype ClearDuesResp _
+instance standardEncodeClearDuesResp :: StandardEncode ClearDuesResp where standardEncode (ClearDuesResp req) = standardEncode req
+instance showClearDuesResp :: Show ClearDuesResp where show = genericShow
+instance decodeClearDuesResp :: Decode ClearDuesResp where decode = defaultDecode
+instance encodeClearDuesResp :: Encode ClearDuesResp where encode = defaultEncode

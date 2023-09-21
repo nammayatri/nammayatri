@@ -79,3 +79,9 @@ subscriptionScreen = do
     RetryPayment updatedState planId -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RETRY_PAYMENT_AC updatedState planId)
+    ClearDues updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CLEAR_DUES_ACT)
+    SubscribeAPI updatedState -> do 
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SUBSCRIBE_API updatedState)

@@ -18,8 +18,8 @@ module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (PaymentBreakUp(..))
+import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
+import Services.API (FeeType(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
 initData = {
@@ -37,12 +37,15 @@ initData = {
             dueItems : [],
             planEntity : dummyPlanConfig,
             autoPayStatus : NO_AUTOPAY,
-            lowAccountBalance : false,
+            lowAccountBalance : Mb.Just 5.0,
             paymentMethodWarning : false,
             switchAndSave : false,
             maxDueAmount : 0.0,
-            currentDueAmount : 0.0,
-            mandateStatus : ""
+            totalDueAmount : 0.0,
+            autoPayDueAmount : 0.0,
+            manualDueAmount : 0.0,
+            mandateStatus : "",
+            selectedDue : ""
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
@@ -59,19 +62,21 @@ initData = {
         isSelectedLangTamil : false,
         subView : NoSubView,
         popUpState : Mb.Nothing,
-        paymentStatus : Mb.Nothing,
         resumeBtnVisibility : false,
         showError : false,
         showShimmer : true ,
         refreshPaymentStatus : false,
         confirmCancel : false,
-        isDueViewExpanded : false,
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing
         },
         myPlanProps : {
-            isDuesExpanded : false
+            isDuesExpanded : false,
+            isDueViewExpanded : false,
+            overDue : false,
+            multiTypeDues : false,
+            dueType : MANUAL_PAYMENT
         },
         managePlanProps : {
             selectedPlanItem : dummyPlanConfig
@@ -84,7 +89,8 @@ initData = {
         prevSubView : NoSubView,
         noKioskLocation : false,
         optionsMenuState : ALL_COLLAPSED,
-        redirectToNav : ""
+        redirectToNav : "",
+        lastPaymentType : Mb.Nothing
     }
 }
 

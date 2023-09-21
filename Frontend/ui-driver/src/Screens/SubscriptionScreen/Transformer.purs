@@ -20,17 +20,18 @@ module Screens.SubscriptionScreen.Transformer where
 import Prelude
 
 import Common.Types.App (LazyCheck(..))
-import Data.Array (cons, (!!), length)
+import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
 import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, toLower)
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.Types (KeyValType, PromoConfig, SubscriptionScreenState, PlanCardConfig)
-import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
+import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
+import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
+
 
 type PlanData = {
     title :: String,
@@ -83,6 +84,10 @@ decodeOfferDescription str = do
                 "ML_IN" | len > 4 -> 4
                 _ -> 0
     
+decodeOfferPlan :: String -> {plan :: String, offer :: String}
+decodeOfferPlan str = do
+    let strArray = split (Pattern "-*@*-") str
+    {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
 freeRideOfferConfig :: LazyCheck -> PromoConfig
 freeRideOfferConfig lazy = 
@@ -192,3 +197,17 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized =
             freeRideCount : planEntity.freeRideCount,
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
+
+constructDues :: Array DriverDuesEntity -> Array DueItem
+constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  {    
+    tripDate: item.rideTakenOn,
+    amount: item.driverFeeAmount,
+    earnings: item.totalEarnings,
+    noOfRides: item.totalRides,
+    scheduledAt: fromMaybe "" item.executionAt,
+    paymentStatus: "", --Paid
+    feeBreakup: "" <> getString GST_INCLUDE, --Breakup
+    plan: fromMaybe "" item.offerAndPlanDetails,--"Plan",
+    mode: MANUAL_PAYMENT,
+    randomId : (getCurrentUTC "") <> show ind
+  }) duesArr)
