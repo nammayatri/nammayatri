@@ -113,7 +113,7 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
                   name = "Driver Details",
                   list =
                     [ Tags.Tag (Just False) (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
-                      Tags.Tag (Just False) (Just "rating") (Just "rating") (Just $ show driver.rating)
+                      Tags.Tag (Just False) (Just "rating") (Just "rating") (show <$> driver.rating)
                     ]
                 }
             ]
