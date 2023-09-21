@@ -939,6 +939,17 @@ export const killPP = function () {
   }
 }
 
+export const getDateAfterNDays = function (n) {
+  const today = new Date();
+  const dateAfterNDays = new Date(today);
+  dateAfterNDays.setDate(today.getDate() + n);
+  const year = dateAfterNDays.getFullYear();
+  const month = String(dateAfterNDays.getMonth() + 1).padStart(2, '0');
+  const day = String(dateAfterNDays.getDate()).padStart(2, '0');
+  const result = `${day}/${month}/${year}`;
+  return `${day}/${month}/${year}`;
+}
+
 function getStringFromCommon(key) {
   var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {

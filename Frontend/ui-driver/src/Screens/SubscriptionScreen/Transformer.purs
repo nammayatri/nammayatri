@@ -186,7 +186,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized =
             title : planData.title ,
             description : planData.description ,
             isSelected : false ,
-            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == getString DAILY_PER_RIDE) then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
