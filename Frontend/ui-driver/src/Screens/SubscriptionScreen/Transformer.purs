@@ -204,10 +204,12 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  {
     amount: item.driverFeeAmount,
     earnings: item.totalEarnings,
     noOfRides: item.totalRides,
-    scheduledAt: fromMaybe "" item.executionAt,
+    scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "", --Paid
     feeBreakup: "" <> getString GST_INCLUDE, --Breakup
     plan: fromMaybe "" item.offerAndPlanDetails,--"Plan",
-    mode: MANUAL_PAYMENT,
-    randomId : (getCurrentUTC "") <> show ind
+    mode: item.feeType,
+    autoPayStage : item.autoPayStage,
+    randomId : (getCurrentUTC "") <> show ind,
+    isSplit : item.isSplit
   }) duesArr)

@@ -26,7 +26,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "TRIP_DATE",
                     title : getString TRIP_DATE,
-                    val : "trip date"--TO BE FIXED(convertUTCtoISC driverFee.ridesTakenDate "Do MMM, YYYY")
+                    val : (convertUTCtoISC driverFee'.rideTakenOn "Do MMM, YYYY")
                   },
                   {
                     key : "PLAN",
@@ -41,9 +41,9 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {key : "YOUR_EARNINGS",
                   title : getString YOUR_EARNINGS,
                   val : "₹" <> show driverFee'.totalEarnings},
-                  {key : "FEE_BREAKUP",
-                  title : getString FEE_BREAKUP,
-                  val : ""<> getString GST_INCLUDE},
+                --   {key : "FEE_BREAKUP",  -- TO BE ADDED
+                --   title : getString FEE_BREAKUP,
+                --   val : ""<> getString GST_INCLUDE},
                   {key : "OFFER",
                   title : getString OFFER,
                   val : planOfferData.offer}
@@ -53,7 +53,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
-            statusTime : fromMaybe "" resp.executionAt,
+            statusTime : convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A",
             isSplit : (length resp.driverFeeInfo == 1) && driverFee'.isSplit,
             isAutoPayFailed : (length resp.driverFeeInfo == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
             details : [
@@ -65,7 +65,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
               {
                 key : "AMOUNT_PAID",
                 title : getString AMOUNT_PAID,
-                val : "₹" <> show resp.amount
+                val : "₹" <> show driverFee'.driverFeeAmount
               },
               { key : "PAYMENT_MODE",
                 title : getString PAYMENT_MODE,
@@ -75,20 +75,20 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
             manualSpecificDetails : do
                     case (length resp.driverFeeInfo /= 1) of
                         true -> mapWithIndex (\ ind (API.DriverFeeInfoEntity driverFee) ->  do
-                            let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
+                            let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee.offerAndPlanDetails
                             {
-                                date : convertUTCtoISC (fromMaybe "" resp.createdAt) "Do MMM, YYYY",
+                                date : convertUTCtoISC driverFee.rideTakenOn "Do MMM, YYYY",
                                 planType : planOfferData.plan,
                                 offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing}]) !! 0,
                                 noOfRides : driverFee.totalRides,
                                 totalEarningsOfDay : driverFee.totalEarnings,
-                                dueAmount : driverFee.planAmount,
+                                dueAmount : driverFee.driverFeeAmount,
                                 fareBreakup : (show driverFee.planAmount),
                                 expanded : false,
                                 isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
                                 isSplitPayment : driverFee.isSplit,
                                 id : show ind,
-                                scheduledAt : if resp.feeType == AUTOPAY_REGISTRATION then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY") else Nothing,
+                                scheduledAt : if resp.feeType == AUTOPAY_REGISTRATION then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
                                 paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (getAutoPayStageData driverFee.autoPayStage) else Nothing
                             }
@@ -137,6 +137,8 @@ dummyDriverFee =
       totalRides : 0,
       planAmount : 0.0,
       isSplit : false,
-      offerAndPlanDetails : Just ""
+      offerAndPlanDetails : Just "",
+      rideTakenOn : "",
+      driverFeeAmount : 0.0
   }
 

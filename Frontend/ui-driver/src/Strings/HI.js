@@ -856,5 +856,6 @@ const hindiStrings = {
   EXECUTION_ATTEMPTING: "निष्पादन का प्रयास",
   EXECUTION_SUCCESS : "निष्पादन सफलता",
   SCHEDULED : "अनुसूचित",
-  ONE_TIME_SETTLEMENT : "एकमुश्त निपटान करें"
+  ONE_TIME_SETTLEMENT : "एकमुश्त निपटान करें",
+  PAYMENT_SCHEDULED : "भुगतान निर्धारित"
 }

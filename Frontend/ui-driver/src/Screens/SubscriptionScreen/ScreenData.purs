@@ -19,7 +19,7 @@ module Screens.SubscriptionScreen.ScreenData where
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
-import Services.API (FeeType(..), PaymentBreakUp(..))
+import Services.API (AutopayPaymentStage(..), FeeType(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
 initData = {
@@ -45,7 +45,9 @@ initData = {
             autoPayDueAmount : 0.0,
             manualDueAmount : 0.0,
             mandateStatus : "",
-            selectedDue : ""
+            selectedDue : "",
+            autopayDues : 0.0,
+            currentDues : 0.0
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,

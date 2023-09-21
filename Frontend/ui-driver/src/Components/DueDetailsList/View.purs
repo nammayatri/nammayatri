@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==))
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||))
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
@@ -91,7 +91,7 @@ view push state =
                 , gravity CENTER_VERTICAL
               ][
                 textView $ [
-                  text $ "₹" <> show item.dueAmount
+                  text $ "₹" <> show item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
@@ -114,8 +114,13 @@ view push state =
                   , background Color.grey900
                   , margin $ MarginBottom 16
                 ][]
-                , 
-                linearLayout [
+                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides) true false
+                , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
+                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
+                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay) true false
+                -- , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <> getString GST_INCLUDE) true false --TO BE ADDED LATER
+                , linearLayout [
                   height WRAP_CONTENT
                   , width MATCH_PARENT
                   , margin $ MarginBottom 16
@@ -130,12 +135,6 @@ view push state =
                       Just offerConfig -> promoCodeView push offerConfig
                       Nothing -> linearLayout[visibility GONE][]
                 ]
-                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides) true false
-                , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
-                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
-                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay) true false
-                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <> getString GST_INCLUDE) true false
                 , textView $ [
                     text $ getString SWITCHED_TO_MANUAL
                     , width MATCH_PARENT
@@ -144,6 +143,7 @@ view push state =
                     , visibility if item.isAutoPayFailed then VISIBLE else GONE
                     , padding $ Padding 8 8 8 8
                     , background Color.white900
+                    , cornerRadius 4.0
                   ] <> FontStyle.tags TypoGraphy
                 , linearLayout
                   [
@@ -160,6 +160,7 @@ view push state =
                     , color Color.black600
                     , visibility if item.isSplitPayment then VISIBLE else GONE
                     , padding $ Padding 8 8 8 8
+                    , cornerRadius 4.0
                     , background Color.white900
                   ] <> FontStyle.tags TypoGraphy
             ]

@@ -68,5 +68,5 @@ getTransactionConfig status = case status of
                               Common.Success -> {image : "ny_ic_green_tick", title : getString PAYMENT_SUCCESSFUL}
                               Common.Pending -> {image : "ny_ic_transaction_pending", title : getString PAYMENT_PENDING}
                               Common.Failed  -> {image : "ny_ic_payment_failed", title : getString PAYMENT_FAILED}
-                              Common.Scheduled  -> {image : "ny_ic_pending", title : "Payment Scheduled"}
+                              Common.Scheduled  -> {image : "ny_ic_pending", title : getString PAYMENT_SCHEDULED}
                               -- {image : "ny_ic_pending", title : getString NOTIFICATION_SCHEDULED}

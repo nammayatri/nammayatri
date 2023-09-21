@@ -825,5 +825,6 @@ const tamilStrings = {
   EXECUTION_ATTEMPTING : "செயல்படுத்தும் முயற்சி",
   EXECUTION_SUCCESS : "செயல்படுத்துதல் வெற்றி",
   SCHEDULED : "திட்டமிடப்பட்டது",
-  ONE_TIME_SETTLEMENT : "ஒருமுறை தீர்வு செய்யுங்கள்"
+  ONE_TIME_SETTLEMENT : "ஒருமுறை தீர்வு செய்யுங்கள்",
+  PAYMENT_SCHEDULED : "கட்டணம் திட்டமிடப்பட்டுள்ளது"
 }

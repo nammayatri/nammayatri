@@ -857,5 +857,6 @@ const englishStrings = {
   EXECUTION_ATTEMPTING : "Execution Attempting", 
   EXECUTION_SUCCESS : "Execution Success",
   SCHEDULED : "SCHEDULED",
-  ONE_TIME_SETTLEMENT : "Do a one-time Settlement"
+  ONE_TIME_SETTLEMENT : "Do a one-time Settlement",
+  PAYMENT_SCHEDULED : "Payment Scheduled"
 } 

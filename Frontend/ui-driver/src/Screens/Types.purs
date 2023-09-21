@@ -1605,7 +1605,9 @@ type MyPlanData = {
   autoPayDueAmount :: Number,
   manualDueAmount :: Number,
   mandateStatus :: String,
-  selectedDue :: String
+  selectedDue :: String,
+  autopayDues :: Number,
+  currentDues :: Number
 }
 
 type MyPlanProps = {
@@ -1626,7 +1628,9 @@ type DueItem = {
   paymentStatus :: String,
   feeBreakup :: String,
   plan :: String,
-  mode :: FeeType
+  mode :: FeeType,
+  autoPayStage :: Maybe AutopayPaymentStage,
+  isSplit :: Boolean
 }
 
 type KioskLocation = {

@@ -828,5 +828,6 @@ const kannadaStrings = {
   EXECUTION_ATTEMPTING : "ಎಕ್ಸಿಕ್ಯೂಶನ್ ಪ್ರಯತ್ನ",
   EXECUTION_SUCCESS : "ಕಾರ್ಯನಿರ್ವಹಣೆಯ ಯಶಸ್ಸು",
   SCHEDULED : "ಶೆಡ್ಯೂಲ್ಡ್",
-  ONE_TIME_SETTLEMENT : "ಒಂದು ಬಾರಿ ಪರಿಹಾರವನ್ನು ಮಾಡಿ"
+  ONE_TIME_SETTLEMENT : "ಒಂದು ಬಾರಿ ಪರಿಹಾರವನ್ನು ಮಾಡಿ",
+  PAYMENT_SCHEDULED : "ಪಾವತಿಯನ್ನು ನಿಗದಿಪಡಿಸಲಾಗಿದೆ"
 }

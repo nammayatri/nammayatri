@@ -355,7 +355,7 @@ transactionDetails push state visibility' =
                 , imageWithFallback config.image
                 ]
               , commonTV push config.title Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER
-              , commonTV push ((getString TRANSACTION_ON) <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER
+              , commonTV push ((getString TRANSACTION_ON) <> " " <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER
             ]
           , linearLayout
               [ width MATCH_PARENT
