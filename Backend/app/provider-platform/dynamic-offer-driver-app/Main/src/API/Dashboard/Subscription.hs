@@ -22,10 +22,12 @@ import qualified Domain.Types.Plan as DPlan
 import Environment
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.Queries.DriverInformation as DI
 import Prelude
 
 data SubscriptionEndpoint
@@ -97,7 +99,8 @@ planSuspend merchantShortId driverId = withFlowHandlerAPI $ do
 planSubscribe :: ShortId DM.Merchant -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
 planSubscribe merchantShortId driverId planId = withFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
-  DTPlan.planSubscribe planId True (cast driverId, m.id)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  DTPlan.planSubscribe planId True (cast driverId, m.id) driverInfo
 
 currentPlan :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.CurrentPlanRes
 currentPlan merchantShortId driverId = do
