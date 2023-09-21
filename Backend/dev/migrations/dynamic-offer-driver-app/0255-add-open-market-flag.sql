@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN  open_market_un_blocked boolean not null default false;
