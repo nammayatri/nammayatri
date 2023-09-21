@@ -141,7 +141,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
                 let cancelCnt = driverGoHomeReq.numCancellation + 1
                 QDGR.updateCancellationCount driverGoHomeReq.id cancelCnt
                 when (cancelCnt == goHomeConfig.cancellationCnt) $
-                  CQDGR.deactivateDriverGoHomeRequest driver.merchantId driverId DDGR.SUCCESS dghInfo
+                  CQDGR.deactivateDriverGoHomeRequest driver.merchantId driverId DDGR.SUCCESS dghInfo (Just False)
                 return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)
               else do
                 return (Nothing, Nothing)

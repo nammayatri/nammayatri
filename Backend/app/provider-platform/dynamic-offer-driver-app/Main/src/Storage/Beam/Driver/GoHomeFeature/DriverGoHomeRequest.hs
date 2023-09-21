@@ -54,7 +54,7 @@ instance FromBackendRow Postgres Domain.DriverGoHomeRequestStatus
 instance IsString Domain.DriverGoHomeRequestStatus where
   fromString = show
 
-toRowExpression reqId driverId lat lon status numCancellation createdAt updatedAt =
+toRowExpression reqId driverId lat lon status numCancellation mbReachedHome createdAt updatedAt =
   DriverGoHomeRequestT
     (B.val_ reqId)
     (B.val_ driverId)
@@ -63,6 +63,7 @@ toRowExpression reqId driverId lat lon status numCancellation createdAt updatedA
     (getPoint (lat, lon))
     (B.val_ status)
     (B.val_ numCancellation)
+    (B.val_ mbReachedHome)
     (B.val_ createdAt)
     (B.val_ updatedAt)
 
@@ -74,6 +75,7 @@ data DriverGoHomeRequestT f = DriverGoHomeRequestT
     point :: B.C f Point,
     status :: B.C f Domain.DriverGoHomeRequestStatus,
     numCancellation :: B.C f Int,
+    reachedHome :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

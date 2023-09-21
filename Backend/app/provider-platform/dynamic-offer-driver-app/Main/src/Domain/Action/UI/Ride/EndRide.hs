@@ -238,7 +238,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                 let driverHomeDists = mapMaybe (.distance) routesResp
                 if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
                   then do
-                    CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo
+                    CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo (Just True)
                     return $ Just True
                   else do
                     CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo

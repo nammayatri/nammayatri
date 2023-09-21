@@ -715,8 +715,8 @@ deactivateGoHomeFeature (personId, merchantId) = do
   ghrId <- fromMaybeM DriverGoHomeRequestNotPresent ghInfo.driverGoHomeRequestId
   succRide <- Ride.findCompletedRideByGHRId ghrId
   if isJust succRide
-    then CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.SUCCESS ghInfo
-    else CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.FAILED ghInfo
+    then CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.SUCCESS ghInfo (Just False)
+    else CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.FAILED ghInfo Nothing
   pure APISuccess.Success
 
 addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> AddHomeLocationReq -> m APISuccess.APISuccess
