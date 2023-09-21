@@ -134,8 +134,8 @@ initData = {
     },
     props: {
       rideRequestFlow : false
-    , homescreensheetState : true
-    , currentItem: ""
+    , homescreensheetState : false
+    , currentItem: 0.0
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false
@@ -229,6 +229,7 @@ initData = {
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
     , homeSheet : COLLAPSED
+    , isRepeatRide : false
     }
 }
 

@@ -626,7 +626,7 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
-            | Scroll String
+            | Scroll Number
             | OnScrollListner String
             | WhereToClick 
 
@@ -682,12 +682,12 @@ eval OnResumeCallback state =
         continue state
       _ -> continue state
 
-eval (OnScrollListner isScrollUp) state = do
-  _ <- pure $ spy "isScrollUp " (if isScrollUp == "true" then "up" else "down")
-  if isScrollUp == "true" then
-    continue state{props{homescreensheetState = true}}
-  else
-    continue state {props{homescreensheetState = false}}
+-- eval (OnScrollListner isScrollUp) state = do
+--   _ <- pure $ spy "isScrollUp " (if isScrollUp == "true" then "up" else "down")
+--   if isScrollUp == "true" then
+--     continue state{props{homescreensheetState = true}}
+--   else
+--     continue state {props{homescreensheetState = false}}
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -781,19 +781,8 @@ eval ScrollToBottom state = do
 
 eval (Scroll item) state = do
   _ <- pure $ spy "scroll check " item
-
-  -- Define a flag to control the visibility of the headerLayout
-  let sheetState =
-        case item of
-          "3" -> false  -- Bottom Sheet is expanded, so headerLayout should fade out (visible)
-          "4" -> true -- Bottom Sheet is collapsed, so headerLayout should fade in (invisible)
-          "1" -> state.props.homescreensheetState  -- Default to visible if the state is not 3 or 4
-          "2" -> true  -- Default to visible if the state is not 3 or 4
-          _ -> false
-
-  -- Update the current state number based on the item received
-  let currStateNumber = item
-      updatedState = state { props { homescreensheetState = sheetState, currentItem = currStateNumber } }
+  let sheetState = if item > 0.0 then true else false
+  let updatedState = state { props { homescreensheetState = sheetState, currentItem = item } }
   _ <- pure $ spy "scroll check state" updatedState
   -- Continue with the updated state
   continue updatedState
@@ -1855,7 +1844,7 @@ eval (UpdateETA currentETA currentDistance) state = do
   continue newState
 
 eval (RepeatRide index item) state = do 
-  exit $ RepeatTrip state item
+  exit $ RepeatTrip state{props{isRepeatRide = true}} item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do

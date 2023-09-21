@@ -706,7 +706,8 @@ type HomeScreenStateProps =
   , homeSheet :: BottomSheetState
   , showDisabilityPopUp :: Boolean
   , homescreensheetState :: Boolean
-  , currentItem :: String
+  , currentItem :: Number
+  , isRepeatRide :: Boolean
   }
 
 type RouteEndPoints = {

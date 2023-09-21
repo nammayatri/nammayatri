@@ -76,6 +76,7 @@ import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipV
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Font.Style (Style(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1113,6 +1114,57 @@ reportIssueOptions state =
     }
   ]
 
+sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
+sourceToDestinationConfig state = let 
+  config = SourceToDestination.config
+  sourceToDestinationConfig' = config
+    { sourceImageConfig {
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+      , margin = (MarginTop 3)
+      }
+    , sourceTextConfig {
+        text = "Nagarjuna Green Ridge"
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , color = Color.black800
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , rideStartedAtConfig {
+        text = "190, Paramahansa Yogananda Road "
+      , color = Color.black700
+      , visibility = VISIBLE
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , maxLines = 1
+      , ellipsize = true
+    }
+    , destinationImageConfig {
+        imageUrl = "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
+      , margin = (MarginTop 3)
+      }
+    , destinationBackground = Color.blue600
+    , destinationTextConfig {
+        text = state.data.destination
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , color = Color.greyDavy
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , rideEndedAtConfig {
+        text = "15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102"
+      , color = Color.black700
+      , visibility = VISIBLE
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , maxLines = 1
+      , ellipsize = true
+    }
+    }
+  in sourceToDestinationConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = let

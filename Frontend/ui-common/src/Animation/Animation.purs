@@ -17,7 +17,7 @@ module Animation where
 
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth)
-import Prelude (Unit, negate, unit, ($), (/))
+import Prelude (Unit, negate, unit, ($), (/), (-), (+))
 import PrestoDOM (PrestoDOM)
 import PrestoDOM.Animation (Interpolator, toRotation)
 import PrestoDOM.Animation as PrestoAnim
@@ -284,6 +284,28 @@ fadeOut ifAnim =
     [ PrestoAnim.duration 250
     , PrestoAnim.toAlpha 0.0
     , PrestoAnim.fromAlpha 1.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseOut
+    -- , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.7 0.0 0.7 1.0
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] ifAnim
+
+fadeInX :: Boolean -> Number -> PrestoAnim.Animation
+fadeInX ifAnim item =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 200
+    , PrestoAnim.toAlpha (1.0 - item)
+    , PrestoAnim.fromAlpha (0.0 + item)
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    -- , PrestoAnim.interpolator $ PrestoAnim.Bezier  0.7 0.0 0.7 1.0
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] ifAnim
+
+fadeOutX :: Boolean -> Number -> PrestoAnim.Animation
+fadeOutX ifAnim item =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 200
+    , PrestoAnim.toAlpha (0.0 + item)
+    , PrestoAnim.fromAlpha (1.0 - item)
     , PrestoAnim.interpolator $ PrestoAnim.EaseOut
     -- , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.7 0.0 0.7 1.0
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat

@@ -1568,7 +1568,7 @@ rideSearchFlow :: String -> FlowBT String Unit
 rideSearchFlow flowType = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState homeScreenModifiedState) <- getState
-  _ <- pure $ spy "checking " "zxc "
+  _ <- pure $ spy "checking " homeScreenModifiedState.homeScreen
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
     then do
@@ -1618,7 +1618,7 @@ rideSearchFlow flowType = do
                       void $ lift $ lift $ toggleLoader false
                       else do
                         if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
-                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId, nearByDrivers = Nothing}})
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = true, searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId, nearByDrivers = Nothing}})
                         _ <- pure $ updateLocalStage FindingEstimate
                         void $ lift $ lift $ toggleLoader false
 
@@ -1762,6 +1762,8 @@ myRidesScreenFlow fromNavBar = do
     GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
       updateRideDetails state
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = true}})
+
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_my_rides_repeat_ride" $ [{ key : "Pickup", value : state.data.selectedItem.source},
                                                                                                                 {key : "Destination", value : state.data.selectedItem.destination}]
       let sourceLat = state.data.selectedItem.sourceLocation^._lat
