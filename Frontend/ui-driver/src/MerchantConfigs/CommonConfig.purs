@@ -42,6 +42,7 @@ commonConfig =
         , red : "#E55454"
         , subscriptionConfig : {
             enableBlocking : false,
+            onBoardingSubscription : false,
             completePaymentPopup : false
         }
         , navigationAppConfig : {

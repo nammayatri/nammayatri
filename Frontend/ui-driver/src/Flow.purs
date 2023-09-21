@@ -58,7 +58,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
 import JBridge as JB
 import Language.Strings (getString)
@@ -95,8 +95,8 @@ import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..))
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, isOnFreeTrial)
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Constants as Constants
 import Data.Function.Uncurried (runFn1)
@@ -287,6 +287,11 @@ getDriverInfoFlow = do
   case getDriverInfoApiResp of
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+      setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
+      case getDriverInfoResp.freeTrialDaysLeft of
+        Just value -> do 
+              void $ pure $ setCleverTapUserProp "NY_Free_Trial_Days_Left" (show value)
+        Nothing -> pure unit
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = (GetDriverInfoResp getDriverInfoResp)})
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
@@ -584,6 +589,9 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
+      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+      deleteValueFromLocalStore FREE_TRIAL_DAYS
+      
 
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
@@ -693,6 +701,8 @@ addVehicleDetailsflow addRcFromProf = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
+      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+      deleteValueFromLocalStore FREE_TRIAL_DAYS
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_  "logout"
       loginFlow
@@ -793,6 +803,8 @@ applicationSubmittedFlow screenType = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
+      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+      deleteValueFromLocalStore FREE_TRIAL_DAYS
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -827,6 +839,8 @@ driverProfileFlow = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
+      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+      deleteValueFromLocalStore FREE_TRIAL_DAYS
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -1575,6 +1589,8 @@ currentRideFlow = do
       updateAvailableAppsAndGoToSubs
     _ -> pure unit
   setValueToLocalStore RIDE_STATUS_POLLING "False"
+  let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+  appConfig <- getAppConfig Constants.appConfig
   let isRequestExpired = if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
     else ceil ((toNumber (rideRequestPollingData.duration - (getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true)) * 1000.0)/rideRequestPollingData.delay) > 0
   if isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired then
@@ -1595,11 +1611,19 @@ currentRideFlow = do
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
         _ <- updateStage $ HomeScreenStage HomeScreen
-        pure unit
+        if onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount appConfig.subscriptionConfig.onBoardingSubscription then onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount 
+          else if onBoardingSubscriptionViewCount < 6 then  do 
+            setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
+            pure unit
+          else pure unit
   else do
     setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
     _ <- updateStage $ HomeScreenStage HomeScreen
-    pure unit
+    if onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount appConfig.subscriptionConfig.onBoardingSubscription then onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount 
+      else if onBoardingSubscriptionViewCount < 6 then  do 
+        setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
+        pure unit
+      else pure unit
   void $ pure $ setCleverTapUserProp "Driver On-ride" if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
@@ -1670,6 +1694,23 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
               Left error -> pure unit
       Left error -> pure unit
     pure unit
+
+onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
+onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
+  setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  action <- UI.onBoardingSubscriptionScreen
+  case action of 
+    GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN -> do
+      setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT "100"
+      homeScreenFlow
+    MAKE_PAYMENT_FROM_ONBOARDING state -> do
+      case state.data.selectedPlanItem of 
+        Just selectedPlan -> do
+          setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT "100"
+          nyPaymentFlow selectedPlan true
+        Nothing -> onBoardingSubscriptionScreenFlow (state.props.screenCount-1)
+  pure unit
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
@@ -2422,7 +2463,8 @@ checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
   if (  any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] &&
         isDateGreaterThan "2023-09-20T00:00:00" &&
-        getDriverInfoResp.autoPayStatus == Nothing
+        getDriverInfoResp.autoPayStatus == Nothing &&
+        not isOnFreeTrial FunctionCall
     ) then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true }})
       when (not getDriverInfoResp.onRide && any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]) do

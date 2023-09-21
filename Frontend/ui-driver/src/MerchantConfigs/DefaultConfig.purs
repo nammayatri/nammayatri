@@ -21,6 +21,7 @@ config =
   },
   subscriptionConfig : {
     enableBlocking : false,
-    completePaymentPopup : false
+    completePaymentPopup : false,
+    onBoardingSubscription : false
   }
   }

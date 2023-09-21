@@ -190,6 +190,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , autoPayStatus         : Nothing
     , mediaUrl              : Nothing
     , aadhaarCardPhoto      : Nothing 
+    , freeTrialDaysLeft     : Nothing
 }
 
 organizationInfo :: OrganizationInfo

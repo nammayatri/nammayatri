@@ -55,7 +55,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -73,9 +73,11 @@ import Services.API (PaymentPagePayload, PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
-import Storage (KeyStore(..))
+import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (UpiApps(..))
+import Data.Int (fromString, even)
+
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -128,6 +130,7 @@ foreign import preFetch :: Effect (Array RenewFile)
 
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
+foreign import getDateAfterNDays :: Int -> String
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
@@ -396,3 +399,10 @@ fetchFiles = do
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
+
+onBoardingSubscriptionScreenCheck :: Int -> Boolean -> Boolean
+onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = isEnabled && 
+                                                                              getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" && 
+                                                                              even onBoardingSubscriptionViewCount && 
+                                                                              onBoardingSubscriptionViewCount <5 && 
+                                                                              isOnFreeTrial FunctionCall

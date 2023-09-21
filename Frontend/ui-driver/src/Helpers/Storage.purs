@@ -15,7 +15,7 @@
 
 module Storage where
 
-import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==))
+import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>))
 import JBridge as JBridge
 import Types.App (FlowBT)
 import Control.Monad.Trans.Class (lift)
@@ -23,6 +23,9 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Screens.Types (HomeScreenStage)
+import Common.Types.App (LazyCheck(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Int(fromString)
 
 data KeyStore = USER_NAME
                 | LANGUAGE_KEY
@@ -96,6 +99,8 @@ data KeyStore = USER_NAME
                 | DISABLE_WIDGET
                 | SHOW_JOIN_NAMMAYATRI
                 | DRIVER_SUBSCRIBED
+                | ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+                | FREE_TRIAL_DAYS
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
 
@@ -126,3 +131,6 @@ updateLocalStage = setValueToLocalStore LOCAL_STAGE <<< show
 
 isLocalStageOn :: HomeScreenStage -> Boolean
 isLocalStageOn stage = (getValueToLocalNativeStore LOCAL_STAGE) == show stage
+
+isOnFreeTrial :: LazyCheck -> Boolean
+isOnFreeTrial dummy = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0

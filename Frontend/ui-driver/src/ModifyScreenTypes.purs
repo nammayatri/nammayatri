@@ -63,6 +63,7 @@ modifyScreenState st =
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
     GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state { globalProps = a state.globalProps })
     SubscriptionScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { subscriptionScreen = a state.subscriptionScreen })
+    OnBoardingSubscriptionScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state { onBoardingSubscriptionScreen = a state.onBoardingSubscriptionScreen })
     PaymentHistoryScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { paymentHistoryScreen = a state.paymentHistoryScreen })
 
 updateStage :: ScreenStage -> FlowBT String Unit
