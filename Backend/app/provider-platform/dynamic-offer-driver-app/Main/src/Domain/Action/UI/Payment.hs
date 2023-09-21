@@ -110,7 +110,7 @@ getStatus (personId, merchantId) orderId = do
     DPayment.MandatePaymentStatus {..} -> do
       unless (order.status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-      processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
+      processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
       QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
     DPayment.PaymentStatus _ -> do
       unless (order.status /= Payment.CHARGED) $ do
@@ -170,6 +170,9 @@ processPayment merchantId driverId orderId sendNotification = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
+  let invoice = listToMaybe invoices
+  when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
+    maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     QDF.updateStatusByIds CLEARED driverFeeIds now
@@ -257,7 +260,7 @@ processNotification notificationId notificationStatus = do
     _ -> pure ()
   QNTF.updateNotificationStatusById notification.id notificationStatus
 
-processMandate :: Id DP.Person -> Payment.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> Flow ()
+processMandate :: Id DP.Person -> Payment.MandateStatus -> Maybe UTCTime -> Maybe UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> Flow ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
   let payerApp = upiDetails >>= (.payerApp)
       payerAppName = upiDetails >>= (.payerAppName)
@@ -268,11 +271,13 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
   when (mandateStatus == Payment.ACTIVE) $ do
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      QM.updateMandateDetails mandateId DM.ACTIVE payerVpa payerApp payerAppName mandatePaymentFlow
+      let toUpdatePayerVpa = isJust mbExistingMandate && (mbExistingMandate <&> (.status)) /= Just DM.ACTIVE --- do not update payer vpa from euler for older active mandates
+      let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
+      QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
       QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
       DI.updateSubscription True (cast driverPlan.driverId)
-      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa (cast driverPlan.driverId)
+      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
@@ -305,5 +310,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
             payerApp,
             payerAppName,
             mandatePaymentFlow,
+            startDate = fromMaybe now startDate,
+            endDate = fromMaybe now endDate,
             ..
           }

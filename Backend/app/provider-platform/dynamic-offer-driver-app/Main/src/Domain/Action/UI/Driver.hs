@@ -1788,7 +1788,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
               driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
-              isSplit = not (null driverFeesInWindow),
+              isSplit = length driverFeesInWindow > 1,
               rideTakenOn = driverFee.createdAt,
               offerAndPlanDetails = driverFee.planOfferTitle
             }

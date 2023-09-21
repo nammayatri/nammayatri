@@ -221,13 +221,14 @@ orderStatusService personId orderId orderStatusCall = do
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
+  now <- getCurrentTime
   orderStatusResp <- orderStatusCall orderStatusReq -- api call
   case orderStatusResp of
     Payment.MandateOrderStatusResp {..} -> do
       let orderTxn =
             OrderTxn
-              { mandateStartDate = Just mandateStartDate,
-                mandateEndDate = Just mandateEndDate,
+              { mandateStartDate = mandateStartDate,
+                mandateEndDate = mandateEndDate,
                 mandateId = Just mandateId,
                 mandateFrequency = Just mandateFrequency,
                 mandateMaxAmount = Just mandateMaxAmount,
@@ -235,7 +236,14 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, upi = orderStatusResp.upi, ..}
+      return $
+        MandatePaymentStatus
+          { status = orderStatusResp.transactionStatus,
+            upi = orderStatusResp.upi,
+            mandateStartDate = fromMaybe now mandateStartDate,
+            mandateEndDate = fromMaybe now mandateEndDate,
+            ..
+          }
     Payment.OrderStatusResp {..} -> do
       let orderTxn =
             OrderTxn
@@ -358,8 +366,8 @@ juspayWebhookService resp respDump = do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       let orderTxn =
             OrderTxn
-              { mandateStartDate = Just mandateStartDate,
-                mandateEndDate = Just mandateEndDate,
+              { mandateStartDate = mandateStartDate,
+                mandateEndDate = mandateEndDate,
                 mandateId = Just mandateId,
                 mandateStatus = Just mandateStatus,
                 mandateFrequency = Just mandateFrequency,
