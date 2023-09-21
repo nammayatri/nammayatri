@@ -19,7 +19,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Maybe as Maybe
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude ((<>))
+import Prelude ((<>), (||))
 import Prelude (unit, (<>), (==), negate)
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState)
@@ -48,10 +48,16 @@ navData screenName = {
       text: "Join"
     },
     {
-      activeIcon: "ic_referral_active,https://assets.juspay.in/nammayatri/images/driver/ic_referral_active.png",
+      activeIcon: "ic_referral_active," <> (getAssetStoreLink FunctionCall) <> "ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
       text: "Rankings"
-    }] else []) <> 
+    }] else [
+    {
+      activeIcon: "ic_referral_active," <> (getAssetStoreLink FunctionCall) <> "ic_referral_active.png",
+      defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
+      text: "Rankings"
+    }
+    ]) <> 
     [{
       activeIcon: "ny_ic_alerts_active",
       defaultIcon: "ny_ic_alerts_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_alerts_inactive.png",
@@ -65,6 +71,8 @@ getActiveIndex screenName = case screenName of
   ScreenNames.HOME_SCREEN -> 0
   ScreenNames.RIDE_HISTORY_SCREEN -> 1
   ScreenNames.SUBSCRIPTION_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else -1
-  ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 else -1
+  ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 
+                                 else if ( getMerchant FunctionCall == YATRI || getMerchant FunctionCall == YATRISATHI) then 2 
+                                 else -1
   ScreenNames.ALERTS_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 4 else 3
   _ -> -1

@@ -54,10 +54,13 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, getAssetStoreLink)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
+import Debug (spy)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -67,34 +70,40 @@ screen initialState =
   , globalEvents : [
               (\push -> do
                 void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                  case initialState.props.leaderBoardType of
-                    ST.Daily  -> do
-                      let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
-                                            case last (getPastDays 1) of
-                                              Just day -> day
-                                              Nothing -> initialState.props.selectedDay
-                                          else initialState.props.selectedDay
+                  case initialState.props.stage of 
+                    ST.LeaderBoard -> do
+                        case initialState.props.leaderBoardType of
+                          ST.Daily  -> do
+                            let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
+                                                  case last (getPastDays 1) of
+                                                    Just day -> day
+                                                    Nothing -> initialState.props.selectedDay
+                                                else initialState.props.selectedDay
 
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
-                      case leaderBoardRes of
-                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                      pure unit
-                    ST.Weekly -> do
-                      let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
-                                            case last (getPastWeeks 1) of
-                                              Just week -> week
-                                              Nothing -> initialState.props.selectedWeek
-                                          else initialState.props.selectedWeek
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
-                      case leaderBoardRes of
-                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                      pure unit
+                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
+                            case leaderBoardRes of
+                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                            pure unit
+                          ST.Weekly -> do
+                            let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
+                                                  case last (getPastWeeks 1) of
+                                                    Just week -> week
+                                                    Nothing -> initialState.props.selectedWeek
+                                                else initialState.props.selectedWeek
+                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
+                            case leaderBoardRes of
+                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                            pure unit
+                    _ -> pure unit
                 pure (pure unit)
               )
   ]
-  , eval
+  , eval : (\state  action -> do
+      let _ = spy "Referral state -----" state
+      let _ = spy "Referral--------action" action
+      eval state action)
   }
 
 
@@ -944,7 +953,7 @@ qrScreen push state =
                   imageView
                     [ height $ V 49
                     , width $ V 120
-                    , imageUrl "ny_namma_yatri"
+                    , imageWithFallback $ getReferralScreenIcon (getMerchant FunctionCall) 
                     ]
                 ]
             , linearLayout
@@ -957,7 +966,8 @@ qrScreen push state =
                   imageView
                     [ height $ V 288
                     , width $ V 288
-                    , imageUrl "ny_ic_qr_code"
+                    , id $ getNewIDWithTag "ReferralQRScreen"
+                    , afterRender push (const (ReferralQrRendered $ getNewIDWithTag "ReferralQRScreen"))
                     ]
                 ]
             , textView
@@ -968,6 +978,9 @@ qrScreen push state =
               , color Color.black900
               , textSize $ FontSize.a_16
               , margin $ MarginTop 8
+              , visibility $ case state.data.driverInfo.referralCode of
+                               Just _ -> VISIBLE
+                               Nothing -> GONE
               ]
             , textView
               [ height WRAP_CONTENT
@@ -1046,8 +1059,7 @@ qrScreen push state =
                 [
                   height $ V 80
                 ,  width $ V 118
-                ,  margin $ MarginRight 5
-                , imageUrl if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then "ny_ic_auto2" else "ny_ic_auto1"
+                , imageWithFallback $ if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then getActiveReferralBannerIcon (getMerchant FunctionCall)  else getReferralBannerIcon (getMerchant FunctionCall) 
                 ]
             ]
         ,   linearLayout
@@ -1167,3 +1179,27 @@ checkDriverWithZeroRides item aboveThreshold state =
 checkDate :: ST.ReferralScreenState -> Boolean
 checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdate "") == (convertUTCtoISC state.props.selectedDay.utcDate "YYYY-MM-DD") 
                   else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 
+
+getReferralScreenIcon :: Merchant -> String
+getReferralScreenIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+    YATRI -> "ny_ic_yatri_logo_dark," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_logo_dark.png"
+    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_sathi_logo_black_icon.png"
+    _ -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+
+getActiveReferralBannerIcon :: Merchant -> String
+getActiveReferralBannerIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    _ -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+
+getReferralBannerIcon :: Merchant -> String
+getReferralBannerIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    _ -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"

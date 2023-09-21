@@ -30,10 +30,10 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
+import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -43,6 +43,9 @@ import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..)
 import Services.API (LeaderBoardRes(..), DriversInfo(..))
 import Services.Config (getSupportNumber)
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Effect.Aff (launchAff_)
+import Common.Types.App
+import Effect.Uncurried(runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -116,6 +119,7 @@ instance loggableAction :: Loggable Action where
         WeekSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "week_changed"
     UpdateLeaderBoard _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard"
     UpdateLeaderBoardFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard_failed"
+    _ -> pure unit
 
 data Action = BottomNavBarAction BottomNavBar.Action
             | GenericHeaderActionController GenericHeader.Action
@@ -137,6 +141,9 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | UpdateLeaderBoard LeaderBoardRes
             | AfterRender
             | UpdateLeaderBoardFailed
+            | ReferralQrRendered String
+            | NoAction
+
 
 data ScreenOutput = GoToHomeScreen
                   | GoBack
@@ -274,6 +281,11 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ SubscriptionScreen state
     _ -> continue state
 
+eval (ReferralQrRendered id) state = 
+  continueWithCmd state [ do
+    runEffectFn4 generateQR (getPlayStoreLink (getMerchant FunctionCall)) id 200 0 -- link for qr generation (app link for customer)
+    pure $ NoAction
+  ]
 eval _ state = continue state
 
 
@@ -287,3 +299,19 @@ transformLeaderBoard (DriversInfo driversInfo) isMaskedName = {
   , rank : driversInfo.rank
   , rides : driversInfo.totalRides
 }
+
+getReferralStage :: Merchant -> ReferralType
+getReferralStage merchant =
+  case merchant of
+    NAMMAYATRI -> LeaderBoard
+    YATRI -> QRScreen
+    YATRISATHI -> QRScreen
+    _ -> LeaderBoard
+
+getPlayStoreLink :: Merchant -> String
+getPlayStoreLink merchant =
+  case merchant of
+    NAMMAYATRI -> "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+    YATRI -> "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
+    YATRISATHI -> "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathi"
+    _ -> "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
