@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver) where
 
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
@@ -68,28 +69,24 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeAutopayDrivers) Plan.AUTOPAY
         let driverInfoForPDNotification = mapDriverInfoForPDNNotification (Map.fromList mandateIdAndDriverIdsToNotify) driverFees
         changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverInfoForPDNotification <&> (.driverFeeId))
-        for_ driverInfoForPDNotification $ \driverToNotify -> do
-          notificationId <- generateGUID
-          notificationShortId <- generateShortId
-          invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverToNotify.driverFeeId
-          case invoice' of
-            Just _ -> do
-              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_ATTEMPTING) driverToNotify.driverFeeId
-              req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
-              exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
-              case exec of
-                Left err -> do
-                  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
-                  QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
-                  QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
-                  logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
-                Right res -> do
-                  QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
-            Nothing -> do
-              QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
-              QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
-              QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
-              logError ("Active autopay invoice not found for driverFeeId" <> driverToNotify.driverFeeId.getId)
+        driverFeeToBeNotified <-
+          mapMaybeM
+            ( \pdnNoticationEntity -> do
+                invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId pdnNoticationEntity.driverFeeId
+                case invoice' of
+                  Just _ -> return $ Just pdnNoticationEntity
+                  Nothing -> do
+                    QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [pdnNoticationEntity.driverFeeId]
+                    QDF.updateStatus PAYMENT_OVERDUE pdnNoticationEntity.driverFeeId now
+                    QDF.updateFeeType RECURRING_INVOICE now pdnNoticationEntity.driverFeeId
+                    logError ("Active autopay invoice not found for driverFeeId" <> pdnNoticationEntity.driverFeeId.getId)
+                    return Nothing
+            )
+            driverInfoForPDNotification
+        QDF.updateAutopayPaymentStageByIds (Just NOTIFICATION_ATTEMPTING) (map (.driverFeeId) driverFeeToBeNotified)
+        for_ driverFeeToBeNotified $ \driverToNotify -> do
+          fork ("Notification call for driverFeeId : " <> driverToNotify.driverFeeId.getId) $ do
+            sendAsyncNotification driverToNotify merchantId
         ReSchedule <$> getRescheduledTime transporterConfig
   logWarning ("duration of job " <> show timetaken)
   return response
@@ -111,34 +108,6 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
           amount = fromInteger (round $ (fromIntegral driverFee_.govtCharges) + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst)
-        }
-    mkNotificationRequest driverInfoForPDN shortId = do
-      now <- getCurrentTime
-      return
-        PaymentInterface.MandateNotificationReq
-          { amount = driverInfoForPDN.amount,
-            txnDate = addUTCTime (3600 * 24) now,
-            mandateId = driverInfoForPDN.mandateId.getId, --- not sure regarding this m
-            notificationId = shortId,
-            description = "Driver fee mandate notification"
-          }
-    buildNotificationEntity response id_ driverFeeId mandateId now =
-      NTF.Notification
-        { id = id_,
-          shortId = response.notificationId,
-          sourceAmount = response.sourceInfo.sourceAmount,
-          mandateId = mandateId,
-          driverFeeId = driverFeeId,
-          juspayProvidedId = response.juspayProvidedId,
-          txnDate = response.sourceInfo.txnDate,
-          providerName = response.providerName,
-          notificationType = response.notificationType,
-          description = response.description,
-          status = response.status,
-          dateCreated = response.dateCreated,
-          lastUpdated = response.lastUpdated,
-          createdAt = now,
-          updatedAt = now
         }
 
 data DriverInfoForPDNotification = DriverInfoForPDNotification
@@ -163,3 +132,58 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
         startTime = startTime,
         endTime = endTime
       }
+
+sendAsyncNotification ::
+  ( MonadFlow m,
+    HasShortDurationRetryCfg r c,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  DriverInfoForPDNotification ->
+  Id Merchant ->
+  m ()
+sendAsyncNotification driverToNotify merchantId = do
+  notificationId <- generateGUID
+  notificationShortId <- generateShortId
+  now <- getCurrentTime
+  req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
+  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
+  case exec of
+    Left err -> do
+      QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
+      QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
+      QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
+      logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
+    Right res -> do
+      QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
+  where
+    buildNotificationEntity response id_ driverFeeId mandateId now =
+      NTF.Notification
+        { id = id_,
+          shortId = response.notificationId,
+          sourceAmount = response.sourceInfo.sourceAmount,
+          mandateId = mandateId,
+          driverFeeId = driverFeeId,
+          juspayProvidedId = response.juspayProvidedId,
+          txnDate = response.sourceInfo.txnDate,
+          providerName = response.providerName,
+          notificationType = response.notificationType,
+          description = response.description,
+          status = response.status,
+          dateCreated = response.dateCreated,
+          lastUpdated = response.lastUpdated,
+          createdAt = now,
+          updatedAt = now
+        }
+    mkNotificationRequest driverInfoForPDN shortId = do
+      now <- getCurrentTime
+      return
+        PaymentInterface.MandateNotificationReq
+          { amount = driverInfoForPDN.amount,
+            txnDate = addUTCTime (3600 * 24) now,
+            mandateId = driverInfoForPDN.mandateId.getId, --- not sure regarding this m
+            notificationId = shortId,
+            description = "Driver fee mandate notification"
+          }

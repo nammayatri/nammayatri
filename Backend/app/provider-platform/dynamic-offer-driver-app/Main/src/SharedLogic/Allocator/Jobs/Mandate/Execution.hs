@@ -6,6 +6,7 @@ import Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan as DP
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
+import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
@@ -45,7 +46,6 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         merchantId = jobData.merchantId
         startTime = jobData.startTime
         endTime = jobData.endTime
-    now <- getCurrentTime
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
@@ -61,17 +61,10 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
             mapDriverPlanByDriverId = Map.fromList driverIdsAndDriverPlanToNotify
         driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications)
         changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverExecutionRequests <&> (.driverFee) <&> (.id))
-        for_ driverExecutionRequests $ \ExecutionData {..} -> do
-          ---- driver fee autoPayStage as Execution Attempting -----
-          QDF.updateAutopayPaymentStageById (Just EXECUTION_ATTEMPTING) driverFee.id
-          exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
-          case exec of
-            Left err -> do
-              QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
-              QDF.updateStatus PAYMENT_OVERDUE driverFee.id now
-              QDF.updateFeeType RECURRING_INVOICE now driverFee.id
-              logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
-            Right _ -> pure ()
+        QDF.updateAutopayPaymentStageByIds (Just EXECUTION_ATTEMPTING) ((.driverFee.id) <$> driverExecutionRequests)
+        for_ driverExecutionRequests $ \executionData -> do
+          fork ("execution for driverFeeId : " <> executionData.driverFee.id.getId) $ do
+            asyncExecutionCall executionData merchantId
         ReSchedule <$> getRescheduledTime transporterConfig
   logInfo ("duration of job " <> show timetaken)
   return response
@@ -133,3 +126,25 @@ data ExecutionData = ExecutionData
     driverFee :: DF.DriverFee,
     driverPlan :: DriverPlan
   }
+
+asyncExecutionCall ::
+  ( MonadFlow m,
+    HasShortDurationRetryCfg r c,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ExecutionData ->
+  Id Merchant ->
+  m ()
+asyncExecutionCall ExecutionData {..} merchantId = do
+  exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
+  now <- getCurrentTime
+  case exec of
+    Left err -> do
+      QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
+      QDF.updateStatus PAYMENT_OVERDUE driverFee.id now
+      QDF.updateFeeType RECURRING_INVOICE now driverFee.id
+      logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
+    Right _ -> pure ()
