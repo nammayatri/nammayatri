@@ -4,6 +4,12 @@
 module Types.DBSync.Create where
 
 import EulerHS.Prelude
+import qualified IssueManagement.Storage.Beam.Issue.Comment as Comment
+import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as IssueCategory
+import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
+import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
+import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
+import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -21,6 +27,7 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import "rider-app" Storage.Beam.IssueManagement ()
 import qualified "rider-app" Storage.Beam.Location as Location
 import qualified "rider-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
@@ -63,6 +70,11 @@ data DBCreateObject
   | FareBreakupObject FareBreakup.FareBreakup
   | GeometryObject Geometry.Geometry
   | IssueObject Issue.Issue
+  | CommentObject Comment.Comment
+  | IssueCategoryObject IssueCategory.IssueCategory
+  | IssueOptionObject IssueOption.IssueOption
+  | IssueReportObject IssueReport.IssueReport
+  | IssueTranslationObject IssueTranslation.IssueTranslation
   | PlaceNameCacheObject PlaceNameCache.PlaceNameCache
   | MerchantObject Merchant.Merchant
   | MerchantMessageObject MerchantMessage.MerchantMessage
@@ -70,6 +82,7 @@ data DBCreateObject
   | MerchantServiceConfigObject MerchantServiceConfig.MerchantServiceConfig
   | MerchantServiceUsageConfigObject MerchantServiceUsageConfig.MerchantServiceUsageConfig
   | MerchantConfigObject MerchantConfig.MerchantConfig
+  | MediaFileObject MediaFile.MediaFile
   | OnSearchEventObject OnSearchEvent.OnSearchEvent
   | PaymentOrderObject PaymentOrder.PaymentOrder
   | PaymentTransactionObject PaymentTransaction.PaymentTransaction
@@ -109,6 +122,11 @@ modelName (ExophoneObject _) = "Exophone"
 modelName (FareBreakupObject _) = "FareBreakup"
 modelName (GeometryObject _) = "Geometry"
 modelName (IssueObject _) = "Issue"
+modelName (CommentObject _) = "Comment"
+modelName (IssueCategoryObject _) = "IssueCategory"
+modelName (IssueOptionObject _) = "IssueOption"
+modelName (IssueReportObject _) = "IssueReport"
+modelName (IssueTranslationObject _) = "IssueTranslation"
 modelName (PlaceNameCacheObject _) = "PlaceNameCache"
 modelName (MerchantObject _) = "Merchant"
 modelName (MerchantMessageObject _) = "MerchantMessage"
@@ -116,6 +134,7 @@ modelName (MerchantPaymentMethodObject _) = "MerchantPaymentMethod"
 modelName (MerchantServiceConfigObject _) = "MerchantServiceConfig"
 modelName (MerchantServiceUsageConfigObject _) = "MerchantServiceUsageConfig"
 modelName (MerchantConfigObject _) = "MerchantConfig"
+modelName (MediaFileObject _) = "MediaFile"
 modelName (OnSearchEventObject _) = "OnSearchEvent"
 modelName (PaymentOrderObject _) = "PaymentOrder"
 modelName (PaymentTransactionObject _) = "PaymentTransaction"

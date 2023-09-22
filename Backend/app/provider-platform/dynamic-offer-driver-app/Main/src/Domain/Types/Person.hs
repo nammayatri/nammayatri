@@ -20,9 +20,9 @@ module Domain.Types.Person where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
-import qualified Domain.Types.MediaFile as M
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile as M
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM

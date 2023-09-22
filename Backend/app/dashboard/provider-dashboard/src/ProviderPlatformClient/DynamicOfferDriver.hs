@@ -26,7 +26,6 @@ import qualified Dashboard.Common.Exotel as Exotel
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
-import qualified Dashboard.ProviderPlatform.Issue as Issue
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Message
@@ -44,6 +43,10 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import IssueManagement.Common
+import qualified IssueManagement.Common.Dashboard.Issue as Issue
+import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueReport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
@@ -209,10 +212,10 @@ data RevenueAPIs = RevenueAPIs
 
 data IssueAPIs = IssueAPIs
   { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
-    issueList :: Maybe Int -> Maybe Int -> Maybe Issue.IssueStatus -> Maybe (Id Issue.IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
-    issueInfo :: Id Issue.IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
-    issueUpdate :: Id Issue.IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
-    issueAddComment :: Id Issue.IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
+    issueList :: Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
+    issueInfo :: Id IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
+    issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
+    issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
     ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }

@@ -93,6 +93,14 @@ dependencies:
   - singletons
   - cassava
   - vector
+  - beam-core
+  - postgresql-simple
+  - beam-postgres
+  - cereal
+  - template-haskell
+  - sequelize
+  - casing
+  - beam-mysql
 
 ghc-options:
   - -fwrite-ide-info

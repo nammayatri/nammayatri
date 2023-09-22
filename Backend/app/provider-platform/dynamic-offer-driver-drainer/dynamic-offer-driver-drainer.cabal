@@ -108,6 +108,7 @@ library
     , record-hasfield
     , sequelize
     , servant-server
+    , shared-services
     , text
     , time
     , tinylog
@@ -196,6 +197,7 @@ executable dynamic-offer-driver-drainer-exe
     , record-hasfield
     , sequelize
     , servant-server
+    , shared-services
     , text
     , time
     , tinylog
