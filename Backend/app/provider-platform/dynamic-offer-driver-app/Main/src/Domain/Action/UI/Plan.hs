@@ -192,7 +192,7 @@ currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
-  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
+  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId AUTOPAY) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
 
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
@@ -231,13 +231,6 @@ currentPlan (driverId, _merchantId) = do
         isLocalized = Just True
       }
   where
-    getDriverPaymentMode = \case
-      Just DI.ACTIVE -> AUTOPAY
-      Just DI.SUSPENDED -> MANUAL
-      Just DI.PAUSED_PSP -> MANUAL
-      Just DI.CANCELLED_PSP -> MANUAL
-      _ -> MANUAL
-
     checkIFActiveStatus (Just DI.ACTIVE) = True
     checkIFActiveStatus _ = False
 
