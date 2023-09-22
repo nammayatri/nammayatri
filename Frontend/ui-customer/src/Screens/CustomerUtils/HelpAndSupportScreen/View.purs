@@ -144,7 +144,7 @@ recentRideView state push=
   , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
   ][
     linearLayout
-    [ height WRAP_CONTENT
+    [ height $ if EHC.os == "IOS" then V 134 else WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
     ][  imageView
