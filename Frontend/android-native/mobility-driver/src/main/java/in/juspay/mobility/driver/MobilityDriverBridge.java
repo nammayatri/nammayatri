@@ -101,6 +101,7 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
+import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
@@ -148,6 +149,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     storeDriverCallBack, notificationType);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+
+    @JavascriptInterface
+    public void translateString(String callback, String toTranslate)
+    {
+        String lang = getKeysInSharedPref("LANGUAGE_KEY");
+        String lastLang = getKeysInSharedPref("LAST_LANG");
+        TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext(), lastLang);
+        translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
     }
 
     @JavascriptInterface

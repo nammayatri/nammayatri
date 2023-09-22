@@ -61,7 +61,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
-import Helpers.Utils (LatLon(..), checkPPInitiateStatus, consumeBP, decodeErrorCode, decodeErrorMessage, getAvailableUpiApps, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, initiatePP, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, paymentPageUI, secondsLeft, toString)
+import Helpers.Utils (LatLon(..), checkPPInitiateStatus, consumeBP, decodeErrorCode, decodeErrorMessage, getAvailableUpiApps, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, initiatePP, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, paymentPageUI, secondsLeft, toString, translateString)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Language.Strings (getString)
@@ -1253,17 +1253,20 @@ myRidesScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = currTab})
       myRidesScreenFlow
     GO_TO_TRIP_DETAILS selectedCard -> do
+      sourceMod <- translateString selectedCard.source 400
+      destinationMod <- translateString selectedCard.destination 400
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
       tripId = selectedCard.id,
       date = selectedCard.date,
       time = selectedCard.time,
-      source = selectedCard.source,
-      destination = selectedCard.destination,
+      source = sourceMod,         
+      destination = destinationMod,  
       totalAmount = selectedCard.total_amount,
       distance = selectedCard.rideDistance,
       status = selectedCard.status,
       vehicleType = selectedCard.vehicleType
       }})
+
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
     SELECTED_TAB state -> do
@@ -1485,14 +1488,18 @@ currentRideFlow = do
   (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
   if not (null activeRideResponse.list) then do
     case (activeRideResponse.list !! 0 ) of
-      Just ride -> do
+      Just (RidesInfo ride) -> do
+        let x = decodeAddress ride.fromLocation true 
+            y = decodeAddress ride.toLocation true
+        sourceMod <- translateString x 500
+        destinationMod <- translateString y 500
         let state = allState.homeScreen
-            activeRide = (activeRideDetail state ride)
+            activeRide = (activeRideDetail state (RidesInfo ride))
             stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
         void $ pure $ setCleverTapUserProp "Driver On-ride" "Yes"
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide}, props{ silentPopUpView = false, goOfflineModal = false }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false }})
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
         _ <- updateStage $ HomeScreenStage HomeScreen
@@ -1510,7 +1517,7 @@ currentRideFlow = do
       else if onBoardingSubscriptionViewCount < 6 then  do 
         setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
         pure unit
-      else pure unit
+else pure unit
   void $ pure $ setCleverTapUserProp "Driver On-ride" if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
@@ -1622,7 +1629,7 @@ homeScreenFlow = do
   case action of
     GO_TO_PROFILE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      driverProfileFlow 
+      driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
       driverProfileFlow
@@ -1721,9 +1728,9 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
-              else if ( errorPayload.code == 400 && (errorMessage == "Wrong Vehicle Variant")) then do
+            else if ( errorPayload.code == 400 && (errorMessage == "Wrong Vehicle Variant")) then do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = true, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false} })
-                else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
     GO_TO_END_RIDE {id, lat, lon} -> do

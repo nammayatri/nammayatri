@@ -153,7 +153,7 @@ public class MobilityAppBridge extends HyperBridge {
     // endregion
 
     @JavascriptInterface
-    public void firebaseLogEvent(String event) {
+    public static void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
     }

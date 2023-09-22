@@ -71,4 +71,5 @@ dependencies {
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
+    implementation 'com.google.mlkit:translate:17.0.1'
 }

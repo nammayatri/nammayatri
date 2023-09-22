@@ -35,7 +35,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
@@ -44,6 +44,7 @@ import Styles.Colors as Color
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
+import JBridge as JB
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -588,6 +589,7 @@ sourceDestinationTextView push config =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.titleText
+        , id (getNewIDWithTag "sourceArea")
         , color Color.black800
         , ellipsize true
         , singleLine true
@@ -596,6 +598,7 @@ sourceDestinationTextView push config =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.detailText
+        , id (getNewIDWithTag "sourceAddress")
         , color Color.black650
         , margin (MarginBottom 25)
         , ellipsize true
@@ -675,6 +678,7 @@ destAddressTextView config push=
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.destinationAddress.titleText
+        , id (getNewIDWithTag "destinationArea")
         , color Color.black800
         , ellipsize true
         , singleLine true
@@ -683,12 +687,13 @@ destAddressTextView config push=
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.destinationAddress.detailText
+        , id (getNewIDWithTag "destinationAddress")
         , color Color.black650
         , ellipsize true
         , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
         ]<> FontStyle.body1 TypoGraphy
       ]
-
+  
 getTitle :: Config -> String
 getTitle config = case config.startRideActive of
   false -> (getString YOU_ARE_ON_A_RIDE)
