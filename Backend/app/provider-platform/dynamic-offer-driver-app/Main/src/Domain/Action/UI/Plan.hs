@@ -207,7 +207,7 @@ currentPlan (driverId, _merchantId) = do
   (orderId, lastPaymentType) <-
     case mbOrder of
       Just order -> do
-        if order.status `elem` [Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
+        if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
           then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
           else
             if order.status == Payment.NEW
