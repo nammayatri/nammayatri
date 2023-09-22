@@ -67,7 +67,7 @@ import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, onAnimationEnd,background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -191,12 +191,12 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([ relativeLayout
+  ]([ PrestoAnim.animationSet [ Anim.fadeIn true ] $ relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , background Color.white900
       , weight 1.0
-      , afterRender
+      , onAnimationEnd
         (\action -> do
           _ <- push action
           _ <- JB.setFCMToken push $ SetToken
@@ -621,11 +621,18 @@ driverDetail push state =
           width $ V 42
         , height $ V 42
         , onClick push $ const GoToProfile
-        ][ imageView
-           [ width $ V 42
-           , height $ V 42
-           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
-           ]
+        ][ case state.data.profileImg of
+            Nothing -> imageView
+                        [ width $ V 42
+                        , height $ V 42
+                        , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+                        ] 
+            Just img -> linearLayout[
+                          width $ V 42
+                        , height $ V 42
+                        , id $ getNewIDWithTag "driver_home_prof"
+                        , afterRender (\action -> do JB.renderBase64Image img (getNewIDWithTag "driver_home_prof") false "CENTER_CROP") (const NoAction)
+                        ][]
          ]
       ]
     , accessibilityHeaderView push state (getAccessibilityHeaderText state)
