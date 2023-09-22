@@ -872,8 +872,14 @@ getRideCompletedConfig state = let
       text2 = getString PURPLE_RIDE_CHAMPION,
       background = Color.mangolia
     },
+    driverUpiQrCard {
+      text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
+      id = "renderQRViewOnRideComplete",
+      vpa = state.data.endRideData.payerVpa
+    },
     showContackSupportPopUp = state.props.showContackSupportPopUp,
-    accessibility = DISABLE
+    accessibility = DISABLE,
+    qrVisibility = state.data.endRideData.hasActiveAutoPay
   }
   in config'
 

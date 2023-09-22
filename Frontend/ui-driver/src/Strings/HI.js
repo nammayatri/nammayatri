@@ -847,5 +847,15 @@ const hindiStrings = {
   PROCEED_TO_CHAT : "चैट के साथ आगे बढ़ें",
   PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
   JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!",
-  GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों"
+  GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
+  OR : "या",
+  COLLECT_CASH_DIRECTLY : "सीधे नकदी इकट्ठा करें ",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "सीधे अपने बैंक खाते में भुगतान स्वीकार करने के लिए, अपने प्लान पर ऑटोपे सेटअप करें",
+  DOWNLOAD_QR : "क्यूआर डाउनलोड करें",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "आप सवारी समाप्त होने के बाद भुगतान एकत्र करने के लिए इस क्यूआर कोड का उपयोग कर सकते हैं।",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "राशि उस बैंक खाते में जमा की जाएगी जिसे आप UPI ऑटोपे के लिए उपयोग कर रहे हैं",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "अपने बैंक खाते में सीधे भुगतान प्राप्त करें",
+  PAYMENT : "भुगतान",
+  QR_CODE : "क्यू आर कोड",
+  GET_QR_CODE : "क्यू आर कोड पाएं"
 }

@@ -110,7 +110,9 @@ initData = {
           riderName : "",
           rating : 0,
           feedback : "",
-          disability : Nothing
+          disability : Nothing,
+          hasActiveAutoPay : false,
+          payerVpa : ""
         }
     },
     props: {

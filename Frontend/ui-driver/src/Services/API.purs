@@ -404,6 +404,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , autoPayStatus         :: Maybe String  
     , aadhaarCardPhoto      :: Maybe String
     , freeTrialDaysLeft     :: Maybe Int
+    , payerVpa              :: Maybe String
     }
 
 
@@ -495,7 +496,9 @@ newtype RidesInfo = RidesInfo
       specialLocationTag :: Maybe String,
       requestedVehicleVariant :: Maybe String,
       customerExtraFee :: Maybe Int,
-      disabilityTag :: Maybe String
+      disabilityTag :: Maybe String,
+      payerVpa :: Maybe String,
+      autoPayStatus :: Maybe String
   }
 
 newtype LocationInfo = LocationInfo

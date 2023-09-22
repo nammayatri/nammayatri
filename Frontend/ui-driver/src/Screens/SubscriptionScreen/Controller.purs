@@ -30,12 +30,13 @@ import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), KioskLocationRes(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import Resource.Constants as Const
 
 instance showAction :: Show Action where
   show _ = ""
@@ -270,7 +271,7 @@ eval (LoadMyPlans plans) state = do
                 }
               , autoPayDetails {
                   detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
+                , pspLogo = Const.getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
                 , payerUpiId = mandateDetails.payerVpa
                 }
               }

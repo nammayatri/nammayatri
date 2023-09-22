@@ -350,7 +350,7 @@ const kannadaStrings = {
   LINK_REFERRAL_CODE: "ಲಿಂಕ್ ರೆಫರಲ್ ಕೋಡ್",
   DRIVER_DETAILS: "ಚಾಲಕ ವಿವರಗಳು",
   FOR_UPDATES_SEE_ALERTS: "ನವೀಕರಣಗಳಿಗಾಗಿ ಘೋಷಣೆಗಳನ್ನು ನೋಡಿ",
-  SHARE_OPTIONS: "ಹಂಚಿಕೆ ಆಯ್ಕೆಗಳು",
+  SHARE_OPTIONS: "ಆಯ್ಕೆಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
   ENTER_PASSWORD: "ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ",
   OTP: "OTP",
   RIDE_FARE : "ರೈಡ್ ದರ",
@@ -819,5 +819,15 @@ const kannadaStrings = {
   PROCEED_TO_CHAT : "ಚಾಟ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಸಿರಿ",
   PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ",
   JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
-  GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ"
+  GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
+  OR : "ಅಥವಾ",
+  COLLECT_CASH_DIRECTLY : "ನೇರವಾಗಿ ಹಣವನ್ನು ಸಂಗ್ರಹಿಸಿ",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರವಾಗಿ ಪಾವತಿಗಳನ್ನು ಸ್ವೀಕರಿಸಲು, ನಿಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಸೆಟಪ್ ಮಾಡಿ",
+  DOWNLOAD_QR : "QR ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "ಸವಾರಿ ಮುಗಿದ ನಂತರ ಪಾವತಿಯನ್ನು ಸಂಗ್ರಹಿಸಲು ನೀವು ಈ QR ಕೋಡ್ ಅನ್ನು ಬಳಸಬಹುದು.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "ನೀವು UPI ಸ್ವಯಂ ಪಾವತಿಗಾಗಿ ಬಳಸುತ್ತಿರುವ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ಮೊತ್ತವನ್ನು ಠೇವಣಿ ಮಾಡಲಾಗುತ್ತದೆ",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರ ಪಾವತಿ ಪಡೆಯಿರಿ",
+  PAYMENT : "ಪಾವತಿ",
+  QR_CODE : "QR ಕೋಡ್",
+  GET_QR_CODE : "QR ಕೋಡ್ ಪಡೆಯಿರಿ"
 }

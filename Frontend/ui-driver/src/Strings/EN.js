@@ -848,5 +848,15 @@ const englishStrings = {
   PROCEED_TO_CHAT : "Proceed to Chat",
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
   JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
-  GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides"
-} 
+  GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
+  OR : "OR",
+  COLLECT_CASH_DIRECTLY : "Collect cash directly ",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "To accept payments directly to your bank account, setup  Autopay on your Plan",
+  DOWNLOAD_QR : "Download QR",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "You can use this QR Code to collect payment after the ride ends.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "The amount will be deposited into the bank account that you are using for UPI Autopay",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Get direct payment to your bank account",
+  PAYMENT : "Payment",
+  QR_CODE : "QR Code",
+  GET_QR_CODE : "Get QR Code"
+}

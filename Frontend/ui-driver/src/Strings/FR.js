@@ -655,5 +655,15 @@ const frenchStrings = {
   PURPLE_RIDE_CHAMPION : "Champion du Purple Ride",
   PURPLE_RIDE : "Tour violet",
   PROCEED_TO_CHAT : "Passer au chat",
-  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler"
+  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler",
+  OR : "OU",
+  COLLECT_CASH_DIRECTLY : "Encaisser directement l'argent",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "Pour accepter les paiements directement sur votre compte bancaire, configurez le paiement automatique sur votre forfait",
+  DOWNLOAD_QR : "Télécharger le QR",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "Vous pouvez utiliser ce QR Code pour collecter le paiement une fois la course terminée.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "Le montant sera déposé sur le compte bancaire que vous utilisez pour UPI Autopay",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Obtenez un paiement direct sur votre compte bancaire",
+  PAIEMENT : "Paiement",
+  QR_CODE : "QR Code",
+  GET_QR_CODE : "Obtenir le code QR"
 }

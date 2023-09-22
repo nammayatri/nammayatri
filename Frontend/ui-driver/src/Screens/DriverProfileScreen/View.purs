@@ -18,6 +18,7 @@ module Screens.DriverProfileScreen.View where
 import Common.Types.App
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
+import Screens.SubscriptionScreen.Transformer
 
 import Animation as Anim
 import Animation.Config as AnimConfig
@@ -68,6 +69,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getVehicleType)
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -91,7 +93,7 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import Screens.Types as ST
+import Screens.Types (AutoPayStatus(..))
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
 import Services.Backend as Remote
@@ -103,6 +105,8 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Helpers.Utils as HU
+import Resource.Constants as Const
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -156,6 +160,7 @@ view push state =
           , background Color.lightBlack900
           , visibility if state.props.logoutModalView == true then VISIBLE else GONE
           ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
+        , if state.props.upiQrView then renderQRView state push  else dummyTextView
         , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
         , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
         , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
@@ -165,6 +170,7 @@ view push state =
         , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
         , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
         , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
+        , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     ]
 
 
@@ -191,6 +197,70 @@ updateDetailsView state push =
       ][ PrimaryButton.view (push <<< UpdateValueAC) (updateButtonConfig state)]
   ]
 
+renderQRView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+renderQRView state push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , background Color.black9000
+  , onClick push $ const DismissQrPopup
+  ][linearLayout 
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.white900
+    , orientation VERTICAL
+    , gravity CENTER
+    , cornerRadius 16.0
+    ][
+      linearLayout
+      [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , id $ getNewIDWithTag "QRpaymentview"
+      , gravity CENTER
+      , orientation VERTICAL
+      , padding $ Padding 16 32 16 16
+      , background Color.white900
+      , cornerRadius 16.0
+      ][ 
+        textView $
+        [
+          text $ getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT
+        ] <> FontStyle.subHeading1 TypoGraphy
+        , linearLayout [
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , background Color.white900
+          , orientation HORIZONTAL
+          , gravity CENTER
+          , margin $ MarginTop 15
+        ][
+          imageView
+          [
+              width $ V 24
+            , height  $ V 24
+            , margin $ MarginRight 6
+            , imageWithFallback $ (Const.getPspIcon state.data.payerVpa)
+          ]
+          , textView $ [
+            text state.data.payerVpa
+          ] <> FontStyle.body2 TypoGraphy
+        ]
+        , imageView[
+            height $ V 280
+          , width $ V 280
+          , margin $ MarginVertical 15 24
+          , id $ getNewIDWithTag "renderQRView"
+          , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
+        ]
+      ]
+      -- To enable after an apk update
+      -- , PrimaryButton.view (push <<< DownloadQR) (downloadQRConfig state)
+      -- , PrimaryButton.view (push <<< ShareQR) (shareOptionButtonConfig state)
+    ]
+  ]
 
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 
@@ -228,6 +298,7 @@ profileView push state =
                 , infoView state push
                 ]
             , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
+            , if state.props.screenType == ST.DRIVER_DETAILS then payment push state else dummyTextView
             , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
             , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
             , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
@@ -568,13 +639,13 @@ additionalRcsView state push config =
 
 getRcDetailsForInactiveRcs config  = [
     --{ key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
-    { key : (getString MODEL_NAME) , value : config.model, action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : config.color, action :NoAction , isEditable : false }
-  , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false } ]
+    { key : (getString MODEL_NAME) , value : config.model, action :  NoAction , isEditable : false , keyInfo : false, isRightInfo : false}
+  , { key : (getString COLOUR) , value : config.color, action :NoAction , isEditable : false , keyInfo : false, isRightInfo : false}
+  , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false , keyInfo : false, isRightInfo : false} ]
 
 
 
-detailsViewForInactiveRcs :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {backgroundColor :: String , lineColor :: String , arrayList :: Array { key :: String , value :: Maybe String , action :: Action , isEditable :: Boolean }} -> PrestoDOM (Effect Unit) w
+detailsViewForInactiveRcs :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {backgroundColor :: String , lineColor :: String , arrayList :: Array { key :: String , value :: Maybe String , action :: Action , isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean }} -> PrestoDOM (Effect Unit) w
 detailsViewForInactiveRcs state push config =
   linearLayout
   [ height WRAP_CONTENT
@@ -785,6 +856,30 @@ vehicleAnalyticsView push state =
       ](map (\item -> infoCard state push item) (vehicleSummaryArray state))
   ]
 
+--------------------------------------- PAYMENT VIEW ------------------------------------------------------------
+payment :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+payment push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ Margin 16 40 16 0
+  , orientation VERTICAL
+  ]([  textView
+      [ text $ getString PAYMENT
+      , margin $ MarginBottom 12
+      , textSize FontSize.a_16
+      , color Color.black900
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      ]
+  ] <> if state.data.autoPayStatus == ACTIVE_AUTOPAY then [detailsListViewComponent state push {  backgroundColor : Color.blue600
+                              , separatorColor : Color.white900
+                              , isLeftKeyClickable : false
+                              , arrayList : driverPaymentsArray state
+                                }] else [detailsListViewComponent state push {  backgroundColor : Color.blue600
+                                , separatorColor : Color.white900
+                                , isLeftKeyClickable : true
+                                , arrayList : driverNoAutoPayArray state
+                                }])
 --------------------------------------- ADDITIONAL DETAILS VIEW ------------------------------------------------------------
 additionalDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 additionalDetails push state =
@@ -802,6 +897,7 @@ additionalDetails push state =
       ]
   ] <> [detailsListViewComponent state push {  backgroundColor : Color.blue600
                               , separatorColor : Color.white900
+                              , isLeftKeyClickable : false
                               , arrayList : if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else vehicleAboutMeArray state
                                 }])
 
@@ -1099,20 +1195,21 @@ infoView state push =
   ][ detailsListViewComponent state push {
                               backgroundColor : Color.white900
                             , separatorColor : Color.grey700
+                            , isLeftKeyClickable : false
                             , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state)
                                            else (getRcDetails state)
                             }
     ]
-getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
+getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean , isRightInfo :: Boolean}
 getRcDetails state = do
   let config = state.data.activeRCData
-  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_STR) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
-  , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }]
+  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_STR) else (getString INACTIVE_RC), action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false }
+  , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false }]
   <> (if config.rcStatus then
-      [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
+      [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false}]
      else [])
-  <>[{ key :(getString MODEL_NAME) , value : if config.rcStatus then config.rcDetails.vehicleModel else Just "NA", action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : if config.rcStatus then config.rcDetails.vehicleColor else Just "NA", action :NoAction , isEditable : false } ]
+  <>[{ key :(getString MODEL_NAME) , value : if config.rcStatus then config.rcDetails.vehicleModel else Just "NA", action :  NoAction , isEditable : false, keyInfo : false, isRightInfo : false}
+  , { key : (getString COLOUR) , value : if config.rcStatus then config.rcDetails.vehicleColor else Just "NA", action :NoAction , isEditable : false , keyInfo : false, isRightInfo : false} ]
   )
 
 bottomPill :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1247,11 +1344,14 @@ detailsListViewComponent :: forall w.
   (Action -> Effect Unit) ->
     {backgroundColor :: String
     , separatorColor :: String
+    , isLeftKeyClickable :: Boolean
     , arrayList :: Array (
                     { key :: String
                     , value :: Maybe String
                     , action :: Action
-                    , isEditable :: Boolean }) } ->
+                    , isEditable :: Boolean
+                    , isRightInfo :: Boolean
+                    , keyInfo :: Boolean }) } ->
   PrestoDOM (Effect Unit) w
 detailsListViewComponent state push config =
   linearLayout
@@ -1275,11 +1375,26 @@ detailsListViewComponent state push config =
             , orientation HORIZONTAL
             , gravity CENTER_VERTICAL
             , padding $ PaddingVertical 16 16
-            ]([  textView
-                [ text item.key
-                , textSize FontSize.a_12
-                , color Color.black700
-                , fontStyle $ FontStyle.regular LanguageStyle
+            ](
+              [ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , orientation HORIZONTAL
+                ][ textView $
+                    [ text item.key
+                    , textSize FontSize.a_12
+                    , color if config.isLeftKeyClickable then Color.blue900 else Color.black700
+                    , fontStyle $ FontStyle.regular LanguageStyle
+                    -- , onClick push $ const LeftKeyAction
+                    ] <> if config.isLeftKeyClickable then [onClick push $ const LeftKeyAction] else []
+                  , imageView
+                    [ height $ V 12
+                    , width $ V 12
+                    , margin $ Margin 7 3 0 0
+                    , onClick push $ const PayemntInfo
+                    , visibility if item.keyInfo then VISIBLE else GONE
+                    , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                    ]
                 ]
               , linearLayout
                 [ height WRAP_CONTENT
@@ -1289,13 +1404,15 @@ detailsListViewComponent state push config =
                 [ text $ fromMaybe (getString ADD) item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
+                , visibility if item.isRightInfo then GONE else VISIBLE
                 , color case item.value of
                           Nothing -> Color.blue900
                           Just val -> do
                                       let isRcActive = val == (getString ACTIVE_STR)
                                       let isRcInActive = val == (getString INACTIVE_RC)
                                       let isRCEdit = val == (getString EDIT_RC)
-                                      if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit then Color.blue900 else Color.black900
+                                      let isPaymentView = val == "View"
+                                      if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit || isPaymentView then Color.blue900 else Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <> if item.isEditable && (isJust item.value) then [imageView
@@ -1304,7 +1421,13 @@ detailsListViewComponent state push config =
                 , margin $ MarginLeft 7
                 , onClick push $ const item.action
                 , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ic_edit_pencil.png"
-                ]]  else [])
+                ]] else if item.isRightInfo then [imageView
+                [ height $ V 11
+                , width $ V 11
+                , margin $ MarginLeft 7
+                , onClick push $ const PayemntInfo
+                , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                ]] else [])
           , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -1416,20 +1539,20 @@ scaleDownConfig ifAnim =
 
 ---------------------------------------------- Data ARRAY -----------------------------------------------------
 
-driverDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
+driverDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 driverDetailsArray state = [
-    { key : (getString NAME) , value : Just state.data.driverName , action : NoAction , isEditable : false }
-  , { key : (getString MOBILE_NUMBER), value : state.data.driverMobile , action : NoAction , isEditable : false }
-  , { key : (getString ALTERNATE_NUMBER) , value : state.data.driverAlternateNumber , action : UpdateAlternateNumber , isEditable : true}
-  , { key : (getString GENDER) , value : (getGenderName state.data.driverGender) , action : SelectGender , isEditable : true } ]
+    { key : (getString NAME) , value : Just state.data.driverName , action : NoAction , isEditable : false , keyInfo : false , isRightInfo : false }
+  , { key : (getString MOBILE_NUMBER), value : state.data.driverMobile , action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false }
+  , { key : (getString ALTERNATE_NUMBER) , value : state.data.driverAlternateNumber , action : UpdateAlternateNumber , isEditable : true , keyInfo : false, isRightInfo : false}
+  , { key : (getString GENDER) , value : (getGenderName state.data.driverGender) , action : SelectGender , isEditable : true , keyInfo : false, isRightInfo : false} ]
 
 
-vehicleDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
+vehicleDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean}
 vehicleDetailsArray state = [
-    { key : (getString REG_NUMBER ) , value : Just state.data.vehicleRegNumber , action : NoAction , isEditable : false }
-  , { key : (getString TYPE), value : Just (getVehicleType state.data.driverVehicleType), action : NoAction , isEditable : false }
-  , { key : (getString MODEL_NAME) , value : Just state.data.vehicleModelName , action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : Just state.data.vehicleColor , action :NoAction , isEditable : false } ]
+    { key : (getString REG_NUMBER ) , value : Just state.data.vehicleRegNumber , action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false }
+  , { key : (getString TYPE), value : Just (getVehicleType state.data.driverVehicleType), action : NoAction , isEditable : false , keyInfo : false, isRightInfo : false}
+  , { key : (getString MODEL_NAME) , value : Just state.data.vehicleModelName , action :  NoAction , isEditable : false, keyInfo : false, isRightInfo : false}
+  , { key : (getString COLOUR) , value : Just state.data.vehicleColor , action :NoAction , isEditable : false , keyInfo : false, isRightInfo : false } ]
 
 genderOptionsArray :: ST.DriverProfileScreenState ->  Array {text :: String , value :: ST.Gender}
 genderOptionsArray _ =
@@ -1442,15 +1565,22 @@ genderOptionsArray _ =
 vehicleSummaryArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
 vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
-vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true }
-  , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
+vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean}
+vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true , keyInfo : false, isRightInfo : false }
+  , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true  , keyInfo : false, isRightInfo : false }]
 
-driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
+driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean}
+driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true  , keyInfo : false, isRightInfo : false }
   -- , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
   ]
 
+driverPaymentsArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean}
+driverPaymentsArray state =  [{ key :  (getString QR_CODE) , value : Just (getString VIEW) , action : UpdateValue ST.PAYMENT , isEditable : false  , keyInfo : true , isRightInfo : false }
+  ]
+
+driverNoAutoPayArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean}
+driverNoAutoPayArray state =  [{ key : (getString GET_QR_CODE) , value : Nothing , action : UpdateValue ST.PAYMENT , isEditable : false  , keyInfo : false , isRightInfo : true }
+  ]
 
 getLanguagesSpoken :: Array String -> Maybe String
 getLanguagesSpoken languages =
@@ -1598,6 +1728,14 @@ trackingCardRcEditView push state item =
          ]
       ]
     ]
+
+paymentInfoPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+paymentInfoPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< PaymentInfoPopUpModalAction) (paymentInfoPopUpConfig push state) ]
 
 activateAndDeactivateRcConfirmationPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 activateAndDeactivateRcConfirmationPopUpView push state =

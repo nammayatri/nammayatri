@@ -280,7 +280,9 @@ type DriverProfileScreenData = {
   logField :: Object Foreign,
   analyticsData :: AnalyticsData,
   fromHomeScreen :: Boolean,
-  profileImg :: Maybe String
+  profileImg :: Maybe String,
+  payerVpa :: String,
+  autoPayStatus :: AutoPayStatus
 }
 
 type RcData = {
@@ -353,7 +355,9 @@ type DriverProfileScreenProps = {
   callDriver :: Boolean,
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean
+  btnActive :: Boolean,
+  upiQrView :: Boolean,
+  paymentInfoView :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -364,7 +368,7 @@ instance showDriverProfileScreenType :: Show DriverProfileScreenType where show 
 instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
 
 
-data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
+data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME | PAYMENT
 
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow
@@ -773,7 +777,9 @@ type EndRideData = {
     riderName :: String,
     rating :: Int,
     feedback :: String,
-    disability :: Maybe String
+    disability :: Maybe String,
+    hasActiveAutoPay :: Boolean,
+    payerVpa :: String
   }
 type PaymentState = {
   rideCount :: Int,
@@ -1677,6 +1683,7 @@ data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | N
 derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
+instance encodeAutoPayStatus :: Encode AutoPayStatus where encode = defaultEnumEncode
 
 data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | NoSubView 
 
