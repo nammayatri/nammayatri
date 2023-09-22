@@ -833,7 +833,7 @@ export const getAvailableUpiApps = function (resultCb) {
             try {
               let resultPayload = JSON.parse(_response)
               resultCb(resultPayload.payload.response.available_apps)();
-              killPP();
+              killPP(["in.juspay.upiintent"]);
             } catch (err) {
               console.log("%cUPIINTENT initiate Result error", "background:darkblue;color:white;font-size:13px;padding:2px", err, code);
             }
@@ -922,10 +922,8 @@ export const checkPPInitiateStatus = function (cb,services = microapps) {
   }
 }
 
-export const killPP = function () {
-  if (top.JOSHolder) {
-    const mapps = Object.keys(top.JOSHolder);
-    mapps.forEach((key) => {
+export const  killPP = function (services) {
+    services.forEach((key) => {
       if (key != JOS.self) {
         var currJOS = top.JOSHolder[key];
         try{currJOS.finish(1)(JSON.stringify({result:"success"}))();}
@@ -935,8 +933,6 @@ export const killPP = function () {
         delete top.JOSHolder[key];
       }
     });
-    window.ppInitiateCallback = undefined;
-  }
 }
 
 export const getDateAfterNDays = function (n) {
