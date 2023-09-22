@@ -1589,7 +1589,8 @@ type SubscriptionScreenProps = {
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
-  lastPaymentType :: Maybe String
+  lastPaymentType :: Maybe String,
+  showOfferBanner :: Boolean
 }
 
 type JoinPlanData = {
