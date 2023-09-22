@@ -823,7 +823,7 @@ const kannadaStrings = {
   PENDING_CAPS : "ಬಾಕಿ",
   FAILURE : "ವೈಫಲ್ಯ",
   PAYMENT_MODE : "ಪಾವತಿ ಮೋಡ್",
-  TXN_ID : "Txn ID",
+  TXN_ID : "ಆರ್ಡರ್ ಐಡಿ",
   AMOUNT_PAID : "ಪಾವತಿಸಿದ ಮೊತ್ತ",
   OFFER: "ಆಫರ್",
   NOTIFICATION_SCHEDULED : "ಅಧಿಸೂಚನೆಯನ್ನು ನಿಗದಿಪಡಿಸಲಾಗಿದೆ!",
@@ -852,5 +852,8 @@ const kannadaStrings = {
   VIEW_DETAILS : "ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
   RETRY_AUTOPAY : "ಸ್ವಯಂಪಾವತಿಯನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ",
   RETRY_STR : "ಮರುಪ್ರಯತ್ನಿಸಿ",
-  ONGOING_PAYMENT_EXECUTION : "ಹಸ್ತಚಾಲಿತ ಪಾವತಿ ನಡೆಯುತ್ತಿದೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ"
+  ONGOING_PAYMENT_EXECUTION : "ಹಸ್ತಚಾಲಿತ ಪಾವತಿ ನಡೆಯುತ್ತಿದೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ",
+  OFFER_CARD_BANNER_TITLE : "ಸೆಪ್ಟೆಂ 30 ರವರೆಗೆ ₹15/ದಿನ ಮಾತ್ರ ಪಾವತಿಸಿ",
+  OFFER_CARD_BANNER_DESC : "ಆಟೋಪೆಯನ್ನು ಸೆಪ್ಟೆಂ 25 ರೊಳಗೆ ಹೊಂದಿಸಿದರೆ ಮಾತ್",
+  OFFER_CARD_BANNER_ALERT : "ನಿಮ್ಮ ಆಟೋಪೆ ಸೆಟಪ್ ಬಾಕಿಯಿದೆ!",
 }

@@ -22,6 +22,7 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (PaymentStatus(..))
+import Components.Banner as Banner
 import Components.DueDetailsList (DueDetailsListState)
 import Components.OptionsMenu as OptionsMenuConfig
 import Components.PopUpModal as PopUpModalConfig
@@ -35,6 +36,7 @@ import Data.Semigroup ((<>))
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
+import Helpers.Utils (getAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -410,8 +412,8 @@ clearManualDuesBtn state = let
       }
   in primaryButtonConfig'
 
-getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> HeaderData
-getHeaderConfig subView isAutoPayDue = 
+getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
+getHeaderConfig subView isManualPayDue isMultiDueType = 
   case subView of
     ST.JoinPlan    -> {title : (getString NAMMA_YATRI_PLANS), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
@@ -419,7 +421,10 @@ getHeaderConfig subView isAutoPayDue =
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
     ST.FindHelpCentre -> {title : (getString FIND_HELP_CENTRE), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
-    ST.DueDetails -> {title : getString if isAutoPayDue then MANUAL_DUE_DETAILS else AUTOPAY_DUE_DETAILS , actionText : "", backbutton : true}
+    ST.DueDetails -> {title : getString case isMultiDueType, isManualPayDue of 
+                                          true, false -> AUTOPAY_DUE_DETAILS
+                                          true, true -> MANUAL_DUE_DETAILS
+                                          _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
     _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
@@ -440,10 +445,36 @@ dueDetailsListState state =
       fareBreakup : item.feeBreakup,
       expanded : item.randomId == state.data.myPlanData.selectedDue,
       isAutoPayFailed : Mb.isJust item.autoPayStage && item.mode == MANUAL_PAYMENT,
-      isSplitPayment : item.isSplit,
+      isSplitPayment : false, --item.isSplit,
       id : item.randomId,
       paymentMode : item.mode,
       scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
       paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (getAutoPayStageData item.autoPayStage) else Nothing
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
+
+offerCardBannerConfig :: Boolean -> Banner.Config
+offerCardBannerConfig isPlanCard = 
+  let 
+    config = Banner.config
+    config' = config  
+      {
+        backgroundColor = Color.yellow800,
+        title = getString OFFER_CARD_BANNER_TITLE,
+        titleColor = Color.black800,
+        actionText = getString OFFER_CARD_BANNER_DESC,
+        actionTextColor = Color.black800,
+        imageUrl = "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
+        isBanner = true,
+        alertText = getString OFFER_CARD_BANNER_ALERT,
+        alertTextColor = Color.red,
+        alertTextVisibility = true,
+        showActionArrow = false,
+        bannerClickable = false,
+        titleStyle = if isPlanCard then Body6 else Body7,
+        imageHeight = if isPlanCard then (V 90) else (V 105),
+        imageWidth = if isPlanCard then (V 108) else (V 118),
+        margin = MarginTop 0,
+        padding = PaddingVertical 12 12
+      }
+  in config'

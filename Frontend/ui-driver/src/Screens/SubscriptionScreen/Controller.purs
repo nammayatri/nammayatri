@@ -3,6 +3,7 @@ module Screens.SubscriptionScreen.Controller where
 import Debug
 
 import Common.Types.App (APIPaymentStatus, LazyCheck(..))
+import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController
 import Components.OptionsMenu as OptionsMenu
@@ -86,6 +87,7 @@ data Action = BackPressed
             | ViewDueDetails FeeType
             | ClearManualDues PrimaryButton.Action
             | DueDetailsListAction DueDetailsListController.Action
+            | OfferCardBanner Banner.Action
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -272,7 +274,7 @@ eval (LoadMyPlans plans) state = do
       _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "true"
       let (PlanEntity planEntity) = planEntity'
           requiredBalance = case (planEntity.bankErrors DA.!! 0) of
-                              Mb.Just (BankError error) -> Mb.Just error.amount
+                              Mb.Just (BankError error) -> if error.code == "Z9" then Mb.Just error.amount else Mb.Nothing -- Checking for code of low account balance
                               Mb.Nothing -> Mb.Nothing
           isOverdue = planEntity.currentDues >= 100.0
           multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
