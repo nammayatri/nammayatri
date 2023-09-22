@@ -30,12 +30,12 @@ findValidByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
-findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> Domain.InvoicePaymentMode -> Int -> Int -> m [Domain.Invoice]
-findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentMode limit offset = do
+findAllInvoicesByDriverIdWithLimitAndOffset :: MonadFlow m => Id Person -> [Domain.InvoicePaymentMode] -> Int -> Int -> m [Domain.Invoice]
+findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentModes limit offset = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (driverId.getId),
-          Se.Is BeamI.paymentMode $ Se.Eq paymentMode,
+          Se.Is BeamI.paymentMode $ Se.In paymentModes,
           Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
         ]
     ]
@@ -56,12 +56,33 @@ findByIdWithPaymenModeAndStatus invocieId paymentMode status =
         ]
     ]
 
-findByDriverFeeIdAndActiveStatus :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
-findByDriverFeeIdAndActiveStatus (Id driverFeeId) =
+findActiveManualOrMandateSetupInvoiceByFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findActiveManualOrMandateSetupInvoiceByFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
-          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.In [Domain.MANUAL_INVOICE, Domain.MANDATE_SETUP_INVOICE]
+        ]
+    ]
+
+findActiveManualInvoiceByFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findActiveManualInvoiceByFeeId (Id driverFeeId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.MANUAL_INVOICE
+        ]
+    ]
+
+findActiveMandateSetupInvoiceByFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findActiveMandateSetupInvoiceByFeeId (Id driverFeeId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.MANDATE_SETUP_INVOICE
         ]
     ]
 
@@ -70,8 +91,14 @@ findByDriverFeeIds driverFeeIds =
   findAllWithKV
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
-findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DriverFee] -> Domain.InvoiceStatus -> [Domain.InvoicePaymentMode] -> m [Domain.Invoice]
-findAllByDriverFeeIdAndStatus driverIds status paymentMode = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (driverIds <&> getId), Se.Is BeamI.invoiceStatus $ Se.Eq status, Se.Is BeamI.paymentMode $ Se.In paymentMode, Se.Is BeamI.maxMandateAmount $ Se.Not $ Se.Eq Nothing]]
+findActiveByDriverFeeIds :: MonadFlow m => [Id DriverFee] -> m [Domain.Invoice]
+findActiveByDriverFeeIds driverFeeIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE
+        ]
+    ]
 
 findLatestAutopayActiveByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
 findLatestAutopayActiveByDriverFeeId driverFeeId = do
@@ -103,6 +130,20 @@ updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
       Se.Set BeamI.updatedAt now
     ]
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
+
+inActivateAllAutopayActiveInvoices :: MonadFlow m => Id Person -> m ()
+inActivateAllAutopayActiveInvoices driverId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus Domain.INACTIVE,
+      Se.Set BeamI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
+        ]
+    ]
 
 updateBankErrorsByInvoiceId :: MonadFlow m => Maybe Text -> Maybe Text -> Id Domain.Invoice -> m ()
 updateBankErrorsByInvoiceId bankError errorCode invoiceId = do

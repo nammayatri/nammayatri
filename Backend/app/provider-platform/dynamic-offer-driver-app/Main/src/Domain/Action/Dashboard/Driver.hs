@@ -432,7 +432,7 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   QDriverInfo.updateSubscription True driverId
   mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
   QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
-  invoices <- (B.runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` driverFees
+  invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
   mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) (concat invoices)
   fork "sending dashboard sms - collected cash" $ do
     Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
