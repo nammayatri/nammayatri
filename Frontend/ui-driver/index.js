@@ -103,9 +103,7 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    // if (!isInit) {
-      callInitiateResult();
-    // }
+    callInitiateResult();
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
