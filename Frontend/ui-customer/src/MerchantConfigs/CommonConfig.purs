@@ -50,4 +50,11 @@ commonConfig =
         , djd: "sdvs"
         , internationalNumberEnabled : false
         , callOptions : ["ANONYMOUS"]
+        , estimateAndQuoteConfig : 
+            { variants :
+                { acVariant : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV"]
+                , nonAcVariant : ["TAXI"]
+                , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV", "TAXI"]
+                }
+            }
         }
