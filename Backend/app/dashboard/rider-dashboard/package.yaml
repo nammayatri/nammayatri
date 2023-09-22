@@ -91,6 +91,7 @@ library:
   dependencies:
     - lib-dashboard
     - rider-app
+    - shared-services
 
 executables:
   rider-dashboard-exe:

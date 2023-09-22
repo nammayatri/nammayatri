@@ -92,7 +92,9 @@ instance FromTType' BeamM.Merchant Merchant where
             dirCacheSlot = dirCacheSlot,
             isAvoidToll = isAvoidToll,
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
-            aadhaarKeyExpiryTime = aadhaarKeyExpiryTime
+            aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
+            mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
+            mediaFileUrlPattern = mediaFileUrlPattern
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -126,5 +128,7 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.dirCacheSlot = dirCacheSlot,
         BeamM.isAvoidToll = isAvoidToll,
         BeamM.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
-        BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime
+        BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
+        BeamM.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
+        BeamM.mediaFileUrlPattern = mediaFileUrlPattern
       }

@@ -45,7 +45,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
-import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -229,7 +229,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           classification = Ticket.CUSTOMER
         }
 
-rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
+rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => ShortId DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
 rideInfo merchantShortId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)

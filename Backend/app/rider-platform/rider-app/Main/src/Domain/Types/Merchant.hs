@@ -59,7 +59,9 @@ data MerchantD (s :: UsageSafety) = Merchant
     timeDiffFromUtc :: Seconds,
     isAvoidToll :: Bool,
     aadhaarVerificationTryLimit :: Int,
-    aadhaarKeyExpiryTime :: Seconds
+    aadhaarKeyExpiryTime :: Seconds,
+    mediaFileSizeUpperLimit :: Int,
+    mediaFileUrlPattern :: Text
   }
   deriving (Generic, Show)
 

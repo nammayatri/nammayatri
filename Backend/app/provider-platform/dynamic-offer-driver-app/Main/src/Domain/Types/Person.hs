@@ -22,9 +22,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Domain.Types.MediaFile as M
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile as M
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM

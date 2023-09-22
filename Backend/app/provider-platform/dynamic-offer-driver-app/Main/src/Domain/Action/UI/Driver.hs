@@ -102,7 +102,6 @@ import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Invoice as INV
-import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.MetaData as MD
@@ -121,6 +120,8 @@ import EulerHS.Prelude hiding (id, state)
 import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
+import qualified IssueManagement.Domain.Types.MediaFile as Domain
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -186,7 +187,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
-import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR

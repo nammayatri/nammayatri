@@ -107,6 +107,7 @@ library
     , rider-app
     , sequelize
     , servant-server
+    , shared-services
     , text
     , time
     , tinylog
@@ -195,6 +196,7 @@ executable rider-app-drainer-exe
     , rider-app-drainer
     , sequelize
     , servant-server
+    , shared-services
     , text
     , time
     , tinylog

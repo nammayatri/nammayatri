@@ -21,9 +21,9 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Domain.Types.Issue as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import qualified IssueManagement.Common as Domain
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize

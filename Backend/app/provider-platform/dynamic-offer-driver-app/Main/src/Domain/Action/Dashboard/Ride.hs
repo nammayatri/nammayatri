@@ -54,6 +54,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Queries.Booking as QBooking
@@ -200,7 +201,15 @@ rideRoute merchantShortId reqRideId = do
     fetchDate dateTime = T.unpack $ T.take 10 dateTime
 
 ---------------------------------------------------------------------
-rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
+rideInfo ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig],
+    HasField "enableLocationTrackingService" r Bool
+  ) =>
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  m Common.RideInfoRes
 rideInfo merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId

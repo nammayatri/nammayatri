@@ -30,7 +30,7 @@ import Kernel.Utils.GenericPretty
 import Servant.API
 import Tools.Auth
 
-data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
+data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED | RCOMPLETED | RCANCELLED
   deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq, ToParamSchema)
 
 instance PrettyShow BookingStatus where

@@ -75,7 +75,9 @@ data MerchantT f = MerchantT
     dirCacheSlot :: B.C f [Domain.Slot],
     isAvoidToll :: B.C f Bool,
     aadhaarVerificationTryLimit :: B.C f Int,
-    aadhaarKeyExpiryTime :: B.C f Seconds
+    aadhaarKeyExpiryTime :: B.C f Seconds,
+    mediaFileSizeUpperLimit :: B.C f Int,
+    mediaFileUrlPattern :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

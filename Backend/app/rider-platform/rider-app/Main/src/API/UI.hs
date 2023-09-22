@@ -31,6 +31,7 @@ import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
+import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
@@ -87,6 +88,7 @@ type API =
            :<|> HotSpot.API
            :<|> Disability.API
            :<|> AadhaarVerification.API
+           :<|> Issue.API
        )
 
 handler :: FlowServer API
@@ -123,3 +125,4 @@ handler =
     :<|> HotSpot.handler
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
+    :<|> Issue.handler
