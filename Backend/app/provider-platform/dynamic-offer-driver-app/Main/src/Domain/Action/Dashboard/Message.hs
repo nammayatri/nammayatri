@@ -26,13 +26,14 @@ import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
-import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
+import qualified IssueManagement.Domain.Types.MediaFile as Domain
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -43,7 +44,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery

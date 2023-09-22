@@ -118,11 +118,13 @@ library:
   dependencies:
     - mobility-core
     - beckn-spec
+    - beckn-services
     - special-zone-a
     - special-zone
     - payment
     - sessionizer-metrics
     - beckn-services
+    - shared-services
 executables:
   rider-app-exe:
     main: Main.hs

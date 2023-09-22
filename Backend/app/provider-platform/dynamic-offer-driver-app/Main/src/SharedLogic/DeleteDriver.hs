@@ -17,6 +17,7 @@ module SharedLogic.DeleteDriver where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -33,7 +34,6 @@ import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Issue.IssueReport as QIssueReport
 import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -68,7 +68,7 @@ deleteDriver merchantShortId reqDriverId = do
   QDriverInfo.deleteById (cast reqDriverId)
   QDriverFlowStatus.deleteById reqDriverId
   QMessage.deleteByPersonId reqDriverId
-  QIssueReport.deleteByPersonId reqDriverId
+  QIssueReport.deleteByPersonId (cast reqDriverId)
   AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
   AadhaarOtp.deleteByPersonIdForVerify reqDriverId
   AV.deleteByPersonId reqDriverId

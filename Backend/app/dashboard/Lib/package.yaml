@@ -91,4 +91,7 @@ ghc-options:
 library:
   source-dirs: src
   ghc-options:
+    - -fhide-source-paths
     - -Wincomplete-uni-patterns
+  dependencies:
+    - shared-services

@@ -27,7 +27,6 @@ import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified "dynamic-offer-driver-app" API.Dashboard.Subscription as BPP
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
@@ -40,6 +39,7 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Comm
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DSN
+import qualified IssueManagement.Common.Dashboard.Issue as Common
 import Kernel.Prelude
 import Kernel.Types.Id
 

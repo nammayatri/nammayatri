@@ -5,6 +5,12 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified IssueManagement.Storage.Beam.Issue.Comment as Comment
+import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as IssueCategory
+import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
+import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
+import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
+import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
@@ -23,6 +29,7 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import "rider-app" Storage.Beam.IssueManagement ()
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -66,6 +73,11 @@ data UpdateModel
   | FareBreakupUpdate
   | GeometryUpdate
   | IssueUpdate
+  | CommentUpdate
+  | IssueCategoryUpdate
+  | IssueOptionUpdate
+  | IssueReportUpdate
+  | IssueTranslationUpdate
   | PlaceNameCacheUpdate
   | MerchantUpdate
   | MerchantMessageUpdate
@@ -73,6 +85,7 @@ data UpdateModel
   | MerchantServiceConfigUpdate
   | MerchantServiceUsageConfigUpdate
   | MerchantConfigUpdate
+  | MediaFileUpdate
   | OnSearchEventUpdate
   | PaymentOrderUpdate
   | PaymentTransactionUpdate
@@ -109,6 +122,11 @@ getTagUpdate ExophoneUpdate = "ExophoneOptions"
 getTagUpdate FareBreakupUpdate = "FareBreakupOptions"
 getTagUpdate GeometryUpdate = "GeometryOptions"
 getTagUpdate IssueUpdate = "IssueOptions"
+getTagUpdate CommentUpdate = "CommentOptions"
+getTagUpdate IssueCategoryUpdate = "IssueCategoryOptions"
+getTagUpdate IssueOptionUpdate = "IssueOptionOptions"
+getTagUpdate IssueReportUpdate = "IssueReportOptions"
+getTagUpdate IssueTranslationUpdate = "IssueTranslationOptions"
 getTagUpdate PlaceNameCacheUpdate = "PlaceNameCacheOptions"
 getTagUpdate MerchantUpdate = "MerchantOptions"
 getTagUpdate MerchantMessageUpdate = "MerchantMessageOptions"
@@ -116,6 +134,7 @@ getTagUpdate MerchantPaymentMethodUpdate = "MerchantPaymentMethodOptions"
 getTagUpdate MerchantServiceConfigUpdate = "MerchantServiceConfigOptions"
 getTagUpdate MerchantServiceUsageConfigUpdate = "MerchantServiceUsageConfigOptions"
 getTagUpdate MerchantConfigUpdate = "MerchantConfigOptions"
+getTagUpdate MediaFileUpdate = "MediaFileOptions"
 getTagUpdate OnSearchEventUpdate = "OnSearchEventOptions"
 getTagUpdate PaymentOrderUpdate = "PaymentOrderOptions"
 getTagUpdate PaymentTransactionUpdate = "PaymentTransactionOptions"
@@ -151,6 +170,11 @@ parseTagUpdate "ExophoneOptions" = return ExophoneUpdate
 parseTagUpdate "FareBreakupOptions" = return FareBreakupUpdate
 parseTagUpdate "GeometryOptions" = return GeometryUpdate
 parseTagUpdate "IssueOptions" = return IssueUpdate
+parseTagUpdate "CommentOptions" = return CommentUpdate
+parseTagUpdate "IssueCategoryOptions" = return IssueCategoryUpdate
+parseTagUpdate "IssueOptionOptions" = return IssueOptionUpdate
+parseTagUpdate "IssueReportOptions" = return IssueReportUpdate
+parseTagUpdate "IssueTranslationOptions" = return IssueTranslationUpdate
 parseTagUpdate "PlaceNameCacheOptions" = return PlaceNameCacheUpdate
 parseTagUpdate "MerchantOptions" = return MerchantUpdate
 parseTagUpdate "MerchantMessageOptions" = return MerchantMessageUpdate
@@ -158,6 +182,7 @@ parseTagUpdate "MerchantPaymentMethodOptions" = return MerchantPaymentMethodUpda
 parseTagUpdate "MerchantServiceConfigOptions" = return MerchantServiceConfigUpdate
 parseTagUpdate "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigUpdate
 parseTagUpdate "MerchantConfigOptions" = return MerchantConfigUpdate
+parseTagUpdate "MediaFileOptions" = return MediaFileUpdate
 parseTagUpdate "OnSearchEventOptions" = return OnSearchEventUpdate
 parseTagUpdate "PaymentOrderOptions" = return PaymentOrderUpdate
 parseTagUpdate "PaymentTransactionOptions" = return PaymentTransactionUpdate
@@ -194,6 +219,11 @@ data DBUpdateObject
   | FareBreakupOptions UpdateModel [Set Postgres FareBreakup.FareBreakupT] (Where Postgres FareBreakup.FareBreakupT)
   | GeometryOptions UpdateModel [Set Postgres Geometry.GeometryT] (Where Postgres Geometry.GeometryT)
   | IssueOptions UpdateModel [Set Postgres Issue.IssueT] (Where Postgres Issue.IssueT)
+  | CommentOptions UpdateModel [Set Postgres Comment.CommentT] (Where Postgres Comment.CommentT)
+  | IssueCategoryOptions UpdateModel [Set Postgres IssueCategory.IssueCategoryT] (Where Postgres IssueCategory.IssueCategoryT)
+  | IssueOptionOptions UpdateModel [Set Postgres IssueOption.IssueOptionT] (Where Postgres IssueOption.IssueOptionT)
+  | IssueReportOptions UpdateModel [Set Postgres IssueReport.IssueReportT] (Where Postgres IssueReport.IssueReportT)
+  | IssueTranslationOptions UpdateModel [Set Postgres IssueTranslation.IssueTranslationT] (Where Postgres IssueTranslation.IssueTranslationT)
   | PlaceNameCacheOptions UpdateModel [Set Postgres PlaceNameCache.PlaceNameCacheT] (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MerchantOptions UpdateModel [Set Postgres Merchant.MerchantT] (Where Postgres Merchant.MerchantT)
   | MerchantMessageOptions UpdateModel [Set Postgres MerchantMessage.MerchantMessageT] (Where Postgres MerchantMessage.MerchantMessageT)
@@ -201,6 +231,7 @@ data DBUpdateObject
   | MerchantServiceConfigOptions UpdateModel [Set Postgres MerchantServiceConfig.MerchantServiceConfigT] (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigOptions UpdateModel [Set Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT] (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
   | MerchantConfigOptions UpdateModel [Set Postgres MerchantConfig.MerchantConfigT] (Where Postgres MerchantConfig.MerchantConfigT)
+  | MediaFileOptions UpdateModel [Set Postgres MediaFile.MediaFileT] (Where Postgres MediaFile.MediaFileT)
   | OnSearchEventOptions UpdateModel [Set Postgres OnSearchEvent.OnSearchEventT] (Where Postgres OnSearchEvent.OnSearchEventT)
   | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
   | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)
@@ -273,6 +304,21 @@ instance FromJSON DBUpdateObject where
       IssueUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ IssueOptions updateModel updVals whereClause
+      CommentUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ CommentOptions updateModel updVals whereClause
+      IssueCategoryUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ IssueCategoryOptions updateModel updVals whereClause
+      IssueOptionUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ IssueOptionOptions updateModel updVals whereClause
+      IssueReportUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ IssueReportOptions updateModel updVals whereClause
+      IssueTranslationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ IssueTranslationOptions updateModel updVals whereClause
       PlaceNameCacheUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PlaceNameCacheOptions updateModel updVals whereClause
@@ -288,6 +334,9 @@ instance FromJSON DBUpdateObject where
       MerchantServiceConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MerchantServiceConfigOptions updateModel updVals whereClause
+      MediaFileUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ MediaFileOptions updateModel updVals whereClause
       MerchantServiceUsageConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MerchantServiceUsageConfigOptions updateModel updVals whereClause

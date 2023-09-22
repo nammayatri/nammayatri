@@ -34,6 +34,7 @@ library
       API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
+      API.Dashboard.Issue
       API.Dashboard.IssueList
       API.Dashboard.Merchant
       API.Dashboard.Ride
@@ -66,6 +67,7 @@ library
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot
+      API.UI.Issue
       API.UI.Maps
       API.UI.Payment
       API.UI.PersonStats
@@ -244,6 +246,7 @@ library
       Storage.Beam.Issue
       Storage.Beam.Location
       Storage.Beam.LocationMapping
+      Storage.Beam.IssueManagement
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
@@ -435,6 +438,7 @@ library
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , shared-services
     , special-zone
     , special-zone-a
     , template-haskell

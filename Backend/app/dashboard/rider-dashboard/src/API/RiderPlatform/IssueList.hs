@@ -15,11 +15,11 @@
 module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import IssueManagement.Common.Dashboard.Issue as Common hiding (IssueListAPI, TicketStatusCallBackAPI)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id

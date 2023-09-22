@@ -25,6 +25,7 @@ library
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer
+      API.RiderPlatform.Issue
       API.RiderPlatform.IssueList
       API.RiderPlatform.Merchant
       API.RiderPlatform.Ride
@@ -100,6 +101,7 @@ library
     , servant-client
     , servant-openapi3
     , servant-server
+    , shared-services
     , template-haskell
     , text
     , time

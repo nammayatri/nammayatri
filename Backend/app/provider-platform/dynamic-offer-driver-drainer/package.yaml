@@ -110,6 +110,7 @@ library:
   dependencies:
     - dynamic-offer-driver-app
     - mobility-core
+    - shared-services
 
 executables:
   dynamic-offer-driver-drainer-exe:
@@ -124,3 +125,4 @@ executables:
       - dynamic-offer-driver-drainer
       - dynamic-offer-driver-app
       - mobility-core
+      - shared-services

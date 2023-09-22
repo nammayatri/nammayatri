@@ -13,11 +13,16 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Dashboard.Common where
+module Dashboard.Common
+  ( module Dashboard.Common,
+    module Reexport,
+  )
+where
 
 import Data.Aeson
 import Data.OpenApi
 import Kernel.Prelude
+import Kernel.Types.HideSecrets as Reexport
 
 data Customer
 
@@ -48,22 +53,6 @@ data DriverHomeLocation
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
--- | Hide secrets before storing request (or response) to DB.
---
--- By default considered that request type has no secrets.
--- So you need to provide manual type instance to hide secrets, if there are.
-class ToJSON (ReqWithoutSecrets req) => HideSecrets req where
-  type ReqWithoutSecrets req
-  hideSecrets :: req -> ReqWithoutSecrets req
-  type ReqWithoutSecrets req = req
-
--- FIXME next default implementation is not working
--- default hideSecrets :: req -> req
--- hideSecrets = identity
-
-instance HideSecrets () where
-  hideSecrets = identity
 
 data Summary = Summary
   { totalCount :: Int, --TODO add db indexes

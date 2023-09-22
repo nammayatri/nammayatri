@@ -21,9 +21,46 @@ source-repository head
 
 library
   exposed-modules:
-      SharedService.Common
-      SharedService.Common.Issue
-      SharedService.ProviderPlatform.Issue
+      IssueManagement.API.Dashboard.Issue
+      IssueManagement.API.UI.Issue
+      IssueManagement.Common
+      IssueManagement.Common.Dashboard.Issue
+      IssueManagement.Common.UI.Issue
+      IssueManagement.Domain.Action.Dashboard.Issue
+      IssueManagement.Domain.Action.UI.Issue
+      IssueManagement.Domain.Types.Issue.Comment
+      IssueManagement.Domain.Types.Issue.IssueCategory
+      IssueManagement.Domain.Types.Issue.IssueConfig
+      IssueManagement.Domain.Types.Issue.IssueMessage
+      IssueManagement.Domain.Types.Issue.IssueOption
+      IssueManagement.Domain.Types.Issue.IssueReport
+      IssueManagement.Domain.Types.Issue.IssueTranslation
+      IssueManagement.Domain.Types.MediaFile
+      IssueManagement.ProviderPlatform.Issue
+      IssueManagement.Storage.Beam.Issue.Comment
+      IssueManagement.Storage.Beam.Issue.IssueCategory
+      IssueManagement.Storage.Beam.Issue.IssueConfig
+      IssueManagement.Storage.Beam.Issue.IssueMessage
+      IssueManagement.Storage.Beam.Issue.IssueOption
+      IssueManagement.Storage.Beam.Issue.IssueReport
+      IssueManagement.Storage.Beam.Issue.IssueTranslation
+      IssueManagement.Storage.Beam.MediaFile
+      IssueManagement.Storage.BeamFlow
+      IssueManagement.Storage.CachedQueries.Issue.IssueCategory
+      IssueManagement.Storage.CachedQueries.Issue.IssueConfig
+      IssueManagement.Storage.CachedQueries.Issue.IssueMessage
+      IssueManagement.Storage.CachedQueries.Issue.IssueOption
+      IssueManagement.Storage.CachedQueries.MediaFile
+      IssueManagement.Storage.Queries.Issue.Comment
+      IssueManagement.Storage.Queries.Issue.IssueCategory
+      IssueManagement.Storage.Queries.Issue.IssueConfig
+      IssueManagement.Storage.Queries.Issue.IssueMessage
+      IssueManagement.Storage.Queries.Issue.IssueOption
+      IssueManagement.Storage.Queries.Issue.IssueReport
+      IssueManagement.Storage.Queries.Issue.IssueTranslation
+      IssueManagement.Storage.Queries.MediaFile
+      IssueManagement.Tools.Error
+      IssueManagement.Tools.UtilsTH
   other-modules:
       Paths_shared_services
   hs-source-dirs:
@@ -66,10 +103,15 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-services
     , beckn-spec
     , bytestring
+    , casing
     , cassava
+    , cereal
     , containers
     , cryptonite
     , dashboard-helper-api
@@ -87,11 +129,13 @@ library
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
@@ -102,6 +146,7 @@ library
     , special-zone
     , stm
     , string-conversions
+    , template-haskell
     , text
     , text-conversions
     , time
