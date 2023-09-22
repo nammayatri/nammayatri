@@ -201,8 +201,10 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
 
 getOnRideStuckDriverIds :: (MonadFlow m, Log m) => m [DriverInformation]
 getOnRideStuckDriverIds = do
+  now <- getCurrentTime
+  let dbSyncInterVal = addUTCTime (-1 * 3600) now
   driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
-  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
+  findAllWithDb [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.updatedAt $ Se.LessThanOrEq dbSyncInterVal, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
