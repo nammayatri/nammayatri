@@ -141,15 +141,19 @@ instance encodeTriggerSignatureOTPReq :: Encode TriggerSignatureOTPReq where enc
 
 -------------------------------------------------- Resend OTP API Types --------------------------------------------
 
+newtype ResendOTPReqBody = ResendOTPReqBody{
+  otpChannel :: String
+}
+
 newtype ResendOTPResp = ResendOTPResp {
     authId :: String
   , attempts :: Int
 }
 
-data ResendOTPRequest = ResendOTPRequest String
+data ResendOTPRequest = ResendOTPRequest String ResendOTPReqBody
 
 instance makeResendOTPRequest :: RestEndpoint ResendOTPRequest ResendOTPResp where
- makeRequest reqBody@(ResendOTPRequest authId) headers = defaultMakeRequest POST (EP.resendOTP authId) headers reqBody Nothing
+ makeRequest reqBody@(ResendOTPRequest authId reqBdy) headers = defaultMakeRequest POST (EP.resendOTP authId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -161,9 +165,15 @@ instance decodeResendOTPResp :: Decode ResendOTPResp where decode = defaultDecod
 instance encodeResendOTPResp :: Encode ResendOTPResp where encode = defaultEncode
 
 derive instance genericResendOTPRequest :: Generic ResendOTPRequest _
-instance standardEncodeResendOTPRequest :: StandardEncode ResendOTPRequest where standardEncode (ResendOTPRequest authId) = standardEncode authId
+instance standardEncodeResendOTPRequest :: StandardEncode ResendOTPRequest where standardEncode (ResendOTPRequest authId (ResendOTPReqBody reqBdy)) = standardEncode reqBdy
 instance decodeResendOTPRequest :: Decode ResendOTPRequest where decode = defaultDecode
 instance encodeResendOTPRequest :: Encode ResendOTPRequest where encode = defaultEncode
+
+derive instance genericResendOTPReqBody :: Generic ResendOTPReqBody _
+derive instance newtypeResendOTPReqBody :: Newtype ResendOTPReqBody _
+instance standardEncodeResendOTPReqBody :: StandardEncode ResendOTPReqBody where standardEncode (ResendOTPReqBody reqBdy) = standardEncode reqBdy
+instance decodeResendOTPReqBody :: Decode ResendOTPReqBody where decode = defaultDecode
+instance encodeResendOTPReqBody :: Encode ResendOTPReqBody where encode = defaultEncode
 
 -------------------------------------------------- Verify OTP API Types --------------------------------------------
 newtype VerifyTokenResp = VerifyTokenResp {

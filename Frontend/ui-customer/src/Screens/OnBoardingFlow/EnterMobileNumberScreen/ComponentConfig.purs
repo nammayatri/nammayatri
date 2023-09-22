@@ -66,8 +66,8 @@ whatsAppOTPButtonConfig state = let
       , color = state.data.config.driverInfoConfig.ratingTextColor 
         }
       , id = "PrimaryButtonWhatsAppOTP"
-      , isClickable = state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91")
-      , alpha = if state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91") then 1.0 else 0.4
+      , isClickable = state.props.btnActiveMobileNumber 
+      , alpha = if state.props.btnActiveMobileNumber  then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , background = Color.aliceBlue
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")

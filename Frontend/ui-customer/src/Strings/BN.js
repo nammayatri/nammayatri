@@ -629,5 +629,7 @@ const bengaliStrings = {
   "LEARN_HOW_TEXT" : "নম্মা যাত্রী কীভাবে আপনার প্রয়োজন মেটায় তা জানুন",
   "UPDATE_PROFILE" : "প্রফাইল হালনাগাদ",
   "NOW_GET_ASSISTED_RIDES" : "আপনি যদি প্রতিবন্ধী ব্যক্তি হন তবে এখন সহায়ক রাইড পান" ,
-  "CLEAN_CAB" : "ক্লিন ক্যাব"
+  "CLEAN_CAB" : "ক্লিন ক্যাব",
+  "SENT_OTP_VIA_WHATSAPP" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
+  "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে"
 }

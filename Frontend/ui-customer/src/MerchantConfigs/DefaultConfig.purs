@@ -123,4 +123,5 @@ config =
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
   , showDisabilityBanner : true
+  , enableWhatsappOTP : ["BD"]
   }
