@@ -2235,7 +2235,8 @@ ackScreenFlow = do
 
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN"}})
+  appConfig <- getAppConfig Constants.appConfig 
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", showOfferBanner = appConfig.subscriptionConfig.showDUOfferBanner}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of

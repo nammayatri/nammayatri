@@ -83,7 +83,8 @@ window.getMerchantConfig = function () {
     }
     , "subscriptionConfig" : {
       "enableBlocking" : true,
-      "onBoardingSubscription" : true
+      "onBoardingSubscription" : true,
+      "showDUOfferBanner" : false
     }
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false

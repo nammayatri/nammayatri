@@ -852,7 +852,7 @@ const hindiStrings = {
   PENDING_CAPS : "लंबित",
   FAILURE : "विफलता",
   PAYMENT_MODE: "भुगतान मोड",
-  TXN_ID : "Txn आईडी",
+  TXN_ID : "ऑर्डर आईडी",
   AMOUNT_PAID : "भुगतान की गई राशि",
   OFFER : "प्रस्ताव",
   NOTIFICATION_SCHEDULED: "अधिसूचना अनुसूचित!",
@@ -880,5 +880,9 @@ const hindiStrings = {
   PAYMENT_SCHEDULED : "भुगतान निर्धारित",
   RETRY_AUTOPAY : "ऑटोपे पुनः प्रयास करें ",
   RETRY_STR : "पुनः प्रयास करें ",
-  ONGOING_PAYMENT_EXECUTION : "मैन्युअल भुगतान जारी है, कृपया प्रतीक्षा करें"
+  ONGOING_PAYMENT_EXECUTION : "मैन्युअल भुगतान जारी है, कृपया प्रतीक्षा करें",
+  OFFER_CARD_BANNER_TITLE : "30 सितंबर तक केवल ₹15/दिन पेय करें",
+  OFFER_CARD_BANNER_DESC : "अगर ऑटोपे 25 सितंबर तक सेटअप हो जाए",
+  OFFER_CARD_BANNER_ALERT : "आपका ऑटोपे सेटअप लंबित है!",
 }
+

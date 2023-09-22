@@ -796,7 +796,7 @@ const mlStrings = {
   PENDING_CAPS : "PENDING",
   FAILURE : "FAILURE",
   PAYMENT_MODE : "Payment Mode",
-  TXN_ID : "Txn ID",
+  TXN_ID : "Order ID",
   AMOUNT_PAID : "Amount Paid",
   OFFER : "Offer",
   NOTIFICATION_SCHEDULED : "Notification Scheduled!",
@@ -821,5 +821,8 @@ const mlStrings = {
   EXECUTION_SUCCESS : "Execution Success",
   SCHEDULED : "SCHEDULED",
   ONE_TIME_SETTLEMENT : "ഒറ്റത്തവണ സെറ്റിൽമെന്റ് നടത്തുക",
-  PAYMENT_SCHEDULED : "Payment Scheduled"
+  PAYMENT_SCHEDULED : "Payment Scheduled",
+  OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
+  OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
+  OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
 }

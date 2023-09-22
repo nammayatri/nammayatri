@@ -22,7 +22,8 @@ config =
   subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
-    onBoardingSubscription : false
+    onBoardingSubscription : false,
+    showDUOfferBanner : false
   },
   rideActionModelConfig : {
     showVehicleVariant : true

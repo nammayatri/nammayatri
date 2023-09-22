@@ -90,7 +90,8 @@ initData = {
         noKioskLocation : false,
         optionsMenuState : ALL_COLLAPSED,
         redirectToNav : "",
-        lastPaymentType : Mb.Nothing
+        lastPaymentType : Mb.Nothing,
+        showOfferBanner : false
     }
 }
 

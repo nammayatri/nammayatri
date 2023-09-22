@@ -822,7 +822,7 @@ const tamilStrings = {
   PENDING_CAPS : "நிலுவையில் உள்ளது",
   FAILURE : "தோல்வி",
   PAYMENT_MODE : "கட்டண முறை",
-  TXN_ID : "Txn ஐடி",
+  TXN_ID : "குறிப்பு எண் ஐடி",
   AMOUNT_PAID : "செலுத்தப்பட்ட தொகை",
   OFFER: "சலுகை",
   NOTIFICATION_SCHEDULED : "அறிவிப்பு திட்டமிடப்பட்டுள்ளது!",
@@ -851,5 +851,8 @@ const tamilStrings = {
   VIEW_DETAILS : "விவரங்களைக் காண்க",
   RETRY_AUTOPAY : "தானாகச் செலுத்த மீண்டும் முயற்சிக்கவும்",
   RETRY_STR : " மீண்டும் முயற்சிக்கவும் ",
-  ONGOING_PAYMENT_EXECUTION : "தற்போது கைமுறையாக பணம் செலுத்துகிறது தயவு செய்து காத்திருக்கவும்"
+  ONGOING_PAYMENT_EXECUTION : "தற்போது கைமுறையாக பணம் செலுத்துகிறது தயவு செய்து காத்திருக்கவும்",
+  OFFER_CARD_BANNER_TITLE : "செப் 30 வரை ஒரு நாளில் ₹15 மட்டும் செலுத்துங்கள்",
+  OFFER_CARD_BANNER_DESC : "செப் 25க்குள் ஆட்டோபே அமைக்கப்பட்டால்",
+  OFFER_CARD_BANNER_ALERT : "உங்கள் ஆக்டோபய அமைப்பு நிலுவையில் உள்ளது!",
 }

@@ -19,7 +19,6 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
     let (API.DriverFeeInfoEntity driverFee') = case (resp.driverFeeInfo !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
                                                   Nothing -> dummyDriverFee
-        execTime = fromMaybe "" resp.executionAt
         autoPaySpecificKeys = do
           let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
           case (length resp.driverFeeInfo == 1) of
@@ -54,7 +53,9 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
-            statusTime : if execTime == "" then "" else  convertUTCtoISC execTime "Do MMM YYYY, h:mm A",
+            statusTime : case resp.executionAt of 
+                            Just time -> convertUTCtoISC time "Do MMM YYYY, h:mm A"
+                            Nothing -> "",
             isSplit : false,--(length resp.driverFeeInfo == 1) && driverFee'.isSplit, // NEED TO FIX LATER
             isAutoPayFailed : (length resp.driverFeeInfo == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
             feeType : resp.feeType,

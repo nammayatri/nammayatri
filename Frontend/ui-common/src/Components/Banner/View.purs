@@ -32,11 +32,13 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ MarginTop 12
+    , margin config.margin
+    , padding config.padding
     , background config.backgroundColor
     , visibility if config.isBanner then VISIBLE else GONE
     , gravity CENTER_VERTICAL
     , onClick push (const OnClick)
+    , clickable config.bannerClickable
     , stroke config.stroke
     ]
     [  linearLayout
@@ -46,7 +48,17 @@ view push config =
         , orientation VERTICAL
         , layoutGravity "center_vertical"
         ]
-        [ textView $
+        [ 
+          textView $
+          [ height if config.alertTextVisibility then WRAP_CONTENT else V 0
+          , width MATCH_PARENT
+          , gravity LEFT
+          , text config.alertText
+          , color config.alertTextColor
+          , padding $ PaddingBottom 2
+          , visibility if config.alertTextVisibility then VISIBLE else GONE
+          ] <> (FontStyle.getFontStyle config.alertTextStyle LanguageStyle)
+        , textView $
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
@@ -76,6 +88,7 @@ view push config =
             , color config.actionTextColor
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5
+            , visibility if config.showActionArrow then VISIBLE else GONE
             ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
           ]
         ]

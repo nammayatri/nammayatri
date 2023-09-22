@@ -2128,7 +2128,7 @@ newtype TxnInfo = TxnInfo {
   , status :: Common.APIPaymentStatus
 }
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE_DRIVERFEE
 
 instance makeGetPaymentHistoryReq :: RestEndpoint GetPaymentHistoryReq GetPaymentHistoryResp where
  makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
@@ -2150,10 +2150,18 @@ instance encodeGetPaymentHistoryResp :: Encode GetPaymentHistoryResp where encod
 
 derive instance genericDriverFeeStatus :: Generic DriverFeeStatus _
 instance showDriverFeeStatus :: Show DriverFeeStatus where show = genericShow
-instance decodeDriverFeeStatus :: Decode DriverFeeStatus where decode = defaultEnumDecode
+instance decodeDriverFeeStatus :: Decode DriverFeeStatus 
+  where 
+    decode status = 
+      case (runExcept $ decode status) of
+        Either.Right val -> case val of
+                      "INACTIVE" -> defaultEnumDecode $ encode "INACTIVE_DRIVERFEE"
+                      _ -> defaultEnumDecode status
+        Either.Left err -> (fail $ ForeignError "Unknown response")
 instance encodeDriverFeeStatus :: Encode DriverFeeStatus where encode = defaultEnumEncode
 instance eqDriverFeeStatus :: Eq DriverFeeStatus where eq = genericEq
 instance standardEncodeDriverFeeStatus :: StandardEncode DriverFeeStatus where standardEncode _ = standardEncode {}
+
 
 derive instance genericPaymentDetailsEntity :: Generic PaymentDetailsEntity _
 derive instance newtypePaymentDetailsEntity:: Newtype PaymentDetailsEntity _

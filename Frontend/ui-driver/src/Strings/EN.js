@@ -853,7 +853,7 @@ const englishStrings = {
   PENDING_CAPS : "PENDING",
   FAILURE : "FAILURE",
   PAYMENT_MODE : "Payment Mode",
-  TXN_ID : "Txn ID",
+  TXN_ID : "Order ID",
   AMOUNT_PAID : "Amount Paid",
   OFFER : "Offer",
   NOTIFICATION_SCHEDULED : "Notification Scheduled!",
@@ -881,5 +881,8 @@ const englishStrings = {
   PAYMENT_SCHEDULED : "Payment Scheduled",
   RETRY_AUTOPAY : "Retry Autopay",
   RETRY_STR : "Retry ",
-  ONGOING_PAYMENT_EXECUTION : "There is ongoing manual payment pls wait"
+  ONGOING_PAYMENT_EXECUTION : "There is ongoing manual payment pls wait",
+  OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
+  OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
+  OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
 } 
