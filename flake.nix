@@ -48,6 +48,8 @@
 
       flake.nix-health.default = {
         caches.required = [ "https://nammayatri.cachix.org" ];
+        direnv.required = true;
+        system.min_ram = "24G";
       };
     };
 }
