@@ -141,7 +141,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   feeWithoutDiscount = if numRides > 0 then baseAmount else 0
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
-          let offerAndPlanTitle = Just plan.description <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
+          let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
           updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
 
           fork "Applying offer" $ do
