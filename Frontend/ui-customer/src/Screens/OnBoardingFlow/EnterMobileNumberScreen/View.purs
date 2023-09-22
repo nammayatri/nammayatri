@@ -28,6 +28,7 @@ import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (elem)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -149,7 +150,7 @@ enterMobileNumberView  state lang push =
             , width MATCH_PARENT
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
-        , if (not state.props.countryCodeOptionExpanded) && state.data.config.internationalNumberEnabled then whatsAppOTPButtonView state push else dummyView push
+        , if (not state.props.countryCodeOptionExpanded) && (elem state.data.countryObj.countryShortCode state.data.config.enableWhatsappOTP) then whatsAppOTPButtonView state push else dummyView push
     ]
 
 whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w

@@ -54,6 +54,7 @@ type AppConfig =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
+  , enableWhatsappOTP :: Array String
   } 
 
 type QuoteListItemConfig = {

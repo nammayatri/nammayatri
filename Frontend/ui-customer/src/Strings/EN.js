@@ -613,5 +613,7 @@ const englishStrings = {
   "LEARN_HOW_TEXT" : "Learn how Namma Yatri caters to your needs",
   "UPDATE_PROFILE" : "Update Profile",
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
-  "CLEAN_CAB" : "Clean Cab"
+  "CLEAN_CAB" : "Clean Cab",
+  "SENT_OTP_VIA_WHATSAPP" : "OTP Sent via Whatsapp", 
+  "SENT_OTP_VIA_SMS" : "OTP Sent via SMS"
 }

@@ -609,5 +609,7 @@ const kannadaStrings = {
   "LEARN_HOW_TEXT" : "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಅಗತ್ಯಗಳನ್ನು ಹೇಗೆ ಪೂರೈಸುತ್ತದೆ ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
   "UPDATE_PROFILE" : "ಪ್ರೊಫೈಲ್ ಅನ್ನು ನವೀಕರಿಸಿ",
   "NOW_GET_ASSISTED_RIDES" : "ನೀವು ಅಂಗವೈಕಲ್ಯ ಹೊಂದಿರುವ ವ್ಯಕ್ತಿಯಾಗಿದ್ದರೆ ಈಗ ಸಹಾಯಕ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಿರಿ" ,
-  "CLEAN_CAB" : "ಕ್ಲೀನ್ ಕ್ಯಾಬ್"
+  "CLEAN_CAB" : "ಕ್ಲೀನ್ ಕ್ಯಾಬ್",
+  "SENT_OTP_VIA_WHATSAPP" : "Whatsapp ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ", 
+  "SENT_OTP_VIA_SMS" : "SMS ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ"
 }

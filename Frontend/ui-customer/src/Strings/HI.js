@@ -613,5 +613,7 @@ const hindiStrings = {
   "LEARN_HOW_TEXT" : "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है", 
   "UPDATE_PROFILE" : "प्रोफ़ाइल अपडेट करें",
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
-  "CLEAN_CAB" : "क्लीन कैब"
+  "CLEAN_CAB" : "क्लीन कैब",
+  "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
+  "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS"
 }
