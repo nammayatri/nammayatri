@@ -221,7 +221,7 @@ type ClevertapEventParams = {
   value :: String
 }
 
-data PaymentStatus = Success | Pending | Failed
+data PaymentStatus = Success | Pending | Failed | Scheduled
 
 derive instance genericPaymentStatus :: Generic PaymentStatus _
 instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}

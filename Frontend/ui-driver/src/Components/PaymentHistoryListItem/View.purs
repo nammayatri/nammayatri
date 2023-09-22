@@ -183,6 +183,11 @@ getPaymentCardConfig status = case status of
   , bgColor : Color.red100
   , paymentStatusText : "Payment Failed"
   }
+  Scheduled -> {
+    textColor : Color.yellow900 
+  , bgColor : Color.yellow100
+  , paymentStatusText : "Payment Scheduled"
+  } 
 
 type PaymentCardConfig =  {
   textColor :: String

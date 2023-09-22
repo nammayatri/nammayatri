@@ -28,7 +28,7 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 
 import MerchantConfig.Utils
 
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), fold) as DA
@@ -404,3 +404,11 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
                                                                               even onBoardingSubscriptionViewCount && 
                                                                               onBoardingSubscriptionViewCount <5 && 
                                                                               isOnFreeTrial FunctionCall
+
+getStatus :: String -> PaymentStatus
+getStatus status = case status of
+  "Success" -> Success
+  "Pending" -> Pending
+  "Failed" -> Failed
+  "Scheduled" -> Scheduled
+  _ -> Pending

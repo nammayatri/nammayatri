@@ -19,22 +19,23 @@ import Common.Types.App
 import Components.DueDetailsList.Controller
 
 import Data.Array (mapWithIndex)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Types (STR(..))
-import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
-import PrestoDOM (Gravity(..), Gradient(..), Length(..), Margin(..), Orientation(..), Visibility(..), PrestoDOM, Padding(..), alignParentBottom, padding, background, color, cornerRadius, fontStyle, gradient, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility)
-import Styles.Colors as Color
-import Screens.Types (PromoConfig)
-import Debug (spy)
 import Language.Strings (getString)
-import Data.Maybe as Mb
+import Language.Types (STR(..))
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||))
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import Screens.Types (PromoConfig)
+import Services.API (FeeType(..))
+import Styles.Colors as Color
 
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
 view push state =
-    linearLayout
+    scrollView
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ][ linearLayout
@@ -52,7 +53,7 @@ view push state =
           , padding $ Padding 16 20 16 8
           , gravity CENTER
           , stroke if item.expanded == true then ("1,"<>Color.blue800) else ("1,"<>Color.grey900)
-          , onClick push (const (SelectDue index))
+          , onClick push $ const $ SelectDue item
           , margin $ MarginBottom 16
           , cornerRadius 10.0
           , background if item.expanded == true then Color.blue600 else Color.white900
@@ -68,18 +69,15 @@ view push state =
                 , weight 1.0
               ][
                 linearLayout[][
-                  textView [
+                  textView $ [
                     text (getString TRIP_DATE)
-                    , textSize FontSize.a_12
-                    , fontStyle $ FontStyle.medium LanguageStyle
                     , color Color.black700
-                  ]
-                  ,textView [
-                    text item.date     
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.black800              
-                  ]
+                  ] <> FontStyle.body3 TypoGraphy
+                  , textView $ [
+                    text item.date
+                    , color Color.black800
+                    , margin $ MarginLeft 2
+                  ] <> FontStyle.body6 TypoGraphy
                 ]
                 , textView [
                     text item.planType
@@ -90,18 +88,16 @@ view push state =
               ]
               , linearLayout[
                 height MATCH_PARENT
-                , gravity CENTER
+                , gravity CENTER_VERTICAL
               ][
-                textView [
-                  text $ "₹" <> item.dueAmount
-                  , textSize FontSize.a_18
-                  , fontStyle $ FontStyle.bold LanguageStyle
+                textView $ [
+                  text $ "₹" <> show item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
                   , color Color.black800
-                ]
+                ] <> FontStyle.h2 TypoGraphy
                 , imageView
                   [ imageWithFallback if item.expanded == true then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
                   , height (V 11)
-                  , margin (Margin 5 3 0 0)
+                  , margin (Margin 5 2 0 0)
                   , width (V 11)
                   ]
               ]
@@ -118,52 +114,95 @@ view push state =
                   , background Color.grey900
                   , margin $ MarginBottom 16
                 ][]
-                , 
-                linearLayout [
+                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides) true false
+                , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
+                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
+                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay) true false
+                -- , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <> getString GST_INCLUDE) true false --TO BE ADDED LATER
+                , linearLayout [
                   height WRAP_CONTENT
                   , width MATCH_PARENT
                   , margin $ MarginBottom 16
                   , gravity CENTER_VERTICAL
-                ][ 
-                  textView [
+                ][
+                  textView $ [
                     text $ getString OFFER_APPLIED
-                    , textSize FontSize.a_12
-                    , fontStyle $ FontStyle.medium LanguageStyle
                     , margin $ MarginRight 8
                     , color Color.black700
-                  ]
-                  , promoCodeView push item.offerApplied
+                  ] <> FontStyle.body3 TypoGraphy
+                  , case item.offerApplied of
+                      Just offerConfig -> case fromMaybe "" offerConfig.title of 
+                                            "" -> textView
+                                                  [ text "N/A"
+                                                  , textSize FontSize.a_14
+                                                  , color Color.black900
+                                                  , fontStyle $ FontStyle.semiBold LanguageStyle
+                                                  ]
+                                            _ -> promoCodeView push offerConfig
+                      Nothing -> linearLayout[visibility GONE][]
                 ]
-                , keyValueView (getString NUMBER_OF_RIDES) item.noOfRides
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> item.totalEarningsOfDay)
-                , keyValueView (getString FARE_BREAKUP) item.fareBreakup
+                , textView $ [
+                    text $ getString SWITCHED_TO_MANUAL
+                    , width MATCH_PARENT
+                    , margin $ MarginRight 8
+                    , color Color.black600
+                    , visibility if item.isAutoPayFailed then VISIBLE else GONE
+                    , padding $ Padding 8 8 8 8
+                    , background Color.white900
+                    , cornerRadius 4.0
+                  ] <> FontStyle.tags TypoGraphy
+                , linearLayout
+                  [
+                    height $ V 1
+                    , width MATCH_PARENT
+                    , background Color.grey900
+                    , margin $ MarginHorizontal 8 16
+                    , visibility if item.isAutoPayFailed && item.isSplitPayment then VISIBLE else GONE
+                  ][]
+                , textView $ [
+                    text $ getString SPLIT_PAYMENT
+                    , width MATCH_PARENT
+                    , margin $ MarginRight 8
+                    , color Color.black600
+                    , visibility if item.isSplitPayment then VISIBLE else GONE
+                    , padding $ Padding 8 8 8 8
+                    , cornerRadius 4.0
+                    , background Color.white900
+                  ] <> FontStyle.tags TypoGraphy
             ]
            ]
          ) state.dues
          )
     ]
 
-keyValueView :: String -> String ->  forall w . PrestoDOM (Effect Unit) w
-keyValueView key value = 
-  linearLayout [
-                  height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , margin $ MarginBottom 16
-              ][ 
-                textView [
-                  text key
-                  , textSize FontSize.a_12
-                  , fontStyle $ FontStyle.medium LanguageStyle
-                  , margin $ MarginRight 8
-                  , color Color.black700
-                ]
-                , textView [
-                  text value
-                  , textSize FontSize.a_14
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  , color Color.black800
-                ]
-              ]
+keyValueView :: String -> String -> Boolean -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+keyValueView key value visibility' prefixImage = 
+  linearLayout 
+  [
+    height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginBottom 16
+    , visibility if visibility' then VISIBLE else GONE
+    , gravity CENTER_VERTICAL
+  ][ 
+    textView $ [
+      text key
+      , margin $ MarginRight 8
+      , color Color.black700
+    ] <> FontStyle.body3 TypoGraphy
+    , imageView
+    [ width $ V 12
+    , height $ V 12
+    , margin (Margin 0 1 4 0)
+    , visibility if prefixImage then VISIBLE else GONE
+    , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
+    ]
+    , textView $ [
+      text value
+      , color Color.black800
+    ] <> FontStyle.body6 TypoGraphy
+  ]
 
 promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
 promoCodeView push state =
