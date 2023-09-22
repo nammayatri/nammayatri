@@ -12,6 +12,7 @@ package in.juspay.mobility.app;
 import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -74,7 +75,10 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.hyper.bridge.HBridge;
 import in.juspay.mobility.app.callbacks.CallBack;
+
+import in.juspay.mobility.app.TranslatorMLKit;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
@@ -244,6 +248,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
+
+            updateViewFromMlTranslation(holder, model);
+
             updateTipView(holder, model);
 
             if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
@@ -381,6 +388,20 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
         }
     });
+
+    private void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder,  SheetModel model) {
+
+        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
+        String lastLang = sharedPref.getString("LAST_LANG", "ENGLISH");
+
+        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this, lastLang);
+
+        translate.translateStringInTextView(model.getSourceArea(), holder.sourceArea);
+        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
+        translate.translateStringInTextView(model.getDestinationArea(), holder.destinationArea);
+        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
+
+    }
 
     private void removeCard(int position) {
         try {
@@ -521,7 +542,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
+
                     }
+
+
+
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             (df.format(distanceTobeCovered / 1000)),
                             (df.format(Integer.parseInt(durationToPickup)/ 60)),

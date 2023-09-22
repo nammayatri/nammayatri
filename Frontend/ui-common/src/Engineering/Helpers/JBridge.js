@@ -1007,6 +1007,26 @@ export const getCurrentPositionWithTimeout = function (cb){
     }
   }
 
+export const translateStringWithTimeout = function (cb){
+  return function (action){
+    return function (delay){
+      return function (value){
+        return function () {
+          var callbackFallback = function (){
+            cb(action(value))();
+          };
+          var timer = setTimeout(callbackFallback, delay);
+          var callback = callbackMapper.map(function (value) {
+            clearTimeout(timer);
+            cb(action(value))();
+          });
+          window.JBridge.translateString(callback, value);
+        }
+      }
+    }
+  }
+}
+
 export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
@@ -1194,6 +1214,9 @@ export const getKeyInNativeSharedPrefKeys = function (key) {
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
+    if (key == "LANGUAGE_KEY"){
+      JBridge.setInSharedPrefs("LAST_LANG", JBridge.getFromSharedPrefs("LANGUAGE_KEY"));
+    }
     return JBridge.setInSharedPrefs(key, value);
   };
 };
@@ -1622,7 +1645,7 @@ export const startLottieProcess = function (configObj) {
   } catch (err) {
     return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
   }
-};
+}
 
 function isFilePresent(fileName) {
    if (window.__OS == "IOS") {

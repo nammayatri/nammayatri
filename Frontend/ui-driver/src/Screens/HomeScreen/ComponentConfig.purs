@@ -60,7 +60,8 @@ import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
-rideActionModalConfig state = let
+rideActionModalConfig state = 
+  let
   config = RideActionModal.config
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
@@ -88,8 +89,8 @@ rideActionModalConfig state = let
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
     appConfig = state.data.config
-  }
-  in rideActionModalConfig'
+    }
+    in rideActionModalConfig'
 
 ---------------------------------------- endRidePopUp -----------------------------------------
 endRidePopUp :: ST.HomeScreenState -> PopUpModal.Config
@@ -101,7 +102,7 @@ endRidePopUp state = let
     option1 {text =(getString GO_BACK)},
     option2 {text = (getString END_RIDE)}
   }
-  in popUpConfig'
+in popUpConfig'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config

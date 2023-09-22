@@ -44,6 +44,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
+import androidx.lifecycle.Observer;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -88,10 +89,12 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
+import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.common.Utils;
 import in.juspay.services.HyperServices;
+
 
 
 public class MainActivity extends AppCompatActivity {
@@ -112,10 +115,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             if (key != null && key.equals("LANGUAGE_KEY")) {
+                TranslatorMLKit translator = new TranslatorMLKit("en",sharedPreferences.getString(key, "null"),MainActivity.this, sharedPreferences.getString("LAST_LANG", "ENGLISH"));
                 Utils.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
             }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
-                String token = sharedPreferences.getString("REGISTERATION_TOKEN", "null");
+                String token = sharedPreferences.getString(key, "null");
                 if (token.equals("__failed")) {
                     final PackageManager pm = getApplicationContext().getPackageManager();
                     final Intent intent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
@@ -280,6 +284,9 @@ public class MainActivity extends AppCompatActivity {
             mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
             setContentView(R.layout.activity_main_without_bg);
         }
+
+
+
 //        String key = getResources().getString(R.string.service);
 //        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
 

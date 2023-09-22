@@ -71,7 +71,7 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PaymentPagePayload, PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -360,6 +360,8 @@ getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max 
 
 data LatLon = LatLon String String
 
+data Translation = Translation String
+
 getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> FlowBT String LatLon
 getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
   (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut $> nonCanceler)
@@ -377,6 +379,12 @@ getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
         case rideLat,rideLong of
           Just lat, Just lon -> pure (LatLon lat lon)
           _,_ -> pure (LatLon "0.0" "0.0")
+
+translateString :: String -> Int -> FlowBT String String 
+translateString toTranslate timeOut = do
+  (Translation translation) <- (lift $ lift $ doAff $ makeAff \cb -> translateStringWithTimeout (cb <<< Right) Translation timeOut toTranslate $> nonCanceler )
+  pure $ ( translation)
+
 
 getRideTypeColor :: Maybe String -> String
 getRideTypeColor variant = case getCategorizedVariant variant of
