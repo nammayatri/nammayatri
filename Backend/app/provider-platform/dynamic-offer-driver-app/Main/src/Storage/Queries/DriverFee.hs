@@ -145,6 +145,7 @@ findFeeInRangeAndDriverId startTime endTime driverId = do
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.platformFee $ Se.GreaterThanOrEq 1.0,
           Se.Is BeamDF.driverId $ Se.Eq (getId driverId)
         ]
     ]

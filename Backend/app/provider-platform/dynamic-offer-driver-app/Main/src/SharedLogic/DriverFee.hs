@@ -67,7 +67,7 @@ groupDriverFeeByInvoices driverFees_ = do
 
     getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
-      invoices <- (runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` pendingFees
+      invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
       let sortedInvoices = mergeSortAndRemoveDuplicate invoices
       let createNewInvoice = or (null <$> invoices)
       if createNewInvoice

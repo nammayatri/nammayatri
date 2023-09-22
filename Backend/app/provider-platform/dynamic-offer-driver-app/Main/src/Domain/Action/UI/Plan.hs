@@ -321,6 +321,8 @@ planSuspend isDashboard (driverId, _merchantId) = do
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
     DI.updateAutoPayStatusAndPayerVpa (Just DI.SUSPENDED) Nothing (cast driverId)
     QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driverId)
+    QINV.inActivateAllAutopayActiveInvoices (cast driverId)
+
   when isDashboard $ notifyPaymentModeManualOnSuspend _merchantId driverId driver.deviceToken
   return Success
 
@@ -367,16 +369,17 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
   let currentDues = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverManualDuesFees
+  let maxMandateAmount = max plan.maxAmount currentDues
   case driverRegisterationFee of
     Just registerFee -> do
-      invoices <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
+      invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
       case invoices of
         [] -> createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
         (inv : resActiveInvoices) -> do
           -- ideally resActiveInvoices should be null in case they are there make them inactive
           mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) resActiveInvoices
-          if inv.maxMandateAmount == Just plan.maxAmount
-            then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANUAL_INVOICE (Just (inv.id, inv.invoiceShortId))
+          if inv.maxMandateAmount == Just maxMandateAmount
+            then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
             else do
               QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
               createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
@@ -395,9 +398,9 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
         }
     createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity = do
       if not (null driverManualDuesFees)
-        then SPayment.createOrder (driverId, merchantId) (driverFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANUAL_INVOICE Nothing
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANDATE_SETUP_INVOICE Nothing
         else do
-          SPayment.createOrder (driverId, merchantId) ([driverFee], []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANUAL_INVOICE Nothing
+          SPayment.createOrder (driverId, merchantId) ([driverFee], []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANDATE_SETUP_INVOICE Nothing
     mkDriverFee currentDues = do
       id <- generateGUID
       now <- getCurrentTime
@@ -554,9 +557,9 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
-        invoice <- listToMaybe <$> QINV.findByDriverFeeIds [driverFee.id]
+        invoice <- listToMaybe <$> QINV.findActiveByDriverFeeIds [driverFee.id]
         let invoiceType = invoice <&> (.paymentMode)
-            createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then invoice <&> (.createdAt) else Nothing
+            createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then invoice <&> (.createdAt) else Nothing
             executionAt =
               if invoiceType == Just INV.AUTOPAY_INVOICE
                 then calcExecutionTime transporterConfig (driverFee.autopayPaymentStage) <$> (driverFee.stageUpdatedAt)

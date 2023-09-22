@@ -79,7 +79,8 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import Data.Either.Extra (eitherToMaybe)
-import Data.List (groupBy, intersect, (\\))
+import Data.List (intersect, (\\))
+import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -1638,28 +1639,34 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
 clearDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m ClearDuesRes
 clearDriverDues (personId, _merchantId) = do
   dueDriverFees <- QDF.findAllByStatusAndDriverId personId [DDF.PAYMENT_OVERDUE]
-  invoices <- groupInvoices <$> QINV.findAllByDriverFeeIdAndStatus (map DDF.id dueDriverFees) INV.ACTIVE_INVOICE [INV.MANUAL_INVOICE]
-  let (invoice, currentDuesForExistingInvoice, newDues) = validateExistingInvoice (listToMaybe invoices) dueDriverFees
-  if null invoices || (length invoices == 1 && isJust invoice)
-    then do
+  invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` dueDriverFees
+  let sortedInvoices = mergeSortAndRemoveDuplicate invoices
+  case sortedInvoices of
+    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing
+    (invoice_ : restinvoices) -> do
+      mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
+      (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
       let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
       let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-      when (isJust invoice) $ QDF.updateFeeTypeByIds DDF.RECURRING_INVOICE (dueDriverFees <&> (.id)) =<< getCurrentTime
       mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice
-    else throwError OngoingManualPayment
   where
-    validateExistingInvoice invoicesGroup driverFees = do
+    validateExistingInvoice invoice driverFees = do
+      invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
-      case invoicesGroup of
-        Just invoices -> do
-          let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
-          if length currentDueDriverFee <= length invoices
-            then do
-              ((\inv -> (inv.id, inv.invoiceShortId)) <$> listToMaybe invoices, currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
-            else (Nothing, driverFeeIds, [])
-        Nothing -> (Nothing, driverFeeIds, [])
+      let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
+      if length currentDueDriverFee <= length invoices
+        then do
+          return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
+        else do
+          QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
+          return (Nothing, driverFeeIds, [])
+
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
-    groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
+
+    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
+    mergeSortAndRemoveDuplicate invoices = do
+      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+      sortOn (Down . (.createdAt)) uniqueInvoices
 
 data HistoryEntityV2 = HistoryEntityV2
   { autoPayInvoices :: [AutoPayInvoiceHistory],
@@ -1691,20 +1698,21 @@ getDriverPaymentsHistoryV2 (driverId, merchantId) mPaymentMode mbLimit mbOffset 
   let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-      mode = fromMaybe INV.MANUAL_INVOICE mPaymentMode
-  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId mode limit offset
+      manualInvoiceModes = [INV.MANUAL_INVOICE, INV.MANDATE_SETUP_INVOICE]
+      modes = maybe manualInvoiceModes (\mode -> if mode == INV.AUTOPAY_INVOICE then [INV.AUTOPAY_INVOICE] else manualInvoiceModes) mPaymentMode
+  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId modes limit offset
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
 
   (manualPayInvoices, autoPayInvoices) <-
-    case mode of
-      INV.MANUAL_INVOICE -> do
-        manualPayInvoices_ <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
-        return (manualPayInvoices_, [])
-      INV.AUTOPAY_INVOICE -> do
+    case mPaymentMode of
+      Just INV.AUTOPAY_INVOICE -> do
         autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
         return ([], autoPayInvoices)
+      _ -> do
+        manualPayInvoices_ <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
+        return (manualPayInvoices_, [])
 
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
@@ -1777,7 +1785,7 @@ getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let amount = sum $ mapToAmount allDriverFeeForInvoice
       invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
-      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
       executionAt =
         if invoiceType == Just INV.AUTOPAY_INVOICE
           then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
@@ -1801,7 +1809,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = fromIntegral driverFee.totalEarnings,
-              driverFeeAmount = (\dueDfee -> fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst) driverFee,
+              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,

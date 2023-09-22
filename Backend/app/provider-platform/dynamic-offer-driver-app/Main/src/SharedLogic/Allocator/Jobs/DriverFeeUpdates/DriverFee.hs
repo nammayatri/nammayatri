@@ -172,6 +172,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                     updateStatus PAYMENT_OVERDUE driverFee.id now
                     updateFeeType RECURRING_INVOICE now driverFee.id
                   AUTOPAY -> do
+                    updateStatus PAYMENT_PENDING driverFee.id now
+                    updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
                     invoice <- mkInvoiceAgainstDriverFee driverFee
                     QINV.create invoice
                     QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
@@ -283,7 +285,6 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
-          updateStatus PAYMENT_OVERDUE firstFee.id now
           updRestFees <- mapM (buildRestFees RECURRING_INVOICE) restFees
           createMany updRestFees
     AUTOPAY -> do
@@ -291,7 +292,6 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
-          updateStatus PAYMENT_PENDING firstFee.id now
           updRestFees <- mapM (buildRestFees RECURRING_EXECUTION_INVOICE) restFees
           createMany updRestFees
 
