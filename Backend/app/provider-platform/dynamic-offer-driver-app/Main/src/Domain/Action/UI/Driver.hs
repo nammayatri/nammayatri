@@ -1794,13 +1794,13 @@ getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
         | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
         | otherwise = DDF.RECURRING_INVOICE
-  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus))
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceId.getId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
-mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> m [DriverFeeInfoEntity]
-mkDriverFeeInfoEntity driverFees invoiceStatus = do
+mkDriverFeeInfoEntity :: MonadFlow m => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> TransporterConfig -> m [DriverFeeInfoEntity]
+mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
@@ -1813,7 +1813,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus = do
               totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
-              rideTakenOn = driverFee.createdAt,
+              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
               offerAndPlanDetails = driverFee.planOfferTitle
             }
     )
