@@ -918,7 +918,7 @@ export const checkPPInitiateStatus = function (cb,services = microapps) {
   if (window.isPPInitiated && checkPPLoadStatus(services)) {
     cb()();
   } else {
-    waitTillPPLoaded(cb,services);
+    waitTillSeviceLoad(cb,services,checkPPInitiateStatus);
   }
 }
 
