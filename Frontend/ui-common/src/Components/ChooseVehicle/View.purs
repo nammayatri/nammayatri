@@ -40,7 +40,7 @@ view push config =
         , linearLayout
           [ width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
           , height WRAP_CONTENT
-          , orientation $ if config.isBookingOption then HORIZONTAL else VERTICAL
+          , orientation VERTICAL
           ][ vehicleDetailsView push config
            , if config.isCheckBox || config.searchResultType == QUOTES then capacityView push config else priceDetailsView push config
           ]
