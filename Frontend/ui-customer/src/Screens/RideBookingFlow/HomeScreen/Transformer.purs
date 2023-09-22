@@ -27,7 +27,7 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Ord
 import Data.Eq
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime)
@@ -325,15 +325,27 @@ isFareRangePresent estimates = DA.length (DA.filter (\(EstimateAPIEntity estimat
                 Just (FareRange fareRange) -> not (fareRange.minFare == fareRange.maxFare )) estimates) > 0
 
 getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
-getFilteredEstimate quotes = do
-  let filteredEstimate = (case (getMerchant FunctionCall) of 
-                            YATRISATHI -> do 
-                              let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) quotes
-                                  nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
-                                  taxiVariant = DA.sortBy (\(EstimateAPIEntity estimateEntity1) (EstimateAPIEntity estimateEntity2) -> compare (estimateEntity1.vehicleVariant) (estimateEntity2.vehicleVariant)) acTaxiVariants
-                              ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
-                            _ -> quotes)
-  (DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) (filteredEstimate))
+getFilteredEstimate quotes =
+  let estimateAndQuoteConfig = getValueFromConfig "estimateAndQuoteConfig"
+      filteredEstimate = case (getMerchant FunctionCall) of
+                            YATRISATHI ->
+                              let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) estimateAndQuoteConfig.variants.acVariant) quotes
+                                  nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) estimateAndQuoteConfig.variants.nonAcVariant) quotes
+                                  sortedAcTaxiVariants = sortEstimateWithVariantOrder acTaxiVariants estimateAndQuoteConfig.variants.acVariant
+                              in (DA.take 1 sortedAcTaxiVariants) <> nonAcTaxiVariants
+                            _ -> quotes
+      sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
+  in sortEstimateWithVariantOrder sortWithFare estimateAndQuoteConfig.variants.variantOrder
+  where
+    sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
+    sortEstimateWithVariantOrder estimates orderList =
+      let orderListLength = DA.length orderList
+          mappedEstimates = map (\(EstimateAPIEntity estimate) -> 
+                              let orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex estimate.vehicleVariant orderList)
+                              in {item : (EstimateAPIEntity estimate), order : orderNumber}
+                            ) estimates
+          sortedEstimates = DA.sortWith (\mappedEstimate -> mappedEstimate.order) mappedEstimates
+      in map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
 
 
 getFareFromEstimate :: EstimateAPIEntity -> Int 
@@ -345,38 +357,42 @@ getFareFromEstimate (EstimateAPIEntity estimate) = do
 
 
 getFilteredQuotes :: Array OfferRes -> Array OfferRes
-getFilteredQuotes quotes =  do 
-  let filteredArray = (case (getMerchant FunctionCall) of 
-                          YATRISATHI -> do 
-                            let acTaxiVariants = DA.filter(\item -> do 
-                                  case item of 
-                                    Quotes body -> do 
+getFilteredQuotes quotes =
+  let estimateAndQuoteConfig = getValueFromConfig "estimateAndQuoteConfig"
+      filteredArray = (case (getMerchant FunctionCall) of
+                          YATRISATHI -> do
+                            let acTaxiVariants = DA.filter(\item -> do
+                                  case item of
+                                    Quotes body -> do
                                       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                      DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"]
+                                      DA.any (_ == quoteEntity.vehicleVariant) estimateAndQuoteConfig.variants.acVariant
                                     _ -> false
                                   ) quotes
                                 nonAcTaxiVariants = DA.filter(\item -> do 
                                   case item of 
                                     Quotes body -> do 
                                       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                      not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
+                                      (DA.any (_ == quoteEntity.vehicleVariant) estimateAndQuoteConfig.variants.nonAcVariant)
                                     _ -> false
                                   ) quotes
-                                sortedACTaxiVariants = DA.sortBy (\ quote1 quote2 -> 
-                                  case quote1 , quote2 of 
-                                    Quotes body , Quotes body2-> do
-                                      let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
-                                      let (QuoteAPIEntity quoteEntity2) = body2.onDemandCab
-                                      compare (quoteEntity1.vehicleVariant) (quoteEntity2.vehicleVariant)
-                                    _ ,_ -> LT
-                                  ) acTaxiVariants
+                                sortedACTaxiVariants = sortQuoteWithVariantOrder acTaxiVariants estimateAndQuoteConfig.variants.acVariant
                             (DA.take 1 sortedACTaxiVariants) <> (nonAcTaxiVariants)
                           _ -> quotes)
-  (DA.sortWith (\quote -> case quote of 
-                            Quotes body -> do
-                                      let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
-                                      (quoteEntity1.estimatedTotalFare)
-                            _ -> 0) (filteredArray))
+  in sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variants.variantOrder
+  where
+    sortQuoteWithVariantOrder :: Array OfferRes -> Array String -> Array OfferRes
+    sortQuoteWithVariantOrder quotes orderList =
+      let orderListLength = DA.length orderList
+          mappedQuotes = map (\quote -> case quote of
+                                          Quotes body ->
+                                            let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                                                orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                                            in {item : Just quote, order : orderNumber}
+                                          _ -> {item : Nothing, order : orderListLength}
+                                ) quotes
+          filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
+          sortedQuotes = DA.sortWith (\mappedQuote -> mappedQuote.order) filterMappedQuotes
+      in DA.catMaybes $ map (\sortedEstimate -> sortedEstimate.item) sortedQuotes
 
 getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index isFareRangePresent = 
