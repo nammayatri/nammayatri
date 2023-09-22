@@ -16,38 +16,35 @@
 module Screens.PaymentHistoryScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, TransactionListItem)
+import Data.Maybe as Mb
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
+import Services.API (AutopayPaymentStage(..), FeeType(..))
 
 initData :: PaymentHistoryScreenState
 initData = {
     data: {
-        paymentListItem : [],
-        transactionListItem : dummyTransactionListItem,
-        manualPaymentRidesListItem : dManualPaymentRidesListItem
+        autoPayList : [],
+        manualPayList : [],
+        transactionDetails : {
+            notificationStatus : Mb.Just NOTIFICATION_SCHEDULED,
+            paymentStatus : Pending,
+            statusTime : "",
+            details : [],
+            manualSpecificDetails : [],
+            isSplit : false,
+            isAutoPayFailed : false,
+            feeType : AUTOPAY_PAYMENT
+        },
+        planData : dummyPlanConfig
     },
 
     props: {
         subView : PaymentHistory,
-        autoPayHistory : true
+        autoPayHistory : true,
+        autoPaySetup : false,
+        selectedDue : ""
     }
 }
-
-
-dummyPaymentListItem :: Array PaymentListItem
-dummyPaymentListItem = [
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success},
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success},
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success}
-]
 
 dummyTransactionListItem :: Array TransactionListItem
 dummyTransactionListItem = [
@@ -80,9 +77,44 @@ dManualPaymentRidesListItem = [
     title : "String",
     val : "String"},
     {key : "String",
-    title : "String",
+    title : "DAILY UNLIMITED",
     val : "String"},
     {key : "TXN_ID",
     title : "String",
     val : "String"}
 ]
+
+
+dummyPlanConfig :: PlanCardConfig
+dummyPlanConfig = 
+    { id : ""
+    , title : ""
+    , description : ""
+    , isSelected : false
+    , offers : [
+                {
+                title : Mb.Nothing,
+                isGradient : true,
+                gradient : [],
+                hasImage : true,
+                imageURL : "",
+                offerDescription : Mb.Nothing,
+                addedFromUI : false
+                }
+                ]
+    , priceBreakup : []
+    , frequency : ""
+    , freeRideCount : 1
+    , showOffer : true
+}
+
+dummyPromoConfig :: PromoConfig
+dummyPromoConfig = {
+                        title : Mb.Just "Freedom Offer: 76% off APPLIED",
+                        offerDescription : Mb.Nothing,
+                        isGradient : true,
+                        gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
+                        hasImage : true,
+                        imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
+                        addedFromUI : true
+                    }

@@ -17,27 +17,27 @@ module Screens.Types where
 
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
-import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
+import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
+import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
+import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Prelude (class Eq, class Show )
+import MerchantConfig.Types (AppConfig)
+import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
-import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
-import Styles.Types (FontSize)
-import Components.ChatView.Controller as ChatView
-import Components.RecordAudioModel.Controller as RecordAudioModel
-import MerchantConfig.Types (AppConfig)
-import Foreign.Object (Object)
-import Foreign (Foreign)
 import Screens (ScreenName)
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status)
+import Styles.Types (FontSize)
 
 type EditTextInLabelState =
  {
@@ -1576,11 +1576,9 @@ type SubscriptionScreenProps = {
   managePlanProps :: ManagePlanProps,
   joinPlanProps :: JoinPlanProps,
   popUpState :: Maybe SubscribePopupType,
-  paymentStatus :: Maybe Common.PaymentStatus,
   resumeBtnVisibility :: Boolean,
   showError :: Boolean,
   showShimmer :: Boolean,
-  isDueViewExpanded :: Boolean,
   refreshPaymentStatus :: Boolean,
   confirmCancel :: Boolean,
   isSelectedLangTamil :: Boolean,
@@ -1592,7 +1590,8 @@ type SubscriptionScreenProps = {
   prevSubView :: SubscriptionSubview,
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
-  redirectToNav :: String
+  redirectToNav :: String,
+  lastPaymentType :: Maybe String
 }
 
 type JoinPlanData = {
@@ -1618,21 +1617,38 @@ type MyPlanData = {
   dueItems :: Array DueItem,
   planEntity :: PlanCardConfig,
   autoPayStatus :: AutoPayStatus,
-  lowAccountBalance :: Boolean,
+  lowAccountBalance :: Maybe Number,
   switchAndSave :: Boolean,
   paymentMethodWarning :: Boolean,
   maxDueAmount :: Number,
-  currentDueAmount :: Number,
-  mandateStatus :: String
+  totalDueAmount :: Number,
+  autoPayDueAmount :: Number,
+  manualDueAmount :: Number,
+  mandateStatus :: String,
+  selectedDue :: String
 }
 
 type MyPlanProps = {
-  isDuesExpanded :: Boolean
+  isDuesExpanded :: Boolean,
+  isDueViewExpanded :: Boolean,
+  overDue :: Boolean,
+  multiTypeDues :: Boolean,
+  dueType :: FeeType
 }
 
 type DueItem = {
+  randomId :: String,
   tripDate :: String,
-  amount :: String
+  amount :: Number,
+  earnings :: Number,
+  noOfRides :: Int,
+  scheduledAt :: String,
+  paymentStatus :: String,
+  feeBreakup :: String,
+  plan :: String,
+  mode :: FeeType,
+  autoPayStage :: Maybe AutopayPaymentStage,
+  isSplit :: Boolean
 }
 
 type KioskLocation = {
@@ -1666,7 +1682,7 @@ type PromoConfig = {
   , addedFromUI :: Boolean
 }
 
-data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup
+data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup | PaymentSuccessPopup
 
 derive instance genericSubscribePopupType :: Generic SubscribePopupType _
 instance showSubscribePopupType :: Show SubscribePopupType where show = genericShow
@@ -1680,7 +1696,7 @@ derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
 
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | NoSubView 
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView 
 
 derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
 instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
@@ -1702,15 +1718,34 @@ type PaymentHistoryScreenState = {
 }
 
 type PaymentHistoryScreenData = {
-  paymentListItem :: Array PaymentListItem,
-  transactionListItem :: Array TransactionListItem,
-  manualPaymentRidesListItem :: Array TransactionListItem
+  transactionDetails :: TransactionInfo,
+  planData :: PlanCardConfig,
+  autoPayList :: Array PaymentListItem,
+  manualPayList :: Array PaymentListItem
+}
+
+type TransactionInfo = {
+  notificationStatus :: Maybe AutopayPaymentStage,
+  paymentStatus :: Common.PaymentStatus,
+  statusTime :: String,
+  details :: Array TransactionListItem,
+  manualSpecificDetails :: Array DueCard,
+  isSplit :: Boolean,
+  isAutoPayFailed :: Boolean,
+  feeType :: FeeType
 }
 type PaymentListItem = {
-  paidDate :: String,
-  rideTakenDate :: String,
-  amount :: String,
-  paymentStatus :: Common.PaymentStatus
+  transactionDate :: String,
+  invoiceId :: String,
+  paymentStatus :: Common.PaymentStatus,
+  amount :: Number,
+  feeType :: FeeType,
+  description :: String
+}
+
+type ChargeBreakupItem = {
+  amount :: Number,
+  component :: String
 }
 
 type TransactionListItem = {
@@ -1719,9 +1754,28 @@ type TransactionListItem = {
   val :: String
 }
 
+type DueCard = {
+  date :: String,
+  planType :: String,
+  offerApplied :: Maybe PromoConfig,
+  noOfRides :: Int,
+  totalEarningsOfDay :: Number,
+  dueAmount :: Number,
+  fareBreakup :: String,
+  expanded :: Boolean,
+  isAutoPayFailed :: Boolean,
+  isSplitPayment :: Boolean,
+  id :: String,
+  scheduledAt :: Maybe String,
+  paymentMode :: FeeType,
+  paymentStatus :: Maybe String
+}
+
 type PaymentHistoryScreenProps = {
   subView :: PaymentHistorySubview,
-  autoPayHistory :: Boolean
+  autoPayHistory :: Boolean,
+  autoPaySetup :: Boolean,
+  selectedDue :: String
 }
 
 data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails
