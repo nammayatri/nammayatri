@@ -1809,7 +1809,8 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true,timerRefresh=false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
-          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true" 
+          _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1833,6 +1834,7 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           void $ updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1864,6 +1866,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_LATLON_TIME "__failed"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
 

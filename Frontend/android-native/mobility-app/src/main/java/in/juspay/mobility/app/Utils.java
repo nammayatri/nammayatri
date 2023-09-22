@@ -23,6 +23,7 @@ import com.theartofdev.edmodo.cropper.CropImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -159,6 +160,23 @@ public class Utils {
             mFirebaseAnalytics.logEvent(event, bundleParams);
         } catch (Exception e) {
             Log.e(UTILS, "Error in logEventWithParams " + e);
+        }
+    }
+
+    public static boolean compareTimeWithInRange(Date start, Date end, Date curr){
+        try {
+            SimpleDateFormat parser = new SimpleDateFormat("HH:mm");
+            Date earlyMorning = parser.parse("00:00");
+            Date midNight = parser.parse("23:59");
+            if(start.before(end)){
+                return curr.after(start) && curr.before(end);
+            }else{
+                boolean condition1 = curr.after(start) && (curr.before(midNight) || curr.equals(midNight));
+                boolean condition2 = (curr.after(earlyMorning) || curr.equals(earlyMorning)) && curr.before(end);
+                return condition1 || condition2;
+            }
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
         }
     }
 }

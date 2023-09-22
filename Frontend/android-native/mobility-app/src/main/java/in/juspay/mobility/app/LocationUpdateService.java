@@ -11,6 +11,8 @@ package in.juspay.mobility.app;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
+import static in.juspay.mobility.app.Utils.compareTimeWithInRange;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
@@ -53,6 +55,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.maps.android.PolyUtil;
+import com.google.maps.android.SphericalUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -482,11 +485,11 @@ public class LocationUpdateService extends Service {
             }
         }
         catch (Exception e){
-
+            Log.e("callDeviationAlertAPI Error", e.toString());
         }
     }
 
-    private void checkIfNotMoving(double lat, double lon){
+    private void checkIfNotMoving(double lat, double lon, float accuracy){
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String jsonValue = sharedPref.getString("DRIVER_LATLON_TIME", "__failed");
@@ -502,16 +505,19 @@ public class LocationUpdateService extends Service {
                 sharedPref.edit().putString("DRIVER_LATLON_TIME", obj.toString()).apply();
             } else {
                 obj = new JSONObject(jsonValue);
-                if (lat == obj.getDouble("lat") && lon == obj.getDouble("lon")) {
+                LatLng oldLatLan = new LatLng(obj.getDouble("lat"), obj.getDouble("lon"));
+                LatLng newLatLan = new LatLng(lat, lon);
+                Double dist = SphericalUtil.computeDistanceBetween(oldLatLan, newLatLan);
+                if (dist < accuracy) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         SimpleDateFormat parser = new SimpleDateFormat("HH:mm");
-                        Date startTime  = parser.parse("21:00");
-                        Date endTime    = parser.parse("08:00");
+                        Date startTime  = parser.parse("22:00");
+                        Date endTime    = parser.parse("06:00");
                         Date date   = new Date();
                         Date currTime = parser.parse(parser.format(date)) ;
                         LocalDateTime prevTime = LocalDateTime.parse(obj.getString("timeStamp"));
                         String alertVal = sharedPref.getString("SAFETY_ALERT", "false");
-                        if (ChronoUnit.SECONDS.between(prevTime, now) / 60 >= 5 && alertVal == "false" && currTime.after(startTime) && currTime.before(endTime)) {
+                        if (ChronoUnit.SECONDS.between(prevTime, now) / 60 >= 5 && alertVal.equals("false") && compareTimeWithInRange(startTime,endTime, currTime)) {
                             sharedPref.edit().putString("SAFETY_ALERT","true").apply();
                             callDeviationAlertAPI("NotMoving");
                         }
@@ -559,7 +565,7 @@ public class LocationUpdateService extends Service {
             Date currTime = parser.parse(parser.format(date)) ;
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String alertVal = sharedPref.getString("SAFETY_ALERT","false");
-            if (PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, false, true, 1000.0) == -1 && alertVal.equals("false") && currTime.after(startTime) && currTime.before(endTime)){
+            if (PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, false, true, 1000.0) == -1 && alertVal.equals("false") && compareTimeWithInRange(startTime, endTime, currTime)){
                 sharedPref.edit().putString("SAFETY_ALERT","true").apply();
                 callDeviationAlertAPI("Deviation");
             }
@@ -605,7 +611,7 @@ public class LocationUpdateService extends Service {
                             getRoute(Double.parseDouble(rideStartLat), Double.parseDouble(rideStartLon), Double.parseDouble(rideEndLat), Double.parseDouble(rideEndLon));
                             routeHandler.post(() -> {
                                 updateDeviation(latitude, longitude, rideWaypoints);
-                                checkIfNotMoving(latitude, longitude);
+                                checkIfNotMoving(latitude, longitude, accuracy);
                             });
                         } catch (Exception e) {
                             Log.e("get route exception", e.toString());
@@ -613,6 +619,7 @@ public class LocationUpdateService extends Service {
                     });
                 } else {
                     updateDeviation(latitude, longitude, rideWaypoints);
+                    checkIfNotMoving(latitude, longitude, accuracy);
                 }
             } else if (localStage.equals("RideCompleted")) {
                 rideWaypoints = null;
