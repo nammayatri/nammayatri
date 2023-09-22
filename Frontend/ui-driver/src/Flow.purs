@@ -91,7 +91,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
-import Services.Accessor (_lat, _lon, _id)
+import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
@@ -1355,14 +1355,13 @@ myRidesScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
       myRidesScreenFlow
     OPEN_PAYMENT_HISTORY state-> do
-      let paymentHistory = spy "history" getPaymentHistoryItemList []
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
       resp <- lift $ lift $ Remote.getPaymentHistory (getcurrentdate "") (getDatebyCount state.data.pastDays) Nothing
       case resp of
         Right (GetPaymentHistoryResp response) -> do
-          let paymentHistory = getPaymentHistoryItemList response
-          modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
+          let paymentHistoryArray = getPaymentHistoryItemList response
+          modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistoryArray}}})
         Left err -> pure unit
+      myRidesScreenFlow
     RIDE_HISTORY_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     RIDE_HISTORY_NAV _ -> myRidesScreenFlow
 
@@ -1669,6 +1668,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
                   Nothing -> pure unit
               Left error -> pure unit
       Left error -> pure unit
+    if getDriverInfoResp.paymentPending then pure unit else setValueToLocalStore PAYMENT_STATUS_POOLING "false"
     pure unit
 
 homeScreenFlow :: FlowBT String Unit
@@ -2094,8 +2094,10 @@ ysPaymentFlow = do
       pure $ toggleBtnLoader "" false
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
-      if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
-      orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
+      if paymentPageOutput == "backpressed" then homeScreenFlow else pure unit-- backpressed FAIL
+      let orderId = fromMaybe "" $ (sdk_payload.payload)^._orderId
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { paymentState{orderId = orderId } }})
+      orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
         Right (OrderStatusRes resp) ->
           case resp.status of

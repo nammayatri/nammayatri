@@ -11,7 +11,8 @@
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}module Engineering.Helpers.Utils where
+-}
+module Engineering.Helpers.Utils where
 
 import Prelude
 
@@ -51,11 +52,8 @@ foreign import loaderTextIOS :: EffectFn2 String String Unit
 foreign import getFromWindow :: EffectFn1 String Foreign
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
-toggleLoader flag = do
-  if os == "IOS" then do
-    _ <- liftFlow $ runEffectFn1 toggleLoaderIOS flag
-    pure unit
-  else if flag then do
+toggleLoader = 
+  if _ then do
     state <- getState
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
     pure unit
@@ -63,13 +61,7 @@ toggleLoader flag = do
     doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
-loaderText mainTxt subTxt = do
-  if os == "IOS" then do
-    _ <- liftFlow $ runEffectFn2 loaderTextIOS mainTxt subTxt
-    pure unit
-  else do
-    _ <- modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
-    pure unit
+loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
 
 getSeparatorFactor :: Int
 getSeparatorFactor = 8

@@ -796,7 +796,8 @@ type PaymentState = {
   chargesBreakup :: Array PaymentBreakUp,
   blockedDueToPayment :: Boolean,
   dateObj :: String,
-  laterButtonVisibility :: Boolean
+  laterButtonVisibility :: Boolean,
+  orderId :: String
 }
 
 type CancelRidePopUpData = {

@@ -560,14 +560,7 @@ makePaymentState state =
   let payableAndGST = EHC.formatCurrencyWithCommas (show state.data.paymentState.payableAndGST) in {
     title : getString GREAT_JOB,
     description : getDescription state,
-    description2 : ( case getValueToLocalStore LANGUAGE_KEY of
-                          "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
-                          "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
-                          "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
-                          "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
-                          "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
-                          _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
-                      ),
+    description2 : getString COMPLETE_PAYMENT_TO_CONTINUE,
     okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
                           "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
                           "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
@@ -594,18 +587,12 @@ makePaymentState state =
 
 getDescription :: ST.HomeScreenState -> String
 getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
-                        "EN_US" -> case (isYesterday state.data.paymentState.dateObj) of
-                                  true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides</b> yesterday!"))
-                                  false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on " else " Rides</b> on ") <> state.data.paymentState.date))
-                        "HI_IN" -> if (isYesterday state.data.paymentState.dateObj) then "आपने कल <b>"<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!" else 
-                                    "आपने " <> state.data.paymentState.date <>  " को "<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!"
-                        "BN_IN" -> if (isYesterday state.data.paymentState.dateObj) then "আপনি গতকাল "<> (show state.data.paymentState.rideCount) <>"টি রাইড সম্পূর্ণ করেছেন" else 
-                                    "আপনি " <> state.data.paymentState.date <>" তারিখে " <> (show state.data.paymentState.rideCount) <> "টি রাইড সম্পূর্ণ করেছেন"
-                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
+                        "EN_US" -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides</b>"))
+                        "HI_IN" -> "आपने " <>  show state.data.paymentState.rideCount <> "सवारी पूरी कर ली हैं"
+                        "BN_IN" -> "আপনি" <> show state.data.paymentState.rideCount <> "টি রাইড সম্পূর্ণ করেছেন"
+                        "TA_IN" -> "நீங்கள்  "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
                         "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
-                        _       -> case (isYesterday state.data.paymentState.dateObj) of
-                                    true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides yesterday!"))
-                                    false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on" else " Rides on") <> state.data.paymentState.date))
+                        _       -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides"))
 
 rateCardState :: ST.HomeScreenState -> RateCard.Config
 rateCardState state =
