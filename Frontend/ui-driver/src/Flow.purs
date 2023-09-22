@@ -2446,7 +2446,7 @@ updateAvailableAppsAndGoToSubs :: FlowBT String Unit
 updateAvailableAppsAndGoToSubs = do
   state <- getState
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
-  void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ getUpiApps
+  -- void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ getUpiApps --TODO Handle Properly
   subScriptionFlow
 
 getUpiApps :: FlowBT String Unit
