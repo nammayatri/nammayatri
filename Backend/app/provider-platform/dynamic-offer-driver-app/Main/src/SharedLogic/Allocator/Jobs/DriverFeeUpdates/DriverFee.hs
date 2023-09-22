@@ -27,6 +27,7 @@ import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPla
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
+import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
@@ -50,6 +51,7 @@ import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan
 import qualified Storage.Queries.Invoice as QINV
+import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
@@ -125,9 +127,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         Just plan -> do
           let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
               dutyDate = driverFee.createdAt
-              mandateSetupDate = case mbDriverPlan of
-                Nothing -> now
-                Just driverPlan -> fromMaybe now driverPlan.mandateSetupDate
+              (mandateSetupDate, mandateId) = case mbDriverPlan of
+                Nothing -> (now, Nothing)
+                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
@@ -151,7 +153,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
           unless (totalFee == 0) $ do
-            driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now
+            driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now
             updatePendingPayment True (cast driverFee.driverId)
 
           -- blocking
@@ -235,7 +237,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate = do
 getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate driverFee = do
   now <- getCurrentTime
-  let dutyDate = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt
+  let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
   if feeWithoutDiscount == 0
     then do
@@ -251,11 +253,12 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
 
-splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> [DriverFee]
-splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} =
-  let numEntities = totalFee / plan.maxAmount
-      remainingFee = totalFee `mod'` plan.maxAmount
-      entityList = replicate (floor numEntities) plan.maxAmount ++ [remainingFee | remainingFee > 0]
+splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> [DriverFee]
+splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxMandateAmount = do
+  let maxAmount = fromMaybe totalFee maxMandateAmount
+  let numEntities = totalFee / maxAmount
+      remainingFee = totalFee `mod'` maxAmount
+      entityList = replicate (floor numEntities) maxAmount ++ [remainingFee | remainingFee > 0]
    in map
         ( \fee -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
@@ -276,9 +279,10 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> UTCTime -> m ()
-driverFeeSplitter plan feeWithoutDiscount totalFee driverFee now = do
-  let splittedFees = splitPlatformFee feeWithoutDiscount totalFee plan driverFee
+driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
+driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now = do
+  mandate <- maybe (pure Nothing) QMD.findById mandateId
+  let splittedFees = splitPlatformFee feeWithoutDiscount totalFee plan driverFee (mandate <&> (.maxAmount))
   case plan.paymentMode of
     MANUAL -> do
       case splittedFees of
