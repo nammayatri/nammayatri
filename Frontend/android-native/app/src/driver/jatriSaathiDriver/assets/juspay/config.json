@@ -73,9 +73,6 @@
     "in.yatri.provider": {
       "default": {
         "entry": "becknbase.html",
-        "required_apps": [
-          "in.juspay.hyperpay"
-        ],
         "root": ""
       }
     }

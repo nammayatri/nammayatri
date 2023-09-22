@@ -9,7 +9,7 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PaymentHistoryListItem as PaymentHistoryListItem
 import Components.PaymentHistoryModel.Controller (Action(..))
-import Data.Array (length)
+import Data.Array (length, take)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink)
@@ -91,7 +91,7 @@ paymentScrollView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         ]
-        (map (\item -> PaymentHistoryListItem.view (push <<< PaymentHistoryListItemAC) item) state.paymentHistoryList)
+        (map (\item -> PaymentHistoryListItem.view (push <<< PaymentHistoryListItemAC) item) (take 15 state.paymentHistoryList))
     ]
 
 ---------------- genericHeaderConfig ----------------

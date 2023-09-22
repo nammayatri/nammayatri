@@ -23,6 +23,7 @@ import LoaderOverlay.ScreenData (LoaderOverlayState)
 import Prelude (Unit, ($), (<>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color, clickable)
 import Styles.Colors as Color
+import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
@@ -53,11 +54,10 @@ view _ state =
     , cornerRadius 10.0
     , gravity CENTER
     , padding $ PaddingVertical 20 20
-    ][ progressBar
+    ][ progressBar $
       [ height $ V 60
       , width $ V 60
-      , stroke if (getValueFromConfig "loaderColor") /= "" then (getValueFromConfig "loaderColor") else Color.black900
-      ]
+      ] <> if EHC.os /= "IOS" then [stroke if (getValueFromConfig "loaderColor") /= "" then (getValueFromConfig "loaderColor") else Color.black900] else []
     , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

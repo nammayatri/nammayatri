@@ -21,6 +21,7 @@ import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
 import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
+import JBridge as JB
 
 
 view :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
@@ -149,5 +150,6 @@ buttonConfig state =
       , background = Color.black900
       , margin = MarginHorizontal 16 16
       , id = "MakePaymentButton"
+      , enableLoader = JB.getBtnLoader "MakePaymentButton"
       }
   in primaryButtonConfig'

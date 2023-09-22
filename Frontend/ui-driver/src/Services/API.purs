@@ -2114,6 +2114,7 @@ newtype PaymentDetailsEntity = PaymentDetailsEntity {
   , chargesBreakup :: Array PaymentBreakUp
   , txnInfo :: Array TxnInfo
   , driverFeeId :: String
+  , status :: DriverFeeStatus
 }
 
 newtype PaymentBreakUp = PaymentBreakUp {
@@ -2126,6 +2127,7 @@ newtype TxnInfo = TxnInfo {
   , status :: Common.APIPaymentStatus
 }
 
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE
 
 instance makeGetPaymentHistoryReq :: RestEndpoint GetPaymentHistoryReq GetPaymentHistoryResp where
  makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
@@ -2144,6 +2146,13 @@ instance standardEncodeGetPaymentHistoryResp :: StandardEncode GetPaymentHistory
 instance showGetPaymentHistoryResp :: Show GetPaymentHistoryResp where show = genericShow
 instance decodeGetPaymentHistoryResp :: Decode GetPaymentHistoryResp where decode = defaultDecode
 instance encodeGetPaymentHistoryResp :: Encode GetPaymentHistoryResp where encode = defaultEncode
+
+derive instance genericDriverFeeStatus :: Generic DriverFeeStatus _
+instance showDriverFeeStatus :: Show DriverFeeStatus where show = genericShow
+instance decodeDriverFeeStatus :: Decode DriverFeeStatus where decode = defaultEnumDecode
+instance encodeDriverFeeStatus :: Encode DriverFeeStatus where encode = defaultEnumEncode
+instance eqDriverFeeStatus :: Eq DriverFeeStatus where eq = genericEq
+instance standardEncodeDriverFeeStatus :: StandardEncode DriverFeeStatus where standardEncode _ = standardEncode {}
 
 derive instance genericPaymentDetailsEntity :: Generic PaymentDetailsEntity _
 derive instance newtypePaymentDetailsEntity:: Newtype PaymentDetailsEntity _
