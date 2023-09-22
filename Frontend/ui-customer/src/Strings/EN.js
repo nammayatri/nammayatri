@@ -587,11 +587,10 @@ const englishStrings = {
   "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
   "OR" : "Or",
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(Helps driver confirm it is you)",
-  "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!",
+  "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
   "GOT_AN_OTP" : "Got an OTP?",
   "JUST_ONE_LAST_THING" : "Just one last thing",
   "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
-  "AUTO_RICKSHAW" : "Auto Rickshaw",
-  "CABS_AVAILABLE" : "cabs available"
+  "AUTO_RICKSHAW" : "Auto Rickshaw"
 }

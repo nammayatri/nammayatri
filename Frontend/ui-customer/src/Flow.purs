@@ -126,7 +126,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   _ <- pure $ setValueToLocalStore BASE_URL (getBaseUrl "dummy")
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
   if ((getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")) then do
-    setValueToLocalStore COUNTRY_CODE "+91"
+    setValueToLocalStore COUNTRY_CODE "+91" 
   else pure unit
   _ <- pure $ setValueToLocalStore MESSAGES_DELAY "0"
   _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
@@ -145,7 +145,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
-  if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")
+  if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)") 
   then do
     setValueToLocalStore COUNTRY_CODE "+91"
   else pure unit
@@ -517,7 +517,7 @@ checkAndUpdateToken count = do
     if count > 0 then do
       (FCMToken newToken) <- lift $ lift $ doAff $ makeAff \cb -> setFCMTokenWithTimeOut 5000 (cb <<< Right) FCMToken $> nonCanceler
       if newToken == "NOT_FOUND" then checkAndUpdateToken (count - 1)
-          else do
+          else do 
               let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
                   requiredData = initialData{deviceToken = Just newToken}
               void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
@@ -525,7 +525,7 @@ checkAndUpdateToken count = do
 
 updateCustomerVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateCustomerVersion dbClientVersion dbBundleVersion = do
-  if (isJust dbClientVersion
+  if (isJust dbClientVersion 
   && isJust dbBundleVersion) then do
     let versionName = getValueToLocalStore VERSION_NAME
         bundle = getValueToLocalStore BUNDLE_VERSION
@@ -733,7 +733,7 @@ homeScreenFlow = do
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination, address : Nothing}
                                                       , sourceAddress : state.data.sourceAddress
                                                       , destinationAddress : state.data.destinationAddress })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}})
       updateLocalStage FindingEstimate
       homeScreenFlow
     RETRY_FINDING_QUOTES showLoader-> do
@@ -1450,7 +1450,7 @@ rideSearchFlow flowType = do
               when (finalState.props.customerTip.enableTips) $ do
                 cancelEstimate finalState.props.estimateId
               _ <- pure $ updateLocalStage TryAgain
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}, data{nearByDrivers = Nothing}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}})
             _        -> do
               let sourceSpecialTagIcon = specialLocationIcons finalState.props.zoneType.sourceTag
                   destSpecialTagIcon = specialLocationIcons finalState.props.zoneType.destinationTag
@@ -1477,7 +1477,7 @@ rideSearchFlow flowType = do
                       void $ lift $ lift $ toggleLoader false
                       else do
                         if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
-                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId, nearByDrivers = Nothing}})
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}})
                         _ <- pure $ updateLocalStage FindingEstimate
                         void $ lift $ lift $ toggleLoader false
 
@@ -2342,7 +2342,7 @@ rideCompletedDetails (RideBookingRes resp) = do
       finalAmount =  getFinalAmount (RideBookingRes resp)
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-
+      
   [ {key : "Estimate ride distance", value : (show $ fromMaybe 0 contents.estimatedDistance/1000) <> " km"},
           {key : "Actual ride distance", value : (show $ (fromMaybe 0 ride.chargeableRideDistance)/1000) <> " km"},
           {key : "Difference between estimated and actual ride distance" , value : (show $ differenceOfDistance/1000) <> " km"},

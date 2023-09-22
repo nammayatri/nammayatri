@@ -572,10 +572,10 @@ const hindiStrings = {
   "ASKED_FOR_EXTRA_FARE": "अतिरिक्त किराया मांगा",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "कुछ भी जो आप हमें बताना चाहेंगे? (वैकल्पिक)",
   "PLEASE_WAIT" : "कृपया प्रतीक्षा करें",
-  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
   "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "PLATFORM_FEE" : "प्लेटफार्म शुल्क",
-  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
   "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
   "SGST" : "एसजीएसटी",
@@ -592,6 +592,5 @@ const hindiStrings = {
   "GOT_AN_OTP" : "एक OTP मिला?",
   "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़",
   "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा",
-  "AUTO_RICKSHAW" : "ऑटो रिक्शा",
-  "CABS_AVAILABLE" : "कैब उपलब्ध हैं"
+  "AUTO_RICKSHAW" : "ऑटो रिक्शा"
 }
