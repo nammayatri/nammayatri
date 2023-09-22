@@ -327,8 +327,6 @@ foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit)
 
 foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
 
-foreign import killPP :: Effect Unit
-
 foreign import consumeBP :: EffectFn1 Unit Unit
 
 foreign import isDateGreaterThan :: String -> Boolean
