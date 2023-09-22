@@ -1,25 +1,20 @@
 module API.Dashboard.Issue where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
 import qualified Domain.Action.Dashboard.Issue as DIssue
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified IssueManagement.API.Dashboard.Issue as IMD
+import qualified IssueManagement.Common as Common
+import qualified IssueManagement.Common.Dashboard.Issue as Common
+import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueReport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 
-type API =
-  "issue"
-    :> ( Common.IssueCategoryListAPI
-           :<|> Common.IssueListAPI
-           :<|> Common.IssueInfoAPI
-           :<|> Common.IssueUpdateByUserAPI
-           :<|> Common.IssueAddCommentByUserAPI
-           :<|> Common.IssueFetchMediaAPI
-           :<|> Common.TicketStatusCallBackAPI
-       )
+type API = IMD.DashboardIssueAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -34,40 +29,40 @@ handler merchantId =
 issueCategoryList ::
   ShortId DM.Merchant ->
   FlowHandler Common.IssueCategoryListRes
-issueCategoryList = withFlowHandlerAPI . DIssue.issueCategoryList
+issueCategoryList merchantShortId = withFlowHandlerAPI $ DIssue.issueCategoryList merchantShortId Common.DRIVER
 
 issueList ::
   ShortId DM.Merchant ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.IssueStatus ->
-  Maybe (Id Common.IssueCategory) ->
+  Maybe (Id IssueCategory) ->
   Maybe Text ->
   FlowHandler Common.IssueReportListResponse
-issueList merchantShortId mbLimit mbOffset mbStatus mbCategoryId = withFlowHandlerAPI . DIssue.issueList merchantShortId mbLimit mbOffset mbStatus (cast <$> mbCategoryId)
+issueList merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ DIssue.issueList merchantShortId mbLimit mbOffset mbStatus (cast <$> mbCategoryId) mbAssignee Common.DRIVER
 
 issueInfo ::
   ShortId DM.Merchant ->
-  Id Common.IssueReport ->
+  Id IssueReport ->
   FlowHandler Common.IssueInfoRes
-issueInfo merchantShortId issueReportId = withFlowHandlerAPI $ DIssue.issueInfo merchantShortId (cast issueReportId)
+issueInfo merchantShortId issueReportId = withFlowHandlerAPI $ DIssue.issueInfo merchantShortId (cast issueReportId) Common.DRIVER
 
 issueUpdate ::
   ShortId DM.Merchant ->
-  Id Common.IssueReport ->
+  Id IssueReport ->
   Common.IssueUpdateByUserReq ->
   FlowHandler APISuccess
-issueUpdate merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issueUpdate merchantShortId (cast issueReportId)
+issueUpdate merchantShortId issueReportId req = withFlowHandlerAPI $ DIssue.issueUpdate merchantShortId (cast issueReportId) req
 
 issueAddComment ::
   ShortId DM.Merchant ->
-  Id Common.IssueReport ->
+  Id IssueReport ->
   Common.IssueAddCommentByUserReq ->
   FlowHandler APISuccess
-issueAddComment merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issueAddComment merchantShortId (cast issueReportId)
+issueAddComment merchantShortId issueReportId req = withFlowHandlerAPI $ DIssue.issueAddComment merchantShortId (cast issueReportId) req
 
 issueFetchMedia :: ShortId DM.Merchant -> Text -> FlowHandler Text
 issueFetchMedia merchantShortId = withFlowHandlerAPI . DIssue.issueFetchMedia merchantShortId
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DIssue.ticketStatusCallBack merchantShortId
+ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DIssue.ticketStatusCallBack merchantShortId Common.DRIVER

@@ -17,7 +17,8 @@
 module Storage.Beam.Issue where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Issue as Domain
+import Database.Beam.MySQL ()
+import qualified IssueManagement.Common as Domain
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 

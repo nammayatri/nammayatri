@@ -3,8 +3,14 @@ module Types.DBSync.Update where
 import Data.Aeson as A
 import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
-import Database.Beam.Postgres (Postgres)
+import Database.Beam.Postgres
 import EulerHS.Prelude
+import qualified IssueManagement.Storage.Beam.Issue.Comment as Comment
+import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as IssueCategory
+import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
+import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
+import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
+import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
@@ -49,14 +55,9 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge 
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
-import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
-import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as IssueOption
-import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueReport as IssueReport
-import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueTranslation as IssueTranslation
+import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
-import qualified "dynamic-offer-driver-app" Storage.Beam.MediaFile as MediaFile
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig

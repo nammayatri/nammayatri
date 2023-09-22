@@ -5,6 +5,12 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified IssueManagement.Storage.Beam.Issue.Comment as Comment
+import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as IssueCategory
+import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
+import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
+import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
+import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
@@ -23,6 +29,7 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import "rider-app" Storage.Beam.IssueManagement ()
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -63,6 +70,11 @@ data DeleteModel
   | FareBreakupDelete
   | GeometryDelete
   | IssueDelete
+  | CommentDelete
+  | IssueCategoryDelete
+  | IssueOptionDelete
+  | IssueReportDelete
+  | IssueTranslationDelete
   | PlaceNameCacheDelete
   | MerchantDelete
   | MerchantMessageDelete
@@ -70,6 +82,7 @@ data DeleteModel
   | MerchantServiceConfigDelete
   | MerchantServiceUsageConfigDelete
   | MerchantConfigDelete
+  | MediaFileDelete
   | OnSearchEventDelete
   | PaymentOrderDelete
   | PaymentTransactionDelete
@@ -106,6 +119,11 @@ getTagDelete ExophoneDelete = "ExophoneOptions"
 getTagDelete FareBreakupDelete = "FareBreakupOptions"
 getTagDelete GeometryDelete = "GeometryOptions"
 getTagDelete IssueDelete = "IssueOptions"
+getTagDelete CommentDelete = "CommentOptions"
+getTagDelete IssueCategoryDelete = "IssueCategoryOptions"
+getTagDelete IssueOptionDelete = "IssueOptionOptions"
+getTagDelete IssueReportDelete = "IssueReportOptions"
+getTagDelete IssueTranslationDelete = "IssueTranslationOptions"
 getTagDelete PlaceNameCacheDelete = "PlaceNameCacheOptions"
 getTagDelete MerchantDelete = "MerchantOptions"
 getTagDelete MerchantMessageDelete = "MerchantMessageOptions"
@@ -113,6 +131,7 @@ getTagDelete MerchantPaymentMethodDelete = "MerchantPaymentMethodOptions"
 getTagDelete MerchantServiceConfigDelete = "MerchantServiceConfigOptions"
 getTagDelete MerchantServiceUsageConfigDelete = "MerchantServiceUsageConfigOptions"
 getTagDelete MerchantConfigDelete = "MerchantConfigOptions"
+getTagDelete MediaFileDelete = "MediaFileOptions"
 getTagDelete OnSearchEventDelete = "OnSearchEventOptions"
 getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
 getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
@@ -148,6 +167,11 @@ parseTagDelete "ExophoneOptions" = return ExophoneDelete
 parseTagDelete "FareBreakupOptions" = return FareBreakupDelete
 parseTagDelete "GeometryOptions" = return GeometryDelete
 parseTagDelete "IssueOptions" = return IssueDelete
+parseTagDelete "CommentOptions" = return CommentDelete
+parseTagDelete "IssueCategoryOptions" = return IssueCategoryDelete
+parseTagDelete "IssueOptionOptions" = return IssueOptionDelete
+parseTagDelete "IssueReportOptions" = return IssueReportDelete
+parseTagDelete "IssueTranslationOptions" = return IssueTranslationDelete
 parseTagDelete "PlaceNameCacheOptions" = return PlaceNameCacheDelete
 parseTagDelete "MerchantOptions" = return MerchantDelete
 parseTagDelete "MerchantMessageOptions" = return MerchantMessageDelete
@@ -155,6 +179,7 @@ parseTagDelete "MerchantPaymentMethodOptions" = return MerchantPaymentMethodDele
 parseTagDelete "MerchantServiceConfigOptions" = return MerchantServiceConfigDelete
 parseTagDelete "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigDelete
 parseTagDelete "MerchantConfigOptions" = return MerchantConfigDelete
+parseTagDelete "MediaFileOptions" = return MediaFileDelete
 parseTagDelete "OnSearchEventOptions" = return OnSearchEventDelete
 parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
 parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
@@ -191,6 +216,11 @@ data DBDeleteObject
   | FareBreakupDeleteOptions DeleteModel (Where Postgres FareBreakup.FareBreakupT)
   | GeometryDeleteOptions DeleteModel (Where Postgres Geometry.GeometryT)
   | IssueDeleteOptions DeleteModel (Where Postgres Issue.IssueT)
+  | CommentDeleteOptions DeleteModel (Where Postgres Comment.CommentT)
+  | IssueCategoryDeleteOptions DeleteModel (Where Postgres IssueCategory.IssueCategoryT)
+  | IssueOptionDeleteOptions DeleteModel (Where Postgres IssueOption.IssueOptionT)
+  | IssueReportDeleteOptions DeleteModel (Where Postgres IssueReport.IssueReportT)
+  | IssueTranslationDeleteOptions DeleteModel (Where Postgres IssueTranslation.IssueTranslationT)
   | PlaceNameCacheDeleteOptions DeleteModel (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MerchantDeleteOptions DeleteModel (Where Postgres Merchant.MerchantT)
   | MerchantMessageDeleteOptions DeleteModel (Where Postgres MerchantMessage.MerchantMessageT)
@@ -198,6 +228,7 @@ data DBDeleteObject
   | MerchantServiceConfigDeleteOptions DeleteModel (Where Postgres MerchantServiceConfig.MerchantServiceConfigT)
   | MerchantServiceUsageConfigDeleteOptions DeleteModel (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
   | MerchantConfigDeleteOptions DeleteModel (Where Postgres MerchantConfig.MerchantConfigT)
+  | MediaFileDeleteOptions DeleteModel (Where Postgres MediaFile.MediaFileT)
   | OnSearchEventDeleteOptions DeleteModel (Where Postgres OnSearchEvent.OnSearchEventT)
   | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
   | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
@@ -268,6 +299,21 @@ instance FromJSON DBDeleteObject where
       IssueDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ IssueDeleteOptions deleteModel whereClause
+      CommentDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ CommentDeleteOptions deleteModel whereClause
+      IssueCategoryDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ IssueCategoryDeleteOptions deleteModel whereClause
+      IssueOptionDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ IssueOptionDeleteOptions deleteModel whereClause
+      IssueReportDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ IssueReportDeleteOptions deleteModel whereClause
+      IssueTranslationDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ IssueTranslationDeleteOptions deleteModel whereClause
       PlaceNameCacheDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PlaceNameCacheDeleteOptions deleteModel whereClause
@@ -289,6 +335,9 @@ instance FromJSON DBDeleteObject where
       MerchantConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MerchantConfigDeleteOptions deleteModel whereClause
+      MediaFileDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ MediaFileDeleteOptions deleteModel whereClause
       OnSearchEventDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ OnSearchEventDeleteOptions deleteModel whereClause

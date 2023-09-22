@@ -18,6 +18,7 @@ module Storage.Queries.Issues where
 import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import qualified IssueManagement.Common as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -102,7 +103,7 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.updatedAt = updatedAt
       }
 
-updateIssueStatus :: MonadFlow m => Text -> IssueStatus -> m ()
+updateIssueStatus :: MonadFlow m => Text -> Domain.IssueStatus -> m ()
 updateIssueStatus ticketId status = do
   now <- getCurrentTime
   updateOneWithKV

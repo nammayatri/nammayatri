@@ -96,6 +96,7 @@ library:
     - dynamic-offer-driver-app
     - rider-app
     - special-zone
+    - shared-services
 
 executables:
   provider-dashboard-exe:

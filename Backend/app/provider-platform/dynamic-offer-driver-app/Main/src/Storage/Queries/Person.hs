@@ -30,12 +30,12 @@ import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverQuote as DriverQuote
-import Domain.Types.MediaFile
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
 import qualified EulerHS.Language as L
+import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)

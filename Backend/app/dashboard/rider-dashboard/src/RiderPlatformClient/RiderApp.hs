@@ -23,7 +23,6 @@ import qualified "rider-app" API.Dashboard.RideBooking.Registration as CR
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified "rider-app" API.UI.Search as SH
 import qualified Dashboard.Common.Booking as Booking
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
@@ -48,6 +47,10 @@ import qualified "rider-app" Domain.Types.RegistrationToken as DTR
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import qualified IssueManagement.Common as DIssue
+import IssueManagement.Common.Dashboard.Issue as Issue
+import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
@@ -64,7 +67,8 @@ data AppBackendAPIs = AppBackendAPIs
     merchant :: MerchantAPIs,
     rides :: RidesAPIs,
     rideBooking :: RideBookingAPIs,
-    issues :: ListIssueAPIs
+    issues :: ListIssueAPIs,
+    issuesV2 :: IssueAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -165,7 +169,17 @@ newtype CancelBookingAPIs = CancelBookingAPIs
 
 data ListIssueAPIs = ListIssueAPIs
   { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
-    ticketStatusCallBack :: Common.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+  }
+
+data IssueAPIs = IssueAPIs
+  { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
+    issueList :: Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
+    issueInfo :: Id IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
+    issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
+    issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
+    issueFetchMedia :: Text -> Euler.EulerClient Text,
+    ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
@@ -186,6 +200,7 @@ mkAppBackendAPIs merchantId token = do
   let cancel = CancelBookingAPIs {..}
   let rideBooking = RideBookingAPIs {..}
   let issues = ListIssueAPIs {..}
+  let issuesV2 = IssueAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
@@ -193,7 +208,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> merchantClient
       :<|> ridesClient
       :<|> rideBookingClient
-      :<|> issueClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> issueClient
+      :<|> issueV2Client = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerDelete
@@ -263,6 +279,14 @@ mkAppBackendAPIs merchantId token = do
 
     listIssue
       :<|> ticketStatusCallBack = issueClient
+
+    issueCategoryList
+      :<|> issueList
+      :<|> issueInfo
+      :<|> issueUpdate
+      :<|> issueAddComment
+      :<|> issueFetchMedia
+      :<|> ticketStatusCallBack_ = issueV2Client
 
 callRiderApp ::
   forall m r b c.

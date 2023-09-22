@@ -16,8 +16,8 @@
 module Domain.Types.Message.Message where
 
 import Data.Map as HM
-import qualified Domain.Types.MediaFile as MF
 import Domain.Types.Merchant (Merchant)
+import qualified IssueManagement.Domain.Types.MediaFile as MF
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id

@@ -110,6 +110,7 @@ library:
   dependencies:
     - rider-app
     - mobility-core
+    - shared-services
 
 executables:
   rider-app-drainer-exe:
@@ -124,3 +125,4 @@ executables:
       - rider-app-drainer
       - rider-app
       - mobility-core
+      - shared-services

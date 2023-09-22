@@ -17,17 +17,9 @@ module Domain.Types.Issue where
 
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
+import IssueManagement.Common
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data IssueStatus
-  = OPEN
-  | PENDING
-  | RESOLVED
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
-
-$(mkBeamInstancesForEnum ''IssueStatus)
 
 data Issue = Issue
   { id :: Id Issue,

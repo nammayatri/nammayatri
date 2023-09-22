@@ -34,6 +34,7 @@ library
       API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
+      API.Dashboard.Issue
       API.Dashboard.IssueList
       API.Dashboard.Merchant
       API.Dashboard.Ride
@@ -66,6 +67,7 @@ library
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot
+      API.UI.Issue
       API.UI.Maps
       API.UI.Payment
       API.UI.PersonStats
@@ -116,6 +118,7 @@ library
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Issue
       Domain.Action.Dashboard.IssueList
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Ride
@@ -134,6 +137,7 @@ library
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
+      Domain.Action.UI.Issue
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.PersonStats
@@ -242,6 +246,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.IssueManagement
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Maps.PlaceNameCache
@@ -435,6 +440,7 @@ library
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , shared-services
     , special-zone
     , special-zone-a
     , template-haskell
