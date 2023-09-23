@@ -15,7 +15,8 @@
 
 module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
-
+import MerchantConfig.Types (AppConfig)
+import MerchantConfig.DefaultConfig as DC
 import Screens.Types (HomeScreenStage(..), DisabilityType(..))
 
 data Action = StartRide 
@@ -50,7 +51,8 @@ type Config = {
   waitTime :: String,
   isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
-  accessibilityTag :: Mb.Maybe DisabilityType
+  accessibilityTag :: Mb.Maybe DisabilityType,
+  appConfig :: AppConfig
   }
 
 type AddressConfig = {
@@ -82,5 +84,6 @@ config = {
   specialLocationTag : Mb.Nothing,
   isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
-  accessibilityTag : Mb.Nothing
+  accessibilityTag : Mb.Nothing,
+  appConfig : DC.config
 }

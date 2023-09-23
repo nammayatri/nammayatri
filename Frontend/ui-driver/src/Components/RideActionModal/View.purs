@@ -215,7 +215,7 @@ rideTypeView push config =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingHorizontal 16 16
-  , visibility if config.requestedVehicleVariant == Maybe.Nothing then GONE else VISIBLE
+  , visibility if config.appConfig.rideActionModelConfig.showVehicleVariant && config.requestedVehicleVariant /= Maybe.Nothing then VISIBLE else GONE
   ][ linearLayout
       [ height $ V 1
       , width MATCH_PARENT

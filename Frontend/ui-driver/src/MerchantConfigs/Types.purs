@@ -10,7 +10,8 @@ type AppConfig =
     defaultLanguage :: String,
     imageUploadOptional :: Boolean,
     leaderBoard :: LeaderBoard,
-    subscriptionConfig :: SubscriptionConfig
+    subscriptionConfig :: SubscriptionConfig,
+    rideActionModelConfig :: RideActionModelConfig 
   } 
 
 type Language =  {
@@ -28,3 +29,7 @@ type SubscriptionConfig =  {
   completePaymentPopup :: Boolean,
   onBoardingSubscription :: Boolean
  }
+
+type RideActionModelConfig = {
+  showVehicleVariant :: Boolean
+}

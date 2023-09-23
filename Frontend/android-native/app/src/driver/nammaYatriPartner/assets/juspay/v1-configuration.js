@@ -75,19 +75,18 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
-    , "navigationAppConfig" : {
-      "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
-  }
     , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "leaderBoard": {
-      "isMaskedName": true
+      "isMaskedName": false
     }
     , "subscriptionConfig" : {
       "enableBlocking" : true,
       "onBoardingSubscription" : true
-    } 
+    }
+    , "rideActionModelConfig" : {
+        "showVehicleVariant" : false
+      }
   })
 }
