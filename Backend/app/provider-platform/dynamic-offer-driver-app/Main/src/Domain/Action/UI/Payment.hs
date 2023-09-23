@@ -57,7 +57,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as DI
+import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverId)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QIN
@@ -159,7 +159,7 @@ juspayWebhookHandler merchantShortId authData value = do
 processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> Flow ()
 processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
@@ -178,12 +178,12 @@ updatePaymentStatus :: Id DP.Person -> Id DM.Merchant -> Flow ()
 updatePaymentStatus driverId merchantId = do
   dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
   let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
-  when (totalDue <= 0) $ DI.updatePendingPayment False (cast driverId)
+  when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
   case plan of
-    Nothing -> DI.updateSubscription True (cast driverId)
-    Just plan_ -> when (totalDue < plan_.maxCreditLimit) $ DI.updateSubscription True (cast driverId)
+    Nothing -> QDI.updateSubscription True (cast driverId)
+    Just plan_ -> when (totalDue < plan_.maxCreditLimit) $ QDI.updateSubscription True (cast driverId)
 
 notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
@@ -263,21 +263,24 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
   QDP.updateMandateIdByDriverId driverId mandateId
   when (mandateStatus == Payment.ACTIVE) $ do
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
+    driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      let toUpdatePayerVpa = isJust mbExistingMandate && (mbExistingMandate <&> (.status)) /= Just DM.ACTIVE --- do not update payer vpa from euler for older active mandates
+      --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
+      let toUpdatePayerVpa = checkToUpdatePayerVpa mbExistingMandate (driverInfo.autoPayStatus)
       let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
       QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
-      DI.updateSubscription True (cast driverPlan.driverId)
-      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
+      QDI.updateSubscription True (cast driverPlan.driverId)
+      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      QM.updateMandateDetails mandateId DM.INACTIVE Nothing Nothing Nothing mandatePaymentFlow --- did this because only update payer vpa on transaction charged
+      --- did this because only update payer vpa on transaction charged just capturing payer app ------
+      QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
-      DI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverPlan.driverId)
+      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverPlan.driverId)
       when (mandateStatus == Payment.PAUSED) $ do
         QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
         QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
@@ -309,3 +312,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
             endDate = fromMaybe now endDate,
             ..
           }
+    checkToUpdatePayerVpa existingMandateEntry autoPayStatus =
+      case existingMandateEntry of
+        Just mandateEntry -> mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED
+        Nothing -> True

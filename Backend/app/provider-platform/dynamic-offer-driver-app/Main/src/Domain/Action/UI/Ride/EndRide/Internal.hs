@@ -475,7 +475,7 @@ getDriverFeeCalcJobFlagKey startTime endTime merchantId = Hedis.get (mkDriverFee
 setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> NominalDiffTime -> m ()
 setDriverFeeCalcJobCache startTime endTime merchantId expTime = do
   Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantId) True (round $ expTime + 86399)
-  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantId) False (round expTime)
+  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantId) False (round $ expTime + 86399)
 
 mkDriverFeeBillNumberKey :: Id Merchant -> Text
 mkDriverFeeBillNumberKey merchantId = "DriverFeeCalulation:BillNumber:Counter" <> merchantId.getId
