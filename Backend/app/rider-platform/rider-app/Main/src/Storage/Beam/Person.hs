@@ -63,6 +63,7 @@ data PersonT f = PersonT
     createdAt :: B.C f Time.UTCTime,
     blockedAt :: B.C f (Maybe Time.LocalTime),
     blockedByRuleId :: B.C f (Maybe Text),
+    aadhaarVerified :: B.C f Bool,
     updatedAt :: B.C f Time.UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),

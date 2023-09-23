@@ -23,6 +23,7 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.External.AadhaarVerification
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types (NotificationService)
@@ -45,6 +46,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getTripRoutes :: B.C f MapsService,
     getPlaceDetails :: B.C f MapsService,
     autoComplete :: B.C f MapsService,
+    aadhaarVerificationService :: B.C f AadhaarVerificationService,
     getDistancesForCancelRide :: B.C f MapsService,
     notifyPerson :: B.C f NotificationService,
     useFraudDetection :: B.C f Bool,

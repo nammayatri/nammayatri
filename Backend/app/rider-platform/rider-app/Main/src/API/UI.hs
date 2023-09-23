@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
@@ -85,6 +86,7 @@ type API =
            :<|> PersonStats.API
            :<|> HotSpot.API
            :<|> Disability.API
+           :<|> AadhaarVerification.API
        )
 
 handler :: FlowServer API
@@ -120,3 +122,4 @@ handler =
     :<|> PersonStats.handler
     :<|> HotSpot.handler
     :<|> Disability.handler
+    :<|> AadhaarVerification.handler

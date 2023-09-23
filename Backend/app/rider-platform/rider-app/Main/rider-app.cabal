@@ -53,6 +53,7 @@ library
       API.MetroBeckn
       API.MetroBeckn.OnSearch
       API.UI
+      API.UI.AadhaarVerification
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
@@ -120,6 +121,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
       Domain.Action.Internal.Rating
+      Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
@@ -151,6 +153,8 @@ library
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
+      Domain.Types.AadhaarVerification.AadhaarOtp
+      Domain.Types.AadhaarVerification.AadhaarVerification
       Domain.Types.AppInstalls
       Domain.Types.BlackListOrg
       Domain.Types.Booking
@@ -214,6 +218,9 @@ library
       SharedLogic.MetroOffer
       SharedLogic.Person
       SharedLogic.PublicTransport
+      Storage.Beam.AadhaarVerification.AadhaarOtpReq
+      Storage.Beam.AadhaarVerification.AadhaarOtpVerify
+      Storage.Beam.AadhaarVerification.AadhaarVerification
       Storage.Beam.AppInstalls
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
@@ -278,6 +285,8 @@ library
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
+      Storage.Queries.AadhaarVerification.AadhaarOtp
+      Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
@@ -322,6 +331,7 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
+      Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call
@@ -390,6 +400,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , beckn-spec
     , bytestring
     , casing

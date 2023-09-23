@@ -57,7 +57,9 @@ data MerchantD (s :: UsageSafety) = Merchant
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     timeDiffFromUtc :: Seconds,
-    isAvoidToll :: Bool
+    isAvoidToll :: Bool,
+    aadhaarVerificationTryLimit :: Int,
+    aadhaarKeyExpiryTime :: Seconds
   }
   deriving (Generic, Show)
 

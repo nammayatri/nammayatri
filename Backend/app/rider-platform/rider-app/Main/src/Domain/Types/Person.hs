@@ -111,6 +111,7 @@ data PersonE e = Person
     hasDisability :: Maybe Bool,
     blockedAt :: Maybe UTCTime,
     blockedByRuleId :: Maybe (Id DMC.MerchantConfig),
+    aadhaarVerified :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
