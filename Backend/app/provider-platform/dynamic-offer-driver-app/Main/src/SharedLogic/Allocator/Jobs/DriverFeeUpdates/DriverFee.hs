@@ -100,6 +100,7 @@ calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    MonadFlow m,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
@@ -153,8 +154,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
             maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
+          let paymentMode = maybe MANUAL (.planType) mbDriverPlan
           unless (totalFee == 0) $ do
-            driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now
+            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now
             updatePendingPayment True (cast driverFee.driverId)
 
           -- blocking
@@ -163,23 +165,12 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               due = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if due + totalFee >= plan.maxCreditLimit
             then do
-              updateStatus PAYMENT_OVERDUE driverFee.id now
+              mapM_ (\feeId -> updateStatus PAYMENT_OVERDUE feeId now) driverFeeIds
               updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
               updateSubscription False (cast driverFee.driverId)
               QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
             else do
-              unless (totalFee == 0) $ do
-                let paymentMode = maybe MANUAL (.planType) mbDriverPlan
-                case paymentMode of
-                  MANUAL -> do
-                    updateStatus PAYMENT_OVERDUE driverFee.id now
-                    updateFeeType RECURRING_INVOICE now driverFee.id
-                  AUTOPAY -> do
-                    updateStatus PAYMENT_PENDING driverFee.id now
-                    updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
-                    invoice <- mkInvoiceAgainstDriverFee driverFee
-                    QINV.create invoice
-                    QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+              unless (totalFee == 0) $ processDriverFee paymentMode driverFee
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
@@ -204,16 +195,33 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           paymentMode = show $ plan.paymentMode
         }
 
-buildRestFees :: MonadGuid m => FeeType -> DriverFee -> m DriverFee
-buildRestFees feeType_ DriverFee {..} = do
+processDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
+processDriverFee paymentMode driverFee = do
+  now <- getCurrentTime
+  case paymentMode of
+    MANUAL -> do
+      updateStatus PAYMENT_OVERDUE driverFee.id now
+      updateFeeType RECURRING_INVOICE now driverFee.id
+    AUTOPAY -> do
+      updateStatus PAYMENT_PENDING driverFee.id now
+      updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
+      invoice <- mkInvoiceAgainstDriverFee driverFee
+      QINV.create invoice
+      QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+
+processRestFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> FeeType -> DriverFee -> m ()
+processRestFee paymentMode feeType_ DriverFee {..} = do
   id_ <- generateGUID
-  return
-    DriverFee
-      { id = id_,
-        status = ONGOING,
-        feeType = feeType_,
-        ..
-      }
+  let driverFee =
+        DriverFee
+          { id = id_,
+            status = ONGOING,
+            feeType = feeType_,
+            ..
+          }
+  QDF.create driverFee
+  processDriverFee paymentMode driverFee
+  updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
 calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 calculatePlatformFeeAttr totalFee plan = do
@@ -280,8 +288,8 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
-driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now = do
+driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
+driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
   let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee (roundToHalf <$> (mandate <&> (.maxAmount)))
   case plan.paymentMode of
@@ -290,15 +298,13 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now = do
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
-          updRestFees <- mapM (buildRestFees RECURRING_INVOICE) restFees
-          createMany updRestFees
+          mapM_ (processRestFee paymentMode RECURRING_INVOICE) restFees
     AUTOPAY -> do
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
           resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
-          updRestFees <- mapM (buildRestFees RECURRING_EXECUTION_INVOICE) restFees
-          createMany updRestFees
+          mapM_ (processRestFee paymentMode RECURRING_EXECUTION_INVOICE) restFees
 
 unsubscribeDriverForPaymentOverdue ::
   ( CacheFlow m r,
