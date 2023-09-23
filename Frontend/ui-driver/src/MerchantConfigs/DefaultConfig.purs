@@ -23,5 +23,8 @@ config =
     enableBlocking : false,
     completePaymentPopup : false,
     onBoardingSubscription : false
+  },
+  rideActionModelConfig : {
+    showVehicleVariant : true
   }
   }

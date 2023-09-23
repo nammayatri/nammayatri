@@ -51,5 +51,8 @@ commonConfig =
             , packageName : "com.google.android.apps.maps"
             , walkQuery : "google.navigation:q=%f,%f&mode=w"
             }
-          } 
+          }
+        , rideActionModelConfig : {
+            showVehicleVariant : true
+          }
         }

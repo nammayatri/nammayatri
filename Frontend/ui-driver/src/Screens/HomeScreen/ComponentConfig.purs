@@ -82,7 +82,8 @@ rideActionModalConfig state = let
     waitTime = state.data.activeRide.waitingTime,
     isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
-    accessibilityTag = state.data.activeRide.disabilityTag
+    accessibilityTag = state.data.activeRide.disabilityTag,
+    appConfig = state.data.config
   }
   in rideActionModalConfig'
 

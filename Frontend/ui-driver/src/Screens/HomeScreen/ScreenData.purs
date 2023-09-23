@@ -21,10 +21,12 @@ import Services.API(Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
+import MerchantConfig.DefaultConfig as DC
 
 initData :: HomeScreenState
 initData = {
     data: {
+        config : DC.config,
         driverName : "",
         vehicleType : "",
         driverAlternateMobile : Nothing,
