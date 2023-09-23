@@ -885,4 +885,14 @@ const englishStrings = {
   OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
   OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
-} 
+  OR : "OR",
+  COLLECT_CASH_DIRECTLY : "Collect cash directly ",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "To accept payments directly to your bank account, setup  Autopay on your Plan",
+  DOWNLOAD_QR : "Download QR",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "You can use this QR Code to collect payment after the ride ends.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "The amount will be deposited into the bank account that you are using for UPI Autopay",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Get direct payment to your bank account",
+  PAYMENT : "Payment",
+  QR_CODE : "QR Code",
+  GET_QR_CODE : "Get QR Code"
+}

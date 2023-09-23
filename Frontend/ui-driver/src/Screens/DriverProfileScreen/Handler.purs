@@ -86,6 +86,7 @@ driverProfileScreen = do
     DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
     CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
     AddingRC state -> App.BackT $ App.NoBack <$> pure (ADD_RC state)
+    SubscriptionScreen -> App.BackT $ App.NoBack <$> pure (SUBCRIPTION )
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)

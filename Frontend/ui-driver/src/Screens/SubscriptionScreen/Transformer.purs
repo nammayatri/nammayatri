@@ -129,25 +129,6 @@ getAutoPayDetailsList (MandateData mandateDetails) =
         {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}
     ]
 
-getPspIcon :: String -> String 
-getPspIcon vpa = do
-    let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
-    case handleName of 
-        Nothing -> "ny_ic_defaultpg,"
-        Just handle -> case handle of
-            "ybl" -> "ny_ic_phonepe,"
-            "ibl" -> "ny_ic_phonepe,"
-            "axl" -> "ny_ic_phonepe,"
-            "okhdfcbank" -> "ny_ic_gpay,"
-            "okicici" -> "ny_ic_gpay,"
-            "oksbi" -> "ny_ic_gpay,"
-            "okaxis" -> "ny_ic_gpay,"
-            "paytm" -> "ny_ic_paytm,"
-            "apl" -> "ny_ic_amazonpay,"
-            "yapl" -> "ny_ic_amazonpay,"
-            "indus" -> "ny_ic_induspay,"
-            "upi" -> "ny_ic_bhim,"
-            _ -> "ny_ic_defaultpg,"
 
 getFrequencyText :: String -> String
 getFrequencyText constructor = 

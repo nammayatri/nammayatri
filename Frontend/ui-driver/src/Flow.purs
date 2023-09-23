@@ -107,6 +107,7 @@ import Constants as Constants
 import Data.Function.Uncurried (runFn1)
 import Helpers.FileProvider.Utils (stringifyJSON)
 
+import Screens.SubscriptionScreen.Controller
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
@@ -931,6 +932,7 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
+    SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
@@ -1940,7 +1942,10 @@ homeScreenFlow = do
               status = response.status,
               rider = (fromMaybe "" response.riderName)
             }})
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag}}})
+          let autoPayStatus =  getAutopayStatus response.autoPayStatus
+              payerVpa = fromMaybe "" response.payerVpa
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag,
+          hasActiveAutoPay = autoPayStatus == ACTIVE_AUTOPAY, payerVpa = payerVpa }}})
         
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted

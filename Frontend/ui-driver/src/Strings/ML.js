@@ -825,4 +825,14 @@ const mlStrings = {
   OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
   OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
+  OR : "അല്ലെങ്കിൽ",
+  COLLECT_CASH_DIRECTLY : "നേരിട്ട് പണം സ്വികരിക്കുക",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് നേരിട്ട് പേയ്‌മെന്റുകൾ സ്വീകരിക്കുന്നതിന്, നിങ്ങളുടെ പ്ലാനിൽ ഓട്ടോപേ സജ്ജീകരിക്കുക",
+  DOWNLOAD_QR : "QR ഡൗൺലോഡ് ചെയ്യുക",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "റൈഡ് അവസാനിച്ചതിന് ശേഷം പേയ്‌മെന്റ് സ്വീകരിക്കാൻ നിങ്ങൾക്ക് ഈ QR കോഡ് ഉപയോഗിക്കാം.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "യുപിഐ ഓട്ടോപേയ്‌ക്കായി നിങ്ങൾ ഉപയോഗിക്കുന്ന ബാങ്ക് അക്കൗണ്ടിലേക്ക് തുക നിക്ഷേപിക്കപെടും",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് നേരിട്ട് പണം സ്വികരിക്കു",
+  PAYMENT : "പേയ്മെന്റ്",
+  QR_CODE : "QR കോഡ്",
+  GET_QR_CODE : "QR കോഡ് നേടുക"
 }
