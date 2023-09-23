@@ -762,7 +762,8 @@ type HomeScreenData =  {
   logField :: Object Foreign,
   paymentState :: PaymentState,
   profileImg :: Maybe String, 
-  endRideData :: EndRideData
+  endRideData :: EndRideData,
+  config :: AppConfig
  }
 
 type EndRideData = {
