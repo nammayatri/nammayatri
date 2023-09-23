@@ -23,7 +23,7 @@ getPaymentHistoryItem (PaymentDetailsEntity item) =
             EXEMPTED -> Success
             COLLECTED_CASH -> Success
             _ -> Pending
-      , id: item.driverFeeId
+      , id: item.invoiceId
       , paymentBreakUp:
           ( \(PaymentBreakUp charge) ->
               { description: charge.component

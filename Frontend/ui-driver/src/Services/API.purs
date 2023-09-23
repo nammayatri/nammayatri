@@ -2113,7 +2113,7 @@ newtype PaymentDetailsEntity = PaymentDetailsEntity {
   , charges :: Int
   , chargesBreakup :: Array PaymentBreakUp
   , txnInfo :: Array TxnInfo
-  , driverFeeId :: String
+  , invoiceId :: String
   , status :: DriverFeeStatus
 }
 

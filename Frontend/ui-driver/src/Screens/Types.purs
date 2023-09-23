@@ -786,7 +786,7 @@ type PaymentState = {
   showRateCard :: Boolean,
   paymentStatusBanner :: Boolean,
   paymentStatus :: Common.PaymentStatus,
-  driverFeeId :: String,
+  invoiceId :: String,
   bannerBG :: String,
   bannerTitle :: String,
   bannerTitleColor :: String,
@@ -797,8 +797,7 @@ type PaymentState = {
   chargesBreakup :: Array PaymentBreakUp,
   blockedDueToPayment :: Boolean,
   dateObj :: String,
-  laterButtonVisibility :: Boolean,
-  orderId :: String
+  laterButtonVisibility :: Boolean
 }
 
 type CancelRidePopUpData = {

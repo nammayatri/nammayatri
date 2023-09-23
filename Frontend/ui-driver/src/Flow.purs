@@ -1667,7 +1667,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
               totalMoneyCollected = paymentDetailsEntity.totalEarnings,
               payableAndGST = paymentDetailsEntity.charges,
               date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
-              driverFeeId = paymentDetailsEntity.driverFeeId,
+              invoiceId = paymentDetailsEntity.invoiceId,
               chargesBreakup = paymentDetailsEntity.chargesBreakup,
               dateObj = paymentDetailsEntity.date,
               laterButtonVisibility = getDriverInfoResp.subscribed
@@ -1684,7 +1684,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
                       totalMoneyCollected = paymentDetailsEntity.totalEarnings,
                       payableAndGST = paymentDetailsEntity.charges,
                       date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
-                      driverFeeId = paymentDetailsEntity.driverFeeId,
+                      invoiceId = paymentDetailsEntity.invoiceId,
                       chargesBreakup = paymentDetailsEntity.chargesBreakup,
                       dateObj = paymentDetailsEntity.date,
                       laterButtonVisibility = getDriverInfoResp.subscribed
@@ -2125,7 +2125,7 @@ ysPaymentFlow = do
   liftFlowBT $ runEffectFn1 initiatePP unit
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
-  response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.driverFeeId
+  response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.invoiceId
   case response of
     Right (CreateOrderRes listResp) -> do
       let (PaymentPagePayload sdk_payload) = listResp.sdk_payload
@@ -2136,9 +2136,7 @@ ysPaymentFlow = do
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
       if paymentPageOutput == "backpressed" then homeScreenFlow else pure unit-- backpressed FAIL
-      let orderId = fromMaybe "" $ (sdk_payload.payload)^._orderId
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { paymentState{orderId = orderId } }})
-      orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
+      orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.invoiceId
       case orderStatus of
         Right (OrderStatusRes resp) ->
           case resp.status of

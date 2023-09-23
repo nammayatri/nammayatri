@@ -91,7 +91,7 @@ initData = {
           showRateCard : false,
           paymentStatusBanner : false,
           paymentStatus : Common.Success,
-          driverFeeId : "",
+          invoiceId : "",
           bannerBG : "",
           bannerTitle : "",
           bannerTitleColor : "",
@@ -101,8 +101,7 @@ initData = {
           showBannerImage : false,
           chargesBreakup : [],
           blockedDueToPayment : false,
-          laterButtonVisibility : false,
-          orderId : ""
+          laterButtonVisibility : false
         },
         profileImg : Nothing,
         endRideData : {
