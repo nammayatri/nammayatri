@@ -288,14 +288,14 @@ driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now = do
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
-          updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
+          resetFee firstFee.id (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now
           updRestFees <- mapM (buildRestFees RECURRING_INVOICE) restFees
           createMany updRestFees
     AUTOPAY -> do
       case splittedFees of
         [] -> throwError (InternalError "No driver fee entity with non zero total fee")
         (firstFee : restFees) -> do
-          updateFee firstFee.id 0 (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now False
+          resetFee firstFee.id (firstFee.govtCharges - driverFee.govtCharges) (firstFee.platformFee.fee - driverFee.platformFee.fee) (firstFee.platformFee.cgst - driverFee.platformFee.cgst) (firstFee.platformFee.sgst - driverFee.platformFee.sgst) now
           updRestFees <- mapM (buildRestFees RECURRING_EXECUTION_INVOICE) restFees
           createMany updRestFees
 
