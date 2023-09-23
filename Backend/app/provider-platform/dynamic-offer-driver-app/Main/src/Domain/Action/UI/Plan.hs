@@ -168,7 +168,7 @@ planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow Pla
 planList (driverId, merchantId) _mbLimit _mbOffset = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
-  plans <- QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
+  plans <- QPD.findByMerchantIdAndPaymentMode merchantId (maybe AUTOPAY (.planType) mDriverPlan)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
@@ -192,7 +192,7 @@ currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
-  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId AUTOPAY) mDriverPlan
+  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (maybe AUTOPAY (.planType) mDriverPlan)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
 
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId

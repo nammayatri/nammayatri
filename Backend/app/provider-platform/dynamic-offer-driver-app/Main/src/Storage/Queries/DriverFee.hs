@@ -146,7 +146,8 @@ findFeeInRangeAndDriverId startTime endTime driverId = do
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
           Se.Is BeamDF.platformFee $ Se.GreaterThanOrEq 1.0,
-          Se.Is BeamDF.driverId $ Se.Eq (getId driverId)
+          Se.Is BeamDF.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION)
         ]
     ]
 
@@ -291,6 +292,17 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = d
         ]
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
+
+resetFee :: MonadFlow m => Id DriverFee -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
+resetFee driverFeeId govtCharges platformFee cgst sgst now = do
+  updateOneWithKV
+    [ Se.Set BeamDF.govtCharges govtCharges,
+      Se.Set BeamDF.platformFee platformFee,
+      Se.Set BeamDF.cgst cgst,
+      Se.Set BeamDF.sgst sgst,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
 
 updateOfferId :: MonadFlow m => Maybe Text -> Id DriverFee -> UTCTime -> m ()
 updateOfferId offerId driverFeeId now = do

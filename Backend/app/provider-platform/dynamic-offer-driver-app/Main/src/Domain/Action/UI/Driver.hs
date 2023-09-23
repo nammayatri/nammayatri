@@ -1726,7 +1726,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
       return $
         Just
           ManualInvoiceHistory
-            { invoiceId = manualInvoice.id.getId,
+            { invoiceId = manualInvoice.invoiceShortId,
               rideDays = length allDriverFeeForInvoice,
               amount,
               createdAt = manualInvoice.createdAt,
@@ -1745,7 +1745,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
       return $
         Just
           AutoPayInvoiceHistory
-            { invoiceId = autoInvoice.id.getId,
+            { invoiceId = autoInvoice.invoiceShortId,
               amount = sum $ mapToAmount [dfee],
               executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
               autoPayStage = dfee.autopayPaymentStage,
