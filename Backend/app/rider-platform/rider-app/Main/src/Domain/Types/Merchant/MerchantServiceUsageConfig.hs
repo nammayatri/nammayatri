@@ -16,6 +16,7 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Kernel.External.AadhaarVerification
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types
@@ -37,6 +38,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getTripRoutes :: MapsService,
     getPlaceDetails :: MapsService,
     autoComplete :: MapsService,
+    aadhaarVerificationService :: AadhaarVerificationService,
     getDistancesForCancelRide :: MapsService,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],

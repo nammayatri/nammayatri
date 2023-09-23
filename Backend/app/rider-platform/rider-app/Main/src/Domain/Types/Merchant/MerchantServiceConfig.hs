@@ -19,6 +19,8 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import qualified Kernel.External.AadhaarVerification as AadhaarVerification
+import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
@@ -39,6 +41,7 @@ data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
   | WhatsappService Whatsapp.WhatsappService
+  | AadhaarVerificationService AadhaarVerification.AadhaarVerificationService
   | CallService Call.CallService
   | NotificationService Notification.NotificationService
   | PaymentService Payment.PaymentService
@@ -52,6 +55,7 @@ instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s
   show (SmsService s) = "Sms_" <> show s
   show (WhatsappService s) = "Whatsapp_" <> show s
+  show (AadhaarVerificationService s) = "AadhaarVerification_" <> show s
   show (CallService s) = "Call_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (PaymentService s) = "Payment_" <> show s
@@ -72,6 +76,10 @@ instance Read ServiceName where
                ]
             ++ [ (WhatsappService v1, r2)
                  | r1 <- stripPrefix "Whatsapp_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (AadhaarVerificationService v1, r2)
+                 | r1 <- stripPrefix "AadhaarVerification_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (CallService v1, r2)
@@ -99,6 +107,7 @@ data ServiceConfigD (s :: UsageSafety)
   = MapsServiceConfig !MapsServiceConfig
   | SmsServiceConfig !SmsServiceConfig
   | WhatsappServiceConfig !WhatsappServiceConfig
+  | AadhaarVerificationServiceConfig !AadhaarVerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
@@ -137,6 +146,8 @@ getServiceName msc = case msc.serviceConfig of
     Sms.GupShupConfig _ -> SmsService Sms.GupShup
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
+  AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
+    AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
   NotificationServiceConfig notificationCfg -> case notificationCfg of

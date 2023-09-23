@@ -287,6 +287,15 @@ fetchRidesCount personId = do
               B.all_ (BeamCommon.booking BeamCommon.atlasDB)
   pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
 
+updateAadhaarVerifiedState :: MonadFlow m => Id Person -> Bool -> m ()
+updateAadhaarVerifiedState (Id personId) isVerified = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.aadhaarVerified isVerified,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
@@ -343,6 +352,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.hasDisability = hasDisability,
         BeamP.blockedAt = T.utcToLocalTime T.utc <$> blockedAt,
         BeamP.blockedByRuleId = getId <$> blockedByRuleId,
+        BeamP.aadhaarVerified = aadhaarVerified,
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,
         BeamP.bundleVersion = versionToText <$> bundleVersion,

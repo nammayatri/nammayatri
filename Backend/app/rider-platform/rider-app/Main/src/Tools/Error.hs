@@ -144,3 +144,36 @@ instance IsHTTPError DisabilityError where
     DisabilityDoesNotExist _ -> E400
 
 instance IsAPIError DisabilityError
+
+data AadhaarError
+  = AadhaarAlreadyVerified
+  | TransactionIdNotFound
+  | AadhaarAlreadyLinked
+  | AadhaarDataAlreadyPresent
+  | GenerateAadhaarOtpExceedLimit Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AadhaarError
+
+instance IsBaseError AadhaarError where
+  toMessage AadhaarAlreadyVerified = Just " aadhaar is already verified."
+  toMessage TransactionIdNotFound = Just " transaction id not found for this verification"
+  toMessage AadhaarAlreadyLinked = Just "aadhaar number is already linked"
+  toMessage AadhaarDataAlreadyPresent = Just "aadhaar data is already present for this person"
+  toMessage (GenerateAadhaarOtpExceedLimit id_) = Just $ "Generate Aadhaar otp  try limit exceeded for person \"" <> id_ <> "\"."
+
+instance IsHTTPError AadhaarError where
+  toErrorCode = \case
+    AadhaarAlreadyVerified -> "AADHAAR_ALREADY_VERIFIED"
+    TransactionIdNotFound -> "TRANSACTION_ID_NOT_FOUND"
+    AadhaarAlreadyLinked -> "AADHAAR_ALREADY_LINKED"
+    AadhaarDataAlreadyPresent -> "AADHAAR_DATA_ALREADY_PRESENT"
+    GenerateAadhaarOtpExceedLimit _ -> "GENERATE_AADHAAR_OTP_EXCEED_LIMIT"
+  toHttpCode = \case
+    AadhaarAlreadyVerified -> E400
+    TransactionIdNotFound -> E400
+    AadhaarAlreadyLinked -> E400
+    AadhaarDataAlreadyPresent -> E400
+    GenerateAadhaarOtpExceedLimit _ -> E429
+
+instance IsAPIError AadhaarError

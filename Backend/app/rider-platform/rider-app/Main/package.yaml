@@ -122,6 +122,7 @@ library:
     - special-zone
     - payment
     - sessionizer-metrics
+    - beckn-services
 executables:
   rider-app-exe:
     main: Main.hs

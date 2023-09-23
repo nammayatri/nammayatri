@@ -73,7 +73,9 @@ data MerchantT f = MerchantT
     createdAt :: B.C f Time.UTCTime,
     timeDiffFromUtc :: B.C f Seconds,
     dirCacheSlot :: B.C f [Domain.Slot],
-    isAvoidToll :: B.C f Bool
+    isAvoidToll :: B.C f Bool,
+    aadhaarVerificationTryLimit :: B.C f Int,
+    aadhaarKeyExpiryTime :: B.C f Seconds
   }
   deriving (Generic, B.Beamable)
 

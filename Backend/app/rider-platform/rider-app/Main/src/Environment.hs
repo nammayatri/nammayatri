@@ -26,6 +26,7 @@ module Environment
   )
 where
 
+import AWS.S3
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
@@ -90,6 +91,8 @@ data AppCfg = AppCfg
     searchRateLimitOptions :: APIRateLimitOptions,
     slackCfg :: SlackConfig,
     searchLimitExceedNotificationTemplate :: Text,
+    s3Config :: S3Config,
+    s3PublicConfig :: S3Config,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -137,6 +140,10 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
+    s3Config :: S3Config,
+    s3PublicConfig :: S3Config,
+    s3Env :: S3Env Flow,
+    s3EnvPublic :: S3Env Flow,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     nwAddress :: BaseUrl,
@@ -173,7 +180,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
@@ -196,6 +203,8 @@ buildAppEnv AppCfg {..} = do
     if cutOffNonCriticalHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
+  let s3Env = buildS3Env cfg.s3Config
+      s3EnvPublic = buildS3Env cfg.s3PublicConfig
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

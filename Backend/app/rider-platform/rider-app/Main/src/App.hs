@@ -23,6 +23,7 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Exit
+import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -82,10 +83,12 @@ runRiderApp' appCfg = do
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
         flowRt' <-
-          modFlowRtWithAuthManagers
+          addAuthManagersToFlowRt
             flowRt
-            appEnv
-            allSubscriberIds
+            $ catMaybes
+              [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
+                Just (Just 150000, prepareGridlineHttpManager 150000)
+              ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

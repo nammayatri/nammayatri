@@ -320,6 +320,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         updatedAt = now,
         blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,
         blockedByRuleId = if useFraudDetection then personWithSameDeviceToken >>= (.blockedByRuleId) else Nothing,
+        aadhaarVerified = False,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing
