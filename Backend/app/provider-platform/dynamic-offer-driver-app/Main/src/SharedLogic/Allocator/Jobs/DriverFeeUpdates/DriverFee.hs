@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import SharedLogic.DriverFee (roundToHalf)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee as QDF
@@ -282,7 +283,7 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
 driverFeeSplitter :: (MonadFlow m) => Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
 driverFeeSplitter plan feeWithoutDiscount totalFee driverFee mandateId now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
-  let splittedFees = splitPlatformFee feeWithoutDiscount totalFee plan driverFee (mandate <&> (.maxAmount))
+  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee (roundToHalf <$> (mandate <&> (.maxAmount)))
   case plan.paymentMode of
     MANUAL -> do
       case splittedFees of
