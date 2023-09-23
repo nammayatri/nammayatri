@@ -350,7 +350,7 @@ updateToManualFeeByDriverFeeIds driverFeeIds = do
       Se.Set BeamDF.updatedAt now
     ]
     [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverFeeIds),
+        [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
           Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING,
           Se.Is BeamDF.feeType $ Se.Eq Domain.RECURRING_EXECUTION_INVOICE
         ]
