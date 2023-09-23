@@ -8,7 +8,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import PrestoDOM.Types.Core (class Loggable)
 import Services.API (UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalStore)
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Debug(spy)
 import Components.PrimaryButton as PrimaryButton

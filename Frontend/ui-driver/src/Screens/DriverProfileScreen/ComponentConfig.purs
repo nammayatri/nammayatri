@@ -48,6 +48,7 @@ import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod)
 import MerchantConfig.Utils (getValueFromConfig)
+import Font.Style (Style(..))
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -163,6 +164,44 @@ updateButtonConfig state = let
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.5
       , id = "DriverProfileScreenUpdatePrimaryButton"
+      }
+  in primaryButtonConfig'
+
+downloadQRConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+downloadQRConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = getString DOWNLOAD_QR
+      , color = Color.primaryButtonColor}
+      , margin = MarginHorizontal 10 10
+      , cornerRadius = 10.0
+      , background = Color.black900
+      , height = (V 48)
+      , id = "downloadQRPrimaryButton"
+      }
+  in primaryButtonConfig'
+
+
+shareOptionButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+shareOptionButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = getString SHARE_OPTIONS
+      , color = Color.black900
+      , textStyle = Tags}
+      , isPrefixImage = true
+      , prefixImageConfig {
+          imageUrl = "ny_ic_share,https://assets.juspay.in/nammayatri/images/driver/ny_ic_share.png"
+        , margin = MarginRight 8
+        , padding = PaddingTop 4
+      }
+      , margin = MarginHorizontal 10 10
+      , cornerRadius = 10.0
+      , background = Color.white900
+      , height = (V 48)
+      , id = "shareOptionPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -312,6 +351,34 @@ activateAndDeactivateRcPopUpConfig push state =
           , color = Color.black650
           , margin = (MarginBottom 16)
           }
+        }
+  in
+    popUpConfig'
+
+paymentInfoPopUpConfig :: forall w. (Action -> Effect Unit) ->  ST.DriverProfileScreenState -> PopUpModal.Config
+paymentInfoPopUpConfig push state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { 
+         buttonLayoutMargin = Margin 16 24 16 20 ,
+         padding = PaddingTop 24,
+         backgroundClickable = true,
+         dismissPopup = true,
+         primaryText {
+          visibility = GONE },
+         secondaryText {
+            visibility = GONE },
+         option1 {
+           text = getString GOT_IT
+         , background = Color.black900
+         , color = Color.yellow900
+         },
+         option2 {
+           visibility = false
+         },
+        listViewArray = [getString USE_THIS_QR_TO_COLLECT_PAYMENT , getString AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT ]
         }
   in
     popUpConfig'

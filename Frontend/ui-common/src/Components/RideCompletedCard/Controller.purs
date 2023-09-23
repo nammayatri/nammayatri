@@ -20,6 +20,7 @@ data Action = Support
             | IssueReportPopUpAC SL.Action
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
+            | UpiQrRendered String
             
 type Config = {
   topCard :: TopCard,
@@ -28,9 +29,13 @@ type Config = {
   driverBottomCard :: DriverBottomCard,
   contactSupportPopUpConfig :: PopUpModal.Config,
   badgeCard :: BadgeCard,
+  driverUpiQrCard :: DriverUpiQrCard,
   showContackSupportPopUp :: Boolean,
   primaryButtonConfig :: PB.Config,
-  accessibility :: Accessiblity
+  accessibility :: Accessiblity,
+  qrVisibility :: Boolean,
+  payerVpa :: String,
+  noVpaVisibility :: Boolean
 }
 
 config :: Config 
@@ -96,10 +101,18 @@ config = {
     imageWidth : V 0, 
     imageHeight : V 0
   },
+  driverUpiQrCard : {
+    text : "Get direct payment to your bank account",
+    id : "",
+    vpa : ""
+  },
   contactSupportPopUpConfig : PopUpModal.config,
   showContackSupportPopUp : false,
   primaryButtonConfig : PB.config,
-  accessibility : ENABLE
+  accessibility : ENABLE,
+  qrVisibility : false ,
+  payerVpa : "",
+  noVpaVisibility : false
 }
 
 type CustomerIssueCard = {
@@ -168,6 +181,12 @@ type BadgeCard = {
   image :: String,
   imageWidth :: Length, 
   imageHeight :: Length
+}
+
+type DriverUpiQrCard = {
+  text :: String,
+  id :: String,
+  vpa :: String
 }
 
 type TopPill = {

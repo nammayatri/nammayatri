@@ -113,7 +113,9 @@ initData = {
           riderName : "",
           rating : 0,
           feedback : "",
-          disability : Nothing
+          disability : Nothing,
+          hasActiveAutoPay : false,
+          payerVpa : ""
         }
     },
     props: {
@@ -135,7 +137,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : true,
-        currentStage : HomeScreen,
+        currentStage : RideCompleted,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,

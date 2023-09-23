@@ -2,7 +2,7 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint,afterRender)
 import PrestoDOM.Animation as PrestoAnim
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
@@ -10,7 +10,7 @@ import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink)
 import Data.Array (mapWithIndex, length, (!!), null)
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
 import Language.Types (STR(..))
 import Common.Types.App (LazyCheck(..))
@@ -18,6 +18,8 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
+import Resource.Constants as Const
+import Language.Strings (getString)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -40,7 +42,7 @@ topCardView :: forall w. Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect
 topCardView config push =
   linearLayout
   [ width MATCH_PARENT
-  , height $ V ((screenHeight unit)/ 2)
+  , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ Padding 16 16 16 16
   , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
@@ -66,6 +68,7 @@ topCardView config push =
       , weight 1.0
       , orientation VERTICAL
       , gravity CENTER
+      , padding $ PaddingVertical 30 26
       ][  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -133,12 +136,17 @@ bottomCardView config push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 16 16 16 16
-  , background Color.white900
+  , background Color.grey900
+  , gravity CENTER
   , weight 1.0
   ][  if config.customerIssueCard.issueFaced then customerIssueView config push
         else if config.customerBottomCard.visible then customerBottomCardView config push
-          else if config.badgeCard.visible then badgeCardView config push 
-            else if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView 
+          else dummyTextView
+          -- else if config.badgeCard.visible then badgeCardView config push -- Removed temporarily till endride screen redesigned
+            -- else if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView  -- Removed temporarily till endride screen redesigned
+    -- , if config.qrVisibility then driverUpiQrCodeView config push else dummyTextView
+    -- , if config.noVpaVisibility then noVpaView config push else dummyTextView
+    -- , if (config.payerVpa /= "" || config.qrVisibility || config.noVpaVisibility) then collectCashView config push else dummyTextView
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -436,6 +444,114 @@ badgeCardView config push =
     , margin $ MarginBottom 24
     ] <> FontStyle.body4 TypoGraphy
   ]
+
+driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+driverUpiQrCodeView config push = 
+  linearLayout 
+    [
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , orientation VERTICAL
+    , cornerRadius 16.0
+    , gravity CENTER
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginBottom 26
+    ][
+      textView $
+      [
+        text config.driverUpiQrCard.text
+      ] <> FontStyle.subHeading1 TypoGraphy
+      , imageView [
+          height $ V 165
+        , width $ V 165
+        , margin $ MarginVertical 8 13
+        , id $ getNewIDWithTag config.driverUpiQrCard.id
+        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
+      ]
+      , linearLayout [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , background Color.white900
+        , orientation HORIZONTAL
+        , gravity CENTER
+      ][
+        imageView [
+          width $ V 24
+        , height  $ V 24
+        , margin $ MarginRight 6
+        , imageWithFallback $ (Const.getPspIcon config.driverUpiQrCard.vpa)
+        ]
+        , textView $ [
+          text config.driverUpiQrCard.vpa
+        ] <> FontStyle.body2 TypoGraphy
+      ]
+    ]
+
+collectCashView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+collectCashView config push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    ][
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        ][
+          linearLayout
+          [ height $ V 1
+          , width $ V ((screenWidth unit)/ 3)
+          , background Color.black500
+          , alpha 0.4
+          ][]
+        , textView
+        [ text $ getString OR
+        , fontStyle $ FontStyle.regular LanguageStyle
+        , margin $ MarginHorizontal 24 24
+        ]
+        , linearLayout
+        [ height $ V 1
+        , width $ V ((screenWidth unit)/ 3)
+        , background Color.black500
+        , alpha 0.4
+        ][]
+        ]
+      , textView $
+        [ text $ getString COLLECT_CASH_DIRECTLY
+        , margin $ MarginTop 10
+        ]  <> FontStyle.body5 TypoGraphy
+    ]
+
+noVpaView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+noVpaView config push = 
+   linearLayout 
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.linen
+    , stroke $ "1,#fad0b4"
+    , cornerRadius 16.0
+    , gravity CENTER
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginBottom 26
+    ][
+        imageView
+        [ height $ V 24
+        , width $ V 24
+        , margin $ MarginVertical 8 13
+        , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
+        ]
+      , textView $
+        [ text $ getString SCAN_TO_ACCEPT_DIRECTLY_TO_BANK
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ PaddingLeft 8
+        , color Color.black800
+        ] <> FontStyle.body2 TypoGraphy
+    ]
 
 topPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 topPillView config push = 

@@ -855,4 +855,14 @@ const tamilStrings = {
   OFFER_CARD_BANNER_TITLE : "செப் 30 வரை ஒரு நாளில் ₹15 மட்டும் செலுத்துங்கள்",
   OFFER_CARD_BANNER_DESC : "செப் 25க்குள் ஆட்டோபே அமைக்கப்பட்டால்",
   OFFER_CARD_BANNER_ALERT : "உங்கள் ஆக்டோபய அமைப்பு நிலுவையில் உள்ளது!",
+  OR : "அல்லது",
+  COLLECT_CASH_DIRECTLY : "நேரடியாக பணத்தை பெறுங்கள்‌",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "உங்கள் வங்கிக் பணத்தை நேரடியாக பெற, உங்கள் திட்டத்தில் UPI ஆட்டோப்பே அமைக்கவும்",
+  DOWNLOAD_QR : "QR ஐப் பதிவிறக்கு",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "சவாரி முடிந்ததும் பணத்தை நேரடியாக பெற இந்த QR பயன்படுத்தலாம்.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "UPI ஆட்டோப்பே அமைத்த வங்கிக்கு பணம்‌ டெபாசிட் செய்யப்படும்",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "உங்கள் வங்கிக்கு நேரடியாகப் பணம் பெறுங்கள்‌",
+  PAYMENT: "பணம்‌",
+  QR_CODE : "QR",
+  GET_QR_CODE : "QR பெற"
 }

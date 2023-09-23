@@ -884,5 +884,14 @@ const hindiStrings = {
   OFFER_CARD_BANNER_TITLE : "30 सितंबर तक केवल ₹15/दिन पेय करें",
   OFFER_CARD_BANNER_DESC : "अगर ऑटोपे 25 सितंबर तक सेटअप हो जाए",
   OFFER_CARD_BANNER_ALERT : "आपका ऑटोपे सेटअप लंबित है!",
+  OR : "या",
+  COLLECT_CASH_DIRECTLY : "सीधे नकदी इकट्ठा करें ",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "सीधे अपने बैंक खाते में भुगतान स्वीकार करने के लिए, अपने प्लान पर ऑटोपे सेटअप करें",
+  DOWNLOAD_QR : "क्यूआर डाउनलोड करें",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "आप सवारी समाप्त होने के बाद भुगतान एकत्र करने के लिए इस क्यूआर कोड का उपयोग कर सकते हैं।",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "राशि उस बैंक खाते में जमा की जाएगी जिसे आप UPI ऑटोपे के लिए उपयोग कर रहे हैं",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "अपने बैंक खाते में सीधे भुगतान प्राप्त करें",
+  PAYMENT : "भुगतान",
+  QR_CODE : "क्यू आर कोड",
+  GET_QR_CODE : "क्यू आर कोड पाएं"
 }
-

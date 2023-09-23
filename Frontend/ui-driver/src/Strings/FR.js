@@ -687,4 +687,14 @@ const frenchStrings = {
   OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
   OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
+  OR : "OU",
+  COLLECT_CASH_DIRECTLY : "Encaisser directement l'argent",
+  SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "Pour accepter les paiements directement sur votre compte bancaire, configurez le paiement automatique sur votre forfait",
+  DOWNLOAD_QR : "Télécharger le QR",
+  USE_THIS_QR_TO_COLLECT_PAYMENT : "Vous pouvez utiliser ce QR Code pour collecter le paiement une fois la course terminée.",
+  AMOUNT_WILL_DEPOSITED_TO_BANK_ACCOUNT : "Le montant sera déposé sur le compte bancaire que vous utilisez pour UPI Autopay",
+  GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Obtenez un paiement direct sur votre compte bancaire",
+  PAIEMENT : "Paiement",
+  QR_CODE : "QR Code",
+  GET_QR_CODE : "Obtenir le code QR"
 }
