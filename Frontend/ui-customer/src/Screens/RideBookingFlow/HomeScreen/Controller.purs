@@ -633,6 +633,16 @@ data Action = NoAction
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
+eval (Scroll item) state = do
+  _ <- pure $ spy "scroll check " item
+  let sheetState = if item > 0.0 then true
+                   else if item < 1.0 then false
+                   else state.props.homescreensheetState
+  let updatedState = state { props { homescreensheetState = sheetState, currentItem = item, prevItem= state.props.currentItem } }
+  _ <- pure $ spy "scroll check state" updatedState
+  -- Continue with the updated state
+  continue updatedState
+
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
@@ -774,18 +784,13 @@ eval ScrollToBottom state = do
 
 -- eval (Scroll item) state = do
 --   _ <- pure $ spy "scroll check " item
---   let sheetState = true -- this can be true or false to make visbility gone/visble of the layout + if animation will be FadeIn/Fadeout
---   let currStateNumber  = 3.0 -- this is for state of bottom sheet which we recieve in 'item' variabe as 1.0(Transitioning),2.0(Released in between so colapsed),3.0(Expanded),4.0(collapsed) 
---   -- so if I am scrolling i'll get 1.0 in item, as soon as I release it I'll get 2.0 and then 4.0
---   continue state{props{homescreensheetState = sheetState, currentItem = curr}}
-
-eval (Scroll item) state = do
-  _ <- pure $ spy "scroll check " item
-  let sheetState = if item > 0.0 then true else false
-  let updatedState = state { props { homescreensheetState = sheetState, currentItem = item } }
-  _ <- pure $ spy "scroll check state" updatedState
-  -- Continue with the updated state
-  continue updatedState
+--   let sheetState = if item > 0.0 then true
+--                    else if item < 1.0 then false
+--                    else state.props.homescreensheetState
+--   let updatedState = state { props { homescreensheetState = sheetState, currentItem = item, prevItem= state.props.currentItem } }
+--   _ <- pure $ spy "scroll check state" updatedState
+--   -- Continue with the updated state
+--   continue updatedState
 
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }

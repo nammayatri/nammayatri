@@ -707,6 +707,7 @@ type HomeScreenStateProps =
   , showDisabilityPopUp :: Boolean
   , homescreensheetState :: Boolean
   , currentItem :: Number
+  , prevItem :: Number
   , isRepeatRide :: Boolean
   }
 

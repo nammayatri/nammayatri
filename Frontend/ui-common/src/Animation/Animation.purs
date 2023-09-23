@@ -244,6 +244,19 @@ translateYAnimFromTopWithAlpha config =
     , PrestoAnim.interpolator $ config.interpolator
     ] config.ifAnim
 
+translateYAnimFromTopWithAlphaX:: AnimConfig -> PrestoAnim.Animation
+translateYAnimFromTopWithAlphaX config =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration config.duration
+    , PrestoAnim.delay config.delay
+    , PrestoAnim.fromY config.fromY
+    , PrestoAnim.toY config.toY
+    , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
+    , PrestoAnim.toAlpha config.toAlpha
+    , PrestoAnim.fromAlpha config.fromAlpha
+    , PrestoAnim.interpolator $ config.interpolator
+    ] config.ifAnim
+
 translateYAnimFromTop :: AnimConfig -> PrestoAnim.Animation
 translateYAnimFromTop config =
    PrestoAnim.Animation
@@ -270,7 +283,7 @@ removeYAnimFromTop config =
 fadeIn :: Boolean -> PrestoAnim.Animation
 fadeIn ifAnim =
   PrestoAnim.Animation
-    [ PrestoAnim.duration 250
+    [ PrestoAnim.duration 200
     , PrestoAnim.toAlpha 1.0
     , PrestoAnim.fromAlpha 0.0
     , PrestoAnim.interpolator $ PrestoAnim.EaseIn
@@ -281,33 +294,11 @@ fadeIn ifAnim =
 fadeOut :: Boolean -> PrestoAnim.Animation
 fadeOut ifAnim =
   PrestoAnim.Animation
-    [ PrestoAnim.duration 250
+    [ PrestoAnim.duration 200
     , PrestoAnim.toAlpha 0.0
     , PrestoAnim.fromAlpha 1.0
-    , PrestoAnim.interpolator $ PrestoAnim.EaseOut
-    -- , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.7 0.0 0.7 1.0
-    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-    ] ifAnim
-
-fadeInX :: Boolean -> Number -> PrestoAnim.Animation
-fadeInX ifAnim item =
-  PrestoAnim.Animation
-    [ PrestoAnim.duration 200
-    , PrestoAnim.toAlpha (1.0 - item)
-    , PrestoAnim.fromAlpha (0.0 + item)
-    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
-    -- , PrestoAnim.interpolator $ PrestoAnim.Bezier  0.7 0.0 0.7 1.0
-    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-    ] ifAnim
-
-fadeOutX :: Boolean -> Number -> PrestoAnim.Animation
-fadeOutX ifAnim item =
-  PrestoAnim.Animation
-    [ PrestoAnim.duration 200
-    , PrestoAnim.toAlpha (0.0 + item)
-    , PrestoAnim.fromAlpha (1.0 - item)
-    , PrestoAnim.interpolator $ PrestoAnim.EaseOut
-    -- , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.7 0.0 0.7 1.0
+    -- , PrestoAnim.interpolator $ PrestoAnim.EaseOut
+    , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.7 0.0 0.7 1.0
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ] ifAnim
 

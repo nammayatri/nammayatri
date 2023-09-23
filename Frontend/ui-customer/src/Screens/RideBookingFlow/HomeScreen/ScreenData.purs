@@ -136,6 +136,7 @@ initData = {
       rideRequestFlow : false
     , homescreensheetState : false
     , currentItem: 0.0
+    , prevItem : 0.0
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false

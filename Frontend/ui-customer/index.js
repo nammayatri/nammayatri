@@ -162,17 +162,17 @@ window.onMerchantEvent = function (event, payload) {
   }
 }
 
-window.callUICallback = function () {
-  var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
-  var fName = args[0]
-  var functionArgs = args.slice(1)
+// window.callUICallback = function () {
+//   var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
+//   var fName = args[0]
+//   var functionArgs = args.slice(1)
 
-  try {
-    window.__PROXY_FN[fName].call(null, ...functionArgs);
-  } catch (err) {
-    console.error(err)
-  }
-}
+//   try {
+//     window.__PROXY_FN[fName].call(null, ...functionArgs);
+//   } catch (err) {
+//     console.error(err)
+//   }
+// }
 
 window.onResumeListeners = [];
 
