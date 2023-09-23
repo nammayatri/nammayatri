@@ -273,18 +273,14 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = d
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
-      let govtCharges' = df.govtCharges
-      let platformFee' = df.platformFee.fee
-      let cgst' = df.platformFee.cgst
-      let sgst' = df.platformFee.sgst
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides + if isRideEnd then 1 else 0
       let fare = fromMaybe 0 mbFare
       updateOneWithKV
-        [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
-          Se.Set BeamDF.platformFee $ platformFee' + platformFee,
-          Se.Set BeamDF.cgst $ cgst' + cgst,
-          Se.Set BeamDF.sgst $ sgst' + sgst,
+        [ Se.Set BeamDF.govtCharges govtCharges,
+          Se.Set BeamDF.platformFee platformFee,
+          Se.Set BeamDF.cgst cgst,
+          Se.Set BeamDF.sgst sgst,
           Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
           Se.Set BeamDF.numRides numRides,
           Se.Set BeamDF.updatedAt now
