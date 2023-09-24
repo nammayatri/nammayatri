@@ -209,14 +209,14 @@ processDriverFee paymentMode driverFee = do
       QINV.create invoice
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
-processRestFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> FeeType -> DriverFee -> m ()
-processRestFee paymentMode feeType_ DriverFee {..} = do
+processRestFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
+processRestFee paymentMode DriverFee {..} = do
   id_ <- generateGUID
   let driverFee =
         DriverFee
           { id = id_,
-            status = ONGOING,
-            feeType = feeType_,
+            status = if paymentMode == MANUAL then PAYMENT_OVERDUE else PAYMENT_PENDING,
+            feeType = if paymentMode == MANUAL then RECURRING_INVOICE else RECURRING_EXECUTION_INVOICE,
             ..
           }
   QDF.create driverFee
@@ -292,19 +292,11 @@ driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
   let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee (roundToHalf <$> (mandate <&> (.maxAmount)))
-  case plan.paymentMode of
-    MANUAL -> do
-      case splittedFees of
-        [] -> throwError (InternalError "No driver fee entity with non zero total fee")
-        (firstFee : restFees) -> do
-          resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
-          mapM_ (processRestFee paymentMode RECURRING_INVOICE) restFees
-    AUTOPAY -> do
-      case splittedFees of
-        [] -> throwError (InternalError "No driver fee entity with non zero total fee")
-        (firstFee : restFees) -> do
-          resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
-          mapM_ (processRestFee paymentMode RECURRING_EXECUTION_INVOICE) restFees
+  case splittedFees of
+    [] -> throwError (InternalError "No driver fee entity with non zero total fee")
+    (firstFee : restFees) -> do
+      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
+      mapM_ (processRestFee paymentMode) restFees
 
 unsubscribeDriverForPaymentOverdue ::
   ( CacheFlow m r,

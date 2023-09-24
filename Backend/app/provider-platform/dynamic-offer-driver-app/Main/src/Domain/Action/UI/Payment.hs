@@ -95,23 +95,25 @@ getStatus :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DP
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
-  paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-
-  case paymentStatus of
-    DPayment.MandatePaymentStatus {..} -> do
-      unless (status /= Payment.CHARGED) $ do
-        processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-      processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
-      QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
-      notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
-    DPayment.PaymentStatus {..} -> do
-      unless (status /= Payment.CHARGED) $ do
-        processPayment merchantId (cast order.personId) order.id True
-      notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
-    DPayment.PDNNotificationStatusResp {..} ->
-      processNotification notificationId notificationStatus
-  pure paymentStatus
+  if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+    then return $ DPayment.PaymentStatus {status = order.status}
+    else do
+      paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
+      case paymentStatus of
+        DPayment.MandatePaymentStatus {..} -> do
+          unless (status /= Payment.CHARGED) $ do
+            processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
+          processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
+          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
+        DPayment.PaymentStatus {..} -> do
+          unless (status /= Payment.CHARGED) $ do
+            processPayment merchantId (cast order.personId) order.id True
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
+        DPayment.PDNNotificationStatusResp {..} ->
+          processNotification notificationId notificationStatus
+      return paymentStatus
 
 -- webhook ----------------------------------------------------------
 
@@ -135,17 +137,19 @@ juspayWebhookHandler merchantShortId authData value = do
           case osr of
             Payment.OrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-              unless (transactionStatus /= Payment.CHARGED) $ do
-                processPayment merchantId (cast order.personId) order.id True
-              notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
-              QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+              when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
+                unless (transactionStatus /= Payment.CHARGED) $ do
+                  processPayment merchantId (cast order.personId) order.id True
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
+                QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             Payment.MandateOrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-              unless (transactionStatus /= Payment.CHARGED) $ do
-                processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-              processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
-              notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
-              QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+              when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
+                unless (transactionStatus /= Payment.CHARGED) $ do
+                  processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
+                processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
+                QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             ---- to do add FCM for insufficient funds  -----
             Payment.MandateStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)

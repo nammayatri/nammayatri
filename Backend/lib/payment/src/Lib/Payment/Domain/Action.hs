@@ -415,18 +415,19 @@ createExecutionService ::
   (Payment.MandateExecutionReq -> m Payment.MandateExecutionRes) ->
   m Payment.MandateExecutionRes
 createExecutionService (request, orderId) merchantId executionCall = do
-  executionResp <- executionCall request
-  executionOrder <- mkExecutionOrder request executionResp
+  executionOrder <- mkExecutionOrder request
   Esq.runTransaction $ QOrder.create executionOrder
+  executionResp <- executionCall request
+  Esq.runTransaction $ QOrder.updateStatus (Id orderId) executionResp.orderId executionResp.status
   return executionResp
   where
-    mkExecutionOrder req resp = do
+    mkExecutionOrder req = do
       now <- getCurrentTime
       return
         DOrder.PaymentOrder
           { id = Id orderId,
             shortId = ShortId req.orderId, ---- to check --------
-            paymentServiceOrderId = resp.orderId,
+            paymentServiceOrderId = "Unkown",
             requestId = Nothing,
             service = Nothing,
             clientId = Nothing,
@@ -438,7 +439,7 @@ createExecutionService (request, orderId) merchantId executionCall = do
             paymentMerchantId = Nothing,
             amount = round req.amount,
             currency = Juspay.INR,
-            status = resp.status,
+            status = Payment.NEW,
             paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing,
             clientAuthToken = Nothing,
             clientAuthTokenExpiry = Nothing,
