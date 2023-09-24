@@ -16,7 +16,8 @@ module Lib.Payment.Storage.Queries.PaymentOrder where
 
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -64,6 +65,20 @@ updateStatusToExpired orderId = do
     set
       tbl
       [ PaymentOrderStatus =. val Payment.CLIENT_AUTH_TOKEN_EXPIRED,
+        PaymentOrderUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PaymentOrderId ==. val orderId.getId
+
+updateStatus :: Id DOrder.PaymentOrder -> Text -> Payment.TransactionStatus -> SqlDB ()
+updateStatus orderId paymentServiceOrderId status = do
+  now <- getCurrentTime
+  mOrder <- findById orderId
+  let newStatus = maybe status (\order -> if order.status == Payment.CHARGED then order.status else status) mOrder -- don't change if status is already charged
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PaymentOrderStatus =. val newStatus,
+        PaymentOrderPaymentServiceOrderId =. val paymentServiceOrderId,
         PaymentOrderUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentOrderId ==. val orderId.getId

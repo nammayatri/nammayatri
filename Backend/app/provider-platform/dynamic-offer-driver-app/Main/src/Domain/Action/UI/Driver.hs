@@ -1778,9 +1778,9 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getHistoryEntryDetailsEntityV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id INV.Invoice -> m HistoryEntryDetailsEntityV2
-getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
-  allEntiresByInvoiceId <- QINV.findAllByInvoiceId invoiceId
+getHistoryEntryDetailsEntityV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Text -> m HistoryEntryDetailsEntityV2
+getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceShortId = do
+  allEntiresByInvoiceId <- QINV.findAllByInvoiceShortId invoiceShortId
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let amount = sum $ mapToAmount allDriverFeeForInvoice
@@ -1795,7 +1795,7 @@ getHistoryEntryDetailsEntityV2 (_, merchantId) invoiceId = do
         | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
         | otherwise = DDF.RECURRING_INVOICE
   driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig
-  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceId.getId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
+  return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
