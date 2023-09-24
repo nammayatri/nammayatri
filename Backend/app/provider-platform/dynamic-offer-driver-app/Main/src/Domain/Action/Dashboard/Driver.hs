@@ -842,7 +842,7 @@ getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId
+  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId.getId
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes

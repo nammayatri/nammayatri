@@ -149,31 +149,33 @@ sendAsyncNotification driverToNotify merchantId = do
   notificationShortId <- generateShortId
   now <- getCurrentTime
   req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
+  QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
   exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
       QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
       QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
+      QNTF.updateNotificationStatusById notificationId PaymentInterface.NOTIFICATION_FAILURE
       logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
     Right res -> do
-      QNTF.create $ buildNotificationEntity res notificationId driverToNotify.driverFeeId driverToNotify.mandateId now
+      QNTF.updateNotificationResponseById notificationId res
   where
-    buildNotificationEntity response id_ driverFeeId mandateId now =
+    buildNotificationEntity id_ req driverFeeId mandateId now =
       NTF.Notification
         { id = id_,
-          shortId = response.notificationId,
-          sourceAmount = fromMaybe 0 response.sourceInfo.sourceAmount,
+          shortId = req.notificationId,
+          sourceAmount = req.amount,
           mandateId = mandateId,
           driverFeeId = driverFeeId,
-          juspayProvidedId = response.juspayProvidedId,
-          txnDate = fromMaybe now response.sourceInfo.txnDate,
-          providerName = response.providerName,
-          notificationType = response.notificationType,
-          description = response.description,
-          status = response.status,
-          dateCreated = fromMaybe now response.dateCreated,
-          lastUpdated = fromMaybe now response.lastUpdated,
+          juspayProvidedId = "Unknown",
+          txnDate = now,
+          providerName = Nothing,
+          notificationType = Nothing,
+          description = req.description,
+          status = PaymentInterface.NOTIFICATION_CREATED,
+          dateCreated = now,
+          lastUpdated = now,
           createdAt = now,
           updatedAt = now
         }

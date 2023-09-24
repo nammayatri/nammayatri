@@ -46,6 +46,9 @@ findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentModes limit offset =
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
+findAllByInvoiceShortId :: MonadFlow m => Text -> m [Domain.Invoice]
+findAllByInvoiceShortId invoiceShortId = findAllWithKV [Se.Is BeamI.invoiceShortId $ Se.Eq invoiceShortId]
+
 findByIdWithPaymenModeAndStatus :: MonadFlow m => Id Domain.Invoice -> Domain.InvoicePaymentMode -> Domain.InvoiceStatus -> m (Maybe Domain.Invoice)
 findByIdWithPaymenModeAndStatus invocieId paymentMode status =
   findOneWithKV
