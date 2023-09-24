@@ -913,7 +913,7 @@ type HomeScreenProps =  {
   showAccessbilityPopup :: Boolean,
   showRideCompleted :: Boolean,
   showRideRating :: Boolean,
-  showContackSupportPopUp :: Boolean,
+  showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   driverBlocked :: Boolean,
   showBlockingPopup :: Boolean

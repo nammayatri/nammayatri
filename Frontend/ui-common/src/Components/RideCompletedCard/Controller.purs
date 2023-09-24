@@ -28,7 +28,7 @@ type Config = {
   driverBottomCard :: DriverBottomCard,
   contactSupportPopUpConfig :: PopUpModal.Config,
   badgeCard :: BadgeCard,
-  showContackSupportPopUp :: Boolean,
+  showContactSupportPopUp :: Boolean,
   primaryButtonConfig :: PB.Config,
   accessibility :: Accessiblity
 }
@@ -97,7 +97,7 @@ config = {
     imageHeight : V 0
   },
   contactSupportPopUpConfig : PopUpModal.config,
-  showContackSupportPopUp : false,
+  showContactSupportPopUp : false,
   primaryButtonConfig : PB.config,
   accessibility : ENABLE
 }

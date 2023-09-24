@@ -194,7 +194,7 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , padding (PaddingVertical 16 16)
+    , padding (PaddingBottom 16)
     , cornerRadius 8.0
     ][ imageView [
         imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall)<>"ny_ic_driver_avatar.png"

@@ -2,7 +2,7 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
@@ -18,6 +18,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
+import MerchantConfig.Utils (getValueFromConfig)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -33,7 +34,7 @@ view config push =
       , bottomCardView config push
       ]
     , if config.customerIssueCard.reportIssueView then reportIssueView config push else dummyTextView
-    , if config.showContackSupportPopUp then contactSupportPopUpView config push else dummyTextView
+    , if config.showContactSupportPopUp then contactSupportPopUpView config push else dummyTextView
   ]
 
 topCardView :: forall w. Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -45,13 +46,21 @@ topCardView config push =
   , padding $ Padding 16 16 16 16
   , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
   , gravity CENTER
-  ][  linearLayout
+  ][  relativeLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , gravity RIGHT
-      , layoutGravity "right"
       , padding $ PaddingTop safeMarginTop
-      ][  imageView
+      ][linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER 
+        , margin $ MarginTop 5
+        ][if config.topCard.topPill.visible then topPillView config push else dummyTextView]
+      , linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity RIGHT
+        ][imageView
           [ height $ V 40
           , width $ V 40
           , accessibility config.accessibility
@@ -59,8 +68,8 @@ topCardView config push =
           , imageWithFallback $ "ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png"
           , onClick push $ const Support
           ]
+        ]
       ]
-    , if config.topCard.topPill.visible then topPillView config push else dummyTextView
     , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -337,52 +346,53 @@ driverBottomCardView config push =
   , gravity CENTER
   ][
     linearLayout[
-      width $ V 230
-    , height WRAP_CONTENT
+      width WRAP_CONTENT
+    , height MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    ](mapWithIndex (\ index item -> 
-        linearLayout[
-          height WRAP_CONTENT,
-          width MATCH_PARENT,
-          orientation VERTICAL, 
-          gravity CENTER
-        ][
-          linearLayout[
-            width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , orientation HORIZONTAL
-          , margin $ Margin 0 8 12 8
-          , padding $ PaddingHorizontal 8 8
-          , gravity CENTER
-          ][
-            textView $ [
-              text $ "₹" <> (show item.amount)
-            , color Color.pigmentGreen
-            , gravity CENTER
-            , margin $ MarginRight 8
-            ] <> FontStyle.h0 LanguageStyle
-          , textView $ [
-              text item.reason
-            , color Color.black800
-            , gravity LEFT
-            ]<> FontStyle.body6 LanguageStyle
-          ]
-          , if index /= ((length config.driverBottomCard.savedMoney)-1) then horizontalLine else dummyTextView
-        ]
-    ) config.driverBottomCard.savedMoney)
-  , linearLayout[
-      height WRAP_CONTENT
-    , width $ V 100
-    , gravity CENTER 
-    ][
-      imageView[
+    ][linearLayout[
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ](mapWithIndex (\ index item -> 
+            linearLayout[
+              height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation VERTICAL
+            ][
+              linearLayout[
+                width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , gravity CENTER
+              , padding $ PaddingHorizontal 8 8
+              ][
+                textView $ [
+                  text $ (getValueFromConfig "currency") <> (show item.amount)
+                , color Color.pigmentGreen
+                , margin $ MarginRight 8
+                ] <> FontStyle.h0 LanguageStyle
+              , textView $ [
+                  text item.reason
+                , color Color.black800
+                , singleLine false
+                , lineHeight "20"
+                ]<> FontStyle.body6 LanguageStyle
+              ]
+              , if index /= ((length config.driverBottomCard.savedMoney)-1) then horizontalLine else dummyTextView
+            ]
+          ) config.driverBottomCard.savedMoney)
+      ]
+    , linearLayout[
+      height MATCH_PARENT,
+      weight 1.0
+      ][]
+    , imageView[
         height $ V 100
       , width $ V 100
       , gravity CENTER
       , imageWithFallback $ "ny_ic_wallet_with_coin," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_with_coin.png"
       ]
-    ]
   ]
 
 contactSupportPopUpView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
@@ -444,7 +454,7 @@ topPillView config push =
   , height WRAP_CONTENT
   , background config.topCard.topPill.background
   , gravity CENTER
-  , padding $ Padding 16 6 16 6
+  , padding $ Padding 16 6 16 10
   , cornerRadius 22.0
   ][
     textView $ [
