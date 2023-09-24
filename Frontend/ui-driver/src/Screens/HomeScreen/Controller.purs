@@ -301,9 +301,12 @@ eval BackPressed state = do
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
                         else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
                           else if state.props.showBlockingPopup then continue state {props{showBlockingPopup = false}}
-                            else do
-                              _ <- pure $ minimizeApp ""
-                              continue state
+                            else if state.props.showRideRating then continue state {props {showRideRating = false}}
+                              else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
+                                else if state.props.currentStage == ST.RideCompleted then continue state
+                                  else do
+                                    _ <- pure $ minimizeApp ""
+                                    continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -723,12 +726,12 @@ eval (PaymentStatusAction status) state =
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
   
-eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContackSupportPopUp = true}}
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContackSupportPopUp = false}}
+eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContactSupportPopUp = true}}
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContactSupportPopUp = false}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
                                                                                                       _ <- pure $ showDialer (getSupportNumber "") false 
                                                                                                       continue state
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContackSupportPopUp = false}}
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContactSupportPopUp = false}}
 
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ GoToRideDetailsScreen state
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = continue state {props {showRideRating = true}}

@@ -797,6 +797,8 @@ getRideCompletedConfig state = let
   config = RideCompletedCard.config
   config' = config{
     primaryButtonConfig {
+      width = MATCH_PARENT,
+      margin = Margin 0 0 0 0,
       textConfig {
         text = getString FARE_COLLECTED
       }
@@ -860,7 +862,7 @@ getRideCompletedConfig state = let
       text2 = getString PURPLE_RIDE_CHAMPION,
       background = Color.mangolia
     },
-    showContackSupportPopUp = state.props.showContackSupportPopUp,
+    showContactSupportPopUp = state.props.showContactSupportPopUp,
     accessibility = DISABLE
   }
   in config'
