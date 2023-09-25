@@ -107,7 +107,7 @@ public class LocationUpdateService extends Service {
     private int maximumLimit = 60;
     private int pointsToRemove = 1;
     private Location prevLocation = null, prevAccLocation = null;
-    private int finalDistance = 0, finalDistanceWithAcc = 0;
+    private static int finalDistance = 0, finalDistanceWithAcc = 0;
     private int maximumLimitNotOnRide = 3;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
@@ -121,7 +121,7 @@ public class LocationUpdateService extends Service {
     static JSONObject triggerFunction;
     static JSONObject androidVersion;
 
-    private static long lastCallTime = 0;
+    private long lastCallTime = 0;
 
     enum LocationSource {
         CurrentLocation,
@@ -220,6 +220,7 @@ public class LocationUpdateService extends Service {
                                 String accuracyThreshold = accHolder == null ? "100.0" : accHolder;
                                 if (prevLocation != null && prevAccLocation != null) {
                                     distanceBtLatLng = (int) location.distanceTo(prevLocation);
+
                                     finalDistance+=distanceBtLatLng;
                                     Log.d(LOG_TAG, "LiveFinalDistanceVal - " + finalDistance );
                                     if (checkLocationAcc(location, accuracyThreshold)) {
@@ -529,10 +530,10 @@ public class LocationUpdateService extends Service {
         return locationPayload;
     }
 
-    public static boolean canCallAPI() {
+    public boolean canCallAPI(boolean executorStatus) {
         long currentTime = System.currentTimeMillis();
         long timeSinceLastCall = currentTime - lastCallTime;
-        if (timeSinceLastCall >= 2500) {
+        if (timeSinceLastCall >= 2050 && executorStatus) {
             // It's been more than 2 seconds since the last call
             lastCallTime = currentTime; // Update the last call time
             return true;
@@ -614,8 +615,8 @@ public class LocationUpdateService extends Service {
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
 
             Log.d(LOG_TAG, "DriverUpdateLoc Payload Created - " + locationPayload);
-            Log.d(LOG_TAG, "DriverUpdateLoc Executor Status - " + executorLocUpdate.isShutdown());
-            if (canCallAPI() && executorLocUpdate.isShutdown()) {
+            Log.d(LOG_TAG, "DriverUpdateLoc Executor Status - " + executorLocUpdate.isShutdown() + " ExecutorOffFor - " + executorBusy + " delayForGNew - " + delayForGNew);
+            if (canCallAPI(executorLocUpdate.isShutdown())) {
                 Log.d(LOG_TAG, "DriverUpdateLoc CanCallAPI and ExecutorShutDown Passed");
                 executorLocUpdate = Executors.newSingleThreadExecutor();
                 MobilityCallAPI callAPIHandler = new MobilityCallAPI();
@@ -635,10 +636,11 @@ public class LocationUpdateService extends Service {
                         String merchantId = getValueFromStorage("MERCHANT_ID");
                         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
-                        if (merchantId != null) baseHeaders.put("mId", merchantId);
-                        if (vehicleVariant != null) baseHeaders.put("vt", vehicleVariant);
-                        if (driverMode != null) baseHeaders.put("dm", driverMode.toUpperCase());
+                        if (merchantId != null) baseHeaders.put("mId", merchantId); else baseHeaders.put("mId", "not_found");
+                        if (vehicleVariant != null) baseHeaders.put("vt", vehicleVariant); else baseHeaders.put("vt", "not_found");
+                        if (driverMode != null) baseHeaders.put("dm", driverMode.toUpperCase()); else baseHeaders.put("dm", "not_found");
                         Log.d(LOG_TAG, "LocationPayload Size - " + locationPayload.length());
+
                         MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
 
                         Log.d(LOG_TAG, "DriverUpdateLoc API  RespCode - " + apiResponse.getStatusCode() + " RespBody - " + apiResponse.getResponseBody());
@@ -646,7 +648,7 @@ public class LocationUpdateService extends Service {
                         int respCode = apiResponse.getStatusCode();
 
                         if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                            if(respCode == 400) updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
+                            if(respCode >= 400 && respCode <500) updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
                         } else {
@@ -667,7 +669,7 @@ public class LocationUpdateService extends Service {
                     handler.post(() -> {
                         try {
                             JSONObject resp = new JSONObject(String.valueOf(finalResult));
-                            Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
+                            if(resp.has("errorCode")) Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
                             if (resp.has("errorCode") && resp.get("errorCode").equals("INVALID_TOKEN")) {
                                 Log.d(LOG_TAG, "Invalid token while updating location API " + resp.get("errorCode"));
                                 updateStorage("REGISTERATION_TOKEN", "__failed");
@@ -681,7 +683,7 @@ public class LocationUpdateService extends Service {
                     });
 
                 });
-            } else if ( canCallAPI() && executorBusy++ > (delayForGNew > 5000 ? 2 : 5)){
+            } else if (canCallAPI(!executorLocUpdate.isShutdown()) && executorBusy++ > (delayForGNew > 5000 ? 1 : 3)){
                 Log.e(LOG_TAG, "Executor status is busy with - " + executorBusy);
                 executorLocUpdate.shutdownNow();
                 executorBusy=0;
