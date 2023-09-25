@@ -140,11 +140,9 @@ asyncExecutionCall ::
   m ()
 asyncExecutionCall ExecutionData {..} merchantId = do
   exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
-  now <- getCurrentTime
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
-      QDF.updateStatus PAYMENT_OVERDUE driverFee.id now
-      QDF.updateFeeType RECURRING_INVOICE now driverFee.id
+      QDF.updateAutoPayToManual driverFee.id
       logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
     Right _ -> pure ()

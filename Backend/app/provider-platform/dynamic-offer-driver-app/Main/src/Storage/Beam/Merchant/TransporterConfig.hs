@@ -68,6 +68,7 @@ data TransporterConfigT f = TransporterConfigT
     driverFeeCalculatorBatchGap :: B.C f (Maybe Seconds),
     rcLimit :: B.C f Int,
     automaticRCActivationCutOff :: B.C f Seconds,
+    orderAndNotificationStatusCheckTime :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
     timeDiffFromUtc :: B.C f Seconds,
     subscription :: B.C f Bool,
@@ -86,9 +87,12 @@ data TransporterConfigT f = TransporterConfigT
     updatedAt :: B.C f Time.UTCTime,
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
     specialZoneBookingOtpExpiry :: B.C f Int,
+    driverFeeRetryThresholdConfig :: B.C f Int,
     isPlanMandatory :: B.C f Bool,
     freeTrialDays :: B.C f Int,
-    openMarketUnBlocked :: B.C f Bool
+    openMarketUnBlocked :: B.C f Bool,
+    updateNotificationStatusBatchSize :: B.C f Int,
+    updateOrderStatusBatchSize :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

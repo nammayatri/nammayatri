@@ -20,6 +20,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 where
 
 import qualified Control.Monad.Catch as C
+import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
 import qualified Data.Map as M
 import Data.Ord
@@ -119,9 +120,23 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
-
+  let threshold = transporterConfig.driverFeeRetryThresholdConfig
+  driverFeesToProccess <-
+    mapMaybeM
+      ( \driverFee -> do
+          let count = driverFee.schedulerTryCount
+              driverFeeId = driverFee.id
+          if count > threshold
+            then do
+              QDF.updateAutoPayToManual driverFeeId
+              return Nothing
+            else do
+              QDF.updateRetryCount (count + 1) now driverFeeId
+              return (Just driverFee)
+      )
+      driverFees
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
-    for_ driverFees $ \driverFee -> do
+    for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverId (cast driverFee.driverId)
       mbPlan <- getPlan mbDriverPlan merchantId
       case mbPlan of
@@ -165,10 +180,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               due = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if due + totalFee >= plan.maxCreditLimit
             then do
-              mapM_ (\feeId -> updateStatus PAYMENT_OVERDUE feeId now) driverFeeIds
-              updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
-              updateStatus PAYMENT_OVERDUE driverFee.id now
-              updateFeeType RECURRING_INVOICE now driverFee.id
+              mapM_ updateAutoPayToManual driverFeeIds
+              updateAutoPayToManual driverFee.id
               updateSubscription False (cast driverFee.driverId)
               QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
             else do
@@ -203,8 +216,7 @@ processDriverFee paymentMode driverFee = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
-      updateStatus PAYMENT_OVERDUE driverFee.id now
-      updateFeeType RECURRING_INVOICE now driverFee.id
+      updateAutoPayToManual driverFee.id
     AUTOPAY -> do
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
@@ -376,6 +388,7 @@ mkInvoiceAgainstDriverFee driverFee = do
         bankErrorUpdatedAt = Nothing,
         maxMandateAmount = Nothing,
         driverId = driverFee.driverId,
+        lastStatusCheckedAt = Nothing,
         updatedAt = now,
         createdAt = now
       }

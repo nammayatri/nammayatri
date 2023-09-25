@@ -110,6 +110,7 @@ groupDriverFeeByInvoices driverFees_ = do
           bankErrorMessage = Nothing,
           bankErrorUpdatedAt = Nothing,
           driverId = driverFee.driverId,
+          lastStatusCheckedAt = Nothing,
           updatedAt = now,
           createdAt = now
         }

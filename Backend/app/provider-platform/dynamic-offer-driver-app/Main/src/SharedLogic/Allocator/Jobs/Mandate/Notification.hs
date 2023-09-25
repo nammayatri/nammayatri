@@ -56,7 +56,6 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
     transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
-    now <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime DF.PAYMENT_PENDING
     if null driverFees
       then do
@@ -77,8 +76,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                   Just _ -> return $ Just pdnNoticationEntity
                   Nothing -> do
                     QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [pdnNoticationEntity.driverFeeId]
-                    QDF.updateStatus PAYMENT_OVERDUE pdnNoticationEntity.driverFeeId now
-                    QDF.updateFeeType RECURRING_INVOICE now pdnNoticationEntity.driverFeeId
+                    QDF.updateAutoPayToManual pdnNoticationEntity.driverFeeId
                     logError ("Active autopay invoice not found for driverFeeId" <> pdnNoticationEntity.driverFeeId.getId)
                     return Nothing
             )
@@ -125,12 +123,18 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
+      dfStatusCheckTime = transporterConfig.orderAndNotificationStatusCheckTime
   let dfCalculationJobTs = diffUTCTime (addUTCTime (dfExecutionTime + dfNotificationTime) endTime) now
+  let orderAndNotiifcationJobTs = diffUTCTime (addUTCTime (dfStatusCheckTime + dfNotificationTime) endTime) now
   createJobIn @_ @'MandateExecution dfCalculationJobTs maxShards $
     MandateExecutionInfo
       { merchantId = merchantId,
         startTime = startTime,
         endTime = endTime
+      }
+  createJobIn @_ @'OrderAndNotificationStatusUpdate orderAndNotiifcationJobTs maxShards $
+    OrderAndNotificationStatusUpdateJobData
+      { merchantId = merchantId
       }
 
 sendAsyncNotification ::
@@ -154,8 +158,7 @@ sendAsyncNotification driverToNotify merchantId = do
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
-      QDF.updateStatus PAYMENT_OVERDUE driverToNotify.driverFeeId now
-      QDF.updateFeeType RECURRING_INVOICE now driverToNotify.driverFeeId
+      QDF.updateAutoPayToManual driverToNotify.driverFeeId
       QNTF.updateNotificationStatusById notificationId PaymentInterface.NOTIFICATION_FAILURE
       logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
     Right res -> do
@@ -176,6 +179,7 @@ sendAsyncNotification driverToNotify merchantId = do
           status = PaymentInterface.NOTIFICATION_CREATED,
           dateCreated = now,
           lastUpdated = now,
+          lastStatusCheckedAt = Nothing,
           createdAt = now,
           updatedAt = now
         }

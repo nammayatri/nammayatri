@@ -111,6 +111,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       bankErrorCode = Nothing,
       bankErrorMessage = Nothing,
       bankErrorUpdatedAt = Nothing,
+      lastStatusCheckedAt = Nothing,
       updatedAt = now,
       createdAt = now
     }

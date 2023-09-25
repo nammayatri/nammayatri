@@ -425,6 +425,22 @@ updateFeeType feeType now (Id driverFeeId) = do
     [Se.Set BeamDF.feeType feeType, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
+updateAutoPayToManual :: MonadFlow m => Id DriverFee -> m ()
+updateAutoPayToManual driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.feeType RECURRING_INVOICE,
+      Se.Set BeamDF.status PAYMENT_OVERDUE,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+updateRetryCount :: MonadFlow m => Int -> UTCTime -> Id DriverFee -> m ()
+updateRetryCount retryCount now (Id driverFeeId) = do
+  updateOneWithKV
+    [Se.Set BeamDF.schedulerTryCount retryCount, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+
 updateRegisterationFeeStatusByDriverId :: MonadFlow m => DriverFeeStatus -> Id Person -> m ()
 updateRegisterationFeeStatusByDriverId status (Id driverId) = do
   now <- getCurrentTime
@@ -468,6 +484,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             collectedAt = collectedAt,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            schedulerTryCount,
             billNumber,
             stageUpdatedAt,
             feeWithoutDiscount
@@ -497,6 +514,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.autopayPaymentStage = autopayPaymentStage,
         BeamDF.stageUpdatedAt = stageUpdatedAt,
         BeamDF.feeWithoutDiscount = feeWithoutDiscount,
+        BeamDF.schedulerTryCount = schedulerTryCount,
         BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt

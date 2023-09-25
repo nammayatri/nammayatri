@@ -49,6 +49,7 @@ data DriverFee = DriverFee
     planOfferTitle :: Maybe Text,
     billNumber :: Maybe Int,
     autopayPaymentStage :: Maybe AutopayPaymentStage,
+    schedulerTryCount :: Int,
     stageUpdatedAt :: Maybe UTCTime,
     feeWithoutDiscount :: Maybe HighPrecMoney
   }

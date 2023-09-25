@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver | SendPDNNotificationToDriver | MandateExecution | CalculateDriverFees
+data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver | SendPDNNotificationToDriver | MandateExecution | CalculateDriverFees | OrderAndNotificationStatusUpdate
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -42,6 +42,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
+  restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -120,3 +121,12 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
 instance JobInfoProcessor 'CalculateDriverFees
 
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
+
+newtype OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
+  { merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'OrderAndNotificationStatusUpdate
+
+type instance JobContent 'OrderAndNotificationStatusUpdate = OrderAndNotificationStatusUpdateJobData

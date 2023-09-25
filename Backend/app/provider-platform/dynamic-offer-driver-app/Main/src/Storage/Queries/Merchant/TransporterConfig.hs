@@ -113,6 +113,9 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             bankErrorExpiry = secondsToNominalDiffTime bankErrorExpiry,
             driverFeeCalculationTime = secondsToNominalDiffTime <$> driverFeeCalculationTime,
             driverFeeCalculatorBatchGap = secondsToNominalDiffTime <$> driverFeeCalculatorBatchGap,
+            updateNotificationStatusBatchSize,
+            updateOrderStatusBatchSize,
+            orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
             ..
           }
     where
@@ -159,9 +162,11 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverFeeMandateNotificationBatchSize = driverFeeMandateNotificationBatchSize,
         BeamTC.driverFeeMandateExecutionBatchSize = driverFeeMandateExecutionBatchSize,
         BeamTC.timeDiffFromUtc = timeDiffFromUtc,
+        BeamTC.driverFeeRetryThresholdConfig = driverFeeRetryThresholdConfig,
         BeamTC.driverFeeCalculationTime = nominalDiffTimeToSeconds <$> driverFeeCalculationTime,
         BeamTC.driverFeeCalculatorBatchSize = driverFeeCalculatorBatchSize,
         BeamTC.driverFeeCalculatorBatchGap = nominalDiffTimeToSeconds <$> driverFeeCalculatorBatchGap,
+        BeamTC.orderAndNotificationStatusCheckTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckTime,
         BeamTC.subscription = subscription,
         BeamTC.minLocationAccuracy = minLocationAccuracy,
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
@@ -183,5 +188,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.isAvoidToll = isAvoidToll,
-        BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry
+        BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
+        BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
+        BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize
       }

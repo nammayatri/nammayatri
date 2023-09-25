@@ -34,6 +34,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
+import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import qualified Storage.CachedQueries.Merchant as Storage
@@ -58,6 +59,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
     }
 
 runDriverOfferAllocator ::

@@ -57,6 +57,7 @@ data NotificationT f = NotificationT
     status :: B.C f Payment.NotificationStatus,
     dateCreated :: B.C f UTCTime,
     lastUpdated :: B.C f UTCTime,
+    lastStatusCheckedAt :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -24,6 +24,7 @@ data Notification = Notification
     status :: Payment.NotificationStatus,
     dateCreated :: UTCTime,
     lastUpdated :: UTCTime,
+    lastStatusCheckedAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
