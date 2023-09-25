@@ -25,7 +25,6 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,13 +32,11 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.InflateException;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,8 +47,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
-import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
@@ -66,7 +63,6 @@ import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.gson.Gson;
 
@@ -83,6 +79,7 @@ import java.util.concurrent.TimeUnit;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
+import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.BootUpReceiver;
 import in.juspay.mobility.app.ChatService;
@@ -93,7 +90,6 @@ import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
-import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.common.Utils;
 import in.juspay.services.HyperServices;
 
@@ -868,7 +864,10 @@ public class MainActivity extends AppCompatActivity {
         payload.put("merchantId", getResources().getString(R.string.merchant_id));
         payload.put("action", action);
         payload.put("logLevel",1);
+        payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
+        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(context,context.getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
+        payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }
 }

@@ -138,6 +138,10 @@
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
+        <service android:name=".RemoteAssetsDownloader"
+            android:enabled="true"
+            android:exported="true"
+            android:largeHeap="true" />
 
     </application>
 </manifest>

@@ -119,6 +119,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore BASE_URL (getBaseUrl "dummy")
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
+  setValueToLocalStore BUNDLE_TIME_OUT "1000"
   if ((getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")) then do
     setValueToLocalStore COUNTRY_CODE "+91"
   else pure unit

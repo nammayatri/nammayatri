@@ -349,6 +349,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             break;
+                        case NotificationTypes.UPDATE_BUNDLE :
+                            Intent bundle = new Intent(this,RemoteAssetsDownloader.class);
+                            bundle.putExtra("merchantType",merchantType);
+                            startService(bundle);
+                            break;
 
                         default:
                             if (payload.get("show_notification").equals("true")) {
@@ -545,5 +550,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
         private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
+        private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
     }
 }
