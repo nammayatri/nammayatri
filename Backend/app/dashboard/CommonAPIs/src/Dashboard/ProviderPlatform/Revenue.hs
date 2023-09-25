@@ -30,11 +30,10 @@ import Servant hiding (Summary)
 
 type GetCashCollectionHistory =
   "cashCollectionHistory"
-    :> MandatoryQueryParam "collectorId" Text
+    :> QueryParam "volunteerId" Text
+    :> QueryParam "place" Text
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
     :> Get '[JSON] CashCollectionListRes
 
 -- from, to is on the basis of startTime
@@ -60,9 +59,13 @@ data AllFees = AllFees
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CashCollectionListRes = CashCollectionListRes
-  { summary :: Summary,
+  { totalCount :: Int,
     totalFeeCollected :: HighPrecMoney,
-    collectedFees :: [DriverFeeAPIEntity]
+    totalRides :: Int,
+    totalDrivers :: Int,
+    collectionsTs :: [(HighPrecMoney, Maybe UTCTime)],
+    numRidesTs :: [(Int, Maybe UTCTime)],
+    paymentTs :: [Maybe UTCTime]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -77,6 +80,7 @@ data DriverFeeAPIEntity = DriverFeeAPIEntity
     startTime :: UTCTime,
     endTime :: UTCTime,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    collectedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

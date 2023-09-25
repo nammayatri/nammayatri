@@ -37,8 +37,8 @@ handler merchantId =
   getCashCollectionHistory merchantId
     :<|> getAllDriverFeeHistory merchantId
 
-getCashCollectionHistory :: ShortId DM.Merchant -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> FlowHandler Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI $ DRevenue.getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffset
+getCashCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CashCollectionListRes
+getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.AllDriverFeeRes
 getAllDriverFeeHistory merchantShortId mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getAllDriverFeeHistory merchantShortId mbFrom mbTo

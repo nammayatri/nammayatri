@@ -85,6 +85,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver 
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
+import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
 import Utils.Parse
 
 -- Each update option contains a list of (key, value) pairs to set during
@@ -161,6 +162,7 @@ data UpdateModel
   | SearchRequestSpecialZoneUpdate
   | SearchTryUpdate
   | VehicleUpdate
+  | VolunteerUpdate
   | FeedbackFormUpdate
   | FeedbackUpdate
   | FeedbackBadgeUpdate
@@ -243,6 +245,7 @@ getTagUpdate SearchRequestForDriverUpdate = "SearchRequestForDriverOptions"
 getTagUpdate SearchRequestSpecialZoneUpdate = "SearchRequestSpecialZoneOptions"
 getTagUpdate SearchTryUpdate = "SearchTryOptions"
 getTagUpdate VehicleUpdate = "VehicleOptions"
+getTagUpdate VolunteerUpdate = "VolunteerOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate FeedbackUpdate = "FeedbackOptions"
 getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
@@ -324,6 +327,7 @@ parseTagUpdate "SearchRequestForDriverOptions" = return SearchRequestForDriverUp
 parseTagUpdate "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneUpdate
 parseTagUpdate "SearchTryOptions" = return SearchTryUpdate
 parseTagUpdate "VehicleOptions" = return VehicleUpdate
+parseTagUpdate "VolunteerOptions" = return VolunteerUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
 parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
@@ -406,6 +410,7 @@ data DBUpdateObject
   | SearchRequestSpecialZoneOptions UpdateModel [Set Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT] (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryOptions UpdateModel [Set Postgres SearchTry.SearchTryT] (Where Postgres SearchTry.SearchTryT)
   | VehicleOptions UpdateModel [Set Postgres Vehicle.VehicleT] (Where Postgres Vehicle.VehicleT)
+  | VolunteerOptions UpdateModel [Set Postgres Volunteer.VolunteerT] (Where Postgres Volunteer.VolunteerT)
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | FeedbackOptions UpdateModel [Set Postgres Feedback.FeedbackT] (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
@@ -638,6 +643,9 @@ instance FromJSON DBUpdateObject where
       VehicleUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ VehicleOptions updateModel updVals whereClause
+      VolunteerUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ VolunteerOptions updateModel updVals whereClause
       FeedbackFormUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FeedbackFormOptions updateModel updVals whereClause

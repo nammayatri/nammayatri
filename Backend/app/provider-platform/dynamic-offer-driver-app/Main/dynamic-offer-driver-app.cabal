@@ -257,6 +257,7 @@ library
       Domain.Types.SearchTry
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
+      Domain.Types.Volunteer
       Environment
       Lib.DriverScore
       Lib.DriverScore.Types
@@ -400,6 +401,7 @@ library
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
+      Storage.Beam.Volunteer
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
@@ -531,6 +533,7 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
+      Storage.Queries.Volunteer
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

@@ -31,7 +31,8 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Time
 import SharedLogic.Merchant
-import Storage.Queries.DriverFee (findAllByCollectorId, findAllByTimeMerchantAndStatus)
+import Storage.Queries.DriverFee (findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
+import Storage.Queries.Volunteer (findAllByPlace)
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.AllDriverFeeRes
 getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
@@ -67,34 +68,29 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
     getNumRides fee = sum $ map numRides fee
     getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 
-getCashCollectionHistory :: ShortId DM.Merchant -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Flow Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId collectorId mbFrom mbTo mbLimit mbOffset = do
+getCashCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CashCollectionListRes
+getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
-  let limit_ = fromMaybe defaultLimit mbLimit
-      offset_ = fromMaybe 0 mbOffset
-      defaultFrom = UTCTime (fromGregorian 2020 1 1) 0
+  let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0
       from_ = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  collections <- findAllByCollectorId merchant.id collectorId from_ to limit_ offset_
+  collections <- case (place, volunteerId) of
+    (Nothing, Nothing) -> pure []
+    (Nothing, Just cId) -> findAllByVolunteerIds merchant.id [cId] from_ to
+    (Just stn, _) -> do
+      volunteers <- findAllByPlace stn
+      let relevantIds = case volunteerId of
+            Just cId -> [cId | cId `elem` ((.id.getId) <$> volunteers)]
+            _ -> (.id.getId) <$> volunteers
+      findAllByVolunteerIds merchant.id relevantIds from_ to
   let totalCnt = length collections
-      totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) collections
-  let limitresp = min maxLimit . fromMaybe defaultLimit $ mbLimit
-  let collectionList = map buildCollectionList (limitOffset limitresp offset_ collections)
-  let count_ = length collectionList
-  pure $ Common.CashCollectionListRes (Common.Summary totalCnt count_) totalFee collectionList
+      totalFeeCollected = sum $ map calcFee collections
+      totalRides = sum $ map (.numRides) collections
+      totalDrivers = length $ nub (map driverId collections)
+      collectionsTs = [(calcFee fee, fee.collectedAt) | fee <- collections]
+      numRidesTs = [(fee.numRides, fee.collectedAt) | fee <- collections]
+      driversPmtTs = [fee.collectedAt | fee <- collections]
+  pure $ Common.CashCollectionListRes totalCnt totalFeeCollected totalRides totalDrivers collectionsTs numRidesTs driversPmtTs
   where
-    maxLimit = 20
-    defaultLimit = 10
-
-    buildCollectionList DriverFee {..} = do
-      Common.DriverFeeAPIEntity
-        { id = cast id,
-          merchantId = merchantId.getId,
-          driverId = cast driverId,
-          fee = fromIntegral govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst,
-          ..
-        }
-
-    limitOffset :: Int -> Int -> [a] -> [a] -- can be in common
-    limitOffset limitVal offsetVal xs = take limitVal (drop offsetVal xs)
+    calcFee fee = fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst
