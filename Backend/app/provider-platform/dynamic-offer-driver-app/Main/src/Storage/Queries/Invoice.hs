@@ -2,6 +2,7 @@
 
 module Storage.Queries.Invoice where
 
+import Data.Time (UTCTime (UTCTime, utctDay), addUTCTime, secondsToDiffTime)
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
 import Domain.Types.Person (Person)
@@ -103,6 +104,26 @@ findActiveByDriverFeeIds driverFeeIds =
         ]
     ]
 
+findAllByStatusWithLimit :: MonadFlow m => Domain.InvoiceStatus -> Int -> m [Domain.Invoice]
+findAllByStatusWithLimit status limit = do
+  endTime <- getCurrentTime
+  let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
+  let lastCheckedAt = UTCTime (utctDay endTime) (secondsToDiffTime 0)
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamI.invoiceStatus $ Se.Eq status,
+          Se.Is BeamI.createdAt $ Se.LessThanOrEq endTime,
+          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq startTime,
+          Se.Or
+            [ Se.Is BeamI.lastStatusCheckedAt $ Se.Eq Nothing,
+              Se.Is BeamI.lastStatusCheckedAt $ Se.Not (Se.Eq $ Just lastCheckedAt)
+            ]
+        ]
+    ]
+    (Se.Desc BeamI.createdAt)
+    (Just limit)
+    Nothing
+
 findLatestAutopayActiveByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
 findLatestAutopayActiveByDriverFeeId driverFeeId = do
   findAllWithOptionsKV
@@ -134,6 +155,18 @@ updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
     ]
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
+updatePendingToFailed :: MonadFlow m => m ()
+updatePendingToFailed = do
+  endTime <- getCurrentTime
+  let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
+  updateWithKV
+    [Se.Set BeamI.invoiceStatus Domain.INACTIVE]
+    [ Se.And
+        [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.createdAt $ Se.LessThan startTime
+        ]
+    ]
+
 inActivateAllAutopayActiveInvoices :: MonadFlow m => Id Person -> m ()
 inActivateAllAutopayActiveInvoices driverId = do
   now <- getCurrentTime
@@ -158,6 +191,16 @@ updateBankErrorsByInvoiceId bankError errorCode invoiceId = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
 
+updateLastCheckedOn :: MonadFlow m => [Id Domain.Invoice] -> m ()
+updateLastCheckedOn invoiceIds = do
+  now <- getCurrentTime
+  let lastCheckedAt = UTCTime (utctDay now) (secondsToDiffTime 0)
+  updateWithKV
+    [ Se.Set BeamI.lastStatusCheckedAt (Just lastCheckedAt),
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.id (Se.In $ getId <$> invoiceIds)]
+
 instance FromTType' BeamI.Invoice Domain.Invoice where
   fromTType' BeamI.InvoiceT {..} = do
     pure $
@@ -173,6 +216,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
             bankErrorCode,
             bankErrorMessage,
             bankErrorUpdatedAt,
+            lastStatusCheckedAt,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -190,6 +234,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
         BeamI.bankErrorCode = bankErrorCode,
         BeamI.bankErrorMessage = bankErrorMessage,
         BeamI.bankErrorUpdatedAt = bankErrorUpdatedAt,
+        BeamI.lastStatusCheckedAt = lastStatusCheckedAt,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }

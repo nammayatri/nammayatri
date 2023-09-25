@@ -23,6 +23,7 @@ data Invoice = Invoice
     bankErrorMessage :: Maybe Text,
     bankErrorCode :: Maybe Text,
     bankErrorUpdatedAt :: Maybe UTCTime,
+    lastStatusCheckedAt :: Maybe UTCTime,
     maxMandateAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

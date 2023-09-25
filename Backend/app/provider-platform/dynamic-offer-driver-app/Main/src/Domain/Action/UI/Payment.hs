@@ -40,7 +40,10 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payment.Types as Payment
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
@@ -91,7 +94,7 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 
 -- order status -----------------------------------------------------
 
-getStatus :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DPayment.PaymentStatusResp
+getStatus :: (ServiceFlow m r, Transactionable m, EncFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> m DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
@@ -160,7 +163,7 @@ juspayWebhookHandler merchantShortId authData value = do
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> Flow ()
+processPayment :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> m ()
 processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -178,7 +181,7 @@ processPayment merchantId driverId orderId sendNotification = do
     updatePaymentStatus driverId merchantId
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 
-updatePaymentStatus :: Id DP.Person -> Id DM.Merchant -> Flow ()
+updatePaymentStatus :: (MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DM.Merchant -> m ()
 updatePaymentStatus driverId merchantId = do
   dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
   let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
@@ -189,7 +192,7 @@ updatePaymentStatus driverId merchantId = do
     Nothing -> QDI.updateSubscription True (cast driverId)
     Just plan_ -> when (totalDue < plan_.maxCreditLimit) $ QDI.updateSubscription True (cast driverId)
 
-notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
+notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key $ do
@@ -198,16 +201,14 @@ notifyPaymentSuccessIfNotNotified driver orderId = do
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
-notifyAndUpdateInvoiceStatusIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> Flow ()
+notifyAndUpdateInvoiceStatusIfPaymentFailed :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> m ()
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName = do
   activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
-  now <- getCurrentTime
   when (toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus) $ do
     QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     case activeExecutionInvoice of
       Just invoice' -> do
-        QDF.updateStatus PAYMENT_OVERDUE invoice'.driverFeeId now
-        QDF.updateFeeType RECURRING_INVOICE now invoice'.driverFeeId
+        QDF.updateAutoPayToManual invoice'.driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
       Nothing -> pure ()
     let key = "driver-offer:FailedNotif-" <> orderId.getId
@@ -221,14 +222,28 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
         (True, False) -> False
         (_, _) -> validStatus
 
-sendNotificationIfNotSent :: Text -> Flow () -> Flow ()
+sendNotificationIfNotSent :: (MonadFlow m, CacheFlow m r) => Text -> m () -> m ()
 sendNotificationIfNotSent key actions = do
   isNotificationSent <- fromMaybe False <$> Hedis.get key
   unless isNotificationSent $ do
     Hedis.setExp key True 86400 -- 24 hours
     actions
 
-pdnNotificationStatus :: (Id DP.Person, Id DM.Merchant) -> Id Notification -> Flow DPayments.NotificationStatusResp
+pdnNotificationStatus ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    HasShortDurationRetryCfg r c,
+    ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  (Id DP.Person, Id DM.Merchant) ->
+  Id Notification ->
+  m DPayments.NotificationStatusResp
 pdnNotificationStatus (_, merchantId) notificationId = do
   pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
   resp <- Payment.mandateNotificationStatus merchantId (mkNotificationRequest pdnNotification.shortId)
@@ -240,16 +255,14 @@ pdnNotificationStatus (_, merchantId) notificationId = do
         { notificationId = shortNotificationId
         }
 
-processNotification :: Text -> Payment.NotificationStatus -> Flow ()
+processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Payment.NotificationStatus -> m ()
 processNotification notificationId notificationStatus = do
   notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
   let driverFeeId = notification.driverFeeId
-  now <- getCurrentTime
   case notificationStatus of
     Juspay.NOTIFICATION_FAILURE -> do
       --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
-      QDF.updateStatus PAYMENT_OVERDUE driverFeeId now
-      QDF.updateFeeType RECURRING_INVOICE now driverFeeId
+      QDF.updateAutoPayToManual driverFeeId
       QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
     Juspay.SUCCESS -> do
       --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
@@ -257,7 +270,7 @@ processNotification notificationId notificationStatus = do
     _ -> pure ()
   QNTF.updateNotificationStatusById notification.id notificationStatus
 
-processMandate :: Id DP.Person -> Payment.MandateStatus -> Maybe UTCTime -> Maybe UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> Flow ()
+processMandate :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Payment.MandateStatus -> Maybe UTCTime -> Maybe UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> m ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
   let payerApp = upiDetails >>= (.payerApp)
       payerAppName = upiDetails >>= (.payerAppName)
@@ -318,5 +331,5 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
           }
     checkToUpdatePayerVpa existingMandateEntry autoPayStatus =
       case existingMandateEntry of
-        Just mandateEntry -> mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED
+        Just mandateEntry -> (mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED) || (mandateEntry.status == DM.ACTIVE && isNothing (mandateEntry.payerVpa))
         Nothing -> True

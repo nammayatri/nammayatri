@@ -427,6 +427,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             stageUpdatedAt = Nothing,
             billNumber = Nothing,
             feeWithoutDiscount = Nothing,
+            schedulerTryCount = 0,
             collectedAt = Nothing
           }
 

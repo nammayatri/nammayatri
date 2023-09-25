@@ -166,6 +166,7 @@ let AllocatorJobType =
       | SendPDNNotificationToDriver
       | MandateExecution
       | CalculateDriverFees
+      | OrderAndNotificationStatusUpdate
       >
 
 let jobInfoMapx =
@@ -184,6 +185,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.MandateExecution, mapValue = True }
       , { mapKey = AllocatorJobType.CalculateDriverFees, mapValue = True }
+      , { mapKey = AllocatorJobType.OrderAndNotificationStatusUpdate
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
