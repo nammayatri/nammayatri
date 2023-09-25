@@ -215,8 +215,8 @@ addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle me
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId
 
-clearOnRideStuckDrivers :: ShortId DM.Merchant -> FlowHandler Common.ClearOnRideStuckDriversRes
-clearOnRideStuckDrivers = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantId = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers merchantId
 
 getDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.GetHomeLocationsRes
 getDriverHomeLocation merchantShortId = withFlowHandlerAPI . DDriver.getDriverHomeLocation merchantShortId
