@@ -50,10 +50,10 @@ handler merchantId =
   getCashCollectionHistory merchantId
     :<|> getAllDriverFeeHistory merchantId
 
-getCashCollectionHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> FlowHandler Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId apiTokenInfo collectorId mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI $ do
+getCashCollectionHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CashCollectionListRes
+getCashCollectionHistory merchantShortId apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.revenue.getCashCollectionHistory) collectorId mbFrom mbTo mbLimit mbOffset
+  Client.callDriverOfferBPP checkedMerchantId (.revenue.getCashCollectionHistory) volunteerId place mbFrom mbTo
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.AllDriverFeeRes
 getAllDriverFeeHistory merchantShortId apiTokenInfo mbFrom mbTo = withFlowHandlerAPI $ do

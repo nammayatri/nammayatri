@@ -176,7 +176,7 @@ data VolunteerAPIs = VolunteerAPIs
   }
 
 data RevenueAPIs = RevenueAPIs
-  { getCashCollectionHistory :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Euler.EulerClient Revenue.CashCollectionListRes,
+  { getCashCollectionHistory :: Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.CashCollectionListRes,
     getAllDriverFeeHistory :: Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.AllDriverFeeRes
   }
 

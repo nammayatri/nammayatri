@@ -104,6 +104,7 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (SearchRequestSpecialZoneDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchTryDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchTry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VehicleDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Vehicle" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (VolunteerDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Volunteer" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FeedbackForm" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FeedbackDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Feedback" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FeedbackBadgeDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FeedbackBadge" :: Text) =<< dbConf
