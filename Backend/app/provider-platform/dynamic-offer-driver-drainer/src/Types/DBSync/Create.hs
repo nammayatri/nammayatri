@@ -82,6 +82,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver 
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
+import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
 
 data DBCreateObject
   = BapMetadataObject BapMetadata.BapMetadata
@@ -154,6 +155,7 @@ data DBCreateObject
   | SearchRequestSpecialZoneObject SearchRequestSpecialZone.SearchRequestSpecialZone
   | SearchTryObject SearchTry.SearchTry
   | VehicleObject Vehicle.Vehicle
+  | VolunteerObject Volunteer.Volunteer
   | RegistrationTokenObject RegistrationToken.RegistrationToken
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | FeedbackObject Feedback.Feedback
@@ -239,6 +241,7 @@ modelName (SearchRequestForDriverObject _) = "SearchRequestForDriver"
 modelName (SearchRequestSpecialZoneObject _) = "SearchRequestSpecialZone"
 modelName (SearchTryObject _) = "SearchTry"
 modelName (VehicleObject _) = "Vehicle"
+modelName (VolunteerObject _) = "Volunteer"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
 modelName (FeedbackFormObject _) = "FeedBackForm"
 modelName (FeedbackObject _) = "FeedBack"

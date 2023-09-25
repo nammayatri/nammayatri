@@ -85,6 +85,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver 
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
+import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
 import Utils.Parse
 
 data DeleteModel
@@ -159,6 +160,7 @@ data DeleteModel
   | SearchRequestSpecialZoneDelete
   | SearchTryDelete
   | VehicleDelete
+  | VolunteerDelete
   | FeedbackFormDelete
   | FeedbackDelete
   | FeedbackBadgeDelete
@@ -241,6 +243,7 @@ getTagDelete SearchRequestForDriverDelete = "SearchRequestForDriverOptions"
 getTagDelete SearchRequestSpecialZoneDelete = "SearchRequestSpecialZoneOptions"
 getTagDelete SearchTryDelete = "SearchTryOptions"
 getTagDelete VehicleDelete = "VehicleOptions"
+getTagDelete VolunteerDelete = "VolunteerOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete FeedbackDelete = "FeedbackOptions"
 getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
@@ -319,6 +322,7 @@ parseTagDelete "SearchRequestForDriverOptions" = return SearchRequestForDriverDe
 parseTagDelete "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneDelete
 parseTagDelete "SearchTryOptions" = return SearchTryDelete
 parseTagDelete "VehicleOptions" = return VehicleDelete
+parseTagDelete "VolunteerOptions" = return VolunteerDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "FeedbackOptions" = return FeedbackDelete
 parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
@@ -401,6 +405,7 @@ data DBDeleteObject
   | SearchRequestSpecialZoneDeleteOptions DeleteModel (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryDeleteOptions DeleteModel (Where Postgres SearchTry.SearchTryT)
   | VehicleDeleteOptions DeleteModel (Where Postgres Vehicle.VehicleT)
+  | VolunteerDeleteOptions DeleteModel (Where Postgres Volunteer.VolunteerT)
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | FeedbackDeleteOptions DeleteModel (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
@@ -631,6 +636,9 @@ instance FromJSON DBDeleteObject where
       VehicleDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ VehicleDeleteOptions deleteModel whereClause
+      VolunteerDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ VolunteerDeleteOptions deleteModel whereClause
       FeedbackFormDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FeedbackFormDeleteOptions deleteModel whereClause

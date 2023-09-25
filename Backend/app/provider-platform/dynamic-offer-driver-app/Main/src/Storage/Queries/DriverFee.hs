@@ -357,9 +357,19 @@ findAllPendingRegistrationDriverFeeByDriverId :: MonadFlow m => Id Person -> m [
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 -- add fee collection time later if req'd
-findAllByCollectorId :: MonadFlow m => Id Merchant -> Text -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
-findAllByCollectorId (Id merchantId) collectorId from to limit offset = do
-  findAllWithOptionsKV [Se.And [Se.Is BeamDF.merchantId $ Se.Eq merchantId, Se.Is BeamDF.collectedBy $ Se.Eq (Just collectorId), Se.Is BeamDF.updatedAt $ Se.GreaterThanOrEq from, Se.Is BeamDF.updatedAt $ Se.LessThanOrEq to]] (Se.Desc BeamDF.updatedAt) (Just limit) (Just offset)
+findAllByVolunteerIds :: MonadFlow m => Id Merchant -> [Text] -> UTCTime -> UTCTime -> m [DriverFee]
+findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to)
+        ]
+          <> [Se.Is BeamDF.collectedBy $ Se.In (map Just volunteerIds) | not (null volunteerIds)]
+    ]
+    (Se.Desc BeamDF.updatedAt)
+    Nothing
+    Nothing
 
 findAllByDriverFeeIds :: MonadFlow m => [Id DriverFee] -> m [DriverFee]
 findAllByDriverFeeIds driverFeeIds = do
@@ -438,9 +448,9 @@ updateRegisterationFeeStatusByDriverId status (Id driverId) = do
     [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId), Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION), Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)]]
 
 updateCollectedPaymentStatus :: MonadFlow m => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
-updateCollectedPaymentStatus status collectorId now (Id driverFeeId) = do
+updateCollectedPaymentStatus status volunteerId now (Id driverFeeId) = do
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId, Se.Set BeamDF.collectedAt (Just now)]
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 updateAllExecutionPendingToManualOverdueByDriverId :: MonadFlow m => Id Person -> m ()

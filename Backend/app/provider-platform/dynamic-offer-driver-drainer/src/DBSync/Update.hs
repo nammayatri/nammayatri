@@ -157,6 +157,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchTry" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (VehicleOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Vehicle" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (VolunteerOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Volunteer" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FeedbackForm" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FeedbackOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Feedback" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FeedbackBadgeOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FeedbackBadge" :: Text) =<< dbConf
