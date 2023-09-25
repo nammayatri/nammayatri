@@ -487,7 +487,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date,
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
-            numOfRides = -1
+            numOfRides = if paymentMode_ == AUTOPAY then 0 else -1
           }
     mkPlanFareBreakup offers = do
       let baseAmount = case plan.planBaseAmount of

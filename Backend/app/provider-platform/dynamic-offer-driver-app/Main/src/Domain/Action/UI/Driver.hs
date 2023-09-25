@@ -677,7 +677,7 @@ setActivity (personId, merchantId) isActive mode = do
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  _ <- QDriverInformation.updateActivity driverId isActive mode
+  _ <- QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   when enableLocationTrackingService do
     whenJust mode $ \md -> do
