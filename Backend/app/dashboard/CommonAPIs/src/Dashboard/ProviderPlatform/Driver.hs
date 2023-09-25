@@ -694,6 +694,7 @@ instance HideSecrets UpdateDriverNameReq where
 type ClearOnRideStuckDriversAPI =
   "clearStuck"
     :> "onRide"
+    :> QueryParam "dbSyncTime" Int
     :> Get '[JSON] ClearOnRideStuckDriversRes
 
 newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
