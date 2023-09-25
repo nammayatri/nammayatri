@@ -91,7 +91,12 @@ initData = {
         optionsMenuState : ALL_COLLAPSED,
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
-        showOfferBanner : false
+        offerBannerProps : {
+            showOfferBanner : false,
+            offerBannerValidTill : "",
+            offerBannerDeadline : ""
+        },
+        scrollToBottom : false
     }
 }
 

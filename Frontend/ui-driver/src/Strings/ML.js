@@ -822,8 +822,8 @@ const mlStrings = {
   SCHEDULED : "SCHEDULED",
   ONE_TIME_SETTLEMENT : "ഒറ്റത്തവണ സെറ്റിൽമെന്റ് നടത്തുക",
   PAYMENT_SCHEDULED : "Payment Scheduled",
-  OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
-  OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
+  OFFER_CARD_BANNER_TITLE : "Setup Autopay and pay only ₹15/day until [VAR]",
+  OFFER_CARD_BANNER_DESC : "Pay only ₹15/Day until Nov 1",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
   OR : "അല്ലെങ്കിൽ",
   COLLECT_CASH_DIRECTLY : "നേരിട്ട് പണം സ്വികരിക്കുക",
@@ -834,5 +834,9 @@ const mlStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് നേരിട്ട് പണം സ്വികരിക്കു",
   PAYMENT : "പേയ്മെന്റ്",
   QR_CODE : "QR കോഡ്",
-  GET_QR_CODE : "QR കോഡ് നേടുക"
+  GET_QR_CODE : "QR കോഡ് നേടുക",
+  EXECUTION_FAILED : "Execution Failed", 
+  NOTIFICATION_FAILED : "Notification Failed",
+  PAY_NOW : "Pay Now",
+  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides"
 }

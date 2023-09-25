@@ -33,6 +33,8 @@ import Data.Int as DI
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
+import Data.String (Pattern(..), Replacement(..), replace, split)
+import Debug (spy)
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
@@ -44,7 +46,7 @@ import Prelude (map, not, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
-import Screens.Types (AutoPayStatus(..), OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..))
+import Screens.Types (AutoPayStatus(..), OptionsMenuState(..), PlanCardConfig(..), SubscribePopupType(..), OfferBanner)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -453,14 +455,23 @@ dueDetailsListState state =
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
 
-offerCardBannerConfig :: Boolean -> Banner.Config
-offerCardBannerConfig isPlanCard = 
+offerCardBannerConfig :: Boolean -> OfferBanner ->  Banner.Config
+offerCardBannerConfig isPlanCard bannerProps= 
   let 
+    strArray = split (Pattern "-*$*-") bannerProps.offerBannerDeadline
+    getLanguage len = do
+        case getValueToLocalStore LANGUAGE_KEY of
+            "KN_IN" | len > 1 -> 1
+            "HI_IN" | len > 2 -> 2
+            "TA_IN" | len > 3 -> 3
+            _ -> 0
+    date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
+    title' = (replace (Pattern "[VAR]") (Replacement date) (getString OFFER_CARD_BANNER_TITLE))
     config = Banner.config
     config' = config  
       {
         backgroundColor = Color.yellow800,
-        title = getString OFFER_CARD_BANNER_TITLE,
+        title = title',
         titleColor = Color.black800,
         actionText = getString OFFER_CARD_BANNER_DESC,
         actionTextColor = Color.black800,
@@ -474,7 +485,8 @@ offerCardBannerConfig isPlanCard =
         titleStyle = if isPlanCard then Body6 else Body7,
         imageHeight = if isPlanCard then (V 90) else (V 105),
         imageWidth = if isPlanCard then (V 108) else (V 118),
-        margin = MarginTop 0,
-        padding = PaddingVertical 12 12
+        margin = MarginTop 12,
+        padding = PaddingTop 0,
+        actionTextVisibility = false
       }
   in config'

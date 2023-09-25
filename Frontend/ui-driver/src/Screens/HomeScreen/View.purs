@@ -76,7 +76,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..))
+import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..))
 import Services.API (Status(..))
@@ -302,15 +302,15 @@ driverMapsHeaderView push state =
                     , width MATCH_PARENT
                     , gravity RIGHT
                   ][
-                    if (state.props.autoPayBanner && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                    if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
                     , viewRecenterAndSupport state push
                   ]
                 ]
               ]
             , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && not state.props.autoPayBanner) then genderBannerView state push else linearLayout[][]
+            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push else linearLayout[][]
             , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
+            , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
             ]
         ]
         , bottomNavBar push state
@@ -406,7 +406,7 @@ autoPayBannerView state push configureImage =
     , width  MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
-    , visibility if state.props.autoPayBanner then VISIBLE else GONE
+    , visibility if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER then VISIBLE else GONE
     , gravity BOTTOM
     , weight 1.0
     ][

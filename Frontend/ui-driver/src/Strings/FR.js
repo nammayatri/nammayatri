@@ -684,10 +684,10 @@ const frenchStrings = {
   EXECUTION_SUCCESS : "Execution Success",
   SCHEDULED : "SCHEDULED",
   PAYMENT_SCHEDULED : "Payment Scheduled",
-  OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
-  OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
+  OFFER_CARD_BANNER_TITLE : "Setup Autopay and pay only ₹15/day until [VAR]",
+  OFFER_CARD_BANNER_DESC : "Pay only ₹15/Day until Nov 1",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
-  OR : "OU",
+  OR : "OR",
   COLLECT_CASH_DIRECTLY : "Encaisser directement l'argent",
   SCAN_TO_ACCEPT_DIRECTLY_TO_BANK : "Pour accepter les paiements directement sur votre compte bancaire, configurez le paiement automatique sur votre forfait",
   DOWNLOAD_QR : "Télécharger le QR",
@@ -696,5 +696,9 @@ const frenchStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Obtenez un paiement direct sur votre compte bancaire",
   PAIEMENT : "Paiement",
   QR_CODE : "QR Code",
-  GET_QR_CODE : "Obtenir le code QR"
+  GET_QR_CODE : "Obtenir le code QR",
+  EXECUTION_FAILED : "Execution Failed", 
+  NOTIFICATION_FAILED : "Notification Failed",
+  PAY_NOW : "Pay Now",
+  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides"
 }

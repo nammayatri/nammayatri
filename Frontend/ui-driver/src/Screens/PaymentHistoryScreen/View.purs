@@ -496,7 +496,7 @@ rightItem push val prefixImage postfixImage =
      , imageWithFallback "ny_ic_upi_logo,"
      ] 
    , textView $
-     [ text if postfixImage then ("..." <> takeRight 10 val) else val
+     [ text val
      , color Color.black900
      , padding $ PaddingBottom 3
      ] <> FontStyle.body6 TypoGraphy

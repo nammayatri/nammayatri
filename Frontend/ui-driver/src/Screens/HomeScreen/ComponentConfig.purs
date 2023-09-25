@@ -39,6 +39,7 @@ import Debug (spy)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
+import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
 import Helpers.Utils as HU
@@ -48,11 +49,11 @@ import Language.Types (STR(..))
 import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
+import Screens.Types (SubscriptionBannerType(..))
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
-import Font.Style (Style (..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -649,17 +650,36 @@ autopayBannerConfig state configureImage =
     config = Banner.config
     config' = config
       {
-        backgroundColor = "#269574",
-        title = if onBoardingSubscriptionScreenCheck 0 true then getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES else getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS,
-        titleColor = Color.white900,
-        actionText = (getString SETUP_NOW),
-        actionTextColor = Color.white900,
-        imageUrl = if onBoardingSubscriptionScreenCheck 0 true then "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" else "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
-        isBanner = state.props.autoPayBanner,
-        imageHeight = if configureImage then (V 75) else (V 95),
+        backgroundColor = case state.props.autoPayBanner of
+                        CLEAR_DUES_BANNER -> Color.yellow900
+                        _ -> "#269574",
+        title = case state.props.autoPayBanner of
+                  FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
+                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
+                  CLEAR_DUES_BANNER -> getString CLEAR_DUES_BANNER_TITLE
+                  _ -> "",
+        titleColor = case state.props.autoPayBanner of
+                        CLEAR_DUES_BANNER -> Color.black900
+                        _ -> Color.white900,
+        actionText = case state.props.autoPayBanner of
+                        CLEAR_DUES_BANNER -> getString PAY_NOW
+                        _ -> (getString SETUP_NOW),
+        actionTextColor = case state.props.autoPayBanner of
+                            CLEAR_DUES_BANNER -> Color.black900
+                            _ -> Color.white900,
+        imageUrl = case state.props.autoPayBanner of
+                      FREE_TRIAL_BANNER -> "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" 
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png"
+                      CLEAR_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
+                      _ -> "",
+        isBanner = state.props.autoPayBanner /= NO_SUBSCRIPTION_BANNER,
+        imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
-        titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
+        titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7,
+        imagePadding = case state.props.autoPayBanner of
+                            CLEAR_DUES_BANNER -> PaddingTop 0
+                            _ -> PaddingVertical 5 5
       }
   in config'
   

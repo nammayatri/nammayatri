@@ -43,7 +43,10 @@ commonConfig =
         , subscriptionConfig : {
             enableBlocking : false,
             onBoardingSubscription : false,
-            completePaymentPopup : false
+            completePaymentPopup : false,
+            showDUOfferBanner : false,
+            offerBannerValidTill : "",
+            offerBannerDeadline : ""
         }
         , navigationAppConfig : {
             android : {  

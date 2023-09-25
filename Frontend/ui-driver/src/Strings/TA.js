@@ -852,7 +852,7 @@ const tamilStrings = {
   RETRY_AUTOPAY : "தானாகச் செலுத்த மீண்டும் முயற்சிக்கவும்",
   RETRY_STR : " மீண்டும் முயற்சிக்கவும் ",
   ONGOING_PAYMENT_EXECUTION : "தற்போது கைமுறையாக பணம் செலுத்துகிறது தயவு செய்து காத்திருக்கவும்",
-  OFFER_CARD_BANNER_TITLE : "செப் 30 வரை ஒரு நாளில் ₹15 மட்டும் செலுத்துங்கள்",
+  OFFER_CARD_BANNER_TITLE : "ஆட்டோப்பே அமைத்து [VAR] வரை ₹15/தினம்‌ சலுகை பெறுங்கள்",
   OFFER_CARD_BANNER_DESC : "செப் 25க்குள் ஆட்டோபே அமைக்கப்பட்டால்",
   OFFER_CARD_BANNER_ALERT : "உங்கள் ஆக்டோபய அமைப்பு நிலுவையில் உள்ளது!",
   OR : "அல்லது",
@@ -864,5 +864,11 @@ const tamilStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "உங்கள் வங்கிக்கு நேரடியாகப் பணம் பெறுங்கள்‌",
   PAYMENT: "பணம்‌",
   QR_CODE : "QR",
-  GET_QR_CODE : "QR பெற"
+  GET_QR_CODE : "QR பெற",
+  EXECUTION_FAILED : "செயல்படுத்தும் தோல்வியடைந்தது", 
+  NOTIFICATION_FAILED : "அறிவிப்பு தோல்வியடைந்தது",
+  PAY_NOW : "பணம்‌ செலுத்தவும்‌",
+  CLEAR_DUES_BANNER_TITLE : "இடைவிடாத சவாரிகளுக்கு உங்கள் பாக்கிகளை செலுத்தவும்‌"
+
+  
 }
