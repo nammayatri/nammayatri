@@ -23,7 +23,9 @@ config =
     enableBlocking : false,
     completePaymentPopup : false,
     onBoardingSubscription : false,
-    showDUOfferBanner : false
+    showDUOfferBanner : false,
+    offerBannerValidTill : "",
+    offerBannerDeadline : ""
   },
   rideActionModelConfig : {
     showVehicleVariant : true

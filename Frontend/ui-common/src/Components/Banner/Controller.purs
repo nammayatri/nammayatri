@@ -44,7 +44,10 @@ type Config = {
   alertTextVisibility :: Boolean,
   bannerClickable :: Boolean,
   padding :: Padding,
-  margin :: Margin
+  margin :: Margin,
+  actionTextVisibility :: Boolean,
+  titleTextVisibility :: Boolean,
+  imagePadding :: Padding
 }
 
 config :: Config
@@ -68,5 +71,8 @@ config = {
     alertTextVisibility : false,
     bannerClickable : true,
     padding : PaddingTop 0,
-    margin : MarginTop 12
+    margin : MarginTop 12,
+    actionTextVisibility : true,
+    titleTextVisibility : true,
+    imagePadding : PaddingVertical 5 5
 }

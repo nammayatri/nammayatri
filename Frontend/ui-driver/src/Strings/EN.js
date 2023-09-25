@@ -882,8 +882,8 @@ const englishStrings = {
   RETRY_AUTOPAY : "Retry Autopay",
   RETRY_STR : "Retry ",
   ONGOING_PAYMENT_EXECUTION : "There is ongoing manual payment pls wait",
-  OFFER_CARD_BANNER_TITLE : "Pay only ₹15/Day until Sep 30",
-  OFFER_CARD_BANNER_DESC : "if Autopay is setup by Sep 25",
+  OFFER_CARD_BANNER_TITLE : "Setup Autopay and pay only ₹15/day until [VAR]",
+  OFFER_CARD_BANNER_DESC : "Pay only ₹15/Day until Nov 1",
   OFFER_CARD_BANNER_ALERT : "Your Autopay Setup is Pending!",
   OR : "OR",
   COLLECT_CASH_DIRECTLY : "Collect cash directly ",
@@ -894,5 +894,9 @@ const englishStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "Get direct payment to your bank account",
   PAYMENT : "Payment",
   QR_CODE : "QR Code",
-  GET_QR_CODE : "Get QR Code"
-}
+  GET_QR_CODE : "Get QR Code",
+  EXECUTION_FAILED : "Execution Failed", 
+  NOTIFICATION_FAILED : "Notification Failed",
+  PAY_NOW : "Pay Now",
+  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides"
+} 

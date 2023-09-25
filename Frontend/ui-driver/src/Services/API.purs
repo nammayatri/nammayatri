@@ -2833,12 +2833,21 @@ instance showDriverFeeInfoEntity :: Show DriverFeeInfoEntity where show = generi
 instance decodeDriverFeeInfoEntity :: Decode DriverFeeInfoEntity where decode = defaultDecode
 instance encodeDriverFeeInfoEntity :: Encode DriverFeeInfoEntity where encode = defaultEncode
 
-data AutopayPaymentStage =  NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+data AutopayPaymentStage =  NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS | EXECUTION_FAILED | NOTIFICATION_FAILED
 data InvoiceStatus =  ACTIVE_INVOICE | SUCCESS | FAILED | EXPIRED | INACTIVE
 
 derive instance genericAutopayPaymentStage :: Generic AutopayPaymentStage _
 instance showAutopayPaymentStage :: Show AutopayPaymentStage where show = genericShow
-instance decodeAutopayPaymentStage :: Decode AutopayPaymentStage where decode = defaultEnumDecode
+instance decodeAutopayPaymentStage :: Decode AutopayPaymentStage
+  where decode body = case unsafeFromForeign body of
+                  "NOTIFICATION_SCHEDULED"        -> except $ Right NOTIFICATION_SCHEDULED 
+                  "NOTIFICATION_ATTEMPTING"           -> except $ Right NOTIFICATION_ATTEMPTING 
+                  "EXECUTION_SCHEDULED" -> except $ Right EXECUTION_SCHEDULED 
+                  "EXECUTION_ATTEMPTING" -> except $ Right EXECUTION_ATTEMPTING 
+                  "EXECUTION_SUCCESS" -> except $ Right EXECUTION_SUCCESS 
+                  "EXECUTION_FAILED" -> except $ Right EXECUTION_FAILED 
+                  "NOTIFICATION_FAILED" -> except $ Right NOTIFICATION_FAILED 
+                  _   ->  except $ Right NOTIFICATION_SCHEDULED
 instance encodeAutopayPaymentStage :: Encode AutopayPaymentStage where encode = defaultEnumEncode
 instance eqAutopayPaymentStage :: Eq AutopayPaymentStage where eq = genericEq
 instance standardEncodeAutopayPaymentStage :: StandardEncode AutopayPaymentStage

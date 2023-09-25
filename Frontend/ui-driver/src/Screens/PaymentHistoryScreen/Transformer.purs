@@ -109,6 +109,7 @@ getAutoPayPaymentStatus status' = do
     API.EXECUTION_SCHEDULED -> Scheduled
     API.EXECUTION_ATTEMPTING -> Pending
     API.EXECUTION_SUCCESS -> Success
+    _ -> Failed
 
 getAutoPayStageData :: Maybe API.AutopayPaymentStage -> String
 getAutoPayStageData stage = 
@@ -120,6 +121,9 @@ getAutoPayStageData stage =
     API.EXECUTION_SCHEDULED -> getString EXECUTION_SCHEDULED
     API.EXECUTION_ATTEMPTING -> getString EXECUTION_ATTEMPTING
     API.EXECUTION_SUCCESS -> getString EXECUTION_SUCCESS
+    API.NOTIFICATION_FAILED -> getString NOTIFICATION_FAILED
+    API.EXECUTION_FAILED -> getString EXECUTION_FAILED
+    _ -> getString EXECUTION_ATTEMPTING
 
 getInvoiceStatus :: Maybe API.InvoiceStatus -> PaymentStatus
 getInvoiceStatus status' = do

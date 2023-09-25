@@ -854,7 +854,7 @@ const kannadaStrings = {
   RETRY_AUTOPAY : "ಸ್ವಯಂಪಾವತಿಯನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ",
   RETRY_STR : "ಮರುಪ್ರಯತ್ನಿಸಿ",
   ONGOING_PAYMENT_EXECUTION : "ಹಸ್ತಚಾಲಿತ ಪಾವತಿ ನಡೆಯುತ್ತಿದೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ",
-  OFFER_CARD_BANNER_TITLE : "ಸೆಪ್ಟೆಂ 30 ರವರೆಗೆ ₹15/ದಿನ ಮಾತ್ರ ಪಾವತಿಸಿ",
+  OFFER_CARD_BANNER_TITLE : "ಆಟೋಪೆ ಸೆಟಪ್ ಮಾಡಿ ಮತ್ತು [VAR] ರವರೆಗೆ ₹15/ದಿನ ಮಾತ್ರ ಪಾವತಿಸಿ",
   OFFER_CARD_BANNER_DESC : "ಆಟೋಪೆಯನ್ನು ಸೆಪ್ಟೆಂ 25 ರೊಳಗೆ ಹೊಂದಿಸಿದರೆ ಮಾತ್",
   OFFER_CARD_BANNER_ALERT : "ನಿಮ್ಮ ಆಟೋಪೆ ಸೆಟಪ್ ಬಾಕಿಯಿದೆ!",
   OR : "ಅಥವಾ",
@@ -866,5 +866,9 @@ const kannadaStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರ ಪಾವತಿ ಪಡೆಯಿರಿ",
   PAYMENT : "ಪಾವತಿ",
   QR_CODE : "QR ಕೋಡ್",
-  GET_QR_CODE : "QR ಕೋಡ್ ಪಡೆಯಿರಿ"
+  GET_QR_CODE : "QR ಕೋಡ್ ಪಡೆಯಿರಿ",
+  EXECUTION_FAILED : "ಎಕ್ಸಿಕ್ಯೂಶನ್ ವಿಫಲವಾಗಿದೆ", 
+  NOTIFICATION_FAILED : "ಅಧಿಸೂಚನೆ ವಿಫಲವಾಗಿದೆ",
+  PAY_NOW : "ಈಗ ಪಾವತಿಸಿ",
+  CLEAR_DUES_BANNER_TITLE : "ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
 }

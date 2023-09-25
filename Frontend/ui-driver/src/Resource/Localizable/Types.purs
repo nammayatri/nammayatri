@@ -906,6 +906,10 @@ data STR = LETS_GET_STARTED
         | PAYMENT
         | QR_CODE
         | GET_QR_CODE
+        | EXECUTION_FAILED
+        | NOTIFICATION_FAILED
+        | CLEAR_DUES_BANNER_TITLE
+        | PAY_NOW
 
 
 getStringFromEnum :: STR -> String
@@ -1802,3 +1806,7 @@ getStringFromEnum key = case key of
     PAYMENT -> "PAYMENT"
     QR_CODE -> "QR_CODE"
     GET_QR_CODE ->  "GET_QR_CODE"
+    EXECUTION_FAILED -> "EXECUTION_FAILED"
+    NOTIFICATION_FAILED -> "NOTIFICATION_FAILED"
+    CLEAR_DUES_BANNER_TITLE -> "CLEAR_DUES_BANNER_TITLE"
+    PAY_NOW -> "PAY_NOW"

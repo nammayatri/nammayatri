@@ -110,9 +110,9 @@ homeScreen = do
     AadhaarVerificationFlow updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
-    SubscriptionScreen updatedState -> do
+    SubscriptionScreen updatedState goToBottom -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $  App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+      App.BackT $  App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription goToBottom)
     GoToRideDetailsScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN)

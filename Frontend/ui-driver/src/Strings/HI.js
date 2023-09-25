@@ -881,7 +881,7 @@ const hindiStrings = {
   RETRY_AUTOPAY : "ऑटोपे पुनः प्रयास करें ",
   RETRY_STR : "पुनः प्रयास करें ",
   ONGOING_PAYMENT_EXECUTION : "मैन्युअल भुगतान जारी है, कृपया प्रतीक्षा करें",
-  OFFER_CARD_BANNER_TITLE : "30 सितंबर तक केवल ₹15/दिन पेय करें",
+  OFFER_CARD_BANNER_TITLE : "ऑटोपे सेटअप करें और [VAR] तक केवल ₹15/दिन पेय करें",
   OFFER_CARD_BANNER_DESC : "अगर ऑटोपे 25 सितंबर तक सेटअप हो जाए",
   OFFER_CARD_BANNER_ALERT : "आपका ऑटोपे सेटअप लंबित है!",
   OR : "या",
@@ -893,5 +893,9 @@ const hindiStrings = {
   GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT : "अपने बैंक खाते में सीधे भुगतान प्राप्त करें",
   PAYMENT : "भुगतान",
   QR_CODE : "क्यू आर कोड",
-  GET_QR_CODE : "क्यू आर कोड पाएं"
+  GET_QR_CODE : "क्यू आर कोड पाएं",
+  EXECUTION_FAILED : "निष्पादन विफल", 
+  NOTIFICATION_FAILED : "अधिसूचना विफल",
+  PAY_NOW : "अब पेय करें",
+  CLEAR_DUES_BANNER_TITLE : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अपना बकाया चुकाएं"
 }

@@ -65,11 +65,13 @@ view push config =
           , text config.title
           , color config.titleColor
           , padding $ PaddingBottom 2
+          , visibility if config.titleTextVisibility then VISIBLE else GONE
           ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , visibility if config.actionTextVisibility then VISIBLE else GONE
           ]
           [
             textView $
@@ -97,7 +99,7 @@ view push config =
             height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , padding $ PaddingVertical 5 5
+          , padding $ config.imagePadding
         ][imageView
             [
               height config.imageHeight

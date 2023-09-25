@@ -908,7 +908,7 @@ type HomeScreenProps =  {
   showAadharPopUp :: Boolean,
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,
-  autoPayBanner :: Boolean,
+  autoPayBanner :: SubscriptionBannerType,
   rcActive :: Boolean, 
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
@@ -919,6 +919,14 @@ type HomeScreenProps =  {
   driverBlocked :: Boolean,
   showBlockingPopup :: Boolean
  }
+
+data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER
+
+derive instance genericSubscriptionBannerType :: Generic SubscriptionBannerType _
+instance eqSubscriptionBannerType :: Eq SubscriptionBannerType where eq = genericEq
+instance showSubscriptionBannerType :: Show SubscriptionBannerType where show = genericShow
+instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where encode = defaultEnumEncode
+instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where decode = defaultEnumDecode
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY
 
@@ -1598,7 +1606,14 @@ type SubscriptionScreenProps = {
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
   lastPaymentType :: Maybe String,
-  showOfferBanner :: Boolean
+  offerBannerProps :: OfferBanner,
+  scrollToBottom :: Boolean
+}
+
+type OfferBanner = {
+    showOfferBanner :: Boolean,
+    offerBannerValidTill :: String,
+    offerBannerDeadline :: String
 }
 
 type JoinPlanData = {

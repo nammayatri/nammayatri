@@ -28,7 +28,9 @@ type SubscriptionConfig =  {
   enableBlocking :: Boolean,
   completePaymentPopup :: Boolean,
   onBoardingSubscription :: Boolean,
-  showDUOfferBanner :: Boolean
+  showDUOfferBanner :: Boolean,
+  offerBannerValidTill :: String,
+  offerBannerDeadline :: String
  }
 
 type RideActionModelConfig = {

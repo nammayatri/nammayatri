@@ -217,7 +217,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
-                    | SubscriptionScreen ST.HomeScreenState 
+                    | SubscriptionScreen ST.HomeScreenState Boolean
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
@@ -361,7 +361,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
+      exit $ SubscriptionScreen state false
     _ -> continue state
 
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
@@ -369,7 +369,7 @@ eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
   _ <- pure $ metaLogEvent "ny_driver_in_app_popup_join_now"
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_in_app_popup_join_now"
-  exit $ SubscriptionScreen state {props { showOffer = false }}
+  exit $ SubscriptionScreen state {props { showOffer = false }} false
 
 eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
@@ -677,7 +677,8 @@ eval (GenderBannerModal (Banner.OnClick)) state = do
   exit $ GotoEditGenderScreen
 
 eval (AutoPayBanner (Banner.OnClick)) state = do
-  exit $ SubscriptionScreen state
+  let goToBottom = state.props.autoPayBanner == ST.CLEAR_DUES_BANNER
+  exit $ SubscriptionScreen state goToBottom
 
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 
@@ -700,7 +701,7 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
 
-eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { props {showBlockingPopup = false}}
+eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { props {showBlockingPopup = false}} false
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
   _ <- pure $ showDialer "08069490091" false

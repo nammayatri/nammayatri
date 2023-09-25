@@ -84,7 +84,9 @@ window.getMerchantConfig = function () {
     , "subscriptionConfig" : {
       "enableBlocking" : true,
       "onBoardingSubscription" : true,
-      "showDUOfferBanner" : false
+      "showDUOfferBanner" : true,
+      "offerBannerValidTill" : "2023-11-02T00:00:00",
+      "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1"
     }
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false
