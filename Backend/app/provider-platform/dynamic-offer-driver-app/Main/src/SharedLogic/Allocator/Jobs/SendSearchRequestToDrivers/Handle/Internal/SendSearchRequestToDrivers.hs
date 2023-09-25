@@ -77,7 +77,8 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  prevSearchRequests <- QSRD.findAllActiveBySTId searchTry.id
+  when (isNothing (head prevSearchRequests).goHomeRequestId) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
   forM_ searchRequestsForDrivers $ \sReqFD -> do
     QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
