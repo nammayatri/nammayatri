@@ -257,7 +257,7 @@ dataListOptions config push =
           ]
         ]
       ) config.selectionOptions)
-
+  ]
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
 someOtherReason config push index =
