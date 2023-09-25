@@ -79,6 +79,10 @@ type API =
                :> TokenAuth
                :> ReqBody '[JSON] DriverOnboarding.DeleteRCReq
                :> Post '[JSON] APISuccess
+             :<|> "sync"
+               :> TokenAuth
+               :> ReqBody '[JSON] DriverOnboarding.SyncRCReq
+               :> Post '[JSON] APISuccess
              :<|> "all"
                :> TokenAuth
                :> Get '[JSON] [DriverOnboarding.LinkedRC]
@@ -98,6 +102,7 @@ handler =
     :<|> addReferral
     :<|> setRCStatus
     :<|> deleteRC
+    :<|> syncRC
     :<|> getAllLinkedRCs
 
 verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
@@ -135,3 +140,6 @@ deleteRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.dele
 
 getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRC]
 getAllLinkedRCs (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId)
+
+syncRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.SyncRCReq -> FlowHandler APISuccess
+syncRC _ req = withFlowHandlerAPI $ DriverOnboarding.syncRC req

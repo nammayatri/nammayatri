@@ -41,6 +41,7 @@ module Domain.Action.Dashboard.Driver
     updateByPhoneNumber,
     setRCStatus,
     deleteRC,
+    syncRC,
     getDriverHomeLocation,
     updateDriverHomeLocation,
     incrementDriverGoToCount,
@@ -891,6 +892,9 @@ deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..}) False
+
+syncRC :: Common.SyncRCReq -> Flow APISuccess
+syncRC Common.SyncRCReq {..} = DomainRC.syncRC DomainRC.SyncRCReq {..}
 
 getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Flow Driver.HistoryEntityV2
 getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = do

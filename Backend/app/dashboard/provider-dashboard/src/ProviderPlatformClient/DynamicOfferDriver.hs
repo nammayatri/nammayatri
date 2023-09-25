@@ -104,6 +104,7 @@ data DriversAPIs = DriversAPIs
     incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
+    syncRC :: Driver.SyncRCReq -> Euler.EulerClient APISuccess,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
     getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2
   }
@@ -282,6 +283,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
+      :<|> syncRC
       :<|> clearOnRideStuckDrivers
       :<|> getDriverHomeLocation
       :<|> updateDriverHomeLocation

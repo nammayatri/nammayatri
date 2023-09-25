@@ -89,6 +89,15 @@ updateVehicleName vehicleName (Id driverId) = do
     [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
     [Se.Is BeamV.driverId (Se.Eq driverId)]
 
+updateVehicleColorAndVariant :: (MonadFlow m) => Maybe Text -> Maybe Variant -> Text -> UTCTime -> m ()
+updateVehicleColorAndVariant mbColor mbVariant rcNo now = do
+  updateWithKV
+    ( [Se.Set BeamV.updatedAt now]
+        <> [Se.Set BeamV.color (fromJust mbColor) | isJust mbColor]
+        <> [Se.Set BeamV.variant (fromJust mbVariant) | isJust mbVariant]
+    )
+    [Se.Is BeamV.registrationNo (Se.Eq rcNo)]
+
 deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 

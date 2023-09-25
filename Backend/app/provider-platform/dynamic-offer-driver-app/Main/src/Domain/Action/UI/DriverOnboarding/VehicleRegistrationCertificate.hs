@@ -26,9 +26,11 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getAllLinkedRCs,
     LinkedRC (..),
     DeleteRCReq (..),
+    SyncRCReq (..),
     activateRC,
     validateRCActivation,
     convertTextToUTC,
+    syncRC,
     makeFleetOwnerKey,
   )
 where
@@ -55,7 +57,6 @@ import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
@@ -102,6 +103,11 @@ newtype DeleteRCReq = DeleteRCReq
 data RCStatusReq = RCStatusReq
   { rcNo :: Text,
     isActivate :: Bool
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+newtype SyncRCReq = SyncRCReq -- Redundant, can we use DeleteRCReq?
+  { rcNo :: Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -280,6 +286,13 @@ linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
       activateRC driverId merchantId now rc
     else do
       deactivateRC rc driverId
+  return Success
+
+syncRC :: SyncRCReq -> Flow APISuccess
+syncRC SyncRCReq {..} = do
+  rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
+  now <- getCurrentTime
+  VQuery.updateVehicleColorAndVariant rc.vehicleColor rc.vehicleVariant rcNo now
   return Success
 
 deactivateRC :: Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
