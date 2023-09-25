@@ -845,10 +845,12 @@ getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
   Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId
 
 ---------------------------------------------------------------------
-clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes
-clearOnRideStuckDrivers merchantShortId = do
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantShortId dbSyncTime = do
   merchant <- findMerchantByShortId merchantShortId
-  driverInfos <- B.runInReplica QPerson.getOnRideStuckDriverIds
+  now <- getCurrentTime
+  let dbSyncInterVal = addUTCTime (fromIntegral (- fromMaybe 1 dbSyncTime) * 60) now
+  driverInfos <- B.runInReplica $ QPerson.getOnRideStuckDriverIds dbSyncInterVal
   driverIds <-
     mapM
       ( \driverInf -> do

@@ -440,10 +440,10 @@ deleteRC merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.deleteRC) driverId req
 
-clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.ClearOnRideStuckDriversRes
-clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantShortId apiTokenInfo dbSyncTime = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers)
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers) dbSyncTime
 
 getDriverHomeLocation :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.GetHomeLocationsRes
 getDriverHomeLocation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

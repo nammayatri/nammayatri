@@ -199,10 +199,10 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
       info <- HashMap.lookup driverId' driverInfoHashMap
       Just $ FullDriver person location info vehicle
 
-getOnRideStuckDriverIds :: (MonadFlow m, Log m) => m [DriverInformation]
-getOnRideStuckDriverIds = do
+getOnRideStuckDriverIds :: (MonadFlow m, Log m) => UTCTime -> m [DriverInformation]
+getOnRideStuckDriverIds dbSyncInterVal = do
   driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
-  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
+  findAllWithDb [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.updatedAt $ Se.LessThanOrEq dbSyncInterVal, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
