@@ -39,6 +39,7 @@ import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
+import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
@@ -88,6 +89,7 @@ data UpdateModel
   | RegistrationTokenUpdate
   | RentalSlabUpdate
   | RideUpdate
+  | RatingUpdate
   | SavedReqLocationUpdate
   | SearchRequestUpdate
   | SearchReqLocationUpdate
@@ -134,6 +136,7 @@ getTagUpdate QuoteUpdate = "QuoteOptions"
 getTagUpdate RegistrationTokenUpdate = "RegistrationTokenOptions"
 getTagUpdate RentalSlabUpdate = "RentalSlabOptions"
 getTagUpdate RideUpdate = "RideOptions"
+getTagUpdate RatingUpdate = "RatingOptions"
 getTagUpdate SavedReqLocationUpdate = "SavedReqLocationOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
 getTagUpdate SearchReqLocationUpdate = "SearchReqLocationOptions"
@@ -179,6 +182,7 @@ parseTagUpdate "QuoteOptions" = return QuoteUpdate
 parseTagUpdate "RegistrationTokenOptions" = return RegistrationTokenUpdate
 parseTagUpdate "RentalSlabOptions" = return RentalSlabUpdate
 parseTagUpdate "RideOptions" = return RideUpdate
+parseTagUpdate "RatingOptions" = return RatingUpdate
 parseTagUpdate "SavedReqLocationOptions" = return SavedReqLocationUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
 parseTagUpdate "SearchReqLocationOptions" = return SearchReqLocationUpdate
@@ -225,6 +229,7 @@ data DBUpdateObject
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
   | RentalSlabOptions UpdateModel [Set Postgres RentalSlab.RentalSlabT] (Where Postgres RentalSlab.RentalSlabT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)
+  | RatingOptions UpdateModel [Set Postgres Rating.RatingT] (Where Postgres Rating.RatingT)
   | SavedReqLocationOptions UpdateModel [Set Postgres SavedReqLocation.SavedReqLocationT] (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
   | SearchReqLocationOptions UpdateModel [Set Postgres SearchReqLocation.SearchReqLocationT] (Where Postgres SearchReqLocation.SearchReqLocationT)
@@ -345,6 +350,9 @@ instance FromJSON DBUpdateObject where
       RideUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RideOptions updateModel updVals whereClause
+      RatingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ RatingOptions updateModel updVals whereClause
       SavedReqLocationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SavedReqLocationOptions updateModel updVals whereClause

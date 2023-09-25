@@ -54,7 +54,7 @@ mkConfirmMessage res = do
                       price = Nothing
                     }
                 ],
-              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName res.mbCustomerRating vehicleVariant,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
               quote =
                 Confirm.Quote
@@ -86,8 +86,8 @@ mkConfirmMessage res = do
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
-mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Maybe Centesimal -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName mbCustomerRating vehicleVariant = do
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
       _type = fulfillmentType,
@@ -128,9 +128,10 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                       }
                 },
             person =
-              mbRiderName <&> \riderName ->
+              ((,) <$> mbRiderName <*> mbCustomerRating) <&> \(riderName, customerRating) -> -- assuming in fullRiderName he will have firstName
                 Confirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    rating = customerRating
                   }
           },
       vehicle =

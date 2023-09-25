@@ -56,6 +56,7 @@ data OnInitRes = OnInitRes
     estimatedFare :: Money,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
+    mbCustomerRating :: Maybe Centesimal,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
     merchant :: DM.Merchant
@@ -94,6 +95,7 @@ onInit req = do
         fromLocation = fromLocation,
         mbToLocation = mbToLocation,
         mbRiderName = decRider.firstName,
+        mbCustomerRating = decRider.rating,
         transactionId = booking.transactionId,
         merchant = merchant,
         ..

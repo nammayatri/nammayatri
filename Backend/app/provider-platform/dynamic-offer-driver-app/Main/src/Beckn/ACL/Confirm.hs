@@ -41,6 +41,7 @@ buildConfirmReq req = do
       customerPhoneNumber = phone.phoneNumber
       fromAddress = castAddress fulfillment.start.location.address
       mbRiderName = fulfillment.customer.person <&> (.name)
+      mbCustomerRating = fulfillment.customer.person <&> (.rating)
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
   toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")

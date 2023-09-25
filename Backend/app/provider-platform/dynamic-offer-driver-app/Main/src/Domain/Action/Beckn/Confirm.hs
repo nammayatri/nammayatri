@@ -77,7 +77,8 @@ data DConfirmReq = DConfirmReq
     customerPhoneNumber :: Text,
     fromAddress :: DBL.LocationAddress,
     toAddress :: DBL.LocationAddress,
-    mbRiderName :: Maybe Text
+    mbRiderName :: Maybe Text,
+    mbCustomerRating :: Maybe Centesimal
   }
 
 data DConfirmRes = DConfirmRes
@@ -89,6 +90,7 @@ data DConfirmRes = DConfirmRes
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
+    customerRating :: Maybe Centesimal,
     vehicleVariant :: VehVar.Variant,
     transporter :: DM.Merchant,
     driverId :: Maybe Text,
@@ -135,7 +137,7 @@ handler transporter req quote = do
               pure otpCode
             Just otp -> pure otp
 
-          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
+          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode req.mbCustomerRating
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           enableLocationTrackingService <- asks (.enableLocationTrackingService)
           when enableLocationTrackingService $ do
@@ -191,6 +193,7 @@ handler transporter req quote = do
                 toLocation = uBooking.toLocation,
                 driverId = Just driver.id.getId,
                 driverName = Just driver.firstName,
+                customerRating = Nothing,
                 vehicleVariant = req.vehicleVariant
               }
         Right _ -> throwError AccessDenied
@@ -222,6 +225,7 @@ handler transporter req quote = do
                 toLocation = uBooking.toLocation,
                 driverId = Nothing,
                 driverName = Nothing,
+                customerRating = Nothing,
                 vehicleVariant = req.vehicleVariant
               }
   where
@@ -234,7 +238,7 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId _ otp = do
+    buildRide driverId booking ghrId _ otp mbCustomerRating = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
@@ -253,6 +257,7 @@ handler transporter req quote = do
             trackingUrl = trackingUrl,
             fare = Nothing,
             traveledDistance = 0,
+            customerRating = mbCustomerRating,
             chargeableDistance = Nothing,
             driverArrivalTime = Nothing,
             tripStartTime = Nothing,
