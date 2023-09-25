@@ -49,8 +49,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
                       ]
                   ]
               ],
-            Se.Is BeamDI.blocked $ Se.Eq False,
-            Se.Is BeamDI.subscribed $ Se.Eq True
+            Se.Is BeamDI.blocked $ Se.Eq False
           ]
             <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
         )
