@@ -39,6 +39,9 @@ public class MobilityCallAPI extends AppCompatActivity {
     }
 
     public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
+        MobilityAPIResponse defaultResp = new MobilityAPIResponse();
+        defaultResp.setResponseBody("");
+        defaultResp.setStatusCode(-1);
         try {
 
             URL url = new URL(endpoint);
@@ -83,7 +86,7 @@ public class MobilityCallAPI extends AppCompatActivity {
             }
             return response;
         }catch (Exception e){
-            return null;
+            return defaultResp;
         }
     }
 

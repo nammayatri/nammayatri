@@ -261,6 +261,7 @@ view push state =
         , afterRender
             ( \action -> do
                 _ <- push action
+                _ <- getCurrentPosition push CurrentLocation
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
                 if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen
                 else pure unit

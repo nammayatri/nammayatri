@@ -212,7 +212,7 @@ checkDateAndTime = do
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
-    NAMMAYATRI -> 85
+    NAMMAYATRI -> 90
     YATRI -> 48
     YATRISATHI -> 16
     MOBILITY_PM -> 1

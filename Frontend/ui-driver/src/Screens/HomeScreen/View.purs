@@ -208,8 +208,8 @@ view push state =
         (\action -> do
           _ <- push action
           _ <- JB.setFCMToken push $ SetToken
-          _ <- JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
           _ <- JB.getCurrentPosition push CurrentLocation
+          _ <- JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
