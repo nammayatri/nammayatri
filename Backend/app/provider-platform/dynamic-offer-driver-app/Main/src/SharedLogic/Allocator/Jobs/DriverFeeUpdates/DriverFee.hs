@@ -151,7 +151,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           fork "Applying offer" $ do
             offerTxnId <- getShortId <$> generateShortId
             let offerApplied = catMaybes [offerId]
-                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate
+                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate driverFee.numRides
             maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
@@ -182,7 +182,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
-    mkApplyOfferRequest offerTxnUUID appliedOfferIds due plan driverId dutyDate registrationDate =
+    mkApplyOfferRequest offerTxnUUID appliedOfferIds due plan driverId dutyDate registrationDate numOfRides =
       PaymentInterface.OfferApplyReq
         { txnId = offerTxnUUID,
           offers = appliedOfferIds,
@@ -192,7 +192,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           planId = plan.id.getId,
           registrationDate,
           dutyDate = dutyDate,
-          paymentMode = show $ plan.paymentMode
+          paymentMode = show $ plan.paymentMode,
+          numOfRides
         }
 
 processDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
@@ -230,8 +231,8 @@ calculatePlatformFeeAttr totalFee plan = do
       sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
   (platformFee, cgst, sgst)
 
-makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Payment.OfferListReq
-makeOfferReq totalFee driver plan dutyDate registrationDate = do
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> Payment.OfferListReq
+makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = Payment.INR} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
@@ -240,7 +241,8 @@ makeOfferReq totalFee driver plan dutyDate registrationDate = do
       planId = plan.id.getId,
       registrationDate,
       paymentMode = show plan.paymentMode,
-      dutyDate
+      dutyDate,
+      numOfRides
     }
 
 getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
@@ -253,7 +255,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateStatus CLEARED driverFee.id now
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal) -- handle UDFs
+      offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
