@@ -82,8 +82,8 @@ data DBCreateObject
   | QuoteObject Quote.Quote
   | RegistrationTokenObject RegistrationToken.RegistrationToken
   | RentalSlabObject RentalSlab.RentalSlab
-  | RatingObject Rating.Rating
   | RideObject Ride.Ride
+  | RatingObject Rating.Rating
   | SavedReqLocationObject SavedReqLocation.SavedReqLocation
   | SearchRequestObject SearchRequest.SearchRequest
   | SearchReqLocationObject SearchReqLocation.SearchReqLocation
@@ -129,8 +129,8 @@ modelName (PersonFlowStatusObject _) = "PersonFlowStatus"
 modelName (QuoteObject _) = "Quote"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
 modelName (RentalSlabObject _) = "RentalSlab"
-modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
+modelName (RatingObject _) = "Rating"
 modelName (SavedReqLocationObject _) = "SavedReqLocation"
 modelName (SearchRequestObject _) = "SearchRequest"
 modelName (SearchReqLocationObject _) = "SearchReqLocation"

@@ -18,6 +18,7 @@ import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import qualified Data.Text as T
 import Kernel.Prelude
+import Kernel.Types.Centesimal (Centesimal)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 import qualified Text.Show
@@ -69,8 +70,9 @@ instance FromJSON Phone where
 instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderPerson = OrderPerson
-  { name :: Text
+data OrderPerson = OrderPerson
+  { name :: Text,
+    rating :: Centesimal
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

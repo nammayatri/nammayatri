@@ -38,6 +38,7 @@ data RideT f = RideT
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
     fare :: B.C f (Maybe Money),
+    customerRating :: B.C f (Maybe Centesimal),
     traveledDistance :: B.C f HighPrecMeters,
     chargeableDistance :: B.C f (Maybe Meters),
     driverArrivalTime :: B.C f (Maybe Time.UTCTime),

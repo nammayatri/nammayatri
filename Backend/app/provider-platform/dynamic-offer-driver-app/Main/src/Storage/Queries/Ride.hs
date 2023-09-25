@@ -474,6 +474,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.otp = otp,
         BeamR.trackingUrl = showBaseUrl trackingUrl,
         BeamR.fare = fare,
+        BeamR.customerRating = customerRating,
         BeamR.traveledDistance = traveledDistance,
         BeamR.chargeableDistance = chargeableDistance,
         BeamR.driverArrivalTime = driverArrivalTime,

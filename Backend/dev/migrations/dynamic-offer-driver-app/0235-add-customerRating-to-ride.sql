@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN customer_rating double precision;

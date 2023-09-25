@@ -37,8 +37,8 @@ buildOnConfirmMessage res = do
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName res.customerRating vehicleVariant
+    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName res.customerRating vehicleVariant
   return $
     OnConfirm.OnConfirmMessage
       { order =
@@ -113,8 +113,8 @@ mklocation loc =
   where
     castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
 
-mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> OnConfirm.FulfillmentType -> Maybe Text -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
-mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant =
+mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> OnConfirm.FulfillmentType -> Maybe Text -> Text -> Text -> Maybe Text -> Maybe Centesimal -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPhoneNumber riderMobileCountryCode mbRiderName mbCustomerRating vehicleVariant =
   OnConfirm.FulfillmentInfo
     { id = fulfillmentId,
       _type = fulfillmentType,
@@ -151,9 +151,10 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
                       }
                 },
             person =
-              mbRiderName <&> \riderName ->
+              ((,) <$> mbRiderName <*> mbCustomerRating) <&> \(riderName, customerRating) ->
                 OnConfirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    rating = customerRating
                   }
           },
       agent =
@@ -168,8 +169,8 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
               }
     }
 
-mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
-mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
+mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> Maybe Centesimal -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName mbCustomerRating vehicleVariant = do
   let authorization =
         Just $
           OnConfirm.Authorization
@@ -212,9 +213,10 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
                       }
                 },
             person =
-              mbRiderName <&> \riderName ->
+              ((,) <$> mbRiderName <*> mbCustomerRating) <&> \(riderName, customerRating) ->
                 OnConfirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    rating = customerRating
                   }
           },
       agent = Nothing

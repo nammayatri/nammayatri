@@ -61,6 +61,7 @@ data Ride = Ride
     otp :: Text,
     trackingUrl :: BaseUrl,
     fare :: Maybe Money,
+    customerRating :: Maybe Centesimal,
     traveledDistance :: HighPrecMeters,
     chargeableDistance :: Maybe Meters,
     driverArrivalTime :: Maybe UTCTime,
