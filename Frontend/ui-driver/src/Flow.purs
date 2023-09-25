@@ -153,6 +153,7 @@ baseAppFlow baseFlow event = do
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
       setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       setValueToLocalStore DISABLE_WIDGET "false"
+      setValueToLocalStore BUNDLE_TIME_OUT "500"
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
       if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")

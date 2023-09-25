@@ -47,4 +47,6 @@
     <string name="message_from_customer">Message from Customer</string>
     <string name="assistance_required">Assistance Required</string>
     <string name="tip">Tip</string>
+    <string name="merchant_id">for_compilation</string>
+    <string name="client_id">for_compilation</string>
 </resources>
