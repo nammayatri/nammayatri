@@ -70,6 +70,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
+import qualified Tools.PaymentNudge as PaymentNudge
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -109,11 +110,11 @@ getStatus (personId, merchantId) orderId = do
             processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
           processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
-          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode
         DPayment.PaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId (cast order.personId) order.id True
-          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing
         DPayment.PDNNotificationStatusResp {..} ->
           processNotification notificationId notificationStatus
       return paymentStatus
@@ -143,7 +144,7 @@ juspayWebhookHandler merchantShortId authData value = do
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
                 unless (transactionStatus /= Payment.CHARGED) $ do
                   processPayment merchantId (cast order.personId) order.id True
-                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             Payment.MandateOrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
@@ -151,7 +152,7 @@ juspayWebhookHandler merchantShortId authData value = do
                 unless (transactionStatus /= Payment.CHARGED) $ do
                   processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
                 processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
-                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             ---- to do add FCM for insufficient funds  -----
             Payment.MandateStatusResp {..} -> do
@@ -195,38 +196,44 @@ updatePaymentStatus driverId merchantId = do
 notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
-  sendNotificationIfNotSent key $ do
+  sendNotificationIfNotSent key 86400 $ do
     notifyPaymentSuccess driver.merchantId driver.id driver.deviceToken orderId
 
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
-notifyAndUpdateInvoiceStatusIfPaymentFailed :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> m ()
-notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName = do
+notifyAndUpdateInvoiceStatusIfPaymentFailed :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> Maybe Text -> m ()
+notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode = do
   activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
-  when (toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus) $ do
+  let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
+  let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
+  when updateFailure $ do
     QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     case activeExecutionInvoice of
       Just invoice' -> do
         QDF.updateAutoPayToManual invoice'.driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
       Nothing -> pure ()
-    let key = "driver-offer:FailedNotif-" <> orderId.getId
-    sendNotificationIfNotSent key $ do
-      driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      notifyPaymentFailed driver.merchantId driver.id driver.deviceToken orderId
+    nofityPaymentFailureIfNotNotified paymentMode
+
+  when (notifyFailure && isJust mbBankErrorCode) $
+    nofityPaymentFailureIfNotNotified paymentMode
   where
+    nofityPaymentFailureIfNotNotified paymentMode = do
+      let key = "driver-offer:FailedNotif-" <> orderId.getId
+      sendNotificationIfNotSent key 3600 $ PaymentNudge.notifyPaymentFailure driverId paymentMode mbBankErrorCode
+
     toNotifyFailure isActiveExecutionInvoice_ eventName_ orderStatus_ = do
       let validStatus = orderStatus_ `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]
       case (isActiveExecutionInvoice_, eventName_ == Just Juspay.ORDER_FAILED) of
-        (True, False) -> False
-        (_, _) -> validStatus
+        (True, False) -> (validStatus, False)
+        (_, _) -> (validStatus, validStatus)
 
-sendNotificationIfNotSent :: (MonadFlow m, CacheFlow m r) => Text -> m () -> m ()
-sendNotificationIfNotSent key actions = do
+sendNotificationIfNotSent :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m () -> m ()
+sendNotificationIfNotSent key expiry actions = do
   isNotificationSent <- fromMaybe False <$> Hedis.get key
   unless isNotificationSent $ do
-    Hedis.setExp key True 86400 -- 24 hours
+    Hedis.setExp key True expiry -- 24 hours
     actions
 
 pdnNotificationStatus ::

@@ -89,12 +89,14 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
-import Tools.Notifications (sendNotificationToDriver)
+import Tools.Notifications
+import qualified Tools.PaymentNudge as PaymentNudge
 
 endRideTransaction ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
+    EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
@@ -304,6 +306,7 @@ a `safeMod` b = a `mod` b
 createDriverFee ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool)
@@ -329,12 +332,20 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards driverInfo 
     lastDriverFee <- QDF.findLatestFeeByDriverId driverId
     driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
     when (totalDriverFee > 0 || isJust mbDriverPlan) $ do
-      _ <- case lastDriverFee of
+      numRides <- case lastDriverFee of
         Just ldFee ->
           if now >= ldFee.startTime && now < ldFee.endTime
-            then QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
-            else QDF.create driverFee
-        Nothing -> QDF.create driverFee
+            then do
+              QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
+              return (ldFee.numRides + 1)
+            else do
+              QDF.create driverFee
+              return 1
+        Nothing -> do
+          QDF.create driverFee
+          return 1
+      plan <- getPlan mbDriverPlan merchantId
+      PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
       scheduleJobs transporterConfig driverFee merchantId maxShards now
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Int -> UTCTime -> m ()
