@@ -167,6 +167,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             then do
               mapM_ (\feeId -> updateStatus PAYMENT_OVERDUE feeId now) driverFeeIds
               updateFeeType RECURRING_INVOICE now `mapM_` driverFeeIds
+              updateStatus PAYMENT_OVERDUE driverFee.id now
+              updateFeeType RECURRING_INVOICE now driverFee.id
               updateSubscription False (cast driverFee.driverId)
               QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
             else do
