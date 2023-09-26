@@ -78,4 +78,10 @@ commonConfig =
             , animationDuration : 400
             }
         , enableWhatsappOTP : ["BD"]
+        , customerTip : {
+            auto : true,
+            cabs : false
+          }
+        , showChargeDesc : false
+        , vehicleMarkerSize : 90
         }

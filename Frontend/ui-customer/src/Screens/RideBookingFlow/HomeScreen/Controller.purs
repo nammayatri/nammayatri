@@ -89,7 +89,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
@@ -1121,8 +1121,9 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
     let tipViewData = HomeScreenData.initData.props.tipViewProps
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
-  else
-    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = state.props.customerTip.enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }} }
+  else do
+    let enableTips = isTipEnabled state
+    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimer timerID
         let tipViewData = HomeScreenData.initData.props.tipViewProps
@@ -1697,8 +1698,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               else pure unit
               let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
-                _ <- pure $ spy "checking " "state"
-                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
+                let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
                 exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
@@ -1720,7 +1720,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
           exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}
     Nothing -> do
       if isLocalStageOn QuoteList then do
-        let updatedState = if state.props.customerTip.enableTips then tipEnabledState state{props{isPopUp = TipsPopUp}} else state{props{isPopUp = ConfirmBack}}
+        let updatedState = if isTipEnabled state then tipEnabledState state{props{isPopUp = TipsPopUp, customerTip{enableTips = true}}} else state{props{isPopUp = ConfirmBack}}
         continue updatedState
         else continue state
 
@@ -1966,26 +1966,6 @@ getCurrentCustomerLocation push state = do
   push $ UpdateSource location.lat location.lng (getString CURRENT_LOCATION)
   pure (pure unit)
 
-dummyEstimateEntity :: EstimateAPIEntity
-dummyEstimateEntity =
-  EstimateAPIEntity
-    { agencyNumber: ""
-    , createdAt: ""
-    , discount: Nothing
-    , estimatedTotalFare: 0
-    , agencyName: ""
-    , vehicleVariant: ""
-    , estimatedFare: 0
-    , tripTerms: []
-    , id: ""
-    , agencyCompletedRidesCount: 0
-    , estimateFareBreakup: Nothing
-    , totalFareRange: Nothing
-    , nightShiftRate: Nothing
-    , specialLocationTag: Nothing
-    , driversLatLong : []
-    }
-
 cancelReasons :: String -> Array OptionButtonList
 cancelReasons dummy =
   [ { reasonCode: "CHANGE_OF_PLANS"
@@ -2188,67 +2168,35 @@ getSearchExpiryTime dummy =
 tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! (state.props.customerTip.tipActiveIndex-1)))}}}
 
-isTipEnabled :: Int -> Boolean
-isTipEnabled distance = (getValueFromConfig "CUSTOMER_TIP") == "true"
+isTipEnabled :: HomeScreenState -> Boolean
+isTipEnabled state = do
+    let tipConfig = state.data.config.customerTip
+    case state.data.selectedEstimatesObject.vehicleVariant of 
+        "AUTO_RICKSHAW" -> tipConfig.auto
+        _ -> tipConfig.cabs
 
 estimatesFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesFlow estimatedQuotes state = do
-  let estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
-      estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
-      estimateId = if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimateId else ""
-      estimateFareBreakup =
-        if isJust (estimatedVarient !! 0) then case (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimateFareBreakup of
-          Just estimateBreakUp -> estimateBreakUp
-          Nothing -> []
-        else
-          []
-      pickUpCharges = case (head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
-        Just deadKmFare -> deadKmFare ^. _price
-        Nothing -> 0
-      additionalFare =
-        if isJust (estimatedVarient !! 0) then case (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _totalFareRange of
-          Just fareRange -> (fareRange ^. _maxFare - fareRange ^. _minFare)
-          Nothing -> 20
-        else
-          20
-      nightShiftRate = if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _nightShiftRate else Nothing
-      nightShiftStart = case nightShiftRate of
-        Just nsRate -> fromMaybe "" (nsRate ^. _nightShiftStart)
-        Nothing -> ""
-      nightShiftEnd = case nightShiftRate of
-        Just nsRate -> fromMaybe "" (nsRate ^. _nightShiftEnd)
-        Nothing -> ""
-      nightShiftMultiplier = case nightShiftRate of
-        Just nSMultiplier -> fromMaybe 0.0 (nSMultiplier ^. _nightShiftMultiplier)
-        Nothing -> 0.0
-      nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
-      baseFare = case (head (filter (\item -> item ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
-        Just baseDistFare -> round $ (toNumber $ baseDistFare ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
-        Nothing -> 0
-      extraFare = case (head (filter (\item -> item ^. _title == "EXTRA_PER_KM_FARE") estimateFareBreakup)) of
-        Just extraPerKmFare -> round $ (toNumber $ extraPerKmFare ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
-        Nothing -> 0
-      showRateCardIcon = if (null estimateFareBreakup) then false else true
-      zoneType = getSpecialTag $ if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _specialLocationTag else Nothing
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
-  if not (null estimatedVarient) then do
+  let estimatesInfo = getEstimatesInfo estimatedQuotes "AUTO_RICKSHAW" state
+      _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
+  if not (null estimatesInfo.estimatedVarient) then do
     let lang = getValueToLocalStore LANGUAGE_KEY
     exit
       $ SelectEstimate
           state
-            { data  { suggestedAmount = estimatedPrice,
+            { data  { suggestedAmount = estimatesInfo.estimatedPrice,
                       currentSearchResultType = ESTIMATES,
-                      rateCard =  { additionalFare: additionalFare
-                                  , nightShiftMultiplier: nightShiftMultiplier
-                                  , nightCharges: nightCharges
+                      rateCard =  { additionalFare: estimatesInfo.additionalFare
+                                  , nightShiftMultiplier: estimatesInfo.nightShiftMultiplier
+                                  , nightCharges: estimatesInfo.nightCharges
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
-                                  , baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges
+                                  , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
                                   , vehicleVariant : ""
                                   }
                                   ,
-                      showPreferences = getPreferenceValue "" }
-            , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon, zoneType = zoneType}
+                      showPreferences = isTipEnabled state }
+            , props { estimateId = estimatesInfo.estimateId, currentStage = SettingPrice, showRateCardIcon = estimatesInfo.showRateCardIcon, zoneType = estimatesInfo.zoneType}
             }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
@@ -2256,13 +2204,13 @@ estimatesFlow estimatedQuotes state = do
     let lang = getValueToLocalStore LANGUAGE_KEY
     continue
       state
-        { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true, showRateCardIcon = showRateCardIcon }
-        , data { currentSearchResultType = ESTIMATES, rateCard = { additionalFare: additionalFare
-                            , nightShiftMultiplier: nightShiftMultiplier
-                            , nightCharges: nightCharges
+        { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true, showRateCardIcon = estimatesInfo.showRateCardIcon }
+        , data { currentSearchResultType = ESTIMATES, rateCard = { additionalFare: estimatesInfo.additionalFare
+                            , nightShiftMultiplier: estimatesInfo.nightShiftMultiplier
+                            , nightCharges: estimatesInfo.nightCharges
                             , currentRateCardType: DefaultRateCard
                             , onFirstPage: false
-                            , baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges
+                            , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
                             , vehicleVariant : ""
                             }
                 }
@@ -2285,23 +2233,13 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
-      defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
-      estimateFareBreakup =
-        if isJust (estimates !! 0) then case (fromMaybe dummyEstimateEntity (estimates !! 0)) ^. _estimateFareBreakup of
-          Just a -> a
-          Nothing -> []
-        else
-          []
-      pickUpCharges = case (head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
-        Just a -> a ^. _price
-        Nothing -> 0
-  if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
+  let estimatesInfo = getEstimatesInfo estimates "" state
+  if ((not (null estimatesInfo.quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
         nearByDrivers = getNearByDrivers estimates
         nearByDriversLength = length nearByDrivers
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = ESTIMATES, rateCard {vehicleVariant = defaultQuote.vehicleVariant}, selectedEstimatesObject = defaultQuote, pickUpCharges = pickUpCharges, nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
+    continue state { data {specialZoneQuoteList = estimatesInfo.quoteList, currentSearchResultType = ESTIMATES, rateCard {vehicleVariant = estimatesInfo.defaultQuote.vehicleVariant, nightShiftMultiplier= estimatesInfo.nightShiftMultiplier, nightCharges= estimatesInfo.nightCharges}, selectedEstimatesObject = estimatesInfo.defaultQuote, pickUpCharges = estimatesInfo.pickUpCharges, nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing}, props {currentStage = SettingPrice, estimateId = estimatesInfo.defaultQuote.id}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
@@ -2362,27 +2300,6 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           }
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
-
-getPreferenceValue :: String -> Boolean
-getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) /= "true"
-
-getSpecialTag :: Maybe String -> SpecialTags
-getSpecialTag specialTag =
-  case specialTag of
-    Just tag ->
-      let zones = STR.split (STR.Pattern "_") tag
-          sourceTag = getZoneType $ zones !! 0
-          destinationTag = getZoneType $ zones !! 1
-          priorityTag = if zones !! 2 == Just "PriorityPickup" then sourceTag else destinationTag
-      in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
-    Nothing -> HomeScreenData.dummyZoneType
-
-getZoneType :: Maybe String -> ZoneType
-getZoneType tag =
-  case tag of
-    Just "SureMetro" -> METRO
-    Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
-    _                -> NOZONE
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }

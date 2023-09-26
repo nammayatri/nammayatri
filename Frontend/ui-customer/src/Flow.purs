@@ -69,10 +69,10 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag, findingQuotesSearchExpired, getZoneType, tipEnabledState)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
@@ -473,9 +473,6 @@ currentFlowStatus = do
                      , searchExpire = secondsLeft
                      , estimateId = estimateId
                      , rideRequestFlow = true
-                     , customerTip{
-                        enableTips = (getValueToLocalStore ENABLE_TIPS) == "true"
-                      }
                      , selectedQuote = Nothing
                      , tipViewProps = tipViewData
                      , findingQuotesProgress = 1.0 - (INT.toNumber secondsLeft)/(INT.toNumber searchExpiryTime)}
@@ -729,14 +726,12 @@ homeScreenFlow = do
         Just (Route response) -> do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
-              tipEnabled = isTipEnabled response.distance
               Snapped points = response.points
           case head points, last points of
             Just (LatLong source), Just (LatLong dest) -> do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : state.data.source, address : Nothing }, destination : { lat : dest.lat, lng : dest.lon, place : state.data.destination, address : Nothing } }) } })
             _ , _ -> pure unit
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress}, props{customerTip{enableTips = tipEnabled}}})
-          _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress}})
           if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0}})
@@ -1473,14 +1468,12 @@ rideSearchFlow flowType = do
                 Just (Route response) -> do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
-                      tipEnabled = isTipEnabled response.distance
                       Snapped points = response.points
                   case head points, last points of
                     Just (LatLong source), Just (LatLong dest) -> do
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress, address : Nothing }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination, address : Nothing } }) } })
                     _ , _ -> pure unit
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
-                  _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}})
                   if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
@@ -2248,39 +2241,44 @@ cancelEstimate :: String -> FlowBT String Unit
 cancelEstimate bookingId = do
   logField_ <- lift $ lift $ getLogFields
   res <- lift $ lift $ Remote.cancelEstimate bookingId
-  case res of
-    Right res -> do
-      -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
-      let (CancelEstimateRes resp) = res
-      case resp.result of
-        "Success" -> do
-          if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
-            _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_driver_assign"
-            pure unit
-            else do
-              _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_quotes"
-              pure unit
-        "BookingAlreadyCreated" -> do
-          void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
-          _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
-          currentRideFlow true
-          homeScreenFlow
-        _ -> do
-          void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
-          _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_right"
-          homeScreenFlow
-    Left err -> do
-      let errResp = err.response
-          codeMessage = decodeError errResp.errorMessage "errorCode"
-      if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
-        void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
-        _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_left"
-        currentRideFlow true
-        homeScreenFlow
-      else do
-        void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
-        _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
-        homeScreenFlow
+  if bookingId == ""
+    then do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}})
+    else do
+      case res of
+        Right res -> do
+          -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
+          let (CancelEstimateRes resp) = res
+          case resp.result of
+            "Success" -> do
+              if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
+                _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_driver_assign"
+                pure unit
+                else do
+                  _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_cancel_waiting_for_quotes"
+                  pure unit
+            "BookingAlreadyCreated" -> do
+              void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
+              _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
+              currentRideFlow true
+              homeScreenFlow
+            _ -> do
+              void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
+              _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_right"
+              homeScreenFlow
+        Left err -> do
+          let errResp = err.response
+              codeMessage = decodeError errResp.errorMessage "errorCode"
+          if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
+            void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
+            _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_left"
+            currentRideFlow true
+            homeScreenFlow
+          else do
+            void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
+            _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}}) 
+            homeScreenFlow
 
 getGenderValue :: Maybe Gender.Gender -> Maybe String
 getGenderValue gender =

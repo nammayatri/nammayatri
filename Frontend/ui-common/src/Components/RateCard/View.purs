@@ -162,16 +162,22 @@ defaultRateCardView push config =
           , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
           , margin $ Margin 20 20 20 12
           ]
-        , textView
+        , textView $
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , color Color.black700
           , text config.applicableCharges
-          , textSize FontSize.a_14
-          , lineHeight "16"
-          , fontStyle $ FontStyle.regular LanguageStyle
           , padding $ PaddingHorizontal 20 20
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
+        , textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , color Color.black700
+          , text (getStringByKey config "CHARGE_DESCRIPTION")
+          , visibility if (getStringByKey config "CHARGE_DESCRIPTION" /= "") then VISIBLE else GONE
+          , padding $ PaddingHorizontal 20 20
+          , margin $ MarginTop 8
+          ] <> FontStyle.paragraphText TypoGraphy
         , imageView
           [ width MATCH_PARENT
           , height $ V 2 

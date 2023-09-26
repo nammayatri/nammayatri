@@ -30,10 +30,10 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
+import PrestoDOM (LetterSpacing, BottomSheetState(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
 
 type Contacts = {
   name :: String,
@@ -810,6 +810,22 @@ type ReferralScreenState =
     , config :: AppConfig
     , logField :: Object Foreign
   }
+
+type EstimateInfo = {
+  additionalFare :: Int,
+  estimatedPrice :: Int, 
+  quoteList :: Array ChooseVehicle.Config,
+  defaultQuote :: ChooseVehicle.Config,
+  estimateId :: String,
+  estimatedVarient :: Array EstimateAPIEntity,
+  pickUpCharges :: Int,
+  nightShiftMultiplier :: Number,
+  nightCharges :: Boolean,
+  baseFare :: Int,
+  extraFare :: Int,
+  showRateCardIcon :: Boolean,
+  zoneType :: SpecialTags
+}
 
 -- ################################## SelectLanguageScreenState ###############################
 

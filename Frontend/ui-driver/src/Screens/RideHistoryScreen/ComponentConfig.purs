@@ -28,16 +28,18 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPastDays)
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Prelude ((<>), (/=))
 import Components.DatePickerModel as DatePickerModel
 import Resource.Constants (tripDatesCount)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Storage (getValueToLocalStore, KeyStore(..))
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png"
+        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png" else "ny_ic_no_past_rides_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides_auto.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)

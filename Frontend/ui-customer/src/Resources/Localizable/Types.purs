@@ -632,6 +632,7 @@ data STR
  | AC_SUV
  | AC_CAB
  | RIDE_TYPE
+ | ERNAKULAM_LIMIT_CHARGE
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -1252,3 +1253,4 @@ getKeyString key = case key of
   AC_SUV -> "AC_SUV"
   AC_CAB -> "AC_CAB"
   RIDE_TYPE -> "RIDE_TYPE"
+  ERNAKULAM_LIMIT_CHARGE -> "ERNAKULAM_LIMIT_CHARGE"

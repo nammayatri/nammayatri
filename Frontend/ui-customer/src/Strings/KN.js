@@ -503,7 +503,7 @@ const kannadaStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
-  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹10 ಹೆಚ್ಚಳದಲ್ಲಿವೆ",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹20 ಹೆಚ್ಚಳದಲ್ಲಿವೆ",
   "SEATS" : "ಆಸನಗಳು",
   "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್",
   "SUV" : "ಎಸ್ ಯು ವಿ",
@@ -616,5 +616,6 @@ const kannadaStrings = {
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
   "AC_CAB" : "ಎಸಿ ಕ್ಯಾಬ್",
   "AC_SUV" : "ಎಸಿ ಎಸ್ಯುವಿ",
-  "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ"
+  "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ",
+  "ERNAKULAM_LIMIT_CHARGE": "ಪಿಕಪ್ ಅಥವಾ ಗಮ್ಯಸ್ಥಾನವು ಎರ್ನಾಕುಲಂ ಕಾರ್ಪೊರೇಷನ್ ಮಿತಿಯಿಂದ ಹೊರಗಿದ್ದರೆ ದರವು 1.5x ಆಗಿರುತ್ತದೆ"
 }

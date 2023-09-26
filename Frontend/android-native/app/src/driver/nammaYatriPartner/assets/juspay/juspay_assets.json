@@ -313,6 +313,8 @@
       "ny_ic_navigator_badge" : true,
       "ny_ic_next_ride" : true,
       "ny_ic_no_alerts" : true,
+      "ny_ic_no_past_rides_auto" : true,
+      "ny_ic_no_past_rides_cab" : true,
       "ny_ic_ny_driver" : true,
       "ny_ic_offer_ends_tonight" : true,
       "ny_ic_offline" : true,

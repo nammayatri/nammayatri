@@ -313,6 +313,7 @@
       "ny_ic_no_alerts" : true,
       "ny_ic_no_notification" : true,
       "ny_ic_no_past_rides" : true,
+      "ny_ic_no_past_rides_auto" : true,
       "ny_ic_no_payments" : true,
       "ny_ic_no_ride" : true,
       "ny_ic_notification" : true,

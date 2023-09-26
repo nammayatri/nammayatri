@@ -419,12 +419,8 @@ makeNumber number = (DS.take 2 number) <> " " <> (DS.drop 2 (DS.take 4 number)) 
 reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
-getMerchantVechicleSize :: Unit -> Int
-getMerchantVechicleSize unit = 
- case getMerchant FunctionCall of
-   YATRI -> 160
-   _ -> 90
-
+getVehicleSize :: Unit -> Int
+getVehicleSize unit = (getValueFromConfig "vehicleMarkerSize")
 
 getScreenFromStage :: Stage -> String
 getScreenFromStage stage = case stage of

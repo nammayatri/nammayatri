@@ -14,10 +14,10 @@ window.getMerchantConfig = function () {
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
     "CALL_NAMMA_YATRI_SUPPORT",
     "YOUR_FEEDBACK_HELPS_US",
-    "YOUR_FEEDBACK_HELPS_US",
-    "LEARN_HOW_TEXT"
+    "LEARN_HOW_TEXT",
+    "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE"
     ],
-    "isReferralEnabled": "false",
+    "isReferralEnabled": "true",
     "showBookingPreference": "false",
     "showRateCard": "false",
     "showDashboard": "false",
@@ -28,7 +28,7 @@ window.getMerchantConfig = function () {
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     "APP_LINK": getAppLink(window.__OS),
-    "CUSTOMER_TIP": "false",
+    "showChargeDesc" : true,
     "isShareAppEnabled": "true",
     "apiLoaderLottie": "primary_button_loader.json",
     "isChatEnabled": "true",
@@ -150,7 +150,8 @@ window.getMerchantConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
       "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience",
-      "LEARN_HOW_TEXT" : "Learn how Yatri caters to your needs"
+      "LEARN_HOW_TEXT" : "Learn how Yatri caters to your needs",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are in increments of ₹10"
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -168,7 +169,8 @@ window.getMerchantConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
       "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു",
-      "LEARN_HOW_TEXT" : "യാത്രി നിങ്ങളുടെ ആവശ്യങ്ങൾ എങ്ങനെ നിറവേറ്റുന്നുവെന്ന് അറിയുക"
+      "LEARN_HOW_TEXT" : "യാത്രി നിങ്ങളുടെ ആവശ്യങ്ങൾ എങ്ങനെ നിറവേറ്റുന്നുവെന്ന് അറിയുക",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹10 ഇൻക്രിമെന്റിലാണ്"
   },
     "languageList": [{
       "name": "English",

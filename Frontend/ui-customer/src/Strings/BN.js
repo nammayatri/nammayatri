@@ -506,7 +506,7 @@ const bengaliStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন",
   "CALL_112": "112 কল করুন",
   "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন",
-  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "ড্রাইভার যোগ করার সীমা ₹20 বৃদ্ধিতে রয়েছে ",
   "SEATS" : "আসন",
   "HATCHBACK" : "হ্যাচব্যাক",
   "SUV" : "এসইউভি",
@@ -636,5 +636,6 @@ const bengaliStrings = {
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।",
   "AC_CAB" : "এসি ক্যাব",
   "AC_SUV" : "এসি এসইউভি",
-  "RIDE_TYPE" : "রাইড টাইপ"
+  "RIDE_TYPE" : "রাইড টাইপ",
+  "ERNAKULAM_LIMIT_CHARGE": "পিকআপ বা গন্তব্য যদি এর্নাকুলাম কর্পোরেশনের সীমার বাইরে থাকে তবে ভাড়া 1.5x হবে"
 }
