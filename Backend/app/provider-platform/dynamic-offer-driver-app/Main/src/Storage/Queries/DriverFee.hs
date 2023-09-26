@@ -309,7 +309,7 @@ updateStatusByIds :: MonadFlow m => DriverFeeStatus -> [Id DriverFee] -> UTCTime
 updateStatusByIds status driverFeeIds now =
   case status of
     CLEARED -> do
-      updateOneWithKV
+      updateWithKV
         [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedAt (Just now)]
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
     _ -> do
@@ -396,15 +396,9 @@ findAllByTimeMerchantAndStatus (Id merchantId) startTime endTime status = do
 
 updateStatus :: MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
-  case status of
-    CLEARED -> do
-      updateOneWithKV
-        [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedAt (Just now)]
-        [Se.Is BeamDF.id (Se.Eq driverFeeId)]
-    _ -> do
-      updateWithKV
-        [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
-        [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+  updateOneWithKV
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 updateFeeType :: MonadFlow m => FeeType -> UTCTime -> Id DriverFee -> m ()
 updateFeeType feeType now (Id driverFeeId) = do
