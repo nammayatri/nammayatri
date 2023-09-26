@@ -33,6 +33,7 @@ data Action = StartRide
             | LoadMessages
             | SecondaryTextClick
             | VisuallyImpairedCustomer
+            | NoAction
 
 type Config = { 
   startRideActive :: Boolean,

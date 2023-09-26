@@ -327,3 +327,12 @@ screenAnimationFadeInOut screen =
     $ PrestoAnim.exitAnimationSetBackward [fadeOut true]
       screen
 
+scaleYAnimWithDuration :: Int -> PrestoAnim.Animation
+scaleYAnimWithDuration duration =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
+    , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0
+    ] true
