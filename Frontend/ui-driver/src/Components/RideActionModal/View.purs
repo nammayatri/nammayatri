@@ -16,15 +16,15 @@
 module Components.RideActionModal.View where
 
 import Common.Types.App
-
+import PrestoDOM.Animation as PrestoAnim
+import Animation (scaleYAnimWithDuration)
 import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
 import Components.SeparatorView.View as SeparatorView
 import Data.Maybe as Maybe
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth)
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
@@ -35,7 +35,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
@@ -54,15 +54,24 @@ view push config =
     ][linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , gravity CENTER
-      , margin $ MarginBottom 16
-      ][ messageButton push config
-       , callButton push config
-       , openGoogleMap push config
-      ]
+      ][ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , id $ getNewIDWithTag "rideActionHeaderLayout"
+        , padding $ PaddingBottom 16
+        ][  linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , gravity CENTER
+            ][ messageButton push config
+            , callButton push config
+            , openGoogleMap push config
+            ]
+          ]
+        ]
     , if isSpecialRide config
-        then rideActionViewWithLabel push config else rideActionView push config
+        then rideActionViewWithLabel push config else rideActionView (MarginTop 0) push config
     ]
 
 
@@ -140,6 +149,7 @@ rideActionViewWithLabel push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER
+      , id $ getNewIDWithTag "rideActionLabelLayout"
       ][ imageView
           [ width $ V 18
           , height $ V 18
@@ -185,27 +195,7 @@ rideActionViewWithLabel push config =
               ][]
           ]
       ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , cornerRadii $ Corners 25.0 true true false false
-      , orientation VERTICAL
-      , background Color.white900
-      , padding $ PaddingTop 6
-      , margin $ MarginTop 6
-      , gravity CENTER
-      , stroke $ "1," <> Color.grey800
-      ][  rideActionDataView push config
-        , rideTypeView push config
-        , linearLayout
-          [ width MATCH_PARENT
-          , height $ V 1
-          , background Color.lightGrey
-          , margin $ MarginTop 24
-          ][]
-        , if config.startRideActive then startRide push config else endRide push config
-        , cancelRide push config
-      ]
+    , rideActionView (MarginTop 6) push config
   ]
 
 rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -241,8 +231,8 @@ rideTypeView push config =
       ]
   ]
 
-rideActionView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-rideActionView push config =
+rideActionView :: forall w . Margin -> (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideActionView layoutMargin push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -251,16 +241,27 @@ rideActionView push config =
   , background Color.white900
   , padding $ PaddingTop 6
   , gravity CENTER
+  , margin layoutMargin
   , stroke $ "1," <> Color.grey800
-  ][  rideActionDataView push config
-    , rideTypeView push config
-    , linearLayout
-      [ width MATCH_PARENT
-      , height $ V 1
-      , background Color.lightGrey
-      , margin $ MarginTop 24
-      ][]
-    , if config.startRideActive then startRide push config else endRide push config
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , id $ getNewIDWithTag "rideActionLayout"
+      ][  rideActionDataView push config
+        , rideTypeView push config
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ V 1
+          , background Color.lightGrey
+          , margin $ MarginTop 24
+          ][]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , padding $ Padding 16 16 16 24
+          ][ if config.startRideActive then startRide push config else endRide push config]
+        ]
     , cancelRide push config
   ]
 
@@ -365,14 +366,17 @@ sourceAndDestinationView push config =
 
 startRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 startRide push config =
-  linearLayout
+  PrestoAnim.animationSet
+  [ scaleYAnimWithDuration 20
+  ]$ linearLayout
   [ width MATCH_PARENT
   , height (V 50)
   , background Color.darkMint
   , cornerRadius 8.0
-  , margin $ Margin 16 16 16 0
   , gravity CENTER
   , onClick push (const $ StartRide)
+  , pivotY 0.0
+  , onAnimationEnd push $ const NoAction
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -390,7 +394,6 @@ endRide push config =
   , height (V 50)
   , background Color.red
   , cornerRadius 8.0
-  , margin $ Margin 16 16 16 24
   , gravity CENTER
   , onClick push (const $ EndRide)
   ][  textView (
@@ -407,10 +410,11 @@ cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect 
 cancelRide push config =
   linearLayout
   [ width MATCH_PARENT
-  , height (V 34)
+  , height WRAP_CONTENT
   , gravity CENTER
+  , background Color.white900
   , visibility if config.startRideActive then VISIBLE else GONE
-  , margin $ MarginVertical 16 16
+  , padding $ PaddingBottom 16
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

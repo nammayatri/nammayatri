@@ -168,7 +168,7 @@ in  upstream
       , "web-events"
       ]
     , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "update/github-purescript-presto-dom-repo-and-font-weight-accessiblity"
+    , version = "nammayatri"
     }
   with halogen-vdom =
     { dependencies =
@@ -236,7 +236,7 @@ in  upstream
           , "control"
           ]
         , repo = "https://github.com/juspay/hyper-decoder.git"
-        , version = "main"}
+        , version = "nammayatri"}
   with tracker =
     { dependencies =
       [ "effect"
