@@ -15,9 +15,11 @@ window.getMerchantConfig = function () {
     "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
     "CALL_NAMMA_YATRI_SUPPORT",
     "YOUR_FEEDBACK_HELPS_US",
-    "LEARN_HOW_TEXT"
+    "LEARN_HOW_TEXT",
+    "ACCESSIBILITY_TEXT",
+    "TO_CATER_YOUR_SPECIFIC_NEEDS"
     ],
-    "isReferralEnabled": "false",
+    "isReferralEnabled": "true",
     "showBookingPreference": "false",
     "showRateCard": "false",
     "showDashboard": "false",
@@ -153,7 +155,9 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Sathi Support",
       "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
-      "LEARN_HOW_TEXT" : "Learn how Yatri Sathi caters to your needs"
+      "LEARN_HOW_TEXT" : "Learn how Yatri Sathi caters to your needs",
+      "ACCESSIBILITY_TEXT" : "Yatri Sathi, now customised for you!",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri Sathi.",
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -174,7 +178,9 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "यात्री साथी सहायता को कॉल करें",
       "YOUR_FEEDBACK_HELPS_US" : "आपका फीडबैक हमें यात्री साथी अनुभव को बेहतर बनाने में मदद करता है",
-      "LEARN_HOW_TEXT" : "जानें कि यात्री साथी आपकी ज़रूरतों को कैसे पूरा करता है"
+      "LEARN_HOW_TEXT" : "जानें कि यात्री साथी आपकी ज़रूरतों को कैसे पूरा करता है",
+      "ACCESSIBILITY_TEXT" : "यात्री साथी, अब आपके लिए अनुकूलित!",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री साथी की कुछ विशेषताओं को अनुकूलित किया है।",
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -195,7 +201,9 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সমর্থন কল করুন",
       "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের যাত্রী সাথী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
-      "LEARN_HOW_TEXT" : "জানুন কীভাবে যাত্রী সাথী আপনার প্রয়োজন মেটায়"
+      "LEARN_HOW_TEXT" : "জানুন কীভাবে যাত্রী সাথী আপনার প্রয়োজন মেটায়",
+      "ACCESSIBILITY_TEXT" : "যাত্রী সাথী, এখন আপনার জন্য কাস্টমাইজ করা হয়েছে!",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "আপনার নির্দিষ্ট চাহিদা মেটাতে আমরা যাত্রী সাথীর কিছু বৈশিষ্ট্য কাস্টমাইজ করেছি।",
     },
     "languageList": [{
       "name": "English",
