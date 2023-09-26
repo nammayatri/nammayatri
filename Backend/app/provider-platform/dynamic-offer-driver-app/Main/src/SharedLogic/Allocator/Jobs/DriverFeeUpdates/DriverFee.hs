@@ -266,7 +266,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
   if feeWithoutDiscount == 0
     then do
-      updateStatus CLEARED driverFee.id now
+      updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
       offers <- Payment.offerList merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
