@@ -629,9 +629,10 @@ accountSetUpScreenFlow = do
       let gender = getGenderValue state.data.gender
           selectedDisability = state.data.disabilityOptions.selectedDisability
           (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-          requiredData = initialData{firstName = (Just state.data.name),gender = gender, hasDisability = Just (isJust selectedDisability), disability = case selectedDisability of 
+          requiredData = initialData{firstName = (Just state.data.name),gender = gender, hasDisability = if state.data.config.showDisabilityBanner then Just (isJust selectedDisability) else Nothing , disability = if state.data.config.showDisabilityBanner then case selectedDisability of 
             Just disability -> Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason))
-            _ -> Nothing  }
+            _ -> Nothing  
+            else Nothing}
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{showDisabilityPopUp = (isJust selectedDisability)} , data{disability = selectedDisability}})
       case gender of
@@ -1746,12 +1747,13 @@ myProfileScreenFlow = do
           nameLength = length name
           gender = getGenderValue state.data.editedGender
           email = if state.data.editedEmailId == state.data.emailId || (state.data.editedEmailId == Just "") then Nothing else state.data.editedEmailId
-          disability = case state.data.editedDisabilityOptions.selectedDisability of 
+          disability = if state.data.config.showDisabilityBanner then case state.data.editedDisabilityOptions.selectedDisability of 
             Just disability -> if (state.data.editedDisabilityOptions.activeIndex == 1) 
                                   then Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason))
                                   else Nothing
             _ -> Nothing
-          hasDisability = if state.props.changeAccessibility then (Just (isJust disability)) else Nothing
+            else Nothing
+          hasDisability = if state.props.changeAccessibility && state.data.config.showDisabilityBanner then (Just (isJust disability)) else Nothing
       resp <- if nameLength > 2 then
                 lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (name !! 1) (name !! (nameLength - 1)) (email) gender hasDisability disability)
                 else if nameLength == 2 then

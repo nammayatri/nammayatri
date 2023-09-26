@@ -236,12 +236,11 @@ personalDetailsArray state =
   , {title : (getString MOBILE_NUMBER_STR) , text : (getValueToLocalStore MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
   , {title : (getString EMAIL_ID) , text :fromMaybe (getString ADD_NOW) state.data.emailId , fieldType : ST.EMAILID_ , supportText : Nothing }
   , {title : (getString GENDER_STR), text : (RSRC.getGender state.data.gender (getString SET_NOW)), fieldType : ST.GENDER_ , supportText : Nothing}
-  , {title : (getString ASSISTANCE_REQUIRED) , text : case state.data.hasDisability of 
+  ] <> if state.data.config.showDisabilityBanner then [{title : (getString ASSISTANCE_REQUIRED) , text : case state.data.hasDisability of 
                                                                         Just false -> (getString NO_DISABILITY)
                                                                         _ -> case state.data.disabilityType of 
                                                                                 Just disabilityType -> disabilityType.description
-                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}
-  ]
+                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}] else []
 
 horizontalLineView :: forall w. ST.MyProfileScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 horizontalLineView state visible =
@@ -437,7 +436,7 @@ genderCaptureView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ]
-        [   disabilityOptionView state push
+        [ if state.data.config.showDisabilityBanner then disabilityOptionView state push else textView[height $ V 0]
         , if state.props.expandEnabled then genderOptionsView state push else textView[height $ V 0]
         ]
     ]
