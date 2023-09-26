@@ -54,7 +54,8 @@ import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
-
+import Components.RideCompletedCard.Controller (Theme(..))
+import Resource.Constants as Const
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
 rideActionModalConfig state = let
@@ -825,6 +826,7 @@ getRideCompletedConfig state = let
       title = getString RIDE_COMPLETED,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
+      gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -884,13 +886,21 @@ getRideCompletedConfig state = let
     driverUpiQrCard {
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
       id = "renderQRViewOnRideComplete",
-      vpa = state.data.endRideData.payerVpa
+      vpa = state.data.endRideData.payerVpa,
+      vpaIcon = (Const.getPspIcon state.data.endRideData.payerVpa),
+      collectCashText = getString OR_COLLECT_CASH_DIRECTLY
+    },
+    noVpaCard {
+      title = getString SETUP_AUTOPAY_TO_ACCEPT_PAYMENT,
+      collectCashText = getString COLLECT_CASH_DIRECTLY
     },
     showContackSupportPopUp = state.props.showContackSupportPopUp,
     accessibility = DISABLE,
     qrVisibility = state.data.endRideData.hasActiveAutoPay && state.data.endRideData.payerVpa /= "",
     payerVpa = state.data.endRideData.payerVpa,
-    noVpaVisibility = not state.data.endRideData.hasActiveAutoPay
+    noVpaVisibility = not state.data.endRideData.hasActiveAutoPay,
+    theme = LIGHT,
+    isPrimaryButtonSticky = true
   }
   in config'
 
