@@ -353,10 +353,6 @@ lightGreyShade = "#DDDDDD"
 blueBtn :: Color
 blueBtn = "#0066FF"
 
-
-yellow800 :: Color
-yellow800 = "#FEEBB9"
-
 lightWhite :: Color
 lightWhite = "#f7f5f5"
 
