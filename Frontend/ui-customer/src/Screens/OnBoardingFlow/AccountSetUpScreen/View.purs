@@ -343,6 +343,7 @@ disabilityOptionView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , visibility if state.data.config.showDisabilityBanner then VISIBLE else GONE
   , margin (MarginTop 28)
   ]$[ textView $
     [ text (getString ARE_YOU_A_PERSON_WITH_DISABILITY)
