@@ -510,7 +510,7 @@ const englishStrings = {
   "CALL_112": "Call 112",
   "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
   "SEATS" : "Seats",
-  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹10",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹20",
   "HATCHBACK" : "Hatchback",
   "SUV" : "SUV",
   "SEDAN" : "Sedan",
@@ -620,5 +620,6 @@ const englishStrings = {
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
   "AC_CAB" : "AC Cab",
   "AC_SUV" : "AC SUV",
-  "RIDE_TYPE" : "Ride Type"
+  "RIDE_TYPE" : "Ride Type",
+  "ERNAKULAM_LIMIT_CHARGE": "Fare will be 1.5x if the pickup or destination lies outside Ernakulam corporation limits"
 }

@@ -16,8 +16,6 @@
 module Components.QuoteListModel.View where
 
 import Common.Types.App
-import Common.Types.App
-
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.PrimaryButton as PrimaryButton
@@ -521,7 +519,9 @@ noQuotesErrorModel state =
         [ height $ V 115
         , width $ V 161
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
+        , imageWithFallback $ if state.vehicleVariant == "AUTO_RICKSHAW" 
+                                then "ny_ic_no_quotes_auto," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_auto.png"
+                                else "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
         ]
       , textView $
         [ height WRAP_CONTENT

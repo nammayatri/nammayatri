@@ -57,6 +57,7 @@ type AppConfig =
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
+  , customerTip :: CustomerTip
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -157,4 +158,9 @@ type TerminateBtnConfig = {
 type EstimateAndQuoteConfig = {
   variantTypes :: Array (Array String),
   variantOrder :: Array String
+}
+
+type CustomerTip = {
+  auto :: Boolean,
+  cabs :: Boolean
 }

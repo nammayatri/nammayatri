@@ -12,7 +12,7 @@ window.getMerchantConfig = function () {
       "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
       "APP_LINK": "",
       "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
-      "CUSTOMER_TIP": "true",
+      "showChargeDesc" : false,
       "isShareAppEnabled": "false",
       "showPickUpandDrop": true,
       "loaderColor": "",

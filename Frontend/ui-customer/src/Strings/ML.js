@@ -501,7 +501,7 @@ const malayalamStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "നമ്മ യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
   "CALL_112": "വിളിക്കുക 112",
   "CALL_EMERGENCY_CENTRE": "എമർജൻസി സെന്ററിലേക്ക് വിളിക്കുക",
-  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹10 ഇൻക്രിമെന്റിലാണ്",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹20 ഇൻക്രിമെന്റിലാണ്",
   "SEATS" : "സീറ്റുകൾ",
   "HATCHBACK" : "ഹാച്ച്ബാക്ക്",
   "SUV" : "സ്ഉവി",
@@ -633,5 +633,6 @@ const malayalamStrings = {
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "സവാരികൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് നമ്മ യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്‌തമാക്കുക.",
   "AC_CAB" : "എസി ക്യാബ്",
   "AC_SUV" : "എസി എസ്‌യുവി",
-  "RIDE_TYPE" : "റൈഡ് തരം"
+  "RIDE_TYPE" : "റൈഡ് തരം",
+  "ERNAKULAM_LIMIT_CHARGE": "പിക്കപ്പ് /ലക്ഷ്യസ്ഥാനം എറണാകുളം കോർപ്പറേഷൻ പരിധിക്ക് പുറത്താണെങ്കിൽ നിരക്ക് 1.5 മടങ്ങ് ആയിരിക്കും."
 }

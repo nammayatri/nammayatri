@@ -21,7 +21,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.RecordAudioModel.Controller (Action(..), RecordAudioModelState)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Font.Style (bold)
+import Font.Style as FontStyle
 import JBridge (startLottieProcess, lottieAnimationConfig)
 import PrestoDOM (frameLayout, id, linearLayout)
 import PrestoDOM.Elements.Elements (imageView, lottieAnimationView, textView)
@@ -30,7 +30,7 @@ import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity
 import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Styles.Colors (black800, blue600, white900) as Color
-import Font.Size (a_14, a_20) as Font
+import Font.Size as FontSize
 import Animation (screenAnimationFadeInOut)
 import Language.Types (STR(RECORD_VOICE_NOTE))
 import Language.Strings (getString)
@@ -48,20 +48,18 @@ view push state =
    , padding (Padding 16 24 16 24)
    , margin (MarginHorizontal 16 16)
    , gravity CENTER
-   ][ frameLayout
+   ][ linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , gravity CENTER_VERTICAL
     , margin (MarginBottom 16)
-    ][ textView
+    ][ textView $
      [ text (getString RECORD_VOICE_NOTE)
      , height WRAP_CONTENT
-     , textSize Font.a_20
      , weight 1.0
-     , fontStyle $ bold LanguageStyle
      , color Color.black800
-     , layoutGravity "center"
-     ]
+     , gravity CENTER
+     ] <> FontStyle.h2 TypoGraphy
      , imageView
      [ width $ V 28
      , height $ V 28
@@ -90,13 +88,12 @@ view push state =
                  pure unit
                 ) (const NoAction)
           ]
-        , textView
+        , textView $
           [ text state.timer
           , layoutGravity "end"
           , height $ V 50
-          , textSize Font.a_14
           , gravity CENTER
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
        ]
      , linearLayout
        [ width MATCH_PARENT
@@ -117,13 +114,12 @@ view push state =
                               , imageWithFallback "ny_ic_static_record,https://assets.juspay.in/nammayatri/images/driver/ny_ic_static_record"
                               , padding (PaddingRight 50)
                               ]
-                            , textView
+                            , textView $
                               [ text "00:00"
                               , layoutGravity "end"
                               , height $ V 50
-                              , textSize Font.a_14
                               , gravity CENTER
-                              ]
+                              ] <> FontStyle.body3 TypoGraphy
                            ]
                          ]
          )

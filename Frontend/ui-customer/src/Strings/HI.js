@@ -508,7 +508,7 @@ const hindiStrings = {
   "CALL_112": "112 पर कॉल करें",
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
   "SEATS" : "सीटें",
-  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹20 की वृद्धि में है",
   "HATCHBACK" : "हैचबैक",
   "SUV" : "एसयूवी",
   "SEDAN" : "सेडान",
@@ -614,11 +614,12 @@ const hindiStrings = {
   "UPDATE_PROFILE" : "प्रोफ़ाइल अपडेट करें",
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
   "CLEAN_CAB" : "क्लीन कैब",
-  "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
-  "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
   "ENABLE_LOCATION_PERMISSION_TO" : "सवारी खोजने के लिए स्थान अनुमति सक्षम करें",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
   "AC_CAB" : "एसी कैब",
   "AC_SUV" : "एसी एसयूवी",
-  "RIDE_TYPE" : "सवारी का प्रकार"
+  "RIDE_TYPE" : "सवारी का प्रकार",
+  "SENT_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी भेजा गया है", 
+  "SENT_OTP_VIA_SMS" : "ओटीपी एसएमएस के माध्यम से भेजा गया है",
+  "ERNAKULAM_LIMIT_CHARGE": "यदि पिकअप या गंतव्य एर्नाकुलम निगम सीमा के बाहर है तो किराया 1.5 गुना होगा"
 }

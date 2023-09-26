@@ -132,4 +132,8 @@ config =
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"] ]
       , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV"]
       }
+  , customerTip : {
+      auto : true,
+      cabs : false
+    }
   }
