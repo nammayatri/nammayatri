@@ -2596,3 +2596,17 @@ instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackRe
 instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
 instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
 instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode
+
+newtype PaymentNudgeConfig = PaymentNudgeConfig {
+  title :: String,
+  description :: String,
+  imageUrl :: String,
+  subType :: String
+}
+
+derive instance genericPaymentNudgeConfig :: Generic PaymentNudgeConfig _
+derive instance newtypePaymentNudgeConfig :: Newtype PaymentNudgeConfig _
+instance standardPaymentNudgeConfig :: StandardEncode PaymentNudgeConfig where standardEncode (PaymentNudgeConfig res) = standardEncode res
+instance showPaymentNudgeConfig :: Show PaymentNudgeConfig where show = genericShow
+instance decodePaymentNudgeConfig :: Decode PaymentNudgeConfig where decode = defaultDecode
+instance encodePaymentNudgeConfig :: Encode PaymentNudgeConfig where encode = defaultEncode 

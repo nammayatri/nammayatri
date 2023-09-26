@@ -103,6 +103,8 @@ data KeyStore = USER_NAME
                 | FREE_TRIAL_DAYS
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
+                | PAYMENT_NUDGE
+                | SHOW_FREE_TRIAL_ENDING
                 | BUNDLE_TIME_OUT
 
 derive instance genericKeyStore :: Generic KeyStore _

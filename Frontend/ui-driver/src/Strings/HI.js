@@ -848,5 +848,11 @@ const hindiStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
   JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
-  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें"
+  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 }

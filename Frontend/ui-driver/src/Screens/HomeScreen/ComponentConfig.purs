@@ -49,10 +49,11 @@ import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), PaymentNudgeConfig(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Font.Style (Style (..))
+import Screens.HomeScreen.Controller (getPaymentNudgeSubType)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -214,6 +215,208 @@ linkAadhaarPopupConfig state = let
     }
   }
   in popUpConfig'
+
+paymentNudgeConfig :: Boolean -> PaymentNudgeConfig -> PopUpModal.Config
+paymentNudgeConfig isImageUrl (PaymentNudgeConfig ob) =
+  let subType = getPaymentNudgeSubType ob.subType
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    visibility = case subType of
+      ST.NO_SUB_TYPE -> GONE
+      _ -> VISIBLE,
+    buttonLayoutMargin = case subType of
+      ST.LOW_ACCOUNT_BALANCE -> Margin 16 0 16 20
+      _ -> Margin 16 0 16 5,
+    topTitle = case subType of
+      ST.LOW_ACCOUNT_BALANCE -> Just ob.title
+      ST.SWITCH_PLAN -> Just ob.title
+      _ -> Nothing,
+    primaryText {
+      text = ob.title
+    , visibility = case subType of
+      ST.LOW_ACCOUNT_BALANCE -> GONE
+      ST.SWITCH_PLAN -> GONE
+      _ -> VISIBLE
+    , margin = Margin 16 24 16 4 },
+    secondaryText {
+      textFromHtml = ob.description
+    , text = ""
+    , margin = MarginBottom 24},
+    option1 {
+      text = case subType of
+        ST.LOW_ACCOUNT_BALANCE -> getString I_WILL_ADD_MONEY_IN_MY_BANK
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> getString I_WILL_ADD_MONEY_IN_MY_BANK
+        ST.SWITCH_PLAN -> getString SWITCH_NOW
+
+        _ -> ""
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = case subType of 
+        ST.LOW_ACCOUNT_BALANCE -> "ny_ic_low_account_balance," <> getAssetStoreLink FunctionCall <> "ny_ic_low_account_balance.png"
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> "ny_failed," <> getAssetStoreLink FunctionCall <> "ny_failed.png"
+        ST.SWITCH_PLAN -> "ny_ic_subscription_save_more," <> getAssetStoreLink FunctionCall <> "ny_ic_subscription_save_more.png"
+        _ -> ""
+    , visibility = VISIBLE
+    , height = case subType of
+        ST.LOW_ACCOUNT_BALANCE -> V 200
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> V 200
+        _ -> V 0
+    , width = V 280
+    , margin = case subType of
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> MarginTop 32
+        _ -> MarginTop 0
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = case subType of
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> getString NEED_HELP
+        ST.SWITCH_PLAN -> getString STAY_ON_DAILY_PER_RIDE_PLAN
+        _ -> ""
+        
+    , visibility = VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    , margin = MarginRight 10
+    }
+    , image {
+      visibility = case subType of
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> VISIBLE
+        _ -> GONE
+    , imageUrl = "ny_ic_phone_filled_blue," <> getAssetStoreLink FunctionCall <> "ny_ic_phone_filled_blue.png"
+    , height = V 16
+    , width = V 16
+    }
+    , textOpt2 {
+      text = getString CALL_SUPPORT
+    , color = Color.blue800
+    , visibility = case subType of
+        ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> VISIBLE
+        _ -> GONE
+    , textStyle = FontStyle.SubHeading2
+    , margin = MarginLeft 5
+    }
+    , height = V 24
+    , margin = MarginVertical 20 20
+    , visibility = case subType of
+      ST.LOW_ACCOUNT_BALANCE -> false
+      _ -> true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
+
+paymentPendingBlockerPopup :: Boolean -> PopUpModal.Config
+paymentPendingBlockerPopup autoPaySet =
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
+    primaryText {
+      text = ""
+    , margin = Margin 16 16 16 4
+    , visibility = GONE },
+    secondaryText {
+      textFromHtml = getString PAYMENT_PENDING_ALERT_DESC
+    , text = ""
+    , margin = MarginBottom 24
+    },
+    option1 {
+      text = if autoPaySet then getString CLEAR_DUES <> "( \\u20b9 " <> "100" <> ")"
+             else getString VIEW_DUE_DETAILS
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    , margin = MarginTop 20
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString VIEW_DUE_DETAILS
+    , visibility = if autoPaySet then VISIBLE else GONE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
+    , visibility = true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
+
+freeTrialEndingPopupConfig :: Int -> PopUpModal.Config
+freeTrialEndingPopupConfig noOfDaysLeft = 
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
+    primaryText {
+      text = case noOfDaysLeft of
+        3 -> getString FREE_TRIAL_ENDING_IN_2_DAYS
+        2 -> getString FREE_TRIAL_ENDING_TOMORROW
+        1 -> getString FREE_TRIAL_ENDS_TONIGHT
+        _ -> ""
+    , margin = Margin 16 16 16 4 },
+    secondaryText {
+      textFromHtml = getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES
+    , text = ""
+    , margin = MarginBottom 24
+    },
+    option1 {
+      text = getString JOIN_NOW
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = case noOfDaysLeft of
+        3 -> "ny_ic_2_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_2_days_left.png"
+        2 -> "ny_ic_1_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_1_days_left.png"
+        1 -> "ny_ic_offer_ends_tonight," <> getAssetStoreLink FunctionCall <> "ny_ic_offer_ends_tonight.png"
+        _ -> ""
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    , margin = MarginTop 20
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString NOT_NOW
+    , visibility = VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
+    , visibility = true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
+
+
 
 offerPopupConfig :: Boolean -> PromotionPopupConfig -> PopUpModal.Config
 offerPopupConfig isImageUrl  (PromotionPopupConfig ob) = 

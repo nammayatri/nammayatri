@@ -374,6 +374,18 @@ public class MainActivity extends AppCompatActivity {
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
 
         try {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("subType", "PAYMENT_FAILED_LOW_ACCOUNT_BALANCE");
+            jsonObject.put("title", "Payment Failed");
+            jsonObject.put("description", "Low account balance. <br> Please add <b> ₹<X> </b> in your bank account and retry payment.");
+            jsonObject.put("imageUrl", "kajdfkajdkl;");
+            sharedPref.edit().putString("PAYMENT_NUDGE", jsonObject.toString()).apply();
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        try {
             MapsInitializer.initialize(getApplicationContext());
         } catch (Exception e) {
             e.printStackTrace();

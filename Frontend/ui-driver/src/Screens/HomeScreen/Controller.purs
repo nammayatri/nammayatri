@@ -56,7 +56,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), PaymentNudgeConfig(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -187,6 +187,9 @@ instance loggableAction :: Loggable Action where
     PaymentStatusAction _ -> pure unit
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
+    PaymentNudgeAC _ _ -> pure unit
+    FreeTrialEndingAC _ -> pure unit
+    PaymentPendingBlockerAC _ _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     _ -> pure unit
 
@@ -268,6 +271,9 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
+            | PaymentNudgeAC PaymentNudgeConfig PopUpModal.Action
+            | FreeTrialEndingAC PopUpModal.Action 
+            | PaymentPendingBlockerAC Boolean PopUpModal.Action
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
@@ -368,6 +374,36 @@ eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
 eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
+
+eval (PaymentNudgeAC (PaymentNudgeConfig ob) PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore PAYMENT_NUDGE "__failed"
+  -- _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
+  -- _ <- pure $ metaLogEvent "ny_driver_in_app_popup_join_now"
+  -- let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_in_app_popup_join_now"
+  continue state
+
+eval (PaymentNudgeAC (PaymentNudgeConfig ob) PopUpModal.OptionWithHtmlClick ) state = do
+  _ <- pure $ setValueToLocalNativeStore PAYMENT_NUDGE "__failed"
+  case (getPaymentNudgeSubType ob.subType) of
+    ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> do
+     _ <- pure $ showDialer (getSupportNumber "") false
+     continue state
+    _ -> continue state
+
+eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_FREE_TRIAL_ENDING "__failed"
+  exit $ SubscriptionScreen state 
+
+eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_FREE_TRIAL_ENDING "__failed"
+  continue state
+
+eval (PaymentPendingBlockerAC autoPaySet PopUpModal.OnButton1Click) state = do
+  -- todo handle autoPaySet case 
+  exit $ SubscriptionScreen state 
+
+eval (PaymentPendingBlockerAC autoPaySet PopUpModal.OptionWithHtmlClick) state = do
+  exit $ SubscriptionScreen state 
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
@@ -889,5 +925,10 @@ updateMessagesWithCmd state =
     pure NoAction
     ]
 
-  
-  
+getPaymentNudgeSubType :: String -> ST.PaymentNudgeSubType
+getPaymentNudgeSubType subType =
+  case subType of
+    "LOW_ACCOUNT_BALANCE" -> ST.LOW_ACCOUNT_BALANCE
+    "PAYMENT_FAILED_LOW_ACCOUNT_BALANCE" -> ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE
+    "SWITCH_PLAN" -> ST.SWITCH_PLAN
+    _ -> ST.NO_SUB_TYPE

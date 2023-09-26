@@ -849,5 +849,11 @@ const englishStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
   JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
-  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment"
+  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days!",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow!",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 } 

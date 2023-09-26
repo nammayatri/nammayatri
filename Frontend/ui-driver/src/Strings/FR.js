@@ -655,5 +655,11 @@ const frenchStrings = {
   PURPLE_RIDE_CHAMPION : "Champion du Purple Ride",
   PURPLE_RIDE : "Tour violet",
   PROCEED_TO_CHAT : "Passer au chat",
-  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler"
+  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days!",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow!",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 }

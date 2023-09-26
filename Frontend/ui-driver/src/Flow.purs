@@ -288,11 +288,17 @@ getDriverInfoFlow = do
   case getDriverInfoApiResp of
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-      setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
+      -- setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
+      setValueToLocalStore FREE_TRIAL_DAYS (show 2)
       case getDriverInfoResp.freeTrialDaysLeft of
-        Just value -> do 
-              void $ pure $ setCleverTapUserProp "NY_Free_Trial_Days_Left" (show value)
-        Nothing -> pure unit
+            Just value -> do 
+                  void $ pure $ setCleverTapUserProp "NY_Free_Trial_Days_Left" (show value)
+                  if value < 4 && value > 0 then do
+                    setValueToLocalStore SHOW_FREE_TRIAL_ENDING "true"
+                  else 
+                    setValueToLocalStore SHOW_FREE_TRIAL_ENDING "__failed"
+            Nothing -> pure unit
+      setValueToLocalStore SHOW_FREE_TRIAL_ENDING "true"
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = (GetDriverInfoResp getDriverInfoResp)})
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
@@ -1775,7 +1781,7 @@ homeScreenFlow = do
   let currdate = getcurrentdate ""
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender, autoPayBanner = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE")}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender, autoPayBanner = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE"), autoPaySet = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE") }})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit

@@ -836,5 +836,13 @@ const bengaliStrings = {
   PURPLE_RIDE : "বেগুনি রাইড",
 	PROCEED_TO_CHAT : "চ্যাট দিয়ে এগিয়ে যান",
 	PLEASE_CONSIDER_CALLING_THEM : "তারা চ্যাট পড়তে সক্ষম নাও হতে পারে. তাদের কল করুন",
-	COMPLETE_PAYMENT_TO_CONTINUE : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন"
+	COMPLETE_PAYMENT_TO_CONTINUE : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I_WILL_ADD_MONEY_IN_MY_BANK",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "STAY_ON_DAILY_PER_RIDE_PLAN",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days!",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow!",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 }

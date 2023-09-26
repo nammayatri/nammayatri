@@ -155,6 +155,7 @@ initData = {
         rcActive : false, 
         rcDeactivePopup : false,
         autoPayBanner : false,
+        autoPaySet : true,
         showAccessbilityPopup : false,
         showRideCompleted : false,
         showRideRating : false,

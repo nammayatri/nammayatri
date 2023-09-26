@@ -148,6 +148,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String title;
                     String body;
                     String imageUrl;
+                    String subType = "";
 
                     if (remoteMessage.getData().containsKey("notification_json") && remoteMessage.getData().get("notification_json") != null) {
                         String notificationData = remoteMessage.getData().get("notification_json");
@@ -180,7 +181,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         } else {
                             imageUrl = null;
                         }
+
+                        if(notification_payload.has("subType")) {
+                            subType = notification_payload.get("subType").toString();
+                        } else {
+                            subType = null;
+                        }
                     }
+
+
 
                     SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     String notificationType = (String) payload.get("notification_type");
@@ -354,7 +363,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             bundle.putExtra("merchantType",merchantType);
                             startService(bundle);
                             break;
-
+                        
+                        case NotificationTypes.PAYMENT_NUDGE :
+                            JSONObject jsonObjectPN = new JSONObject();
+                            jsonObjectPN.put("subType", subType);
+                            jsonObjectPN.put("title", title);
+                            jsonObjectPN.put("description", body);
+                            jsonObjectPN.put("imageUrl", imageUrl);
+                            sharedPref.edit().putString("PAYMENT_NUDGE", jsonObjectPN.toString()).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -551,5 +568,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
+        private static final String PAYMENT_NUDGE = "PAYMENT_NUDGE";
     }
 }

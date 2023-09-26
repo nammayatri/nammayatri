@@ -820,5 +820,11 @@ const kannadaStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ",
   JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
-  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 }

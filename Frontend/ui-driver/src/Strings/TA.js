@@ -818,5 +818,11 @@ const tamilStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "அவர்களால் உரையாடலைப் படிக்க முடியாமல் போகலாம். தயவுசெய்து அவர்களை அழைக்கவும்",
   JOIN_A_PLAN_TO_START_EARNING : "சம்பாதிப்பதைத் தொடங்க ஒரு திட்டத்தில் சேரவும்!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள்.\nசவாரி செய்வதற்கான திட்டத்தில் சேரவும்",
-  COMPLETE_PAYMENT_TO_CONTINUE : "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, உங்கள் கட்டணத்தைச் செலுத்தவும்"
+  COMPLETE_PAYMENT_TO_CONTINUE : "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, உங்கள் கட்டணத்தைச் செலுத்தவும்",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 }
