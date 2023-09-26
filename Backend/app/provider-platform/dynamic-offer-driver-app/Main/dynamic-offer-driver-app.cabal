@@ -226,6 +226,7 @@ library
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.OnboardingDocumentConfig
+      Domain.Types.Merchant.PushNotification
       Domain.Types.Merchant.TransporterConfig
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
@@ -366,6 +367,7 @@ library
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.Merchant.OnboardingDocumentConfig
+      Storage.Beam.Merchant.PushNotification
       Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport
@@ -414,6 +416,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.OnboardingDocumentConfig
+      Storage.CachedQueries.Merchant.PushNotification
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
@@ -490,6 +493,7 @@ library
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.OnboardingDocumentConfig
+      Storage.Queries.Merchant.PushNotification
       Storage.Queries.Merchant.TransporterConfig
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
@@ -531,6 +535,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
       Tools.Payment
+      Tools.PaymentNudge
       Tools.SMS
       Tools.Ticket
       Tools.Verification

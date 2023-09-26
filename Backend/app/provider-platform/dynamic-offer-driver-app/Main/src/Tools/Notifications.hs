@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Merchant
+import Domain.Types.Merchant.PushNotification as MPN
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
@@ -572,31 +573,31 @@ notifyPaymentModeManualOnSuspend merchantId personId mbDeviceToken = do
           [ "Your UPI Autopay has been suspended. You can clear your dues manually from the Plan page."
           ]
 
-notifyLowAccountBalance ::
+notifyPaymentNudge ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
+  MPN.NotificationSubType ->
+  Text ->
+  Text ->
+  Maybe Text ->
   m ()
-notifyLowAccountBalance merchantId personId mbDeviceToken = do
+notifyPaymentNudge merchantId personId mbDeviceToken notificationSubType title_ body_ icon = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
-    notifType = FCM.LOW_ACCOUNT_BALANCE
+    notifType = FCM.PAYMENT_NUDGE
     notificationData =
       FCM.FCMData
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
-          fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmEntityData = Just notificationSubType,
+          fcmNotificationJSON = FCM.createAndroidNotificationWithIcon title body notifType icon
         }
-    title = FCMNotificationTitle "Low Account Balance"
-    body =
-      FCMNotificationBody $
-        unwords
-          [ "Your Bank Account balance is low. Add money to enjoy uninterrupted rides."
-          ]
+    title = FCMNotificationTitle title_
+    body = FCMNotificationBody body_
