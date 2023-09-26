@@ -320,11 +320,6 @@ purpleSirocco = "#788889"
 pinkPantone :: Color
 pinkPantone = "#f5c6c6"
 
-
-
-yellow800 :: Color
-yellow800 = "#FEEBB9"
-
 lightWhite :: Color
 lightWhite = "#f7f5f5"
 

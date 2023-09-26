@@ -262,6 +262,7 @@
       "ny_ic_hand_wave" : true,
       "ny_ic_head_phones" : true,
       "ny_ic_headphone" : true,
+      "ny_ic_black_headphone" : true,
       "ny_ic_heart_grey" : true,
       "ny_ic_heart_outline" : true,
       "ny_ic_heart_red" : true,

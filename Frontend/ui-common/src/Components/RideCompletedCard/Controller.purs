@@ -11,6 +11,10 @@ import Prim.TypeError as String
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
 import Components.PopUpModal as PopUpModal
+import Data.Eq.Generic (genericEq)
+import Foreign.Generic (class Decode, class Encode)
+import Data.Generic.Rep (class Generic)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 data Action = Support
             | RideDetails
@@ -31,12 +35,23 @@ type Config = {
   badgeCard :: BadgeCard,
   driverUpiQrCard :: DriverUpiQrCard,
   showContackSupportPopUp :: Boolean,
+  noVpaCard :: NoVpaCard,
   primaryButtonConfig :: PB.Config,
   accessibility :: Accessiblity,
   qrVisibility :: Boolean,
   payerVpa :: String,
-  noVpaVisibility :: Boolean
+  noVpaVisibility :: Boolean,
+  theme :: Theme,
+  isPrimaryButtonSticky :: Boolean
 }
+
+data Theme = DARK | LIGHT
+
+derive instance genericTheme :: Generic Theme _
+instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
+instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
+instance eqTheme :: Eq Theme where eq = genericEq
+
 
 config :: Config 
 config = {
@@ -45,6 +60,7 @@ config = {
     finalAmount : 0,
     initalAmount : 0,
     fareUpdatedVisiblity : false,
+    gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
       text : "",
       background : Color.black900,
@@ -102,9 +118,15 @@ config = {
     imageHeight : V 0
   },
   driverUpiQrCard : {
-    text : "Get direct payment to your bank account",
+    text : "Get direct payment to UPI ID",
     id : "",
-    vpa : ""
+    vpa : "",
+    vpaIcon : "ny_ic_defaultpg,",
+    collectCashText : "or Collect cash directly "
+  },
+  noVpaCard : {
+    title : "To accept payments directly to your bank account, setup  Autopay on your Plan",
+    collectCashText : "or Collect cash directly "
   },
   contactSupportPopUpConfig : PopUpModal.config,
   showContackSupportPopUp : false,
@@ -112,7 +134,9 @@ config = {
   accessibility : ENABLE,
   qrVisibility : false ,
   payerVpa : "",
-  noVpaVisibility : false
+  noVpaVisibility : false,
+  theme : DARK,
+  isPrimaryButtonSticky : false
 }
 
 type CustomerIssueCard = {
@@ -133,6 +157,7 @@ type TopCard = {
   finalAmount :: Int,
   initalAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
+  gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
   bottomText :: String
@@ -186,7 +211,14 @@ type BadgeCard = {
 type DriverUpiQrCard = {
   text :: String,
   id :: String,
-  vpa :: String
+  vpa :: String,
+  vpaIcon :: String,
+  collectCashText :: String
+}
+
+type NoVpaCard = {
+  title :: String,
+  collectCashText :: String
 }
 
 type TopPill = {
