@@ -17,6 +17,7 @@ module Screens.HomeScreen.View where
 
 import Screens.HomeScreen.ComponentConfig
 
+import Animation (scaleYAnimWithDuration)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
@@ -41,6 +42,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber)
 import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -65,9 +67,9 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, (+))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift  )
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -1151,14 +1153,21 @@ rideActionModelView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
-          , peakHeight if state.data.activeRide.isDriverArrived then 518 else 470
-          , halfExpandedRatio 0.9
+          , peakHeight $ getPeekHeight state
+          , topShift 0.0
           ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
                 RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
                 else linearLayout[][]
         ]
       ]
     ]
+
+getPeekHeight :: HomeScreenState -> Int
+getPeekHeight state = 
+  let headerLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionHeaderLayout"
+      labelLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLabelLayout"
+      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLayout"
+    in headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
