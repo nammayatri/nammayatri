@@ -196,6 +196,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , aadhaarCardPhoto      : Nothing 
     , freeTrialDaysLeft     : Nothing
     , payerVpa              : Nothing
+    , currentDues           : Nothing
+    , manualDues           : Nothing
 }
 
 organizationInfo :: OrganizationInfo

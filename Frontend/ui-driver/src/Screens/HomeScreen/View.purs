@@ -240,7 +240,8 @@ view push state =
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if state.props.showPaymentPendingBlocker && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< DuePaymentPendingAC) (paymentPendingBlockerPopup state) else linearLayout[visibility GONE][]
+      , if state.props.showPaymentPendingBlocker && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< DuePaymentPendingAC) (paymentPendingBlockerConfig state) else linearLayout[visibility GONE][]
+      , if state.props.softPaymentPendingNudge && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< SoftPaymentPendingAC) (softPaymentPendingNudgeConfig state) else linearLayout[visibility GONE][]
   ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
