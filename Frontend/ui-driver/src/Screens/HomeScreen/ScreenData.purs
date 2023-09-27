@@ -27,6 +27,7 @@ initData :: HomeScreenState
 initData = {
     data: {
         config : DC.config,
+        totalPendingManualDues : 0.0,
         driverName : "",
         vehicleType : "",
         driverAlternateMobile : Nothing,
@@ -165,6 +166,7 @@ initData = {
         showChatBlockerPopUp : false,
         duesAmount : "",
         showPaymentPendingBlocker : false,
+        softPaymentPendingNudge : false,
         subscribed : true,
         showShimmer : false,
         driverBlocked : false,

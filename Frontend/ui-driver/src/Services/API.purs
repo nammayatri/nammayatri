@@ -406,6 +406,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , aadhaarCardPhoto      :: Maybe String
     , freeTrialDaysLeft     :: Maybe Int
     , payerVpa              :: Maybe String
+    , currentDues           :: Maybe Number
+    , manualDues           :: Maybe Number
     }
 
 

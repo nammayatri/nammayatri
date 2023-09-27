@@ -278,6 +278,7 @@ data Action = NoAction
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
             | DuePaymentPendingAC PopUpModal.Action
+            | SoftPaymentPendingAC PopUpModal.Action
             | GetCurrenDuesAction GetCurrentPlanResp
             | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
@@ -381,6 +382,24 @@ eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
 
+eval (SoftPaymentPendingAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
+  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+  exit $ SubscriptionScreen state {props { softPaymentPendingNudge = false }} false
+
+eval (SoftPaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+  exit (DriverAvailabilityStatus state{props { softPaymentPendingNudge = false }} ST.Online)
+
+eval (SoftPaymentPendingAC PopUpModal.DismissPopup) state = do
+  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+  continue state {props { softPaymentPendingNudge = false }}
+
 eval (DuePaymentPendingAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
   _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
@@ -393,8 +412,7 @@ eval (DuePaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
   exit $ SubscriptionScreen state {props { showPaymentPendingBlocker = false }} false
 
-eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = do
-  continue state {props { showPaymentPendingBlocker = false }}
+eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = continue state {props { showPaymentPendingBlocker = false }}
 
 eval (GetCurrenDuesAction (GetCurrentPlanResp resp)) state =
   let currentDues = case resp.currentPlanDetails of
@@ -671,7 +689,7 @@ eval (SwitchDriverStatus status) state =
   else if state.props.driverStatusSet == status then continue state
     else
       case status of
-        ST.Online -> exit (DriverAvailabilityStatus state status)
+        ST.Online -> if state.data.totalPendingManualDues >= 25.0 then continue state { props { softPaymentPendingNudge = true }} else exit (DriverAvailabilityStatus state status)
         ST.Silent -> exit (DriverAvailabilityStatus state status)
         ST.Offline ->
           do
