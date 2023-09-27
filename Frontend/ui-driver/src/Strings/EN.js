@@ -121,6 +121,7 @@ const englishStrings = {
   TRIP_DETAILS: "Trip Details",
   BY_CASH: "by Cash",
   ONLINE_: "Online",
+  GO_ONLINE_POPUP: "<u>Go Online</u>",
   REPORT_AN_ISSUE: "Report an Issue",
   DISTANCE: "Distance",
   TIME_TAKEN: "Time Taken",

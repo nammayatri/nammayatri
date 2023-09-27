@@ -120,6 +120,7 @@ const tamilStrings = {
   TRIP_DETAILS: "பயண விவரங்கள்",
   BY_CASH: "பணத்தால்",
   ONLINE_: "ஆன்லைன்",
+  GO_ONLINE_POPUP: "<u>போ ஆன்லைன்</u>",
   REPORT_AN_ISSUE: "சிக்கலைப் புகாரளிக்கவும்",
   DISTANCE: "தூரம்",
   TIME_TAKEN: "எடுக்கப்பட்ட நேரம்",

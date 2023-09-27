@@ -121,6 +121,7 @@ const mlStrings = {
   TRIP_DETAILS: "യാത്ര വിശദാംശങ്ങൾ",
   BY_CASH: "പണമായി",
   ONLINE_: "ഓൺ",
+  GO_ONLINE_POPUP: "<u>പോകൂ ഓൺ</u>",
   REPORT_AN_ISSUE: "ഒരു പ്രശ്നം റിപ്പോർട്ടുചെയ്യുക",
   DISTANCE: "അകലം",
   TIME_TAKEN: "എടുത്ത സമയം",
