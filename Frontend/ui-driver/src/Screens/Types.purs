@@ -767,7 +767,8 @@ type HomeScreenData =  {
   paymentState :: PaymentState,
   profileImg :: Maybe String, 
   endRideData :: EndRideData,
-  config :: AppConfig
+  config :: AppConfig,
+  totalPendingManualDues :: Number
  }
 
 type EndRideData = {
@@ -918,6 +919,7 @@ type HomeScreenProps =  {
   showChatBlockerPopUp :: Boolean,
   duesAmount :: String,
   showPaymentPendingBlocker :: Boolean,
+  softPaymentPendingNudge :: Boolean,
   subscribed :: Boolean,
   showShimmer :: Boolean,
   driverBlocked :: Boolean,

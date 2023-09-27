@@ -120,6 +120,7 @@ const kannadaStrings = {
   TRIP_DETAILS: "ಪ್ರವಾಸದ ವಿವರಗಳು",
   BY_CASH: "ನಗದು ಮೂಲಕ",
   ONLINE_: "ಆನ್ಲೈನ್",
+  GO_ONLINE_POPUP: "<u>ಗೋ ಆನ್ಲೈನ್</u>",
   REPORT_AN_ISSUE: "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
   DISTANCE: "ದೂರ",
   TIME_TAKEN: "ತೆಗೆದುಕೊಂಡ ಸಮಯ",
