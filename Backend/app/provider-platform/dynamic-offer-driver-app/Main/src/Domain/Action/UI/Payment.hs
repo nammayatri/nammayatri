@@ -221,7 +221,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
   where
     nofityPaymentFailureIfNotNotified paymentMode = do
       let key = "driver-offer:FailedNotif-" <> orderId.getId
-      sendNotificationIfNotSent key 3600 $ PaymentNudge.notifyPaymentFailure driverId paymentMode mbBankErrorCode
+      sendNotificationIfNotSent key 3600 $ fork "Sending payment failure notification" (PaymentNudge.notifyPaymentFailure driverId paymentMode mbBankErrorCode)
 
     toNotifyFailure isActiveExecutionInvoice_ eventName_ orderStatus_ = do
       let validStatus = orderStatus_ `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]

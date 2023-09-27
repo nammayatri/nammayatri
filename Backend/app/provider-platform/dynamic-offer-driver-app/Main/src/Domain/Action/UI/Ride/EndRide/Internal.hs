@@ -345,7 +345,7 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards driverInfo 
           QDF.create driverFee
           return 1
       plan <- getPlan mbDriverPlan merchantId
-      PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
+      fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
       scheduleJobs transporterConfig driverFee merchantId maxShards now
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Int -> UTCTime -> m ()
