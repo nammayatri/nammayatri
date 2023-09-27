@@ -63,7 +63,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams, initiateLocationServiceClient)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -122,21 +122,23 @@ baseAppFlow baseFlow event = do
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     if isTokenValid regToken
-      then case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
-        Just e -> 
-          case e.data of
-            "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
-              lift $ lift $ doAff do liftEffect hideSplash
+      then do
+        _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
+        case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
+          Just e -> 
+            case e.data of
+              "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
+                lift $ lift $ doAff do liftEffect hideSplash
+                setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+                updateAvailableAppsAndGoToSubs false
+              _ -> do
+                    setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+                    getDriverInfoFlow
+          
+          Nothing -> do
               setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-              updateAvailableAppsAndGoToSubs false
-            _ -> do
-                  setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-                  getDriverInfoFlow
-        
-        Nothing -> do
-            setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-            getDriverInfoFlow
-      else loginFlow
+              getDriverInfoFlow
+        else loginFlow
     where
     cacheAppParameters :: Int -> FlowBT String Unit
     cacheAppParameters versionCode = do
