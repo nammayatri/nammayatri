@@ -1759,7 +1759,8 @@ type TransactionInfo = {
   manualSpecificDetails :: Array DueCard,
   isSplit :: Boolean,
   isAutoPayFailed :: Boolean,
-  feeType :: FeeType
+  feeType :: FeeType,
+  numOfDriverFee :: Int
 }
 type PaymentListItem = {
   transactionDate :: String,

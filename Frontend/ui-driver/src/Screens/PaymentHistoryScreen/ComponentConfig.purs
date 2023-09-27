@@ -15,6 +15,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..))
 import Screens.Types as ST
+import Services.API as API
 
 
 genericHeaderConfig :: PaymentHistoryScreenState -> GenericHeader.Config
@@ -65,10 +66,24 @@ getStatusConfig status = case status of
                               Common.Failed  -> {color : Color.red, backgroundColor : "#29E55454", name : getString FAILURE}
                               Common.Scheduled  -> {color : Color.yellow900, backgroundColor : "#29FCC32C", name : getString SCHEDULED}
 
-getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String}
-getTransactionConfig status = case status of
-                              Common.Success -> {image : "ny_ic_green_tick", title : getString PAYMENT_SUCCESSFUL}
-                              Common.Pending -> {image : "ny_ic_transaction_pending," <> (getAssetStoreLink FunctionCall) <> "ny_ic_transaction_pending.png", title : getString PAYMENT_PENDING}
-                              Common.Failed  -> {image : "ny_ic_payment_failed," <> (getAssetStoreLink FunctionCall) <> "ny_ic_payment_failed.png", title : getString PAYMENT_FAILED}
-                              Common.Scheduled  -> {image : "ny_ic_pending", title : getString PAYMENT_SCHEDULED}
-                              -- {image : "ny_ic_pending", title : getString NOTIFICATION_SCHEDULED}
+getTransactionConfig :: ST.TransactionInfo -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig transactionInfo = do
+  let status = transactionInfo.paymentStatus
+      feeType = transactionInfo.feeType
+      isRegisteredWithDuesClear = transactionInfo.numOfDriverFee > 1
+      title' = getString case status, feeType, isRegisteredWithDuesClear of
+                  Common.Success, API.AUTOPAY_REGISTRATION, true  ->  AUTOPAY_SETUP_AND_PAYMENT_SUCCESSFUL
+                  Common.Success, API.AUTOPAY_REGISTRATION, false ->  AUTOPAY_SETUP_SUCCESSFUL
+                  Common.Success, _, _                            ->  PAYMENT_SUCCESSFUL
+                  Common.Pending, API.AUTOPAY_REGISTRATION, true  ->  AUTOPAY_SETUP_AND_PAYMENT_PENDING
+                  Common.Pending, API.AUTOPAY_REGISTRATION, false ->  AUTOPAY_SETUP_PENDING
+                  Common.Pending, _, _                            ->  PAYMENT_PENDING
+                  Common.Failed, API.AUTOPAY_REGISTRATION, true   ->  AUTOPAY_SETUP_AND_PAYMENT_FAILED
+                  Common.Failed, API.AUTOPAY_REGISTRATION, false  ->  AUTOPAY_SETUP_FAILED
+                  Common.Failed, _, _                             ->  PAYMENT_FAILED
+                  _, _, _                                         ->  PAYMENT_SCHEDULED
+  case status of
+    Common.Success -> {image : "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
+    Common.Pending -> {image : "ny_ic_transaction_pending," <> (getAssetStoreLink FunctionCall) <> "ny_ic_transaction_pending.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Failed  -> {image : "ny_ic_payment_failed," <> (getAssetStoreLink FunctionCall) <> "ny_ic_payment_failed.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Scheduled  -> {image : "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}

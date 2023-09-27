@@ -349,6 +349,7 @@ getDriverInfoFlow = do
 
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
+      void $ pure $ setCleverTapUserProp "Enabled" if getDriverInfoResp.enabled then "TRUE" else "FALSE"
       setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
       setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
       case getDriverInfoResp.blocked of

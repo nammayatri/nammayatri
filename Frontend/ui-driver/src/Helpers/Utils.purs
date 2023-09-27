@@ -76,7 +76,8 @@ import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (UpiApps(..))
-import Data.Int (fromString, even)
+import Data.Int (fromString, even, fromNumber)
+import Data.Number.Format (fixed, toStringWith)
 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -422,3 +423,8 @@ getStatus status = case status of
   "Failed" -> Failed
   "Scheduled" -> Scheduled
   _ -> Pending
+
+getFixedTwoDecimals :: Number -> String
+getFixedTwoDecimals amount = case (fromNumber amount) of
+                                Just value -> show value
+                                Nothing ->  toStringWith (fixed 2) amount

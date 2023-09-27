@@ -42,7 +42,7 @@ import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
 import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (decode)
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=), (||))
@@ -178,7 +178,7 @@ paymentList push state =
                     [ height WRAP_CONTENT
                     , weight 1.0
                     ][]
-                , commonTV push ("₹" <> show item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                , commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
                 , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -211,7 +211,10 @@ paymentList push state =
                           , margin (MarginRight 4)
                           , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
                           ]
-                        , commonTV push (if item.feeType == AUTOPAY_PAYMENT then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
+                        , commonTV push (case item.feeType of 
+                                          AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
+                                          AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
+                                          _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
                         ]
                 ]
             ]
@@ -332,8 +335,10 @@ tabView state push =
 
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 transactionDetails push state visibility' = 
-  let config = getTransactionConfig state.data.transactionDetails.paymentStatus
-      autopayStageTitle = getAutoPayStageData state.data.transactionDetails.notificationStatus
+  let config = getTransactionConfig state.data.transactionDetails
+      autopayStageData = getAutoPayStageData state.data.transactionDetails.notificationStatus
+      title = if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.title else autopayStageData.stage
+      statusTimeDesc = if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.statusTimeDesc else autopayStageData.statusTimeDesc
   in
   PrestoAnim.animationSet [Anim.fadeIn visibility'] $
   scrollView
@@ -357,8 +362,8 @@ transactionDetails push state visibility' =
                 , height $ V 114
                 , imageWithFallback config.image
                 ]
-              , commonTV push (if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.title else autopayStageTitle) Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER true
-              , commonTV push ((getString TRANSACTION_ON) <> " " <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER (state.data.transactionDetails.statusTime /= "")
+              , commonTV push title Color.black900 (FontStyle.h2 TypoGraphy) 24 CENTER true
+              , commonTV push ((statusTimeDesc) <> " : " <> state.data.transactionDetails.statusTime) Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER (state.data.transactionDetails.statusTime /= "")
             ]
           , linearLayout
               [ width MATCH_PARENT
@@ -564,7 +569,7 @@ manualPaymentRidesList push state =
                 , color Color.black800
                 ] <> FontStyle.tags TypoGraphy
               , textView $
-                [ text ("₹" <> show item.dueAmount)
+                [ text ("₹" <> getFixedTwoDecimals item.dueAmount)
                 , color Color.black800
                 , width $ V (screenwidth/3)
                 , gravity RIGHT

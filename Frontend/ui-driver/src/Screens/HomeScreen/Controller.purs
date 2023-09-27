@@ -711,6 +711,12 @@ eval (GenderBannerModal (Banner.OnClick)) state = do
 
 eval (AutoPayBanner (Banner.OnClick)) state = do
   let goToBottom = state.props.autoPayBanner == ST.CLEAR_DUES_BANNER
+      ctEvent = case state.props.autoPayBanner of
+                  ST.CLEAR_DUES_BANNER -> "clear_dues_banner_clicked"
+                  ST.SETUP_AUTOPAY_BANNER -> "setup_autopay_banner_clicked"
+                  ST.FREE_TRIAL_BANNER -> "setup_autopay_trial_ends_banner_clicked"
+                  _ -> ""
+  _ <- pure $ cleverTapCustomEvent ctEvent
   exit $ SubscriptionScreen state goToBottom
 
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
