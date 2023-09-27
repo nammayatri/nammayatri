@@ -2650,63 +2650,6 @@ instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode 
 
 ---------------------------------------------- NY-PaymentHistory ---------------------------------------------------
 
--- data InvoiceInfo = InvoiceInfo
---   { id :: Id Invoice,
---     paymentMode :: MANUAL | AUTOPAY,
---     debitedOn :: ,
---     invoiceAmount ::
---     numberOfDays ::
---     invoiceStatus :: {
---       status = SUCCESS | FAILED | NOTIFICATION_SCHEDULED | NOTIFICATION_SENT | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTED | PAYMENT_OVERDUE
---       time = UTCTime
---     },
---     driverFees :: [DriverFeeInfo]
---   }
--- data DriverFeeInfo = DriverFeeInfo
---   { ridesTakenOn :: UTCTime,
---     driverFeeId :: Id DDF.DriverFee,
---     totalRides :: Int,
---     paymentAmount :: Money,
---     chargesBreakup :: [DriverPaymentBreakup],
---     planOfferDetails :: ""
---   }
-
--- data GetNYPaymentHistoryReq = GetNYPaymentHistoryReq String String (Maybe String)
-
--- newtype GetNYPaymentHistoryResp = GetNYPaymentHistoryResp (Array PaymentHistoryItem)
-
--- newtype PaymentHistoryItem = PaymentHistoryItem {
---     date :: String
---   , totalRides :: Int
---   , totalEarnings :: Int
---   , charges :: Int
---   , chargesBreakup :: Array PaymentBreakUp
---   , txnInfo :: Array TxnInfo
---   , driverFeeId :: String
--- }
-
--- newtype PaymentBreakUp = PaymentBreakUp {
---     component :: String
---   , amount :: Number
--- }
-
--- newtype TxnInfo = TxnInfo {
---     id :: String
---   , status :: Common.APIPaymentStatus
--- }
-
-
--- instance makeGetNYPaymentHistoryReq :: RestEndpoint GetNYPaymentHistoryReq GetPaymentHistoryResp where
---  makeRequest reqBody@(GetNYPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
---  decodeResponse = decodeJSON
---  encodeRequest req = standardEncode req
-
--- derive instance genericGetGetNYPaymentHistoryReq :: Generic GetGetNYPaymentHistoryReq _
--- instance standardEncodeGetGetNYPaymentHistoryReq :: StandardEncode GetGetNYPaymentHistoryReq where standardEncode res = standardEncode {}
--- instance showGetGetNYPaymentHistoryReq :: Show GetGetNYPaymentHistoryReq where show = genericShow
--- instance decodeGetGetNYPaymentHistoryReq :: Decode GetGetNYPaymentHistoryReq where decode = defaultDecode
--- instance encodeGetGetNYPaymentHistoryReq :: Encode GetGetNYPaymentHistoryReq where encode = defaultEncode
-
 
 data FeeType = AUTOPAY_REGISTRATION | MANUAL_PAYMENT | AUTOPAY_PAYMENT
 
@@ -2736,7 +2679,7 @@ newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
   invoiceId :: String,
   amount :: Number,
   executionAt :: String,
-  autoPayStage :: Maybe AutopayPaymentStage, -- NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
+  autoPayStage :: Maybe AutopayPaymentStage, 
   rideTakenOn :: String
 }
 
@@ -2791,13 +2734,13 @@ newtype HistoryEntryDetailsEntityV2Resp = HistoryEntryDetailsEntityV2Resp {
     amount :: Number,
     createdAt :: Maybe String,
     executionAt :: Maybe String,
-    feeType :: FeeType , -- MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE
+    feeType :: FeeType ,
     driverFeeInfo :: Array DriverFeeInfoEntity
 }
 
 newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
-    autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
-    paymentStatus :: Maybe InvoiceStatus, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+    autoPayStage :: Maybe AutopayPaymentStage,
+    paymentStatus :: Maybe InvoiceStatus,
     totalEarnings :: Number,
     totalRides :: Int,
     planAmount :: Number,

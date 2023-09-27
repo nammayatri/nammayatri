@@ -15,10 +15,10 @@
 
 module Language.Strings where
 
-import Language.Types (STR, getKeyString)
-import MerchantConfig.Utils (getStringFromConfig, getENStrings)
-import Prelude (($))
 import Data.String.Common (trim)
+import Language.Types (STR, getKeyString)
+import MerchantConfig.Utils (getENStrings, getStringFromConfig, getStringWithVar)
+import Prelude (($))
 
 data LANGUAGE_KEY = EN_US | KN_IN | HI_IN | BN_IN | ML_IN
 
@@ -34,6 +34,9 @@ getKey key = do
 --TODO: Translate in OR AS
 getString :: STR -> String
 getString key = getStringFromConfig $ trim $ getKeyString key
+
+getVarString :: STR -> Array String -> String
+getVarString key vals = getStringWithVar (trim $ getKeyString key) vals
 
 getEN :: STR -> String
 getEN key = getENStrings $ trim $ getKeyString key

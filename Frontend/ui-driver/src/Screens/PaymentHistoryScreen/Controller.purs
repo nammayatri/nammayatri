@@ -27,7 +27,7 @@ import JBridge (copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==))
+import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInvoiceStatus)
@@ -117,11 +117,16 @@ getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
 }
 
 getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
-getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = {
-  invoiceId : manualPayInvoice.invoiceId,
-  paymentStatus : getInvoiceStatus (Mb.Just manualPayInvoice.paymentStatus),
-  amount : manualPayInvoice.amount,
-  description : (getString RIDES_TAKEN_ON) <> " " <> show manualPayInvoice.rideDays <> " days",
-  feeType : MANUAL_PAYMENT,
-  transactionDate : manualPayInvoice.createdAt
-}
+getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = do
+  let description' = case manualPayInvoice.feeType, (manualPayInvoice.rideDays - 1) of
+                        AUTOPAY_REGISTRATION, 0 -> getString ONE_TIME_REGISTERATION
+                        AUTOPAY_REGISTRATION, _ -> getString CLEARANCE_AND_REGISTERATION
+                        _, _ -> (getString RIDES_TAKEN_ON) <> " " <> show manualPayInvoice.rideDays <> " days"
+  {
+    invoiceId : manualPayInvoice.invoiceId,
+    paymentStatus : getInvoiceStatus (Mb.Just manualPayInvoice.paymentStatus),
+    amount : manualPayInvoice.amount,
+    description : description',
+    feeType : manualPayInvoice.feeType,
+    transactionDate : manualPayInvoice.createdAt
+  }

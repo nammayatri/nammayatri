@@ -38,7 +38,6 @@ import Debug (spy)
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
-import Helpers.Utils (getAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -57,10 +56,10 @@ clearDueButtonConfig state = let
     config = PrimaryButton.config
     buttonText = 
       case state.data.myPlanData.manualDueAmount > 0.0, state.data.myPlanData.autoPayStatus, isJust state.data.orderId of
-        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> show state.data.myPlanData.manualDueAmount <> ")"
-        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> show state.data.myPlanData.manualDueAmount <> ")"
-        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> show state.data.myPlanData.manualDueAmount <> ")" 
-        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> show state.data.myPlanData.manualDueAmount <> ")" 
+        true, ACTIVE_AUTOPAY, true  -> (getString RETRY_STR) <>  if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, ACTIVE_AUTOPAY, false  -> if state.props.myPlanProps.overDue then (getString CLEAR_DUES) else (getString CLEAR_MANUAL_DUES) <> "(₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")"
+        true, _, true  -> (getString RETRY_AUTOPAY) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
+        true, _, false  -> (getString SETUP_AUTOPAY_STR) <> " & " <>  (getString CLEAR_DUES) <> " (₹" <> HU.getFixedTwoDecimals state.data.myPlanData.manualDueAmount <> ")" 
         false,_, _ -> getString SETUP_AUTOPAY_STR
     primaryButtonConfig' = config 
       { textConfig { text = buttonText }
@@ -149,7 +148,7 @@ switchPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 switchPlanButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = ((getString SWITCH_TO)<> " " <> (getSelectedAlternatePlan state) <> " " <> (getString PLAN)) }
+      { textConfig{ text = (getVarString SWITCH_TO [getSelectedAlternatePlan state]) }
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (Margin 0 16 0 16)
@@ -437,6 +436,7 @@ dueDetailsListState state =
   {
   dues : map (\ item -> do
     let planOfferData = decodeOfferPlan item.plan
+        autoPayStageData = getAutoPayStageData item.autoPayStage
     {
       date : convertUTCtoISC item.tripDate "Do MMM, YYYY",
       planType : planOfferData.plan,
@@ -447,11 +447,11 @@ dueDetailsListState state =
       fareBreakup : item.feeBreakup,
       expanded : item.randomId == state.data.myPlanData.selectedDue,
       isAutoPayFailed : Mb.isJust item.autoPayStage && item.mode == MANUAL_PAYMENT,
-      isSplitPayment : false, --item.isSplit,
+      isSplitPayment : item.isSplit,
       id : item.randomId,
       paymentMode : item.mode,
       scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
-      paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (getAutoPayStageData item.autoPayStage) else Nothing
+      paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
 
@@ -466,7 +466,7 @@ offerCardBannerConfig isPlanCard bannerProps=
             "TA_IN" | len > 3 -> 3
             _ -> 0
     date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
-    title' = (replace (Pattern "[VAR]") (Replacement date) (getString OFFER_CARD_BANNER_TITLE))
+    title' = getVarString OFFER_CARD_BANNER_TITLE [date]
     config = Banner.config
     config' = config  
       {
@@ -475,7 +475,7 @@ offerCardBannerConfig isPlanCard bannerProps=
         titleColor = Color.black800,
         actionText = getString OFFER_CARD_BANNER_DESC,
         actionTextColor = Color.black800,
-        imageUrl = "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
+        imageUrl = "ny_ic_autopay_setup_banner,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
         isBanner = true,
         alertText = getString OFFER_CARD_BANNER_ALERT,
         alertTextColor = Color.red,
@@ -483,9 +483,9 @@ offerCardBannerConfig isPlanCard bannerProps=
         showActionArrow = false,
         bannerClickable = false,
         titleStyle = if isPlanCard then Body6 else Body7,
-        imageHeight = if isPlanCard then (V 90) else (V 105),
-        imageWidth = if isPlanCard then (V 108) else (V 118),
-        margin = MarginTop 12,
+        imageHeight = if isPlanCard then (V 80) else (V 95),
+        imageWidth = if isPlanCard then (V 98) else (V 108),
+        margin = MarginTop 8,
         padding = PaddingTop 0,
         actionTextVisibility = false
       }

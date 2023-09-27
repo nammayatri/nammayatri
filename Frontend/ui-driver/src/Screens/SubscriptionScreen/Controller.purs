@@ -22,7 +22,7 @@ import Data.String (toLower)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getDistanceBwCordinates)
+import Helpers.Utils (getDistanceBwCordinates, getFixedTwoDecimals)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -32,6 +32,7 @@ import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($),
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
+import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
@@ -39,7 +40,6 @@ import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocati
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
-import Resource.Constants as Const
 
 instance showAction :: Show Action where
   show _ = ""
@@ -89,6 +89,7 @@ data Action = BackPressed
             | ClearManualDues PrimaryButton.Action
             | DueDetailsListAction DueDetailsListController.Action
             | OfferCardBanner Banner.Action
+            | TogglePlanDescription PlanCardConfig
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -277,7 +278,7 @@ eval (LoadMyPlans plans) state = do
           requiredBalance = case (planEntity.bankErrors DA.!! 0) of
                               Mb.Just (BankError error) -> if error.code == "Z9" then Mb.Just error.amount else Mb.Nothing -- Checking for code of low account balance
                               Mb.Nothing -> Mb.Nothing
-          isOverdue = planEntity.currentDues >= 100.0
+          isOverdue = planEntity.currentDues >= planEntity.totalPlanCreditLimit
           multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
           newState = state{ 
             props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
@@ -292,6 +293,7 @@ eval (LoadMyPlans plans) state = do
                       lowAccountBalance = requiredBalance,
                       dueItems = constructDues planEntity.dues}}}
       _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
+      _ <- pure $ setCleverTapUserProp "Search Request Eligibility" if isOverdue then "FALSE" else "TRUE"
       _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
       _ <- pure $ setCleverTapUserProp "Due Amount" $ show planEntity.currentDues
       _ <- pure $ setCleverTapUserProp "Autopay status" $ fromMaybe "Nothing" currentPlanResp.autoPayStatus
@@ -351,15 +353,15 @@ eval (ClearManualDues PrimaryButton.OnClick) state = updateAndExit state $ Clear
 
 eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = if state.data.myPlanData.selectedDue == dueItem.id then "" else dueItem.id}}}
 
+eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}}
+
 eval _ state = continue state
 
 getPlanPrice :: Array PaymentBreakUp -> String -> String
 getPlanPrice fares priceType = do
   let price = (DA.filter(\(PaymentBreakUp item) -> item.component == priceType) fares)
   case price DA.!! 0 of
-    Mb.Just (PaymentBreakUp element) -> case (DI.fromNumber element.amount) of
-                        Mb.Just value -> show value
-                        Mb.Nothing ->  toStringWith (fixed 2) element.amount
+    Mb.Just (PaymentBreakUp element) -> getFixedTwoDecimals element.amount
     Mb.Nothing -> ""
 
 getAllFareFromArray :: Array PaymentBreakUp -> Array String -> Number
