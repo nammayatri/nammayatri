@@ -1796,7 +1796,8 @@ homeScreenFlow = do
                                   true, false, true -> CLEAR_DUES_BANNER
                                   true, _, false -> SETUP_AUTOPAY_BANNER
                                   _, _, _ -> NO_SUBSCRIPTION_BANNER
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType}})
+      pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning, totalPendingManualDues = pendingTotalManualDues}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit

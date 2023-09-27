@@ -121,6 +121,7 @@ const bengaliStrings = {
 	TRIP_DETAILS: "ভ্রমণের বিশদ",
 	BY_CASH: "নগদে",
 	ONLINE_: "অনলাইন",
+	GO_ONLINE_POPUP: "<u>যাওয়া অনলাইন</u>",
 	REPORT_AN_ISSUE: "একটি সমস্যা রিপোর্ট",
 	DISTANCE: "দূরত্ব",
 	TIME_TAKEN: "সময় নিয়েছে",

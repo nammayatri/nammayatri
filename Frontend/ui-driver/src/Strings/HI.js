@@ -121,6 +121,7 @@ const hindiStrings = {
   TRIP_DETAILS: "यात्रा विवरण",
   BY_CASH: "नकद द्वारा",
   ONLINE_: "ऑनलाइन",
+  GO_ONLINE_POPUP: "<u>गो ऑनलाइन</u>",
   REPORT_AN_ISSUE: "मामले की रिपोर्ट करें",
   DISTANCE: "दूरी",
   TIME_TAKEN: "समय लिया",
