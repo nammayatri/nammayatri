@@ -241,7 +241,9 @@ data DriverInformationRes = DriverInformationRes
     isGoHomeEnabled :: Bool,
     driverGoHomeInfo :: DDGR.CachedGoHomeRequest,
     freeTrialDaysLeft :: Int,
-    maskedDeviceToken :: Maybe Text
+    maskedDeviceToken :: Maybe Text,
+    currentDues :: Maybe HighPrecMoney,
+    manualDues :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -656,12 +658,15 @@ getInformation (personId, merchantId) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
+  dues <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
+  let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
+  let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantId Nothing
-  makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo
+  makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues)
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId) isActive mode = do
@@ -945,7 +950,7 @@ updateDriver (personId, _) req = do
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantId Nothing
-  makeDriverInformationRes driverEntity org driverReferralCode driverStats driverGoHomeInfo
+  makeDriverInformationRes driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -1080,8 +1085,8 @@ buildMetaData req personId = do
         MD.updatedAt = now
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r) => DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> m DriverInformationRes
-makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats dghInfo = do
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r) => DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues = do
   CQGHC.findByMerchantId org.id >>= \cfg ->
     return $
       DriverInformationRes
