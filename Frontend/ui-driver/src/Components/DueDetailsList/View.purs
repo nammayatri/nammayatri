@@ -18,15 +18,16 @@ module Components.DueDetailsList.View where
 import Common.Types.App
 import Components.DueDetailsList.Controller
 
-import Data.Array (mapWithIndex)
+import Data.Array (length, mapWithIndex)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||))
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<))
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
@@ -45,6 +46,8 @@ view push state =
        , margin (Margin 16 10 16 10)
        ](mapWithIndex
          (\index item ->
+          let rideNumberPrefix = if item.noOfRides < 10 then "0" else ""
+          in
           linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -91,7 +94,7 @@ view push state =
                 , gravity CENTER_VERTICAL
               ][
                 textView $ [
-                  text $ "₹" <> show item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
+                  text $ "₹" <> getFixedTwoDecimals item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
@@ -114,12 +117,12 @@ view push state =
                   , background Color.grey900
                   , margin $ MarginBottom 16
                 ][]
-                , keyValueView (getString NUMBER_OF_RIDES) (show item.noOfRides) true false
+                , keyValueView (getString NUMBER_OF_RIDES) (rideNumberPrefix <> show item.noOfRides) true false
                 , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
                 , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
                 , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> show item.totalEarningsOfDay) true false
-                -- , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <> getString GST_INCLUDE) true false --TO BE ADDED LATER
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false
+                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) true false
                 , linearLayout [
                   height WRAP_CONTENT
                   , width MATCH_PARENT

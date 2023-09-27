@@ -15,10 +15,10 @@
 
 module Language.Strings where
 
-import Language.Types (STR, getStringFromEnum)
-import MerchantConfig.Utils (getStringFromConfig, getENStrings)
-import Prelude (($))
 import Data.String.Common (trim)
+import Language.Types (STR, getStringFromEnum)
+import MerchantConfig.Utils (getENStrings, getStringFromConfig, getStringWithVar)
+import Prelude (($))
 
 data Language = EN_US | KN_IN | HI_IN | TA_IN 
 
@@ -27,3 +27,6 @@ getString key = getStringFromConfig $ trim $ getStringFromEnum key
 
 getEN :: STR -> String
 getEN key = getENStrings $ trim $ getStringFromEnum key
+
+getVarString :: STR -> Array String -> String
+getVarString key vals = getStringWithVar (getString key) vals

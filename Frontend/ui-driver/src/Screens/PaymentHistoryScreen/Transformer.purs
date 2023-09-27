@@ -3,12 +3,13 @@ module Screens.PaymentHistoryScreen.Transformer where
 import Prelude
 
 import Common.Types.App (PaymentStatus(..), PaymentStatus(..))
-import Data.Array (length, mapWithIndex, (!!))
+import Data.Array (length, mapWithIndex, (!!), filter)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (convertUTCtoISC)
+import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
+import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getFeeBreakup, getPromoConfig)
 import Screens.Types (PromoConfig)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
@@ -16,12 +17,16 @@ import Services.API as API
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
-    let (API.DriverFeeInfoEntity driverFee') = case (resp.driverFeeInfo !! 0) of
+    let filteredDriverFees = if (resp.feeType == AUTOPAY_REGISTRATION && length resp.driverFeeInfo > 1)  then filter (\ (API.DriverFeeInfoEntity driverFee) -> driverFee.driverFeeAmount /= 1.0) resp.driverFeeInfo else resp.driverFeeInfo
+        (API.DriverFeeInfoEntity driverFee') = case (filteredDriverFees !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
                                                   Nothing -> dummyDriverFee
+        statusTime = if resp.feeType == AUTOPAY_PAYMENT then resp.executionAt else resp.createdAt
         autoPaySpecificKeys = do
-          let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee'.offerAndPlanDetails
-          case (length resp.driverFeeInfo == 1) of
+          let offerAndPlanDetails = fromMaybe "" driverFee'.offerAndPlanDetails
+              planOfferData = decodeOfferPlan $ offerAndPlanDetails
+              rideNumberPrefix = if driverFee'.totalRides < 10 then "0" else ""
+          case (length filteredDriverFees == 1) of
               true -> [
                   {
                     key : "TRIP_DATE",
@@ -36,29 +41,36 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "NUMBER_OF_RIDES",
                     title : getString NUMBER_OF_RIDES,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else show driverFee'.totalRides
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else rideNumberPrefix <> show driverFee'.totalRides 
                   },
-                  {key : "YOUR_EARNINGS",
-                  title : getString YOUR_EARNINGS,
-                  val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "₹" <> show driverFee'.totalEarnings},
-                --   {key : "FEE_BREAKUP",  -- TO BE ADDED
-                --   title : getString FEE_BREAKUP,
-                --   val : ""<> getString GST_INCLUDE},
-                  {key : "OFFER",
-                  title : getString OFFER,
-                  val : planOfferData.offer}
+                  {
+                    key : "YOUR_EARNINGS",
+                    title : getString YOUR_EARNINGS,
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "₹" <> getFixedTwoDecimals driverFee'.totalEarnings
+                  },
+                  {
+                    key : "FEE_BREAKUP",
+                    title : getString FEE_BREAKUP,
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else (getFeeBreakup offerAndPlanDetails driverFee'.totalRides <> " "<> getString GST_INCLUDE)
+                  },
+                  {
+                    key : "OFFER",
+                    title : getString OFFER,
+                    val : planOfferData.offer
+                  }
                 ]
               false -> []
  
         transactionDetails = {
             notificationStatus : driverFee'.autoPayStage,
             paymentStatus : if resp.feeType == AUTOPAY_PAYMENT then getAutoPayPaymentStatus driverFee'.autoPayStage else getInvoiceStatus driverFee'.paymentStatus,
-            statusTime : case resp.executionAt of 
+            statusTime : case statusTime of 
                             Just time -> convertUTCtoISC time "Do MMM YYYY, h:mm A"
                             Nothing -> "",
-            isSplit : false,--(length resp.driverFeeInfo == 1) && driverFee'.isSplit, // NEED TO FIX LATER
-            isAutoPayFailed : (length resp.driverFeeInfo == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
+            isSplit : (length filteredDriverFees == 1) && driverFee'.isSplit,
+            isAutoPayFailed : (length filteredDriverFees == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
             feeType : resp.feeType,
+            numOfDriverFee : length filteredDriverFees,
             details : [
               {
                 key : "TXN_ID",
@@ -68,7 +80,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
               {
                 key : "AMOUNT_PAID",
                 title : getString AMOUNT_PAID,
-                val : "₹" <> show driverFee'.driverFeeAmount
+                val : "₹" <> getFixedTwoDecimals driverFee'.driverFeeAmount
               },
               { key : "PAYMENT_MODE",
                 title : getString PAYMENT_MODE,
@@ -76,9 +88,11 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
               }
             ] <> autoPaySpecificKeys,
             manualSpecificDetails : do
-                    case (length resp.driverFeeInfo /= 1) of
+                    case (length filteredDriverFees /= 1) of
                         true -> mapWithIndex (\ ind (API.DriverFeeInfoEntity driverFee) ->  do
-                            let planOfferData = decodeOfferPlan $ fromMaybe "" driverFee.offerAndPlanDetails
+                            let offerAndPlanDetails = fromMaybe "" driverFee.offerAndPlanDetails
+                                planOfferData = decodeOfferPlan offerAndPlanDetails
+                                autoPayStageData = getAutoPayStageData driverFee.autoPayStage
                             {
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM, YYYY",
                                 planType : planOfferData.plan,
@@ -86,16 +100,16 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                                 noOfRides : driverFee.totalRides,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,
-                                fareBreakup : (show driverFee.planAmount),
+                                fareBreakup : getFeeBreakup offerAndPlanDetails driverFee.totalRides,
                                 expanded : false,
                                 isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
-                                isSplitPayment : false,--driverFee.isSplit, //NEED TO FIX LATER
+                                isSplitPayment : driverFee.isSplit,
                                 id : show ind,
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
-                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (getAutoPayStageData driverFee.autoPayStage) else Nothing
+                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
                             }
-                            ) resp.driverFeeInfo
+                            ) filteredDriverFees
                         false -> []          
         }
         in transactionDetails
@@ -111,19 +125,19 @@ getAutoPayPaymentStatus status' = do
     API.EXECUTION_SUCCESS -> Success
     _ -> Failed
 
-getAutoPayStageData :: Maybe API.AutopayPaymentStage -> String
+getAutoPayStageData :: Maybe API.AutopayPaymentStage -> {stage :: String, statusTimeDesc :: String}
 getAutoPayStageData stage = 
   let status = fromMaybe API.NOTIFICATION_SCHEDULED stage
   in
   case status of 
-    API.NOTIFICATION_SCHEDULED -> getString NOTIFICATION_SCHEDULED
-    API.NOTIFICATION_ATTEMPTING -> getString NOTIFICATION_ATTEMPTING
-    API.EXECUTION_SCHEDULED -> getString EXECUTION_SCHEDULED
-    API.EXECUTION_ATTEMPTING -> getString EXECUTION_ATTEMPTING
-    API.EXECUTION_SUCCESS -> getString EXECUTION_SUCCESS
-    API.NOTIFICATION_FAILED -> getString NOTIFICATION_FAILED
-    API.EXECUTION_FAILED -> getString EXECUTION_FAILED
-    _ -> getString EXECUTION_ATTEMPTING
+    API.NOTIFICATION_SCHEDULED -> { stage : getString NOTIFICATION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
+    API.NOTIFICATION_ATTEMPTING -> { stage : getString NOTIFICATION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_SCHEDULED -> { stage : getString EXECUTION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_ATTEMPTING -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_SUCCESS -> { stage : getString EXECUTION_SUCCESS, statusTimeDesc : getString TRANSACTION_DEBITED_ON }
+    API.NOTIFICATION_FAILED -> { stage : getString NOTIFICATION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
+    API.EXECUTION_FAILED -> { stage : getString EXECUTION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
+    _ -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
 
 getInvoiceStatus :: Maybe API.InvoiceStatus -> PaymentStatus
 getInvoiceStatus status' = do
