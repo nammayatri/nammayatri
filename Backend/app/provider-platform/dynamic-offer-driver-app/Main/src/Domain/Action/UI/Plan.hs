@@ -373,16 +373,23 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   case driverRegisterationFee of
     Just registerFee -> do
       invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
+      let totalOrderAmount = registerFee.platformFee.fee + currentDues + registerFee.platformFee.cgst + registerFee.platformFee.sgst
       case invoices of
         [] -> createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
         (inv : resActiveInvoices) -> do
           -- ideally resActiveInvoices should be null in case they are there make them inactive
           mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) resActiveInvoices
-          if inv.maxMandateAmount == Just maxMandateAmount
-            then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
-            else do
+          if totalOrderAmount <= 0
+            then do
+              QDF.updateStatus DF.CLEARED registerFee.id now
               QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
-              createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
+              createMandateInvoiceAndOrder driverId merchantId plan
+            else do
+              if inv.maxMandateAmount == Just maxMandateAmount
+                then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
+                else do
+                  QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
+                  createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
     Nothing -> do
       driverFee <- mkDriverFee currentDues
       QDF.create driverFee
