@@ -16,7 +16,7 @@ import Helpers.Utils (getAssetStoreLink)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRadius, gravity, height, imageWithFallback, margin, orientation, padding, text, textFromHtml, visibility, weight, width)
+import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRadius, gravity, height, imageWithFallback, margin, orientation, padding, text, textFromHtml, visibility, weight, width, stroke)
 import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
 import Styles.Colors as Color
@@ -30,8 +30,6 @@ view push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  , background Color.black9000
-  , clickable true
   , gravity BOTTOM
   ][ PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $
       linearLayout
@@ -42,6 +40,7 @@ view push state =
       , background Color.white900
       , padding $ Padding 16 10 16 20
       , gravity CENTER
+      , stroke $ "1," <> Color.grey900
       ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction false
         , commonTV push state.description Color.black800 FontStyle.subHeading2 CENTER 8 NoAction true
         , paymentReview push state
