@@ -374,33 +374,34 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
     Just registerFee -> do
       invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
       case invoices of
-        [] -> createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
+        [] -> createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity plan
         (inv : resActiveInvoices) -> do
           -- ideally resActiveInvoices should be null in case they are there make them inactive
           mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) resActiveInvoices
           if inv.maxMandateAmount == Just maxMandateAmount
-            then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
+            then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity plan) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
             else do
               QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
-              createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity
+              createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity plan
     Nothing -> do
       driverFee <- mkDriverFee currentDues
       QDF.create driverFee
-      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity
+      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity plan
   where
-    mandateOrder currentDues now mandateValidity =
+    mandateOrder currentDues now mandateValidity plan' =
       SPayment.MandateOrder
         { maxAmount = max plan.maxAmount currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED,
           mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
-          mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
+          mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now,
+          planRegistrationAmount = plan'.registrationAmount
         }
-    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity = do
+    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity plan' = do
       if not (null driverManualDuesFees)
-        then SPayment.createOrder (driverId, merchantId) (driverFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANDATE_SETUP_INVOICE Nothing
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now mandateValidity plan') INV.MANDATE_SETUP_INVOICE Nothing
         else do
-          SPayment.createOrder (driverId, merchantId) ([driverFee], []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANDATE_SETUP_INVOICE Nothing
+          SPayment.createOrder (driverId, merchantId) ([driverFee], []) (Just $ mandateOrder currentDues now mandateValidity plan') INV.MANDATE_SETUP_INVOICE Nothing
     mkDriverFee currentDues = do
       id <- generateGUID
       now <- getCurrentTime

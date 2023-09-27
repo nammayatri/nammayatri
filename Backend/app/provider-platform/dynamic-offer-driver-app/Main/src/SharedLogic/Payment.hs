@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -41,7 +42,8 @@ data MandateOrder = MandateOrder
     _type :: MandateType,
     frequency :: MandateFrequency,
     mandateStartDate :: Text,
-    mandateEndDate :: Text
+    mandateEndDate :: Text,
+    planRegistrationAmount :: HighPrecMoney
   }
 
 createOrder ::
@@ -70,33 +72,71 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf (fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
-      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
-  unless (isJust existingInvoice) $ QIN.createMany invoices
-  let createOrderReq =
-        CreateOrderReq
-          { orderId = invoiceId.getId,
-            orderShortId = invoiceShortId,
-            amount = amount,
-            customerId = driver.id.getId,
-            customerEmail = driverEmail,
-            customerPhone = driverPhone,
-            customerFirstName = Just driver.firstName,
-            customerLastName = driver.lastName,
-            createMandate = mbMandateOrder <&> (._type),
-            mandateMaxAmount = mbMandateOrder <&> (.maxAmount),
-            mandateFrequency = mbMandateOrder <&> (.frequency),
-            mandateEndDate = mbMandateOrder <&> (.mandateEndDate),
-            mandateStartDate = mbMandateOrder <&> (.mandateStartDate)
-          }
-  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      createOrderCall = Payment.createOrder merchantId -- api call
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
-  case mCreateOrderRes of
-    Just createOrderRes -> return (createOrderRes, cast invoiceId)
-    Nothing -> do
-      QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId) (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
+      registrationFee = find (\df -> df.feeType == MANDATE_REGISTRATION) driverFees
+  case (amount <= 0, registrationFee, mbMandateOrder) of
+    (True, Just registrationFee', Just mandateOrder) -> do
+      uuid <- generateGUID
+      let newDriverFee = replicateDriverFeeWithAmount registrationFee' mandateOrder.planRegistrationAmount now uuid
+      QDF.updateStatus CLEARED registrationFee'.id now
+      QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [registrationFee'.id]
+      QDF.create newDriverFee
+      createOrder (driverId, merchantId) ([newDriverFee], []) mbMandateOrder invoicePaymentMode Nothing
+    (True, Nothing, Nothing) -> throwError $ InternalError "amount should be greater than 0"
+    (_, _, _) -> do
+      let invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
+      unless (isJust existingInvoice) $ QIN.createMany invoices
+      let createOrderReq =
+            CreateOrderReq
+              { orderId = invoiceId.getId,
+                orderShortId = invoiceShortId,
+                amount = amount,
+                customerId = driver.id.getId,
+                customerEmail = driverEmail,
+                customerPhone = driverPhone,
+                customerFirstName = Just driver.firstName,
+                customerLastName = driver.lastName,
+                createMandate = mbMandateOrder <&> (._type),
+                mandateMaxAmount = mbMandateOrder <&> (.maxAmount),
+                mandateFrequency = mbMandateOrder <&> (.frequency),
+                mandateEndDate = mbMandateOrder <&> (.mandateEndDate),
+                mandateStartDate = mbMandateOrder <&> (.mandateStartDate)
+              }
+      let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+          commonPersonId = cast @DP.Person @DPayment.Person driver.id
+          createOrderCall = Payment.createOrder merchantId -- api call
+      mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+      case mCreateOrderRes of
+        Just createOrderRes -> return (createOrderRes, cast invoiceId)
+        Nothing -> do
+          QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
+          createOrder (driverId, merchantId) (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
+  where
+    replicateDriverFeeWithAmount oldDriverFee amount now id =
+      DriverFee
+        { id = id,
+          merchantId = oldDriverFee.merchantId,
+          payBy = now,
+          status = oldDriverFee.status,
+          numRides = 0,
+          createdAt = now,
+          updatedAt = now,
+          platformFee = PlatformFee {fee = amount, cgst = oldDriverFee.platformFee.cgst, sgst = oldDriverFee.platformFee.sgst},
+          totalEarnings = 0,
+          feeType = MANDATE_REGISTRATION,
+          govtCharges = 0,
+          startTime = now,
+          endTime = now,
+          collectedBy = Nothing,
+          driverId = oldDriverFee.driverId,
+          offerId = Nothing,
+          planOfferTitle = Nothing,
+          autopayPaymentStage = Nothing,
+          stageUpdatedAt = Nothing,
+          billNumber = Nothing,
+          feeWithoutDiscount = Nothing,
+          schedulerTryCount = 0,
+          collectedAt = Nothing
+        }
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
