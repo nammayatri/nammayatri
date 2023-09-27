@@ -37,10 +37,12 @@ import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, mapWithIndex, null, any, (!!), take)
+import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Number (round)
+import Data.Int (toNumber)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -50,13 +52,13 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
+import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM.Animation as PrestoAnim
@@ -76,6 +78,7 @@ import Helpers.Utils as HU
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Resource.Constants as Const
 import Data.Either (Either (..))
+import Data.Enum (enumFromThenTo)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -479,6 +482,7 @@ missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (
   {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
     {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
+
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push =
   let analyticsData = state.data.analyticsData
@@ -523,7 +527,7 @@ driverAnalyticsView state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
+        ][  infoTileView state {primaryText: (parseFloat (fromMaybe 0.0 analyticsData.rating) 1), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -1252,7 +1256,7 @@ infoTileView state config =
                 , width WRAP_CONTENT
                 , margin $ MarginLeft 9
                 , visibility if config.postImgVisibility then VISIBLE else GONE
-                ](mapWithIndex (\index item ->
+                ](map (\item ->
                     linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -1260,9 +1264,12 @@ infoTileView state config =
                     ][imageView
                         [ height $ V 13
                         , width $ V 13
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= (fromMaybe 0.0 state.data.analyticsData.rating) then "ny_ic_star_active" else "ny_ic_star_inactive"
+                        , imageWithFallback case item of
+                                                0.5 -> fetchImage FF_COMMON_ASSET "ny_ic_star_half_active"
+                                                1.0 -> fetchImage FF_COMMON_ASSET  "ny_ic_star_active"
+                                                _ -> fetchImage FF_COMMON_ASSET "ny_ic_star_inactive"
                         ]
-                    ]) [1.0,2.0,3.0,4.0,5.0])
+                    ]) (getStarsForRating 5 (fromMaybe 0.0 state.data.analyticsData.rating)))
           ]
       , textView
         ([ width WRAP_CONTENT
@@ -1273,6 +1280,15 @@ infoTileView state config =
         , color Color.black700
         ] <> FontStyle.body3 TypoGraphy)
     ]
+
+getStarsForRating :: Int -> Number -> Array Number
+getStarsForRating outOf currRating = map calculateRating (range 1 outOf)
+  where
+    calculateRating :: Int -> Number
+    calculateRating x
+        | currRating - (toNumber x) < -0.50 = 0.0
+        | currRating - (toNumber x) >= 0.00 = 1.0
+        | otherwise = 0.5
 
 -------------------------------------------- MENU BUTTON VIEW COMPONENT ---------------------------------------------
 

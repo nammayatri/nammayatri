@@ -52,6 +52,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
+import Helpers.Utils (parseFloat)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -949,7 +950,7 @@ ratingView push state =
       , accessibility DISABLE
       ]
     , textView (
-      [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
+      [ text $ if state.data.rating == 0.0 then (getString NEW_) else (parseFloat state.data.rating 1)
       , color state.data.config.driverInfoConfig.ratingTextColor
       , gravity CENTER
       , margin (Margin 8 0 2 0)
