@@ -104,6 +104,16 @@ screen initialState =
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp "Driver On-ride" "No"
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
+
+          if (initialState.props.driverBlocked && not initialState.props.subscribed) then do
+              void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "primaryButtonOption1"}
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                currentPlan <- Remote.getCurrentPlan ""
+                case currentPlan of
+                  Right resp -> doAff do liftEffect $ push $ GetCurrenDuesAction resp
+                  Left err -> doAff do liftEffect $ push $ GetCurrentDuesFailed
+            else pure unit
+
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
             _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback
@@ -230,6 +240,7 @@ view push state =
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
+      , if state.props.showPaymentPendingBlocker && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< DuePaymentPendingAC) (paymentPendingBlockerPopup state) else linearLayout[visibility GONE][]
   ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
@@ -576,7 +587,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background if state.props.driverBlocked then Color.yellowText else Color.darkMint 
+                    , background if state.props.driverBlocked then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

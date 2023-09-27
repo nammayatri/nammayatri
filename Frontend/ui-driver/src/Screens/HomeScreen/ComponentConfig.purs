@@ -261,6 +261,55 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
   }
 }
 
+
+paymentPendingBlockerPopup :: ST.HomeScreenState -> PopUpModal.Config
+paymentPendingBlockerPopup state =
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
+    dismissPopup = true,
+    topTitle = Just $ "⚠️  " <> getString PAYMENT_PENDING <>  "  ⚠️",
+    primaryText {
+      text = ""
+    , margin = Margin 16 16 16 4
+    , visibility = GONE },
+    secondaryText {
+      text = getString PAYMENT_PENDING_ALERT_DESC
+    , margin = MarginBottom 24
+    },
+    option1 {
+      text = getString CLEAR_DUES <> state.props.duesAmount
+    , background = Color.black900
+    , color = Color.yellow900
+    , showShimmer = state.props.showShimmer
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = true,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString VIEW_DUE_DETAILS
+    , visibility =  VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
+    , visibility = true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
+
 offerConfigParams :: ST.HomeScreenState -> PromotionPopupConfig
 offerConfigParams state = PromotionPopupConfig $ {
   title : getString LIMITED_TIME_OFFER,

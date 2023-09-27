@@ -2076,8 +2076,49 @@ homeScreenFlow = do
       resp <- lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       _ <- updateStage $ HomeScreenStage HomeScreen 
       homeScreenFlow
-      
+    CLEAR_PENDING_DUES -> clearPendingDuesFlow
   pure unit
+
+clearPendingDuesFlow :: FlowBT String Unit
+clearPendingDuesFlow = do
+  void $ lift $ lift $ toggleLoader true
+  liftFlowBT $ runEffectFn1 initiatePP unit
+  clearduesResp' <- lift $ lift $ Remote.cleardues ""
+  case clearduesResp' of
+    Right (API.ClearDuesResp clearduesResp) -> do
+      let (CreateOrderRes orderResp) = clearduesResp.orderResp
+          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      setValueToLocalStore DISABLE_WIDGET "true"
+      _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
+      _ <- pure $ metaLogEvent "ny_driver_payment_page_opened"
+      liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      _ <- paymentPageUI sdkPayload
+      pure $ toggleBtnLoader "" false
+      void $ lift $ lift $ toggleLoader false
+      liftFlowBT $ runEffectFn1 consumeBP unit
+      setValueToLocalStore DISABLE_WIDGET "false"
+      orderStatus <- lift $ lift $ Remote.paymentOrderStatus $ clearduesResp.orderId
+      case orderStatus of
+        Right (OrderStatusRes statusResp) -> do
+          when (statusResp.status == PS.CHARGED) $ do
+            _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "due_amount" innerpayload.amount
+            _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "clearence_type" "manual"
+            pure unit
+          let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
+                            else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
+                            else Nothing
+          case popUpState of
+            Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState'}})
+            Nothing -> pure unit
+        Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
+    Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  void $ lift $ lift $ toggleLoader false
+  pure $ toggleBtnLoader "" false
+  subScriptionFlow
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
 nyPaymentFlow planCardConfig fromJoinPlan = do
@@ -2343,45 +2384,7 @@ subScriptionFlow = do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
     SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity false
-    CLEAR_DUES_ACT -> do
-      void $ lift $ lift $ toggleLoader true
-      liftFlowBT $ runEffectFn1 initiatePP unit
-      clearduesResp' <- lift $ lift $ Remote.cleardues ""
-      case clearduesResp' of
-        Right (API.ClearDuesResp clearduesResp) -> do
-          let (CreateOrderRes orderResp) = clearduesResp.orderResp
-              (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
-              (PayPayload innerpayload) = sdk_payload.payload
-              finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
-              sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-          setValueToLocalStore DISABLE_WIDGET "true"
-          _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
-          _ <- pure $ metaLogEvent "ny_driver_payment_page_opened"
-          liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
-          lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-          _ <- paymentPageUI sdkPayload
-          pure $ toggleBtnLoader "" false
-          void $ lift $ lift $ toggleLoader false
-          liftFlowBT $ runEffectFn1 consumeBP unit
-          setValueToLocalStore DISABLE_WIDGET "false"
-          orderStatus <- lift $ lift $ Remote.paymentOrderStatus $ clearduesResp.orderId
-          case orderStatus of
-            Right (OrderStatusRes statusResp) -> do
-              when (statusResp.status == PS.CHARGED) $ do
-                _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "due_amount" innerpayload.amount
-                _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "clearence_type" "manual"
-                pure unit
-              let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
-                                else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
-                                else Nothing
-              case popUpState of
-                Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState'}})
-                Nothing -> pure unit
-            Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
-        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-      void $ lift $ lift $ toggleLoader false
-      pure $ toggleBtnLoader "" false
-      subScriptionFlow
+    CLEAR_DUES_ACT -> clearPendingDuesFlow
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location
@@ -2536,13 +2539,13 @@ getUpiApps = do
 
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
-  if (  any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] &&
-        isDateGreaterThan "2023-09-20T00:00:00" &&
-        getDriverInfoResp.autoPayStatus == Nothing &&
-        not isOnFreeTrial FunctionCall
-    ) then do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true }})
+  if any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] 
+    && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall)
+    || not getDriverInfoResp.subscribed)
+           then do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }})
       when (not getDriverInfoResp.onRide && any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]) do
         void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
         homeScreenFlow
-  else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = false }})
+  else do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = false }})

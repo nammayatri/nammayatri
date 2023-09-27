@@ -106,7 +106,8 @@ type ButtonConfig = {
   timerID :: String,
   textStyle :: Style,
   height :: Length,
-  image :: ImageConfig
+  image :: ImageConfig,
+  showShimmer :: Boolean
 }
 
 type DismissPopupConfig =
@@ -205,6 +206,7 @@ config = {
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
     }
+    , showShimmer : false
   } 
   , option1 : {
       background : Color.white900
@@ -229,6 +231,7 @@ config = {
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
     }
+    , showShimmer : false
     }
   , option2 : {
       background : Color.black900
@@ -253,6 +256,7 @@ config = {
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
     }
+    , showShimmer : false
     }
   , optionWithHtml : {
       background : Color.black900,
