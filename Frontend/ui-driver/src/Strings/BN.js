@@ -923,5 +923,6 @@ const bengaliStrings = {
 	EXECUTION_FAILED : "Execution Failed", 
 	NOTIFICATION_FAILED : "Notification Failed",
 	PAY_NOW : "Pay Now",
-	CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides"
+	CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides",
+	COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR বা ক্যাশের মাধ্যমে সংগ্রহ করুন"
 }

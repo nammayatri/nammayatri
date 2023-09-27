@@ -898,5 +898,6 @@ const hindiStrings = {
   EXECUTION_FAILED : "निष्पादन विफल", 
   NOTIFICATION_FAILED : "अधिसूचना विफल",
   PAY_NOW : "अब पेय करें",
-  CLEAR_DUES_BANNER_TITLE : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अपना बकाया चुकाएं"
+  CLEAR_DUES_BANNER_TITLE : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अपना बकाया चुकाएं",
+  COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR या नकद के माध्यम से एकत्र करें"
 }

@@ -823,7 +823,7 @@ getRideCompletedConfig state = let
       }
     },
     topCard {
-      title = getString RIDE_COMPLETED,
+      title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
       gradient =  ["#F5F8FF","#E2EAFF"],

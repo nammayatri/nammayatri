@@ -701,5 +701,6 @@ const frenchStrings = {
   EXECUTION_FAILED : "Execution Failed", 
   NOTIFICATION_FAILED : "Notification Failed",
   PAY_NOW : "Pay Now",
-  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides"
+  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides",
+  COLLECT_VIA_UPI_QR_OR_CASH : "Collectez via UPI QR ou Cash"
 }

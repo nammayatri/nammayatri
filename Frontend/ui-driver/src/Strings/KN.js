@@ -871,5 +871,6 @@ const kannadaStrings = {
   EXECUTION_FAILED : "ಎಕ್ಸಿಕ್ಯೂಶನ್ ವಿಫಲವಾಗಿದೆ", 
   NOTIFICATION_FAILED : "ಅಧಿಸೂಚನೆ ವಿಫಲವಾಗಿದೆ",
   PAY_NOW : "ಈಗ ಪಾವತಿಸಿ",
-  CLEAR_DUES_BANNER_TITLE : "ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
+  CLEAR_DUES_BANNER_TITLE : "ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ",
+  COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR ಅಥವಾ ನಗದು ಮೂಲಕ ಸಂಗ್ರಹಿಸಿ"
 }

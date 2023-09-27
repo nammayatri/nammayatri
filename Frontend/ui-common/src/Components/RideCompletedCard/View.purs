@@ -75,8 +75,16 @@ topCardView config push =
       , height WRAP_CONTENT
       , gravity RIGHT
       , layoutGravity "right"
+      , margin $ MarginLeft 40
       , padding $ PaddingTop safeMarginTop
-      ][  imageView
+      ][ if config.topCard.topPill.visible then 
+            linearLayout[
+              width MATCH_PARENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , margin $ MarginLeft 40
+            ][topPillView config push] else dummyTextView
+        , imageView
           [ height $ V 40
           , width $ V 40
           , accessibility config.accessibility
@@ -85,7 +93,8 @@ topCardView config push =
           , onClick push $ const Support
           ]
       ]
-    , if config.topCard.topPill.visible then topPillView config push else dummyTextView
+    -- Removed temporarily till endride screen redesigned
+    -- , if config.topCard.topPill.visib3le then topPillView config push else dummyTextView --
     , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -96,7 +105,7 @@ topCardView config push =
           , height WRAP_CONTENT
           , text config.topCard.title
           , color $ if config.theme == LIGHT then Color.black800 else Color.grey900
-          ] <> FontStyle.h1 TypoGraphy
+          ] <> if config.theme == LIGHT then FontStyle.h3 TypoGraphy else FontStyle.h1 TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -172,9 +181,12 @@ bottomCardView config push =
           -- else if config.badgeCard.visible then badgeCardView config push -- Removed temporarily till endride screen redesigned
             -- else if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView  -- Removed temporarily till endride screen redesigned
     , if config.qrVisibility then driverUpiQrCodeView config push else dummyTextView 
-    , if config.qrVisibility then collectCashView config.driverUpiQrCard.collectCashText else dummyTextView 
-    , if config.noVpaVisibility then collectCashView config.noVpaCard.collectCashText else dummyTextView 
-    , if config.noVpaVisibility then noVpaView config push  else dummyTextView
+    -- Removed temporarily till endride screen redesigned
+    -- , if config.qrVisibility then collectCashView config.driverUpiQrCard.collectCashText else dummyTextView 
+    -- , if config.noVpaVisibility then collectCashView config.noVpaCard.collectCashText else dummyTextView 
+    , if config.noVpaVisibility then noVpaView config  else dummyTextView
+    , if config.badgeCard.visible then badgeCardView config push  else dummyTextView
+    , if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView
     , if not config.isPrimaryButtonSticky then 
       linearLayout
       [ width MATCH_PARENT
@@ -368,8 +380,10 @@ driverBottomCardView config push =
     width MATCH_PARENT
   , height WRAP_CONTENT
   , background Color.linen
+  , stroke ("1," <> Color.grey900)
   , orientation HORIZONTAL
   , cornerRadius 8.0
+  , margin $ MarginVertical 14 24
   , padding $ Padding 12 12 12 12
   , gravity CENTER
   ][
@@ -451,7 +465,6 @@ badgeCardView config push =
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginHorizontal 16 16
   , orientation VERTICAL
   , gravity CENTER 
   , background config.badgeCard.background
@@ -535,7 +548,7 @@ collectCashView title =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ PaddingVertical 14 14
+    , padding $ PaddingVertical 4 14
     , gravity CENTER
     ][
       textView $
@@ -543,8 +556,8 @@ collectCashView title =
         ]  <> FontStyle.body5 TypoGraphy
     ]
 
-noVpaView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-noVpaView config push = 
+noVpaView :: forall w. Config -> PrestoDOM (Effect Unit) w 
+noVpaView config = 
    linearLayout 
     [
       height WRAP_CONTENT

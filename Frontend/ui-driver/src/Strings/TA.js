@@ -869,5 +869,6 @@ const tamilStrings = {
   EXECUTION_FAILED : "செயல்படுத்தும் தோல்வியடைந்தது", 
   NOTIFICATION_FAILED : "அறிவிப்பு தோல்வியடைந்தது",
   PAY_NOW : "பணம்‌ செலுத்தவும்‌",
-  CLEAR_DUES_BANNER_TITLE : "இடைவிடாத சவாரிகளுக்கு உங்கள் பாக்கிகளை செலுத்தவும்‌"
+  CLEAR_DUES_BANNER_TITLE : "இடைவிடாத சவாரிகளுக்கு உங்கள் பாக்கிகளை செலுத்தவும்‌",
+  COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR அல்லது பணத்தின் மூலம் சேகரிக்கவும்"
 }
