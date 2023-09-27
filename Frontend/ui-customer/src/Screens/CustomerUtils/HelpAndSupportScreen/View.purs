@@ -455,11 +455,13 @@ topicsList state = [
   { action : ContactUs
   , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
   , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
-  },
-  { action : CallSupport
-  , title : (getString CONTACT_SUPPORT)
-  , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
-  } ] <> if state.data.config.showDeleteAccount then [
+  }
+  -- , -- TEMP : For removing Contact Support
+  -- { action : CallSupport
+  -- , title : (getString CONTACT_SUPPORT)
+  -- , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
+  -- } 
+  ] <> if state.data.config.showDeleteAccount then [
     { action : DeleteAccount
   , title : (getString REQUEST_TO_DELETE_ACCOUNT)
   , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"

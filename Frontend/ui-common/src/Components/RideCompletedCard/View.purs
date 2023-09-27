@@ -49,6 +49,7 @@ topCardView config push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity RIGHT
+      , visibility GONE -- TEMP : removed for contact Support 
       , layoutGravity "right"
       , padding $ PaddingTop safeMarginTop
       ][  imageView
