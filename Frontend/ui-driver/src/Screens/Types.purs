@@ -916,6 +916,10 @@ type HomeScreenProps =  {
   showRideRating :: Boolean,
   showContackSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
+  duesAmount :: String,
+  showPaymentPendingBlocker :: Boolean,
+  subscribed :: Boolean,
+  showShimmer :: Boolean,
   driverBlocked :: Boolean,
   showBlockingPopup :: Boolean
  }

@@ -163,6 +163,10 @@ initData = {
         showRideRating : false,
         showContackSupportPopUp : false,
         showChatBlockerPopUp : false,
+        duesAmount : "",
+        showPaymentPendingBlocker : false,
+        subscribed : true,
+        showShimmer : false,
         driverBlocked : false,
         showBlockingPopup : false
     }

@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout)
 import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -182,7 +182,7 @@ view push state =
             , orientation HORIZONTAL
             , margin state.buttonLayoutMargin
             ]
-            [ linearLayout
+            [   linearLayout
                 [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) then MATCH_PARENT else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
@@ -208,24 +208,42 @@ view push state =
                         )
                         (const OnButton1Click)
                     ]
-                    [   
-                        imageView [
+                    [   shimmerFrameLayout
+                        [ width MATCH_PARENT
+                        , height MATCH_PARENT
+                        , visibility $  if state.option1.showShimmer then VISIBLE else GONE
+                        , cornerRadius 8.0
+                        ][ linearLayout
+                            [ width MATCH_PARENT
+                            , height MATCH_PARENT
+                            , background Color.white200
+                            , cornerRadius 8.0
+                            ][]
+                        ]
+                        , linearLayout
+                        [ width $ MATCH_PARENT
+                        , height $ MATCH_PARENT
+                        , visibility $ if state.option1.showShimmer then GONE else VISIBLE
+                        , gravity $ CENTER
+                        ]
+                        [ imageView [
                             imageWithFallback state.option1.image.imageUrl
                             , height state.option1.image.height
                             , width state.option1.image.width
                             , margin state.option1.image.margin
                             , visibility state.option1.image.visibility
                             , padding state.option1.image.padding
+                            ]
+                            , textView $
+                            [ width WRAP_CONTENT
+                            , height WRAP_CONTENT
+                            , accessibility ENABLE
+                            , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
+                            , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
+                            , color $ state.option1.color
+                            , gravity CENTER
+                            ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
                         ]
-                        , textView $
-                        [ width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , accessibility ENABLE
-                        , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
-                        , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
-                        , color $ state.option1.color
-                        , gravity CENTER
-                        ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
                     ]
                 , linearLayout
                     [ if state.option1.visibility then width state.option2.width else weight 1.0

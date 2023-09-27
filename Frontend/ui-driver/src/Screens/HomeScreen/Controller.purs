@@ -57,7 +57,7 @@ import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Screens.Types (AutoPayStatus(..))
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -68,6 +68,8 @@ import Effect.Aff (launchAff_)
 import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
 import Effect.Uncurried (runEffectFn4)
+import Debug (spy)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -221,6 +223,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
+                    | ClearPendingDues ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -274,6 +277,9 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
+            | DuePaymentPendingAC PopUpModal.Action
+            | GetCurrenDuesAction GetCurrentPlanResp
+            | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
@@ -374,6 +380,32 @@ eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
 eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
+
+eval (DuePaymentPendingAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
+  _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
+  exit $ ClearPendingDues state {props { showPaymentPendingBlocker = false }}
+
+eval (DuePaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_view_details"
+  _ <- pure $ metaLogEvent "ny_driver_due_payment_view_details"
+  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
+  exit $ SubscriptionScreen state {props { showPaymentPendingBlocker = false }} false
+
+eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = do
+  continue state {props { showPaymentPendingBlocker = false }}
+
+eval (GetCurrenDuesAction (GetCurrentPlanResp resp)) state =
+  let currentDues = case resp.currentPlanDetails of
+                      Just (PlanEntity planEntity) -> planEntity.currentDues - planEntity.autopayDues
+                      Nothing -> 0.0
+      updatedDues = if currentDues /= 0.0 then "( ₹" <> show currentDues <> ") " else ""
+  in 
+    continue state { props{showShimmer = false, duesAmount = updatedDues}}
+
+eval (GetCurrentDuesFailed ) state = do
+  continue state { props{showShimmer = false, duesAmount = ""}}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
@@ -625,7 +657,8 @@ eval (RideActiveAction activeRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
+  if state.props.driverBlocked && not state.props.subscribed then continue state { props{ showPaymentPendingBlocker = true}}
+  else if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
   else if not state.props.rcActive then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
