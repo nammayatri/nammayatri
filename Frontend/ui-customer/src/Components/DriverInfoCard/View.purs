@@ -337,7 +337,7 @@ supportButton push state =
       [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
       , height $ V 18
       , width $ V 18
-      , margin $ Margin 10 10 10 4
+      , margin $ Margin 10 10 10 10
       , accessibilityHint "Share Ride : Button"
       , accessibility ENABLE
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
@@ -346,8 +346,8 @@ supportButton push state =
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
-      , margin (MarginTop 8 )
+      , visibility GONE -- (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE) -- TEMP : For removing Contact Support
+      , margin (MarginTop 2 )
       , background Color.lightGreyShade
       ][]
     , imageView
@@ -357,6 +357,7 @@ supportButton push state =
       , margin $ Margin 10 12 10 10
       , accessibilityHint "Contact Customer Support : Button"
       , accessibility ENABLE
+      , visibility GONE -- TEMP : For removing Contact Support
       , onClick push $ const Support
       ]
   ]

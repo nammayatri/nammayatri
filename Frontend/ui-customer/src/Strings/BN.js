@@ -59,7 +59,7 @@ const bengaliStrings = {
   "YOU_RATED": "আপনি রেট করেছেন:",
   "GETTING_STARTED_AND_FAQS": "শুরু করা এবং প্রায়শই জিজ্ঞাসিত প্রশ্নাবলী",
   "FOR_OTHER_ISSUES_WRITE_TO_US": "অন্যান্য ইস্যুগুলির জন্য, আমাদের লিখুন",
-  "HELP_AND_SUPPORT": "সাহায্য এবং সহযোগিতা",
+  "HELP_AND_SUPPORT": "সাহায্য", //"সাহায্য এবং সহযোগিতা"
   "OUR_SUGGESTED_PRICE_FOR_THIS_TRIP_IS": "এই ভ্রমণের জন্য আমাদের প্রস্তাবিত দাম",
   "DRIVERS_CAN_CHARGE_BETWEEN_THE_ABOVE_RANGE": "*ড্রাইভারগুলি উপরের পরিসরের মধ্যে চার্জ করতে পারে",
   "HOW_THIS_WORKS": "এটি কিভাবে কাজ করে?",
@@ -228,7 +228,7 @@ const bengaliStrings = {
   "NOT_NOW": "এখন না",
   "OF": "এর",
   "LOST_SOMETHING": "কিছু হারিয়েছে?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "ড্রাইভারের সাথে সংযোগ করার চেষ্টা করুন",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "আপনি ড্রাইভার থেকে একটি কলব্যাক অনুরোধ করতে পারেন", //"ড্রাইভারের সাথে সংযোগ করার চেষ্টা করুন",
   "CALL_DRIVER": "ড্রাইভারকে কল করুন",
   "NO_MORE_RIDES": "আর কোনও রাইড নেই",
   "CONTACT_SUPPORT": "সহায়তার সাথে যোগাযোগ করুন",
