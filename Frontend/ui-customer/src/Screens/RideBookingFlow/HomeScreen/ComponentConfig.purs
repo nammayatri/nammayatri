@@ -606,7 +606,7 @@ rateCardConfig state =
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
-
+        , fareInfoText = (getString FARE_IS_BASED_ON_KARNATAKA_STATE)
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},

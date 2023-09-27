@@ -6,15 +6,15 @@ export function getStringValue(key) {
 }
 
 const malayalamStrings = {
-  "DOWNLOAD_INVOICE": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുക",
+  "DOWNLOAD_INVOICE": "ഡ്രൈവർ രസീത് ഡൗൺലോഡ് ചെയ്യുക",
   "REPORT_AN_ISSUE": "ഒരു പ്രശ്നം റിപ്പോർട്ടുചെയ്യുക",
   "SUBMIT": "സമർപ്പിക്കുക",
-  "VIEW_INVOICE": "ഇൻവോയ്സ് കാണുക",
+  "VIEW_INVOICE": "ഡ്രൈവർ രസീത് കാണുക",
   "TOTAL_AMOUNT": "മൊത്തം തുക",
   "AMOUNT_PAID": "അടച്ച തുക",
   "TRIP_DETAILS_": "യാത്ര വിശദാംശങ്ങൾ",
   "DOWNLOAD_PDF": "PDF ഡൗൺലോഡുചെയ്യുക",
-  "INVOICE": "ഇൻവോയ്സ്",
+  "INVOICE": "ഡ്രൈവർ രസീത്",
   "TRIP_CHARGES": "യാത്ര ചാർജുകൾ",
   "PROMOTION": "പ്രമോഷൻ",
   "SEND_EMAIL": "ഇമെയിൽ അയയ്ക്കുക",
@@ -626,5 +626,6 @@ const malayalamStrings = {
   "LEARN_HOW_TEXT" : "നമ്മ യാത്രി നിങ്ങളുടെ ആവശ്യങ്ങൾ എങ്ങനെ നിറവേറ്റുന്നുവെന്ന് അറിയുക",
   "UPDATE_PROFILE" : "പ്രൊഫൈൽ അപ്ഡേറ്റ് ചെയ്യുക",
   "NOW_GET_ASSISTED_RIDES" : "നിങ്ങൾ വൈകല്യമുള്ള ആളാണെങ്കിൽ ഇപ്പോൾ അസിസ്റ്റന്റ് റൈഡുകൾ നേടൂ",
-  "CLEAN_CAB" : "ക്ലീൻ ക്യാബ്"
+  "CLEAN_CAB" : "ക്ലീൻ ക്യാബ്",
+  "FARE_IS_BASED_ON_KARNATAKA_STATE" : "കർണാടക സംസ്ഥാന ഗവൺമെന്റ് റൂൾസ് ഫാക്‌ടറിംഗ് ഓട്ടോ ഡ്രൈവർമാരുടെ കൂട്ടിച്ചേർക്കലുകളെ അടിസ്ഥാനമാക്കിയുള്ളതാണ് നിരക്ക്, അത് നമ്മ യാത്രി നിശ്ചയിക്കുന്നില്ല."
 }

@@ -7,16 +7,16 @@ export function getStringValue(key) {
 }
 
 const englishStrings = {
-  "DOWNLOAD_INVOICE": "Download Invoice",
+  "DOWNLOAD_INVOICE": "Download Driver Receipt",// "View Invoice",
   "REPORT_AN_ISSUE": "Report an Issue",
   "SUBMIT": "Submit",
-  "VIEW_INVOICE": "View Invoice",
+  "VIEW_INVOICE": "View Driver Receipt", // "View Invoice",
   "TOTAL_AMOUNT": "Total Amount",
   "AMOUNT_PAID": "Amount Paid",
   "TRIP_DETAILS_": "Trip Details",
   "DOWNLOAD_PDF": "Download PDF",
   "CGST": "CGST",
-  "INVOICE": "Invoice",
+  "INVOICE": "Driver Receipt", //  Invoice",
   "TRIP_CHARGES": "Trip Charges",
   "PROMOTION": "Promotion",
   "SEND_EMAIL": "Send Email",
@@ -613,5 +613,6 @@ const englishStrings = {
   "LEARN_HOW_TEXT" : "Learn how Namma Yatri caters to your needs",
   "UPDATE_PROFILE" : "Update Profile",
   "NOW_GET_ASSISTED_RIDES" : "Now get assisted rides if you are a person with disability" ,
-  "CLEAN_CAB" : "Clean Cab"
+  "CLEAN_CAB" : "Clean Cab",
+  "FARE_IS_BASED_ON_KARNATAKA_STATE" : "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri."
 }

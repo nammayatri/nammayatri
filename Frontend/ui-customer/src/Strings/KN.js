@@ -7,16 +7,16 @@ export function getStringValue(key) {
 }
 
 const kannadaStrings = {
-  "DOWNLOAD_INVOICE": "ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+  "DOWNLOAD_INVOICE": "ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
   "REPORT_AN_ISSUE": "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
   "SUBMIT": "ಸಲ್ಲಿಸಿ",
-  "VIEW_INVOICE": "ಸರಕುಪಟ್ಟಿ ವೀಕ್ಷಿಸಿ",
+  "VIEW_INVOICE": "ಚಾಲಕ ರಶೀದಿಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "TOTAL_AMOUNT": "ಒಟ್ಟು ಮೊತ್ತ",
   "AMOUNT_PAID": "ಪಾವತಿಸಿದ ಮೊತ್ತ",
   "TRIP_DETAILS_": "ಪ್ರವಾಸದ ವಿವರಗಳು",
   "DOWNLOAD_PDF": "PDF ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
   "CGST": "ಸಿಜಿಎಸ್ಟಿಟಿ",
-  "INVOICE": "ಸರಕುಪಟ್ಟಿ",
+  "INVOICE": "ಚಾಲಕ ರಶೀದಿ",
   "TRIP_CHARGES": "ಟ್ರಿಪ್ ಶುಲ್ಕ",
   "PROMOTION": "ಪ್ರಚಾರ",
   "SEND_EMAIL": "ಇಮೇಲ್ ಕಳುಹಿಸಿ",
@@ -609,5 +609,6 @@ const kannadaStrings = {
   "LEARN_HOW_TEXT" : "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಅಗತ್ಯಗಳನ್ನು ಹೇಗೆ ಪೂರೈಸುತ್ತದೆ ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
   "UPDATE_PROFILE" : "ಪ್ರೊಫೈಲ್ ಅನ್ನು ನವೀಕರಿಸಿ",
   "NOW_GET_ASSISTED_RIDES" : "ನೀವು ಅಂಗವೈಕಲ್ಯ ಹೊಂದಿರುವ ವ್ಯಕ್ತಿಯಾಗಿದ್ದರೆ ಈಗ ಸಹಾಯಕ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಿರಿ" ,
-  "CLEAN_CAB" : "ಕ್ಲೀನ್ ಕ್ಯಾಬ್"
+  "CLEAN_CAB" : "ಕ್ಲೀನ್ ಕ್ಯಾಬ್",
+  "FARE_IS_BASED_ON_KARNATAKA_STATE" : "ದರವು ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ನಿಯಮಗಳ ಅಂಶವನ್ನು ಆಧರಿಸಿದ ಆಟೋ ಚಾಲಕರ ಸೇರ್ಪಡೆಗಳನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿ ನಿರ್ಧರಿಸುವುದಿಲ್ಲ"
 }
