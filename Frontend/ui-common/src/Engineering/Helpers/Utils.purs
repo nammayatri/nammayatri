@@ -44,7 +44,6 @@ import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Halogen.VDom.DOM.Prop (PropValue)
 
-
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
 foreign import loaderTextIOS :: EffectFn2 String String Unit
