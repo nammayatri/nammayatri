@@ -849,6 +849,7 @@ const englishStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
   JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
+  GO_ONLINE_PROMPT_PAYMENT_PENDING : "You are currently offline.\nComplete your plan payment to take rides",
   COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment",
   PENDING_CAPS : "PENDING",
   FAILURE : "FAILURE",
