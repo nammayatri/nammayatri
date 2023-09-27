@@ -235,6 +235,32 @@ defaultRateCardView push config =
                   ][]
                 ]
               )config.otherOptions)
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ PaddingHorizontal 20 20
+            , visibility if config.fareInfoText /= "" then VISIBLE else GONE
+            , margin $ MarginTop 8
+            ][textView  
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.red
+              , text "*"
+              , textSize FontSize.a_12
+              , padding $ PaddingRight 5
+              , lineHeight "16"
+              , fontStyle $ FontStyle.regular LanguageStyle
+              ]
+            , textView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.black700
+              , text $ config.fareInfoText
+              , textSize FontSize.a_14
+              , lineHeight "16"
+              , fontStyle $ FontStyle.regular LanguageStyle
+              ]
+            ]
       ]
   ]
       

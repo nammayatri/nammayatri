@@ -59,13 +59,15 @@ view push state =
   , width $ V (screenWidth unit)
   , background Color.transparent
   , orientation VERTICAL
-  ][ linearLayout[
-       height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity RIGHT
-      , padding $ PaddingHorizontal 16 16
-      ][supportButton push state]
-    , mapOptionsView push state
+  ][ 
+    -- linearLayout[
+    --    height WRAP_CONTENT
+    --   , width MATCH_PARENT
+    --   , gravity RIGHT
+    --   , padding $ PaddingHorizontal 16 16
+    --   ][supportButton push state]
+    -- , 
+    mapOptionsView push state
     , messageNotificationView push state
     , driverInfoViewSpecialZone push state
     , driverInfoView push state
@@ -316,7 +318,7 @@ mapOptionsView push state =
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
       ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else (textView[height $ V 0])
-        , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
+        , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else shareRideButton push state 
       ]
     ]
 
@@ -385,6 +387,35 @@ locationTrackButton push state =
       , cornerRadius 20.0
       ][  imageView
         [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
+        , height $ V 18
+        , width $ V 18
+        , margin $ Margin 10 10 10 10
+        ]
+      ]
+  ]
+
+shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+shareRideButton push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , background Color.white900
+  , stroke $ "1,"<> Color.grey900
+  , visibility if (getValueFromConfig "enableShareRide") && (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
+  , cornerRadius 20.0
+  , accessibility DISABLE_DESCENDANT
+  , onClick push (const $ ShareRide)
+  , margin $ MarginTop 8
+  ][  linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius 20.0
+      ][  imageView
+        [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
         , height $ V 18
         , width $ V 18
         , margin $ Margin 10 10 10 10

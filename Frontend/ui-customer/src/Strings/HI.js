@@ -7,17 +7,17 @@ export function getStringValue(key) {
 }
 
 const hindiStrings = {
-  "DOWNLOAD_INVOICE": "इनवाइस को डाउनलोड करें",
+  "DOWNLOAD_INVOICE": "ड्राइवर रसीद डाउनलोड करेंरें",
   "REPORT_AN_ISSUE": "मामले की रिपोर्ट दर्ज करें",
   "SUBMIT": "जमा करें",
-  "VIEW_INVOICE": "बिल देखें",
+  "VIEW_INVOICE": "ड्राइवर रसीद देखें",
   "YOU_RATED": "आपकी रेटिंग",
   "TOTAL_AMOUNT": "कुल राशि",
   "AMOUNT_PAID": "राशि का भुगतान",
   "TRIP_DETAILS_": "यात्रा विवरण",
   "DOWNLOAD_PDF": "डाउनलोड पीडीऍफ़",
   "CGST": "सीजीएसटी",
-  "INVOICE": "बिल",
+  "INVOICE": "ड्राइवर रसीद",
   "TRIP_CHARGES": "यात्रा शुल्क",
   "PROMOTION": "पदोन्नति",
   "SEND_EMAIL": "ईमेल भेजें",
@@ -613,5 +613,6 @@ const hindiStrings = {
   "LEARN_HOW_TEXT" : "जानें कि नम्मा यात्री आपकी आवश्यकताओं को कैसे पूरा करता है", 
   "UPDATE_PROFILE" : "प्रोफ़ाइल अपडेट करें",
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
-  "CLEAN_CAB" : "क्लीन कैब"
+  "CLEAN_CAB" : "क्लीन कैब",
+  "FARE_IS_BASED_ON_KARNATAKA_STATE" : "किराया कर्नाटक राज्य सरकार के नियमों पर आधारित है जिसमें ऑटो चालक की संख्या को शामिल किया गया है और यह नम्मा यात्री द्वारा निर्धारित नहीं किया जाता है।"
 }

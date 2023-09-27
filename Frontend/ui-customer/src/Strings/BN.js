@@ -7,16 +7,16 @@ export function getStringValue(key) {
 }
 
 const bengaliStrings = {
-  "DOWNLOAD_INVOICE": "চালান ডাউনলোড করুন",
+  "DOWNLOAD_INVOICE": "ড্রাইভার রসিদ ডাউনলোড করুন",
   "REPORT_AN_ISSUE": "সমস্যা বিবৃতি করুন",
   "SUBMIT": "অনুমোদন",
-  "VIEW_INVOICE": "চালান দেখুন",
+  "VIEW_INVOICE": "ড্রাইভারের রসিদ দেখুন",
   "TOTAL_AMOUNT": "মোট মূল্য",
   "AMOUNT_PAID": "পরিমাণ অর্থ প্রদান করা",
   "TRIP_DETAILS_": "ভ্রমণের বিশদ",
   "DOWNLOAD_PDF": "পিডিএফ ডাউনলোড করুন",
   "CGST": "সিজিএসটি",
-  "INVOICE": "চালান",
+  "INVOICE": "ড্রাইভার রসিদ",
   "TRIP_CHARGES": "ট্রিপ চার্জ",
   "PROMOTION": "পদোন্নতি",
   "SEND_EMAIL": "ইমেইল পাঠান",
@@ -629,5 +629,6 @@ const bengaliStrings = {
   "LEARN_HOW_TEXT" : "নম্মা যাত্রী কীভাবে আপনার প্রয়োজন মেটায় তা জানুন",
   "UPDATE_PROFILE" : "প্রফাইল হালনাগাদ",
   "NOW_GET_ASSISTED_RIDES" : "আপনি যদি প্রতিবন্ধী ব্যক্তি হন তবে এখন সহায়ক রাইড পান" ,
-  "CLEAN_CAB" : "ক্লিন ক্যাব"
+  "CLEAN_CAB" : "ক্লিন ক্যাব",
+  "FARE_IS_BASED_ON_KARNATAKA_STATE" : "ভাড়াটি কর্ণাটক রাজ্য সরকারের নিয়মের উপর ভিত্তি করে অটো চালকের সংযোজন ফ্যাক্টর করে এবং নম্মা যাত্রী দ্বারা নির্ধারিত হয় না।"
 }
