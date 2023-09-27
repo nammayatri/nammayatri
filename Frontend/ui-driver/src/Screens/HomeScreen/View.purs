@@ -568,7 +568,9 @@ offlineView push state =
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
-              , text $ getString if state.props.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE else GO_ONLINE_PROMPT
+              , text $ getString if state.props.driverBlocked && not state.props.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
+                                 else if state.props.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
+                                 else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
             ]
         ]
