@@ -30,11 +30,11 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -84,8 +84,8 @@ data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
     shortRideId :: ShortId DRide.Ride,
     status :: DRide.RideStatus,
-    fromLocation :: DBLoc.BookingLocationAPIEntity,
-    toLocation :: DBLoc.BookingLocationAPIEntity,
+    fromLocation :: DLoc.LocationAPIEntity,
+    toLocation :: DLoc.LocationAPIEntity,
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
@@ -172,8 +172,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     { id = ride.id,
       shortRideId = ride.shortId,
       status = ride.status,
-      fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
-      toLocation = DBLoc.makeBookingLocationAPIEntity booking.toLocation,
+      fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
+      toLocation = DLoc.makeLocationAPIEntity booking.toLocation,
       driverName = rideDetails.driverName,
       driverNumber,
       vehicleNumber = rideDetails.vehicleNumber,
@@ -249,7 +249,7 @@ otpRideCreate driver otpCode booking = do
   when enableLocationTrackingService $
     void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-  QRide.create ride
+  QRide.createRide ride
   DLoc.updateOnRide driver.merchantId driver.id True
 
   QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
@@ -307,6 +307,8 @@ otpRideCreate driver otpCode booking = do
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             tripStartPos = Nothing,
+            fromLocation = booking.fromLocation,
+            toLocation = booking.toLocation,
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,

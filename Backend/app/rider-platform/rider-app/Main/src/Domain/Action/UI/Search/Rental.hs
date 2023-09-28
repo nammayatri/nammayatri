@@ -79,7 +79,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
-  _ <- QSearchRequest.create searchRequest
+  _ <- QSearchRequest.createDSReq searchRequest
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,

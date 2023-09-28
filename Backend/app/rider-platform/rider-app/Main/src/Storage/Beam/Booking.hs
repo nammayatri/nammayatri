@@ -43,7 +43,7 @@ data BookingT f = BookingT
     providerMobileNumber :: B.C f Text,
     primaryExophone :: B.C f Text,
     startTime :: B.C f UTCTime,
-    fromLocationId :: B.C f Text,
+    fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     estimatedFare :: B.C f HighPrecMoney,
     discount :: B.C f (Maybe HighPrecMoney),

@@ -32,11 +32,11 @@ import qualified Data.Time as Time
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.Error
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -278,9 +278,9 @@ rideInfo merchantShortId reqRideId = do
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
       }
 
-mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
-mkLocationAPIEntity DBLoc.BookingLocation {..} = do
-  let DBLoc.LocationAddress {..} = address
+mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
+mkLocationAPIEntity DLoc.Location {..} = do
+  let DLoc.LocationAddress {..} = address
   Common.LocationAPIEntity {..}
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource

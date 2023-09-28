@@ -16,30 +16,53 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import Data.Ord
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
+import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import Storage.Queries.Booking ()
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
 
+createRide' :: MonadFlow m => Ride -> m ()
+createRide' = createWithKV
+
 create :: MonadFlow m => Ride -> m ()
-create = createWithKV
+create ride = do
+  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
+  _ <- whenJust ride.toLocation $ \location -> processLocation location
+  createRide' ride
+  where
+    processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+createRide :: MonadFlow m => Ride -> m ()
+createRide ride = do
+  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE) ride.toLocation
+  void $ QLM.create fromLocationMap
+  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
+  create ride
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   { dwTable1 :: f (B.TableEntity table1),
@@ -300,6 +323,18 @@ findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ S
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
+    mappings <- QLM.findByEntityId id
+    let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+        toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+    when (null fromLocationMapping) $ throwError (InternalError "Entity Mappings Not Found")
+    let fromLocMap = head fromLocationMapping
+    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
+    toLocation <-
+      if null toLocationMappings
+        then return Nothing
+        else do
+          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+          QL.findById toLocMap.locationId
     tUrl <- parseBaseUrl `mapM` trackingUrl
     pure $
       Just
@@ -331,7 +366,8 @@ instance FromTType' BeamR.Ride Ride where
             rideRating = rideRating,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            driverMobileCountryCode = driverMobileCountryCode
+            driverMobileCountryCode = driverMobileCountryCode,
+            ..
           }
 
 instance ToTType' BeamR.Ride Ride where

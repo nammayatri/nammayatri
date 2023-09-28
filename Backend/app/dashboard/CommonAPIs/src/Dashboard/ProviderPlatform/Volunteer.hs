@@ -47,8 +47,8 @@ type BookingInfoAPI =
 
 data BookingInfoResponse = BookingInfoResponse
   { bookingId :: Id Booking,
-    fromLocation :: BookingLocation,
-    toLocation :: BookingLocation,
+    fromLocation :: Location,
+    toLocation :: Location,
     estimatedDistance :: Meters,
     estimatedFare :: Money,
     estimatedDuration :: Seconds,
@@ -58,8 +58,8 @@ data BookingInfoResponse = BookingInfoResponse
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BookingLocation = BookingLocation
-  { id :: Id BookingLocation,
+data Location = Location
+  { id :: Id Location,
     lat :: Double,
     lon :: Double,
     address :: LocationAddress,

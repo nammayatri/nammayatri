@@ -9,7 +9,6 @@ import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
-import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
@@ -82,7 +81,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
@@ -93,7 +91,6 @@ data DeleteModel
   = RegistrationTokenDelete
   | BapMetadataDelete
   | BookingDelete
-  | BookingLocationDelete
   | BookingCancellationReasonDelete
   | BusinessEventDelete
   | CallStatusDelete
@@ -158,7 +155,6 @@ data DeleteModel
   | RideDetailsDelete
   | RiderDetailsDelete
   | SearchRequestDelete
-  | SearchReqLocationDelete
   | SearchRequestForDriverDelete
   | SearchRequestSpecialZoneDelete
   | SearchTryDelete
@@ -177,7 +173,6 @@ getTagDelete :: DeleteModel -> Text
 getTagDelete RegistrationTokenDelete = "RegistrationTokenOptions"
 getTagDelete BapMetadataDelete = "BapMetadataOptions"
 getTagDelete BookingDelete = "BookingOptions"
-getTagDelete BookingLocationDelete = "BookingLocationOptions"
 getTagDelete BookingCancellationReasonDelete = "BookingCancellationReasonOptions"
 getTagDelete BusinessEventDelete = "BusinessEventOptions"
 getTagDelete CallStatusDelete = "CallStatusOptions"
@@ -242,7 +237,6 @@ getTagDelete RideDelete = "RideOptions"
 getTagDelete RideDetailsDelete = "RideDetailsOptions"
 getTagDelete RiderDetailsDelete = "RiderDetailsOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
-getTagDelete SearchReqLocationDelete = "SearchReqLocationOptions"
 getTagDelete SearchRequestForDriverDelete = "SearchRequestForDriverOptions"
 getTagDelete SearchRequestSpecialZoneDelete = "SearchRequestSpecialZoneOptions"
 getTagDelete SearchTryDelete = "SearchTryOptions"
@@ -259,7 +253,6 @@ getTagDelete GoHomeConfigDelete = "GoHomeConfigOptions"
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
 parseTagDelete "BookingOptions" = return BookingDelete
-parseTagDelete "BookingLocationOptions" = return BookingLocationDelete
 parseTagDelete "BookingCancellationReasonOptions" = return BookingCancellationReasonDelete
 parseTagDelete "BusinessEventOptions" = return BusinessEventDelete
 parseTagDelete "CallStatusOptions" = return CallStatusDelete
@@ -322,7 +315,6 @@ parseTagDelete "RideOptions" = return RideDelete
 parseTagDelete "RideDetailsOptions" = return RideDetailsDelete
 parseTagDelete "RiderDetailsOptions" = return RiderDetailsDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
-parseTagDelete "SearchReqLocationOptions" = return SearchReqLocationDelete
 parseTagDelete "SearchRequestForDriverOptions" = return SearchRequestForDriverDelete
 parseTagDelete "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneDelete
 parseTagDelete "SearchTryOptions" = return SearchTryDelete
@@ -341,7 +333,6 @@ data DBDeleteObject
   = RegistrationTokenDeleteOptions DeleteModel (Where Postgres RegistrationToken.RegistrationTokenT)
   | BapMetadataDeleteOptions DeleteModel (Where Postgres BapMetadata.BapMetadataT)
   | BookingDeleteOptions DeleteModel (Where Postgres Booking.BookingT)
-  | BookingLocationDeleteOptions DeleteModel (Where Postgres BookingLocation.BookingLocationT)
   | BookingCancellationReasonDeleteOptions DeleteModel (Where Postgres BookingCancellationReason.BookingCancellationReasonT)
   | BusinessEventDeleteOptions DeleteModel (Where Postgres BusinessEvent.BusinessEventT)
   | CallStatusDeleteOptions DeleteModel (Where Postgres CallStatus.CallStatusT)
@@ -406,7 +397,6 @@ data DBDeleteObject
   | RideDetailsDeleteOptions DeleteModel (Where Postgres RideDetails.RideDetailsT)
   | RiderDetailsDeleteOptions DeleteModel (Where Postgres RiderDetails.RiderDetailsT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
-  | SearchReqLocationDeleteOptions DeleteModel (Where Postgres SearchReqLocation.SearchReqLocationT)
   | SearchRequestForDriverDeleteOptions DeleteModel (Where Postgres SearchRequestForDriver.SearchRequestForDriverT)
   | SearchRequestSpecialZoneDeleteOptions DeleteModel (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryDeleteOptions DeleteModel (Where Postgres SearchTry.SearchTryT)
@@ -437,9 +427,6 @@ instance FromJSON DBDeleteObject where
       BookingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BookingDeleteOptions deleteModel whereClause
-      BookingLocationDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ BookingLocationDeleteOptions deleteModel whereClause
       BookingCancellationReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BookingCancellationReasonDeleteOptions deleteModel whereClause
@@ -632,9 +619,6 @@ instance FromJSON DBDeleteObject where
       SearchRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchRequestDeleteOptions deleteModel whereClause
-      SearchReqLocationDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ SearchReqLocationDeleteOptions deleteModel whereClause
       SearchRequestForDriverDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchRequestForDriverDeleteOptions deleteModel whereClause

@@ -18,8 +18,8 @@ import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DRBL
 import qualified Domain.Types.FareParameters as DFParams
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import SharedLogic.FareCalculator
@@ -131,7 +131,7 @@ mkOnInitMessage res = do
           }
     }
   where
-    castAddress DRBL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
+    castAddress DL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
     castVehicleVariant = \case
       VehVar.SEDAN -> OnInit.SEDAN
       VehVar.SUV -> OnInit.SUV

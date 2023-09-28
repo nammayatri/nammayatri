@@ -26,7 +26,6 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Booking as Booking
-import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import qualified Domain.Types.DriverLocation as DDL
@@ -206,9 +205,6 @@ getOnRideStuckDriverIds dbSyncInterVal = do
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
-
-fetchToLocationIDFromBooking :: [Booking.Booking] -> [Id BookingLocation]
-fetchToLocationIDFromBooking = map (.toLocation.id)
 
 fetchQuoteIdFromDriverQuotes :: [DriverQuote] -> [Text]
 fetchQuoteIdFromDriverQuotes = map (.id.getId)

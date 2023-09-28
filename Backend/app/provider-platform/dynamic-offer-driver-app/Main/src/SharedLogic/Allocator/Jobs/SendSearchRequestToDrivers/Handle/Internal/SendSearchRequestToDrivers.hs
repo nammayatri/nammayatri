@@ -22,10 +22,10 @@ import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import qualified Domain.Types.Location as DLoc
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
@@ -145,17 +145,28 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
-buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
+buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
   areaRegional <- case mbLanguage of
-    Nothing -> return area
+    Nothing -> return address.area
     Just lang -> do
-      mAreaObj <- translate ENGLISH lang `mapM` area
+      mAreaObj <- translate ENGLISH lang `mapM` address.area
       let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
       return $ (.translatedText) <$> translation
   pure
-    DLoc.SearchReqLocation
-      { area = areaRegional,
+    DLoc.Location
+      { address =
+          DLoc.LocationAddress
+            { area = areaRegional,
+              street = address.street,
+              door = address.door,
+              city = address.city,
+              state = address.state,
+              country = address.country,
+              building = address.building,
+              areaCode = address.areaCode,
+              fullAddress = address.fullAddress
+            },
         ..
       }
 

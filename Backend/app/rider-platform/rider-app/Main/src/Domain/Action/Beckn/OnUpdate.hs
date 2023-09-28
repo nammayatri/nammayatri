@@ -253,7 +253,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   incrementRideCreatedRequestCount booking.merchantId.getId
   _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-  _ <- QRide.create ride
+  _ <- QRide.createRide ride
+
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
@@ -264,6 +265,12 @@ onUpdate ValidatedRideAssignedReq {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      let fromLocation = booking.fromLocation
+          toLocation = case booking.bookingDetails of
+            SRB.OneWayDetails details -> Just details.toLocation
+            SRB.RentalDetails _ -> Nothing
+            SRB.DriverOfferDetails details -> Just details.toLocation
+            SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
       return
         SRide.Ride
           { id = guid,

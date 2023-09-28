@@ -19,7 +19,7 @@ import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state)
@@ -86,7 +86,7 @@ mkConfirmMessage res = do
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
 mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,

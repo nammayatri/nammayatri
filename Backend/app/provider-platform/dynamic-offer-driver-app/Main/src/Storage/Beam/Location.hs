@@ -13,41 +13,39 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Storage.Beam.SearchRequestSpecialZone where
+module Storage.Beam.Location where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.FareProduct as FareProductD
+import Database.Beam.MySQL ()
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
-data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
+data LocationT f = LocationT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
-    messageId :: B.C f Text,
-    startTime :: B.C f UTCTime,
-    validTill :: B.C f UTCTime,
-    providerId :: B.C f Text,
-    fromLocationId :: B.C f (Maybe Text),
-    toLocationId :: B.C f (Maybe Text),
-    area :: B.C f (Maybe FareProductD.Area),
-    bapId :: B.C f Text,
-    bapUri :: B.C f Text,
-    estimatedDistance :: B.C f Meters,
-    estimatedDuration :: B.C f Seconds,
+    lat :: B.C f Double,
+    lon :: B.C f Double,
+    street :: B.C f (Maybe Text),
+    door :: B.C f (Maybe Text),
+    city :: B.C f (Maybe Text),
+    state :: B.C f (Maybe Text),
+    country :: B.C f (Maybe Text),
+    building :: B.C f (Maybe Text),
+    areaCode :: B.C f (Maybe Text),
+    area :: B.C f (Maybe Text),
+    fullAddress :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table SearchRequestSpecialZoneT where
-  data PrimaryKey SearchRequestSpecialZoneT f
+instance B.Table LocationT where
+  data PrimaryKey LocationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type SearchRequestSpecialZone = SearchRequestSpecialZoneT Identity
+type Location = LocationT Identity
 
-$(enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])
+$(enableKVPG ''LocationT ['id] [])
 
-$(mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone")
+$(mkTableInstances ''LocationT "location")

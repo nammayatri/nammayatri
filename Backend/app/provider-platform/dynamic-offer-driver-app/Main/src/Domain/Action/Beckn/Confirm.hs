@@ -18,10 +18,10 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
@@ -53,12 +53,12 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
 import qualified Storage.Queries.Ride as QRide
@@ -75,16 +75,16 @@ data DConfirmReq = DConfirmReq
     driverId :: Maybe Text,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
-    fromAddress :: DBL.LocationAddress,
-    toAddress :: DBL.LocationAddress,
+    fromAddress :: DL.LocationAddress,
+    toAddress :: DL.LocationAddress,
     mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
-    fromLocation :: DBL.BookingLocation,
-    toLocation :: DBL.BookingLocation,
+    fromLocation :: DL.Location,
+    toLocation :: DL.Location,
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
@@ -149,7 +149,7 @@ handler transporter req quote = do
 
           -- critical updates
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-          QRide.create ride
+          QRide.createRide ride
           DLoc.updateOnRide driver.merchantId driver.id True
 
           -- non-critical updates
@@ -157,8 +157,8 @@ handler transporter req quote = do
           QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
           QRB.updateRiderId booking.id riderDetails.id
           QRideD.create rideDetails
-          QBL.updateAddress booking.fromLocation.id req.fromAddress
-          QBL.updateAddress booking.toLocation.id req.toAddress
+          QL.updateAddress booking.fromLocation.id req.fromAddress
+          QL.updateAddress booking.toLocation.id req.toAddress
           QDQ.setInactiveBySTId driverQuote.searchTryId
           QSRD.setInactiveBySTId driverQuote.searchTryId
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
@@ -202,8 +202,8 @@ handler transporter req quote = do
           QRB.updateSpecialZoneOtpCode booking.id otpCode
           when isNewRider $ QRD.create riderDetails
           QRB.updateRiderId booking.id riderDetails.id
-          QBL.updateAddress booking.fromLocation.id req.fromAddress
-          QBL.updateAddress booking.toLocation.id req.toAddress
+          QL.updateAddress booking.fromLocation.id req.fromAddress
+          QL.updateAddress booking.toLocation.id req.toAddress
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
           QBE.logRideConfirmedEvent booking.id
 
@@ -259,6 +259,8 @@ handler transporter req quote = do
             tripEndTime = Nothing,
             tripStartPos = Nothing,
             tripEndPos = Nothing,
+            fromLocation = booking.fromLocation, --check if correct
+            toLocation = booking.toLocation, --check if correct
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
             createdAt = now,

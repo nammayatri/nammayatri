@@ -15,23 +15,38 @@
 
 module Storage.Queries.SearchRequestSpecialZone where
 
+import Data.Ord
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
+import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
-import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.SearchRequest as QSL
 
-createSearchRequestSpecialZone :: MonadFlow m => SearchRequestSpecialZone -> m ()
-createSearchRequestSpecialZone = createWithKV
+createSearchRequestSpecialZone' :: MonadFlow m => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone' = createWithKV
 
 create :: MonadFlow m => SearchRequestSpecialZone -> m ()
-create srsz = QSRL.create srsz.fromLocation >> QSRL.create srsz.toLocation >> createSearchRequestSpecialZone srsz
+create srsz = do
+  _ <- whenNothingM_ (QL.findById srsz.fromLocation.id) $ do QL.create srsz.fromLocation
+  _ <- whenNothingM_ (QL.findById srsz.toLocation.id) $ do QL.create srsz.toLocation
+  createSearchRequestSpecialZone' srsz
+
+createSearchRequestSpecialZone :: MonadFlow m => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone searchRequest = do
+  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
 
 findById :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
@@ -54,8 +69,30 @@ getValidTill (Id searchRequestId) = do
 
 instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequestSpecialZone for fromLocationId: " <> show fromLocationId)
-    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in SearchRequestSpecialZone for toLocationId: " <> show toLocationId)
+    mappings <- QLM.findByEntityId id
+    (fl, tl) <-
+      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+        then do
+          logInfo "Accessing Search Request Location Table"
+          pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
+          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
+          QLM.create pickupLocMapping
+
+          dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
+          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
+          QLM.create dropLocMapping
+          return (pickupLoc, dropLoc)
+        else do
+          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+
+          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+          let toLoc = maximumBy (comparing (.order)) toLocationMappings
+          tl <- QL.findById toLoc.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLoc.locationId.getId)
+          return (fl, tl)
     pUrl <- parseBaseUrl bapUri
     pure $
       Just
@@ -86,8 +123,8 @@ instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone whe
         BeamSRSZ.startTime = startTime,
         BeamSRSZ.validTill = validTill,
         BeamSRSZ.providerId = getId providerId,
-        BeamSRSZ.fromLocationId = getId fromLocation.id,
-        BeamSRSZ.toLocationId = getId toLocation.id,
+        BeamSRSZ.fromLocationId = Just $ getId fromLocation.id,
+        BeamSRSZ.toLocationId = Just $ getId toLocation.id,
         BeamSRSZ.area = area,
         BeamSRSZ.bapId = bapId,
         BeamSRSZ.bapUri = showBaseUrl bapUri,

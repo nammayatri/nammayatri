@@ -10,7 +10,6 @@ import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
-import qualified "rider-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "rider-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "rider-app" Storage.Beam.CallStatus as CallStatus
 import qualified "rider-app" Storage.Beam.CallbackRequest as CallbackRequest
@@ -44,7 +43,6 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "rider-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -58,7 +56,6 @@ data UpdateModel
   = AppInstallsUpdate
   | BlackListOrgUpdate
   | BookingUpdate
-  | BookingLocationUpdate
   | BookingCancellationReasonUpdate
   | CallbackRequestUpdate
   | CallStatusUpdate
@@ -90,7 +87,6 @@ data UpdateModel
   | RideUpdate
   | SavedReqLocationUpdate
   | SearchRequestUpdate
-  | SearchReqLocationUpdate
   | SosUpdate
   | SpecialZoneQuoteUpdate
   | TripTermsUpdate
@@ -104,7 +100,6 @@ getTagUpdate :: UpdateModel -> Text
 getTagUpdate AppInstallsUpdate = "AppInstallsOptions"
 getTagUpdate BlackListOrgUpdate = "BlackListOrgOptions"
 getTagUpdate BookingUpdate = "BookingOptions"
-getTagUpdate BookingLocationUpdate = "BookingLocationOptions"
 getTagUpdate BookingCancellationReasonUpdate = "BookingCancellationReasonOptions"
 getTagUpdate CallbackRequestUpdate = "CallbackRequestOptions"
 getTagUpdate CallStatusUpdate = "CallStatusOptions"
@@ -136,7 +131,6 @@ getTagUpdate RentalSlabUpdate = "RentalSlabOptions"
 getTagUpdate RideUpdate = "RideOptions"
 getTagUpdate SavedReqLocationUpdate = "SavedReqLocationOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
-getTagUpdate SearchReqLocationUpdate = "SearchReqLocationOptions"
 getTagUpdate SosUpdate = "SosOptions"
 getTagUpdate SpecialZoneQuoteUpdate = "SpecialZoneQuoteOptions"
 getTagUpdate TripTermsUpdate = "TripTermsOptions"
@@ -149,7 +143,6 @@ parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
 parseTagUpdate "BlackListOrgOptions" = return BlackListOrgUpdate
 parseTagUpdate "BookingOptions" = return BookingUpdate
-parseTagUpdate "BookingLocationOptions" = return BookingLocationUpdate
 parseTagUpdate "BookingCancellationReasonOptions" = return BookingCancellationReasonUpdate
 parseTagUpdate "CallbackRequestOptions" = return CallbackRequestUpdate
 parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
@@ -181,7 +174,6 @@ parseTagUpdate "RentalSlabOptions" = return RentalSlabUpdate
 parseTagUpdate "RideOptions" = return RideUpdate
 parseTagUpdate "SavedReqLocationOptions" = return SavedReqLocationUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
-parseTagUpdate "SearchReqLocationOptions" = return SearchReqLocationUpdate
 parseTagUpdate "SosOptions" = return SosUpdate
 parseTagUpdate "SpecialZoneQuoteOptions" = return SpecialZoneQuoteUpdate
 parseTagUpdate "TripTermsOptions" = return TripTermsUpdate
@@ -195,7 +187,6 @@ data DBUpdateObject
   = AppInstallsOptions UpdateModel [Set Postgres AppInstalls.AppInstallsT] (Where Postgres AppInstalls.AppInstallsT)
   | BlackListOrgOptions UpdateModel [Set Postgres BlackListOrg.BlackListOrgT] (Where Postgres BlackListOrg.BlackListOrgT)
   | BookingOptions UpdateModel [Set Postgres Booking.BookingT] (Where Postgres Booking.BookingT)
-  | BookingLocationOptions UpdateModel [Set Postgres BookingLocation.BookingLocationT] (Where Postgres BookingLocation.BookingLocationT)
   | BookingCancellationReasonOptions UpdateModel [Set Postgres BookingCancellationReason.BookingCancellationReasonT] (Where Postgres BookingCancellationReason.BookingCancellationReasonT)
   | CallbackRequestOptions UpdateModel [Set Postgres CallbackRequest.CallbackRequestT] (Where Postgres CallbackRequest.CallbackRequestT)
   | CallStatusOptions UpdateModel [Set Postgres CallStatus.CallStatusT] (Where Postgres CallStatus.CallStatusT)
@@ -227,7 +218,6 @@ data DBUpdateObject
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)
   | SavedReqLocationOptions UpdateModel [Set Postgres SavedReqLocation.SavedReqLocationT] (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
-  | SearchReqLocationOptions UpdateModel [Set Postgres SearchReqLocation.SearchReqLocationT] (Where Postgres SearchReqLocation.SearchReqLocationT)
   | SosOptions UpdateModel [Set Postgres Sos.SosT] (Where Postgres Sos.SosT)
   | SpecialZoneQuoteOptions UpdateModel [Set Postgres SpecialZoneQuote.SpecialZoneQuoteT] (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsOptions UpdateModel [Set Postgres TripTerms.TripTermsT] (Where Postgres TripTerms.TripTermsT)
@@ -255,9 +245,6 @@ instance FromJSON DBUpdateObject where
       BookingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BookingOptions updateModel updVals whereClause
-      BookingLocationUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ BookingLocationOptions updateModel updVals whereClause
       BookingCancellationReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BookingCancellationReasonOptions updateModel updVals whereClause
@@ -351,9 +338,6 @@ instance FromJSON DBUpdateObject where
       SearchRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SearchRequestOptions updateModel updVals whereClause
-      SearchReqLocationUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ SearchReqLocationOptions updateModel updVals whereClause
       SosUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SosOptions updateModel updVals whereClause

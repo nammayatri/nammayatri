@@ -19,6 +19,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
@@ -57,6 +58,8 @@ data Ride = Ride
     tripEndTime :: Maybe UTCTime,
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
+    fromLocation :: DL.Location,
+    toLocation :: DL.Location,
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,

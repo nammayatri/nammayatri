@@ -17,9 +17,9 @@ module Domain.Types.Booking where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
-import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
@@ -60,8 +60,8 @@ data Booking = Booking
     bapCountry :: Maybe Context.Country,
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
-    fromLocation :: DLoc.BookingLocation,
-    toLocation :: DLoc.BookingLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: DLoc.Location,
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,

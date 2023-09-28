@@ -31,10 +31,10 @@ import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DTB
-import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
+import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -86,10 +86,10 @@ mkCommonRideStatus rs = case rs of
   DRide.COMPLETED -> Common.COMPLETED
   DRide.CANCELLED -> Common.CANCELLED
 
-mkCommonBookingLocation :: BookingLocation -> Common.BookingLocation
-mkCommonBookingLocation BookingLocation {..} =
-  Common.BookingLocation
-    { id = cast @BookingLocation @Common.BookingLocation id,
+mkCommonBookingLocation :: Location -> Common.Location
+mkCommonBookingLocation Location {..} =
+  Common.Location
+    { id = cast @Location @Common.Location id,
       address = mkAddressRes address,
       ..
     }

@@ -16,8 +16,8 @@
 module Domain.Types.SearchRequest where
 
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -29,8 +29,8 @@ data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
     providerId :: Id DM.Merchant,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: DLoc.Location,
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,

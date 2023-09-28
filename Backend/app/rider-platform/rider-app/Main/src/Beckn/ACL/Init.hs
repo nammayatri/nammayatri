@@ -19,7 +19,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Control.Lens ((%~))
 import qualified Data.Text as T
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
@@ -100,7 +100,7 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
 mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,

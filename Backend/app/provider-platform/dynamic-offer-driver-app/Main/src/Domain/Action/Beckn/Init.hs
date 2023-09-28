@@ -16,18 +16,17 @@ module Domain.Action.Beckn.Init where
 
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Veh
@@ -77,16 +76,6 @@ data InitRes = InitRes
     driverName :: Maybe Text,
     driverId :: Maybe Text
   }
-
-buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
-buildBookingLocation DLoc.SearchReqLocation {..} = do
-  let address = DLoc.LocationAddress {..}
-  guid <- generateGUIDText
-  pure
-    DLoc.BookingLocation
-      { id = Id guid,
-        ..
-      }
 
 cancelBooking ::
   ( EsqDBFlow m r,
@@ -151,14 +140,14 @@ handler merchantId req eitherReq = do
           booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
-          _ <- QRB.create booking
+          _ <- QRB.createBooking booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
-          _ <- QRB.create booking
+          _ <- QRB.createBooking booking
           -- moving route from search request id to booking id
           routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
           case routeInfo of
@@ -174,8 +163,8 @@ handler merchantId req eitherReq = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
-        HasField "fromLocation" sr DLoc.SearchReqLocation,
-        HasField "toLocation" sr DLoc.SearchReqLocation,
+        HasField "fromLocation" sr DLoc.Location,
+        HasField "toLocation" sr DLoc.Location,
         HasField "estimatedDuration" sr Seconds,
         HasField "area" sr (Maybe FareProductD.Area),
         HasField "vehicleVariant" q Veh.Variant,
@@ -196,8 +185,8 @@ handler merchantId req eitherReq = do
       m DRB.Booking
     buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
-      fromLocation <- buildBookingLocation searchRequest.fromLocation
-      toLocation <- buildBookingLocation searchRequest.toLocation
+      let fromLocation = searchRequest.fromLocation
+          toLocation = searchRequest.toLocation
       exophone <- findRandomExophone merchantId
       pure
         DRB.Booking

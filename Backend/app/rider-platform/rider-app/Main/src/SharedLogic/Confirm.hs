@@ -15,9 +15,9 @@
 module SharedLogic.Confirm where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
@@ -25,12 +25,10 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
--- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -58,8 +56,8 @@ data DConfirmRes = DConfirmRes
   { providerId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
-    fromLoc :: DBL.BookingLocation,
-    toLoc :: Maybe DBL.BookingLocation,
+    fromLoc :: DL.Location,
+    toLoc :: Maybe DL.Location,
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     booking :: DRB.Booking,
@@ -110,10 +108,8 @@ confirm DConfirmReq {..} = do
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
-  bFromLocation <- buildBookingLocation now fromLocation
-  mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest fulfillmentId quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -129,7 +125,7 @@ confirm DConfirmReq {..} = do
     pure paymentMethod
 
   -- DB.runTransaction $ do
-  _ <- QRideB.create booking
+  _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
@@ -139,8 +135,8 @@ confirm DConfirmReq {..} = do
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         itemId = quote.itemId,
-        fromLoc = bFromLocation,
-        toLoc = mbBToLocation,
+        fromLoc = fromLocation,
+        toLoc = mbToLocation,
         vehicleVariant = quote.vehicleVariant,
         quoteDetails = details,
         searchRequestId = searchRequest.id,
@@ -167,8 +163,8 @@ buildBooking ::
   DSReq.SearchRequest ->
   Maybe Text ->
   DQuote.Quote ->
-  DBL.BookingLocation ->
-  Maybe DBL.BookingLocation ->
+  DL.Location ->
+  Maybe DL.Location ->
   DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
@@ -234,16 +230,3 @@ findRandomExophone merchantId = do
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
-
-buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
-buildBookingLocation now DSRLoc.SearchReqLocation {..} = do
-  locId <- generateGUID
-  return
-    DBL.BookingLocation
-      { id = locId,
-        lat,
-        lon,
-        address,
-        createdAt = now,
-        updatedAt = now
-      }
