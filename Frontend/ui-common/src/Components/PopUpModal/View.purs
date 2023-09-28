@@ -154,18 +154,31 @@ view push state =
                     ]
                 ]
             ]
-        , textView $
-            [ width MATCH_PARENT
+        , linearLayout
+          [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , color $ state.secondaryText.color
-            , gravity $ state.secondaryText.gravity
-            , padding state.secondaryText.padding
+            , gravity CENTER
             , margin $ state.secondaryText.margin
-            , (text $ state.secondaryText.text)
-            , accessibility ENABLE
-            , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
-            , visibility $ state.secondaryText.visibility
-            ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+            , padding state.secondaryText.padding
+            , onClick push $ const OnSecondaryTextClick
+          ][ textView $
+             [ width WRAP_CONTENT
+             , height WRAP_CONTENT
+             , color $ state.secondaryText.color
+             , gravity $ state.secondaryText.gravity
+             , textFromHtml state.secondaryText.text
+             , accessibility ENABLE
+             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
+             , visibility $ state.secondaryText.visibility
+             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+            , imageView [
+               width state.secondaryText.suffixImage.width
+               , height state.secondaryText.suffixImage.height
+               , imageWithFallback state.secondaryText.suffixImage.imageUrl
+               , visibility state.secondaryText.suffixImage.visibility
+               , margin state.secondaryText.suffixImage.margin
+             ]
+          ]
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout

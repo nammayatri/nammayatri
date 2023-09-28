@@ -16,6 +16,7 @@
 module Flow where
 
 import Log
+import Screens.SubscriptionScreen.Controller
 
 import Common.Styles.Colors as Color
 import Common.Styles.Colors as Color
@@ -56,14 +57,15 @@ import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
-import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
+import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams, initiateLocationServiceClient)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -106,8 +108,6 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-
-import Screens.SubscriptionScreen.Controller
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
@@ -2109,8 +2109,9 @@ clearPendingDuesFlow = do
       case orderStatus of
         Right (OrderStatusRes statusResp) -> do
           when (statusResp.status == PS.CHARGED) $ do
-            _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "due_amount" innerpayload.amount
-            _ <- pure $ cleverTapCustomEventWithParams "ny_driver_clear_dues" "clearence_type" "manual"
+            _<- pure $ cleverTapEvent "ny_driver_clear_dues" $ [ {key : "due_amount", value : unsafeToForeign innerpayload.amount},
+                                                                                         {key : "clearence_type", value : unsafeToForeign "manual"}
+                                                                                        ]
             pure unit
           let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
