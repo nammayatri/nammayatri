@@ -40,3 +40,6 @@ INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (merchant_id, lang
     ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'TAMIL', 'PAYMENT_FAILED_MANUAL', null, 'MANUAL_PAYMENT_FAILED', 'https://assets.juspay.in/beckn/nammayatri/driver/images/ny_failed', 'பணம் செலுத்த முடியவில்லை', 'தொந்தரவு இல்லாத சவாரிகளுக்கு உங்கள் கைமுறை நிலுவைத் தொகையை அழிக்கவும்!');
 
 ALTER TABLE atlas_driver_offer_bpp.payment_order ALTER COLUMN amount type numeric(30,2);
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cache_offer_list_by_driver_id type boolean default false not null;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_offer_list_cache type boolean default true not null;

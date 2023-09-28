@@ -91,6 +91,8 @@ data TransporterConfigT f = TransporterConfigT
     isPlanMandatory :: B.C f Bool,
     freeTrialDays :: B.C f Int,
     openMarketUnBlocked :: B.C f Bool,
+    cacheOfferListByDriverId :: B.C f Bool,
+    useOfferListCache :: B.C f Bool,
     updateNotificationStatusBatchSize :: B.C f Int,
     updateOrderStatusBatchSize :: B.C f Int
   }

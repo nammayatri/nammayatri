@@ -183,6 +183,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.isPlanMandatory = isPlanMandatory,
         BeamTC.freeTrialDays = freeTrialDays,
         BeamTC.openMarketUnBlocked = openMarketUnBlocked,
+        BeamTC.cacheOfferListByDriverId = cacheOfferListByDriverId,
+        BeamTC.useOfferListCache = useOfferListCache,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,

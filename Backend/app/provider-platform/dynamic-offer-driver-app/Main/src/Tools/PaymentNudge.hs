@@ -33,12 +33,12 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.PushNotification as CMP
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Person as QDP
 import Tools.Notifications (notifyPaymentNudge)
-import qualified Tools.Payment as TPayment
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -90,7 +90,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
               _ -> currentTotal
       let mbMandateSetupDate = mbDriverPlan >>= (.mandateSetupDate)
       let mandateSetupDate = maybe now (\date -> if driverInfo.autoPayStatus == Just DI.ACTIVE then date else now) mbMandateSetupDate
-      offersResp <- TPayment.offerList transporterConfig.merchantId =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
+      offersResp <- SPayment.offerListCache transporterConfig.merchantId =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
       if null offersResp.offerResp
         then return (mkOfferedAmountsEntity amount plan.id)
         else do
