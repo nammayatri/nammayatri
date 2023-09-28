@@ -905,5 +905,7 @@ const bengaliStrings = {
 	AUTOPAY_SETUP_FAILED : "অটোপে সেটআপ ব্যর্থ হয়েছে!",
 	ONE_TIME_REGISTERATION : "একবার নিবন্ধন",
    	CLEARANCE_AND_REGISTERATION : "ক্লিয়ারেন্স + রেজিস্ট্রেশন",
-	UPI_AUTOPAY_SETUP : "UPI অটোপে সেটআপ"
+	UPI_AUTOPAY_SETUP : "UPI অটোপে সেটআপ",
+	WATCH_VIDEO_FOR_HELP : "সাহায্যের জন্য ভিডিও দেখুন",
+	PAYMENT_PENDING_SOFT_NUDGE : "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন"
 }

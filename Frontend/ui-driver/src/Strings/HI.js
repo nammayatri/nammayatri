@@ -912,5 +912,7 @@ const hindiStrings = {
   AUTOPAY_SETUP_FAILED : "ऑटोपे सेटअप विफल!",
   ONE_TIME_REGISTERATION : "एक बार पंजीकरण",
   CLEARANCE_AND_REGISTERATION : "क्लीयरेंस + रजिस्ट्रेशन",
-  UPI_AUTOPAY_SETUP : "UPI ऑटोपे सेटअप"
+  UPI_AUTOPAY_SETUP : "UPI ऑटोपे सेटअप",
+  WATCH_VIDEO_FOR_HELP : "मदद के लिए वीडियो देखें",
+  PAYMENT_PENDING_SOFT_NUDGE : "बकाया सीमा जल्द ही पूरी हो जाएगी. नॉन-स्टॉप सवारी का आनंद लेने के लिए बकाया चुकाएँ"
 }
