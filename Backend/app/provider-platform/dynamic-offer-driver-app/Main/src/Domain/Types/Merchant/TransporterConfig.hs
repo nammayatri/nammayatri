@@ -91,7 +91,9 @@ data TransporterConfigD u = TransporterConfig
     specialZoneBookingOtpExpiry :: Int,
     isPlanMandatory :: Bool,
     freeTrialDays :: Int,
-    openMarketUnBlocked :: Bool
+    openMarketUnBlocked :: Bool,
+    cacheOfferListByDriverId :: Bool,
+    useOfferListCache :: Bool
   }
   deriving (Generic, Show)
 
