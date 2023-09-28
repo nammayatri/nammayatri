@@ -885,5 +885,7 @@ const kannadaStrings = {
   AUTOPAY_SETUP_FAILED : "ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್ ವಿಫಲವಾಗಿದೆ!",
   ONE_TIME_REGISTERATION : "ಒಂದು ಬಾರಿ ನೋಂದಣಿ",
   CLEARANCE_AND_REGISTERATION : "ತೆರವು + ನೋಂದಣಿ",
-  UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್"
+  UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್",
+  WATCH_VIDEO_FOR_HELP : "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ",
+  PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ"
 }

@@ -852,5 +852,7 @@ const mlStrings = {
   AUTOPAY_SETUP_FAILED : "ഓട്ടോപേ സജ്ജീകരണം പരാജയപ്പെട്ടു!",
   ONE_TIME_REGISTERATION : "ഒറ്റത്തവണ രജിസ്ട്രേഷൻ",
   CLEARANCE_AND_REGISTERATION : "ക്ലിയറൻസ് + രജിസ്ട്രേഷൻ",
-  UPI_AUTOPAY_SETUP : "UPI ഓട്ടോപേ സെറ്റപ്പ്"
+  UPI_AUTOPAY_SETUP : "UPI ഓട്ടോപേ സെറ്റപ്പ്",
+  WATCH_VIDEO_FOR_HELP : "സഹായത്തിനായി വീഡിയോ കാണുക",
+  PAYMENT_PENDING_SOFT_NUDGE : "കുടിശ്ശിക പരിധി ഉടൻ എത്തും.നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ കുടിശ്ശിക മായ്ക്കുക"
 }

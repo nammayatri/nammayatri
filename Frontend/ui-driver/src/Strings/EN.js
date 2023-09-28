@@ -913,5 +913,7 @@ const englishStrings = {
   AUTOPAY_SETUP_FAILED : "Autopay Setup Failed!",
   ONE_TIME_REGISTERATION : "One time registration",
   CLEARANCE_AND_REGISTERATION : "Clearance + Registration",
-  UPI_AUTOPAY_SETUP : "UPI Autopay Setup"
+  UPI_AUTOPAY_SETUP : "UPI Autopay Setup",
+  WATCH_VIDEO_FOR_HELP : "Watch video for help",
+  PAYMENT_PENDING_SOFT_NUDGE : "Dues limit will be reached soon. Clear dues to enjoy non-stop rides"
 } 
