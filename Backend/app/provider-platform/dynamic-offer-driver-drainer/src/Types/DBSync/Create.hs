@@ -6,7 +6,6 @@ import EulerHS.Prelude
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
-import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
@@ -79,7 +78,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
@@ -88,7 +86,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 data DBCreateObject
   = BapMetadataObject BapMetadata.BapMetadata
   | BookingObject Booking.Booking
-  | BookingLocationObject BookingLocation.BookingLocation
   | BookingCancellationReasonObject BookingCancellationReason.BookingCancellationReason
   | BusinessEventObject BusinessEvent.BusinessEvent
   | CallStatusObject CallStatus.CallStatus
@@ -153,7 +150,6 @@ data DBCreateObject
   | RideDetailsObject RideDetails.RideDetails
   | RiderDetailsObject RiderDetails.RiderDetails
   | SearchRequestObject SearchRequest.SearchRequest
-  | SearchReqLocationObject SearchReqLocation.SearchReqLocation
   | SearchRequestForDriverObject SearchRequestForDriver.SearchRequestForDriver
   | SearchRequestSpecialZoneObject SearchRequestSpecialZone.SearchRequestSpecialZone
   | SearchTryObject SearchTry.SearchTry
@@ -175,7 +171,6 @@ data DBCreateObject
 modelName :: DBCreateObject -> Text
 modelName (BapMetadataObject _) = "BapMetadata"
 modelName (BookingObject _) = "Booking"
-modelName (BookingLocationObject _) = "BookingLocation"
 modelName (BookingCancellationReasonObject _) = "BookingCancellationReason"
 modelName (BusinessEventObject _) = "BusinessEvent"
 modelName (CallStatusObject _) = "CallStatus"
@@ -240,7 +235,6 @@ modelName (RideObject _) = "Ride"
 modelName (RideDetailsObject _) = "RideDetails"
 modelName (RiderDetailsObject _) = "RiderDetails"
 modelName (SearchRequestObject _) = "SearchRequest"
-modelName (SearchReqLocationObject _) = "SearchReqLocation"
 modelName (SearchRequestForDriverObject _) = "SearchRequestForDriver"
 modelName (SearchRequestSpecialZoneObject _) = "SearchRequestSpecialZone"
 modelName (SearchTryObject _) = "SearchTry"

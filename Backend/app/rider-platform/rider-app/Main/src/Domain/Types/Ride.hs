@@ -17,6 +17,7 @@ module Domain.Types.Ride where
 
 import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -44,6 +45,8 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    fromLocation :: DL.Location,
+    toLocation :: Maybe DL.Location,
     status :: RideStatus,
     driverName :: Text,
     driverRating :: Maybe Centesimal,

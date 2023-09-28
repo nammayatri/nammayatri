@@ -20,8 +20,8 @@ module Domain.Action.UI.Ride
   )
 where
 
-import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity, makeBookingLocationAPIEntity)
 import qualified Domain.Types.Booking.Type as DB
+import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
@@ -52,8 +52,8 @@ data GetDriverLocResp = GetDriverLocResp
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data GetRideStatusResp = GetRideStatusResp
-  { fromLocation :: BookingLocationAPIEntity,
-    toLocation :: Maybe BookingLocationAPIEntity,
+  { fromLocation :: LocationAPIEntity,
+    toLocation :: Maybe LocationAPIEntity,
     ride :: RideAPIEntity,
     customer :: SPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
@@ -127,12 +127,12 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   decRider <- decrypt rider
   return $
     GetRideStatusResp
-      { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
+      { fromLocation = makeLocationAPIEntity booking.fromLocation,
         toLocation = case booking.bookingDetails of
-          DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
+          DB.OneWayDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.RentalDetails _ -> Nothing
-          DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
+          DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
+          DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
         customer = SPerson.makePersonAPIEntity decRider tag,
         driverPosition = mbPos <&> (.currPoint)

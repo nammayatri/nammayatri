@@ -31,6 +31,7 @@ import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as DR
@@ -39,14 +40,16 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, null, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude hiding (foldl', map)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -55,6 +58,8 @@ import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import Storage.Queries.Booking ()
 import Storage.Queries.Instances.DriverInformation ()
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
 
@@ -72,8 +77,20 @@ data DatabaseWith4 table1 table2 table3 table4 f = DatabaseWith4
   }
   deriving (Generic, B.Database be)
 
-create :: MonadFlow m => Ride.Ride -> m ()
-create = createWithKV
+createRide' :: MonadFlow m => Ride -> m ()
+createRide' = createWithKV
+
+create :: MonadFlow m => Ride -> m ()
+create ride = do
+  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
+  _ <- whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
+  createRide' ride
+
+createRide :: MonadFlow m => Ride -> m ()
+createRide ride = do
+  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
+  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
+  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
 
 findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
@@ -444,6 +461,16 @@ findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ S
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
+    mappings <- QLM.findByEntityId id
+    let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+        toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
+
+    when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+    toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
     tUrl <- parseBaseUrl trackingUrl
     pure $
       Just

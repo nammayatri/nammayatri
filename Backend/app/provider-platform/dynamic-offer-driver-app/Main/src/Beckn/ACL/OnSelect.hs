@@ -71,7 +71,7 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation
+  let toLocation = dReq.searchRequest.toLocation -- have to take last or all ?
   OS.FulfillmentInfo
     { id = quote.estimateId.getId,
       start =

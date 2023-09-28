@@ -27,7 +27,7 @@ data SearchRequestT f = SearchRequestT
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     riderId :: B.C f Text,
-    fromLocationId :: B.C f Text,
+    fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     distance :: B.C f (Maybe Centesimal),
     maxDistance :: B.C f (Maybe Centesimal),

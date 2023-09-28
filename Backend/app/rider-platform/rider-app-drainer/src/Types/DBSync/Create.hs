@@ -8,7 +8,6 @@ import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
-import qualified "rider-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "rider-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "rider-app" Storage.Beam.CallStatus as CallStatus
 import qualified "rider-app" Storage.Beam.CallbackRequest as CallbackRequest
@@ -43,7 +42,6 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "rider-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -53,7 +51,6 @@ data DBCreateObject
   = AppInstallsObject AppInstalls.AppInstalls
   | BlackListOrgObject BlackListOrg.BlackListOrg
   | BookingObject Booking.Booking
-  | BookingLocationObject BookingLocation.BookingLocation
   | BookingCancellationReasonObject BookingCancellationReason.BookingCancellationReason
   | CallbackRequestObject CallbackRequest.CallbackRequest
   | CallStatusObject CallStatus.CallStatus
@@ -86,7 +83,6 @@ data DBCreateObject
   | RideObject Ride.Ride
   | SavedReqLocationObject SavedReqLocation.SavedReqLocation
   | SearchRequestObject SearchRequest.SearchRequest
-  | SearchReqLocationObject SearchReqLocation.SearchReqLocation
   | SosObject Sos.Sos
   | SpecialZoneQuoteObject SpecialZoneQuote.SpecialZoneQuote
   | TripTermsObject TripTerms.TripTerms
@@ -100,7 +96,6 @@ modelName :: DBCreateObject -> Text
 modelName (AppInstallsObject _) = "AppInstalls"
 modelName (BlackListOrgObject _) = "BlackListOrg"
 modelName (BookingObject _) = "Booking"
-modelName (BookingLocationObject _) = "BookingLocation"
 modelName (BookingCancellationReasonObject _) = "BookingCancellationReason"
 modelName (CallbackRequestObject _) = "CallbackRequest"
 modelName (CallStatusObject _) = "CallStatus"
@@ -133,7 +128,6 @@ modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (SavedReqLocationObject _) = "SavedReqLocation"
 modelName (SearchRequestObject _) = "SearchRequest"
-modelName (SearchReqLocationObject _) = "SearchReqLocation"
 modelName (SosObject _) = "Sos"
 modelName (SpecialZoneQuoteObject _) = "SpecialZoneQuote"
 modelName (TripTermsObject _) = "TripTerms"

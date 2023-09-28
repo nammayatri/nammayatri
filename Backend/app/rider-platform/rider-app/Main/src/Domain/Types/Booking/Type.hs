@@ -16,7 +16,7 @@
 module Domain.Types.Booking.Type where
 
 import Data.Aeson
-import qualified Domain.Types.Booking.BookingLocation as DLoc
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
@@ -67,7 +67,7 @@ data Booking = Booking
     primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
-    fromLocation :: DLoc.BookingLocation,
+    fromLocation :: DLoc.Location,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -89,13 +89,13 @@ data BookingDetails
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: DLoc.Location,
     distance :: HighPrecMeters
   }
   deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: DLoc.Location,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
   }

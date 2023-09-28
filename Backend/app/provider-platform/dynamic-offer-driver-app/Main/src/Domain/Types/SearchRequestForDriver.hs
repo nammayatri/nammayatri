@@ -18,10 +18,10 @@ module Domain.Types.SearchRequestForDriver where
 import qualified Domain.Types.BapMetadata as DSM
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -92,8 +92,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: DLoc.Location, -- we need to show all requests or last one ?
     distance :: Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,

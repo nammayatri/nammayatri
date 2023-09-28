@@ -176,7 +176,9 @@ library
       Domain.Types.HotSpot
       Domain.Types.HotSpotConfig
       Domain.Types.Issue
+      Domain.Types.Location
       Domain.Types.LocationAddress
+      Domain.Types.LocationMapping
       Domain.Types.Maps.DirectionsCache
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
@@ -211,6 +213,7 @@ library
       SharedLogic.Confirm
       SharedLogic.DirectionsCache
       SharedLogic.GoogleTranslate
+      SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
@@ -241,6 +244,8 @@ library
       Storage.Beam.Geometry
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.Location
+      Storage.Beam.LocationMapping
       Storage.Beam.Maps.DirectionsCache
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
@@ -304,6 +309,8 @@ library
       Storage.Queries.Geometry
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
       Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant

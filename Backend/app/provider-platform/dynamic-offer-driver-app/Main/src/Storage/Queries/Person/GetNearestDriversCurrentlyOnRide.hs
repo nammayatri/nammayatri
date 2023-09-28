@@ -19,11 +19,11 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified Storage.Queries.Booking.BookingLocation.Internal as Int
 import qualified Storage.Queries.Booking.Internal as Int
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.DriverQuote.Internal as Int
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
@@ -60,7 +60,7 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
   drivers <- Int.getDrivers vehicles
   driverQuote <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers
   bookingInfo <- Int.getBookingInfo driverQuote
-  bookingLocation <- Int.getBookingLocs (bookingInfo <&> (.toLocation.id))
+  bookingLocation <- QL.getBookingLocs (bookingInfo <&> (.toLocation.id))
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)

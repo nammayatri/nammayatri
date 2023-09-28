@@ -33,13 +33,13 @@ import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -158,7 +158,7 @@ handler merchant sReq = do
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
-        _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
+        _ <- QSearchRequestSpecialZone.createSearchRequestSpecialZone searchRequestSpecialZone
         Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
         now <- getCurrentTime
         let listOfVehicleVariants = listVehicleVariantHelper farePolicies
@@ -215,8 +215,8 @@ handler merchant sReq = do
         Just dp -> return (estimate, dp)
 
     buildEstimatesInfos ::
-      DLoc.SearchReqLocation ->
-      DLoc.SearchReqLocation ->
+      DLoc.Location ->
+      DLoc.Location ->
       DriverPoolConfig ->
       DistanceAndDuration ->
       [DFP.FullFarePolicy] ->
@@ -232,6 +232,7 @@ handler merchant sReq = do
           return []
         else do
           driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing
+          logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
           driverPoolCurrentlyOnRide <-
             if null driverPoolNotOnRide
               then do
@@ -253,7 +254,7 @@ handler merchant sReq = do
 
           forM_ estimates $ \est -> do
             triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
-          _ <- QSR.create searchReq
+          _ <- QSR.createDSReq searchReq
           QEst.createMany estimates
 
           let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
@@ -298,8 +299,8 @@ buildSearchRequest ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  DLoc.Location ->
   Meters ->
   Seconds ->
   Maybe Text ->
@@ -327,8 +328,8 @@ buildSearchRequestSpecialZone ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  DLoc.Location ->
   Meters ->
   Seconds ->
   DFareProduct.Area ->
@@ -378,7 +379,7 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
+mkQuoteInfo :: DLoc.Location -> DLoc.Location -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
 mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
       toLocation = Maps.getCoordinates toLoc
@@ -416,7 +417,7 @@ validateRequest merchantId sReq = do
             maybe (pure True) (`someGeometriesContain` regions) mbDestination
       pure $ originServiceable && destinationServiceable
 
-buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   updAddress <- case address of
     Just loc
@@ -439,16 +440,19 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
   let createdAt = now
       updatedAt = now
   pure $
-    DLoc.SearchReqLocation
-      { areaCode = (address >>= (.area_code)) <|> updAddress.areaCode,
-        street = (address >>= (.street)) <|> updAddress.street,
-        door = (address >>= (.door)) <|> updAddress.door,
-        city = (address >>= (.city)) <|> updAddress.city,
-        state = (address >>= (.state)) <|> updAddress.state,
-        country = (address >>= (.country)) <|> updAddress.country,
-        building = (address >>= (.building)) <|> updAddress.building,
-        area = (address >>= (.ward)) <|> updAddress.area,
-        full_address = (address >>= decodeAddress) <|> updAddress.full_address,
+    DLoc.Location
+      { address =
+          DLoc.LocationAddress
+            { areaCode = (address >>= (.area_code)) <|> updAddress.areaCode,
+              street = (address >>= (.street)) <|> updAddress.street,
+              door = (address >>= (.door)) <|> updAddress.door,
+              city = (address >>= (.city)) <|> updAddress.city,
+              state = (address >>= (.state)) <|> updAddress.state,
+              country = (address >>= (.country)) <|> updAddress.country,
+              building = (address >>= (.building)) <|> updAddress.building,
+              area = (address >>= (.ward)) <|> updAddress.area,
+              fullAddress = (address >>= decodeAddress) <|> updAddress.full_address
+            },
         ..
       }
 

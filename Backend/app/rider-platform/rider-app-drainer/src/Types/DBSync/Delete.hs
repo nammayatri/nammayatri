@@ -10,7 +10,6 @@ import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
-import qualified "rider-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "rider-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "rider-app" Storage.Beam.CallStatus as CallStatus
 import qualified "rider-app" Storage.Beam.CallbackRequest as CallbackRequest
@@ -44,7 +43,6 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "rider-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -55,7 +53,6 @@ data DeleteModel
   = AppInstallsDelete
   | BlackListOrgDelete
   | BookingDelete
-  | BookingLocationDelete
   | BookingCancellationReasonDelete
   | CallbackRequestDelete
   | CallStatusDelete
@@ -87,7 +84,6 @@ data DeleteModel
   | RideDelete
   | SavedReqLocationDelete
   | SearchRequestDelete
-  | SearchReqLocationDelete
   | SosDelete
   | SpecialZoneQuoteDelete
   | TripTermsDelete
@@ -101,7 +97,6 @@ getTagDelete :: DeleteModel -> Text
 getTagDelete AppInstallsDelete = "AppInstallsOptions"
 getTagDelete BlackListOrgDelete = "BlackListOrgOptions"
 getTagDelete BookingDelete = "BookingOptions"
-getTagDelete BookingLocationDelete = "BookingLocationOptions"
 getTagDelete BookingCancellationReasonDelete = "BookingCancellationReasonOptions"
 getTagDelete CallbackRequestDelete = "CallbackRequestOptions"
 getTagDelete CallStatusDelete = "CallStatusOptions"
@@ -133,7 +128,6 @@ getTagDelete RentalSlabDelete = "RentalSlabOptions"
 getTagDelete RideDelete = "RideOptions"
 getTagDelete SavedReqLocationDelete = "SavedReqLocationOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
-getTagDelete SearchReqLocationDelete = "SearchReqLocationOptions"
 getTagDelete SosDelete = "SosOptions"
 getTagDelete SpecialZoneQuoteDelete = "SpecialZoneQuoteOptions"
 getTagDelete TripTermsDelete = "TripTermsOptions"
@@ -146,7 +140,6 @@ parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
 parseTagDelete "BlackListOrgOptions" = return BlackListOrgDelete
 parseTagDelete "BookingOptions" = return BookingDelete
-parseTagDelete "BookingLocationOptions" = return BookingLocationDelete
 parseTagDelete "BookingCancellationReasonOptions" = return BookingCancellationReasonDelete
 parseTagDelete "CallbackRequestOptions" = return CallbackRequestDelete
 parseTagDelete "CallStatusOptions" = return CallStatusDelete
@@ -178,7 +171,6 @@ parseTagDelete "RentalSlabOptions" = return RentalSlabDelete
 parseTagDelete "RideOptions" = return RideDelete
 parseTagDelete "SavedReqLocationOptions" = return SavedReqLocationDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
-parseTagDelete "SearchReqLocationOptions" = return SearchReqLocationDelete
 parseTagDelete "SosOptions" = return SosDelete
 parseTagDelete "SpecialZoneQuoteOptions" = return SpecialZoneQuoteDelete
 parseTagDelete "TripTermsOptions" = return TripTermsDelete
@@ -192,7 +184,6 @@ data DBDeleteObject
   = AppInstallsDeleteOptions DeleteModel (Where Postgres AppInstalls.AppInstallsT)
   | BlackListOrgDeleteOptions DeleteModel (Where Postgres BlackListOrg.BlackListOrgT)
   | BookingDeleteOptions DeleteModel (Where Postgres Booking.BookingT)
-  | BookingLocationDeleteOptions DeleteModel (Where Postgres BookingLocation.BookingLocationT)
   | BookingCancellationReasonDeleteOptions DeleteModel (Where Postgres BookingCancellationReason.BookingCancellationReasonT)
   | CallbackRequestDeleteOptions DeleteModel (Where Postgres CallbackRequest.CallbackRequestT)
   | CallStatusDeleteOptions DeleteModel (Where Postgres CallStatus.CallStatusT)
@@ -224,7 +215,6 @@ data DBDeleteObject
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | SavedReqLocationDeleteOptions DeleteModel (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
-  | SearchReqLocationDeleteOptions DeleteModel (Where Postgres SearchReqLocation.SearchReqLocationT)
   | SosDeleteOptions DeleteModel (Where Postgres Sos.SosT)
   | SpecialZoneQuoteDeleteOptions DeleteModel (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsDeleteOptions DeleteModel (Where Postgres TripTerms.TripTermsT)
@@ -250,9 +240,6 @@ instance FromJSON DBDeleteObject where
       BookingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BookingDeleteOptions deleteModel whereClause
-      BookingLocationDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ BookingLocationDeleteOptions deleteModel whereClause
       BookingCancellationReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BookingCancellationReasonDeleteOptions deleteModel whereClause
@@ -346,9 +333,6 @@ instance FromJSON DBDeleteObject where
       SearchRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchRequestDeleteOptions deleteModel whereClause
-      SearchReqLocationDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ SearchReqLocationDeleteOptions deleteModel whereClause
       SosDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SosDeleteOptions deleteModel whereClause

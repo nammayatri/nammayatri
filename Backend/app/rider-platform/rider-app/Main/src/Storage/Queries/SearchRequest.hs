@@ -15,10 +15,15 @@
 
 module Storage.Queries.SearchRequest where
 
+import Data.Ord
+import qualified Domain.Types.Location as DL
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
+import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -27,17 +32,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Sequelize as Se
+import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
-import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-createDSReq :: MonadFlow m => SearchRequest -> m ()
-createDSReq = createWithKV
+createDSReq' :: MonadFlow m => SearchRequest -> m ()
+createDSReq' = createWithKV
 
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
-  _ <- QSRL.create dsReq.fromLocation
-  _ <- traverse_ QSRL.create dsReq.toLocation
-  createDSReq dsReq
+  _ <- whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
+  _ <- whenJust dsReq.toLocation $ \location -> processLocation location
+  createDSReq' dsReq
+  where
+    processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+createDSReq :: MonadFlow m => SearchRequest -> m ()
+createDSReq searchRequest = do
+  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST) searchRequest.toLocation
+  void $ QLM.create fromLocationMap
+  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
+  create searchRequest
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -78,8 +96,27 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
-    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequest for fromLocationId:" <> show fromLocationId)
-    tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
+    mappings <- QLM.findByEntityId id
+    (fl, tl) <-
+      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+        then do
+          logInfo "Accessing Search Request Location Table"
+          pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id
+          dropLoc <- upsertToLocationAndMappingForOldData toLocationId id
+          return (pickupLoc, dropLoc)
+        else do
+          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
+          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+          tl <-
+            if null toLocationMappings
+              then return Nothing
+              else do
+                let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+                QL.findById toLocMap.locationId
+          return (fl, tl)
     pure $
       Just
         SearchRequest
@@ -113,7 +150,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.startTime = startTime,
         BeamSR.validTill = validTill,
         BeamSR.riderId = getId riderId,
-        BeamSR.fromLocationId = getId fromLocation.id,
+        BeamSR.fromLocationId = Just $ getId fromLocation.id,
         BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
         BeamSR.distance = getHighPrecMeters <$> distance,
         BeamSR.maxDistance = getHighPrecMeters <$> maxDistance,
@@ -131,3 +168,30 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
         BeamSR.createdAt = createdAt
       }
+
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+
+buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
+buildLocation DSSL.SearchReqLocation {..} = do
+  return $
+    DL.Location
+      { id = cast id,
+        ..
+      }
+
+upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
+upsertFromLocationAndMappingForOldData locationId searchRequestId = do
+  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Search Request Table")
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Search Request Location Table for SearchRequestId : " <> searchRequestId)) buildLocation loc
+  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id searchRequestId DLM.SEARCH_REQUEST
+  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
+  return pickupLoc
+
+upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m (Maybe DL.Location)
+upsertToLocationAndMappingForOldData toLocationId searchReqId = do
+  tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
+  dropLocation <- maybe (pure Nothing) (fmap Just . buildLocation) tl
+  whenJust dropLocation $ \dropLoc -> do
+    toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id searchReqId DLM.SEARCH_REQUEST
+    void $ QL.create dropLoc >> QLM.create toLocationMapping
+  return dropLocation

@@ -16,7 +16,7 @@ module Domain.Action.Beckn.OnInit where
 
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.External.Encryption (decrypt)
@@ -50,8 +50,8 @@ data OnInitRes = OnInitRes
     fulfillmentId :: Maybe Text,
     bppId :: Text,
     bppUrl :: BaseUrl,
-    fromLocation :: DBL.BookingLocation,
-    mbToLocation :: Maybe DBL.BookingLocation,
+    fromLocation :: DL.Location,
+    mbToLocation :: Maybe DL.Location,
     estimatedTotalFare :: Money,
     estimatedFare :: Money,
     riderPhoneCountryCode :: Text,

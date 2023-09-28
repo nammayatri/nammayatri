@@ -9,7 +9,6 @@ import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
-import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
@@ -82,7 +81,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
@@ -94,7 +92,6 @@ import Utils.Parse
 data UpdateModel
   = BapMetadataUpdate
   | BookingUpdate
-  | BookingLocationUpdate
   | BookingCancellationReasonUpdate
   | BusinessEventUpdate
   | CallStatusUpdate
@@ -160,7 +157,6 @@ data UpdateModel
   | RideDetailsUpdate
   | RiderDetailsUpdate
   | SearchRequestUpdate
-  | SearchReqLocationUpdate
   | SearchRequestForDriverUpdate
   | SearchRequestSpecialZoneUpdate
   | SearchTryUpdate
@@ -178,7 +174,6 @@ data UpdateModel
 getTagUpdate :: UpdateModel -> Text
 getTagUpdate BapMetadataUpdate = "BapMetadataOptions"
 getTagUpdate BookingUpdate = "BookingOptions"
-getTagUpdate BookingLocationUpdate = "BookingLocationOptions"
 getTagUpdate BookingCancellationReasonUpdate = "BookingCancellationReasonOptions"
 getTagUpdate BusinessEventUpdate = "BusinessEventOptions"
 getTagUpdate CallStatusUpdate = "CallStatusOptions"
@@ -244,7 +239,6 @@ getTagUpdate RideUpdate = "RideOptions"
 getTagUpdate RideDetailsUpdate = "RideDetailsOptions"
 getTagUpdate RiderDetailsUpdate = "RiderDetailsOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
-getTagUpdate SearchReqLocationUpdate = "SearchReqLocationOptions"
 getTagUpdate SearchRequestForDriverUpdate = "SearchRequestForDriverOptions"
 getTagUpdate SearchRequestSpecialZoneUpdate = "SearchRequestSpecialZoneOptions"
 getTagUpdate SearchTryUpdate = "SearchTryOptions"
@@ -261,7 +255,6 @@ getTagUpdate GoHomeConfigUpdate = "GoHomeConfigOptions"
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
 parseTagUpdate "BookingOptions" = return BookingUpdate
-parseTagUpdate "BookingLocationOptions" = return BookingLocationUpdate
 parseTagUpdate "BookingCancellationReasonOptions" = return BookingCancellationReasonUpdate
 parseTagUpdate "BusinessEventOptions" = return BusinessEventUpdate
 parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
@@ -327,7 +320,6 @@ parseTagUpdate "RideOptions" = return RideUpdate
 parseTagUpdate "RideDetailsOptions" = return RideDetailsUpdate
 parseTagUpdate "RiderDetailsOptions" = return RiderDetailsUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
-parseTagUpdate "SearchReqLocationOptions" = return SearchReqLocationUpdate
 parseTagUpdate "SearchRequestForDriverOptions" = return SearchRequestForDriverUpdate
 parseTagUpdate "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneUpdate
 parseTagUpdate "SearchTryOptions" = return SearchTryUpdate
@@ -345,7 +337,6 @@ parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "
 data DBUpdateObject
   = BapMetadataOptions UpdateModel [Set Postgres BapMetadata.BapMetadataT] (Where Postgres BapMetadata.BapMetadataT)
   | BookingOptions UpdateModel [Set Postgres Booking.BookingT] (Where Postgres Booking.BookingT)
-  | BookingLocationOptions UpdateModel [Set Postgres BookingLocation.BookingLocationT] (Where Postgres BookingLocation.BookingLocationT)
   | BookingCancellationReasonOptions UpdateModel [Set Postgres BookingCancellationReason.BookingCancellationReasonT] (Where Postgres BookingCancellationReason.BookingCancellationReasonT)
   | BusinessEventOptions UpdateModel [Set Postgres BusinessEvent.BusinessEventT] (Where Postgres BusinessEvent.BusinessEventT)
   | CallStatusOptions UpdateModel [Set Postgres CallStatus.CallStatusT] (Where Postgres CallStatus.CallStatusT)
@@ -411,7 +402,6 @@ data DBUpdateObject
   | RideDetailsOptions UpdateModel [Set Postgres RideDetails.RideDetailsT] (Where Postgres RideDetails.RideDetailsT)
   | RiderDetailsOptions UpdateModel [Set Postgres RiderDetails.RiderDetailsT] (Where Postgres RiderDetails.RiderDetailsT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
-  | SearchReqLocationOptions UpdateModel [Set Postgres SearchReqLocation.SearchReqLocationT] (Where Postgres SearchReqLocation.SearchReqLocationT)
   | SearchRequestForDriverOptions UpdateModel [Set Postgres SearchRequestForDriver.SearchRequestForDriverT] (Where Postgres SearchRequestForDriver.SearchRequestForDriverT)
   | SearchRequestSpecialZoneOptions UpdateModel [Set Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT] (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryOptions UpdateModel [Set Postgres SearchTry.SearchTryT] (Where Postgres SearchTry.SearchTryT)
@@ -441,9 +431,6 @@ instance FromJSON DBUpdateObject where
       BookingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BookingOptions updateModel updVals whereClause
-      BookingLocationUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ BookingLocationOptions updateModel updVals whereClause
       BookingCancellationReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BookingCancellationReasonOptions updateModel updVals whereClause
@@ -639,9 +626,6 @@ instance FromJSON DBUpdateObject where
       SearchRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SearchRequestOptions updateModel updVals whereClause
-      SearchReqLocationUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ SearchReqLocationOptions updateModel updVals whereClause
       SearchRequestForDriverUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SearchRequestForDriverOptions updateModel updVals whereClause

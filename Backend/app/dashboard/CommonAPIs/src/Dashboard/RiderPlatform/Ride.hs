@@ -65,8 +65,8 @@ data ShareRideInfoRes = ShareRideInfoRes
     rideEndTime :: Maybe UTCTime,
     userFirstName :: Maybe Text,
     userLastName :: Maybe Text,
-    fromLocation :: BookingLocation,
-    toLocation :: Maybe BookingLocation
+    fromLocation :: Location,
+    toLocation :: Maybe Location
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -77,8 +77,8 @@ data RideInfoRes = RideInfoRes
     customerName :: Maybe Text,
     customerPhoneNo :: Maybe Text,
     rideOtp :: Text,
-    customerPickupLocation :: BookingLocation,
-    customerDropLocation :: Maybe BookingLocation,
+    customerPickupLocation :: Location,
+    customerDropLocation :: Maybe Location,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     driverRegisteredAt :: UTCTime,
@@ -116,8 +116,8 @@ data RideStatus
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data BookingLocation = BookingLocation
-  { id :: Id BookingLocation,
+data Location = Location
+  { id :: Id Location,
     lat :: Double,
     lon :: Double,
     address :: LocationAddress,
@@ -250,8 +250,8 @@ data RideInfo = RideInfo
     vehicleNo :: Text,
     status :: BookingStatus,
     rideCreatedAt :: UTCTime,
-    pickupLocation :: BookingLocation,
-    dropLocation :: Maybe BookingLocation,
+    pickupLocation :: Location,
+    dropLocation :: Maybe Location,
     fare :: Maybe Money,
     personId :: Id Customer,
     classification :: Ticket.Classification

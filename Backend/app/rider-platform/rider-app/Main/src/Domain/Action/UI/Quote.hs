@@ -24,12 +24,11 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote (QuoteAPIEntity)
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR
-import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -51,8 +50,8 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
 data GetQuotesRes = GetQuotesRes
-  { fromLocation :: SearchReqLocationAPIEntity,
-    toLocation :: Maybe SearchReqLocationAPIEntity,
+  { fromLocation :: DL.LocationAPIEntity,
+    toLocation :: Maybe DL.LocationAPIEntity,
     quotes :: [OfferRes],
     estimates :: [EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity]
@@ -85,8 +84,8 @@ getQuotes searchRequestId = do
   paymentMethods <- getPaymentMethods searchRequest
   return $
     GetQuotesRes
-      { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
+      { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
+        toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
         quotes = offers,
         estimates,
         paymentMethods

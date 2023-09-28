@@ -21,8 +21,8 @@ import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Data.Maybe
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 
@@ -64,17 +64,22 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-makeLocation :: DLoc.SearchReqLocation -> Search.Location
-makeLocation DLoc.SearchReqLocation {..} =
+makeLocation :: DLoc.Location -> Search.Location
+makeLocation DLoc.Location {..} =
   Search.Location
     { gps = Search.Gps {..},
       address =
         Just
           Search.Address
-            { area_code = areaCode,
+            { area_code = address.areaCode,
               locality = Nothing,
-              ward = area,
-              ..
+              ward = address.area,
+              state = address.state,
+              country = address.country,
+              building = address.building,
+              street = address.street,
+              city = address.city,
+              door = address.door
             }
     }
 

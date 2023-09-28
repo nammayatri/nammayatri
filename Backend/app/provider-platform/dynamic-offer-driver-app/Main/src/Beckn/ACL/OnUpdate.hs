@@ -158,7 +158,7 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
           RideAssignedOU.EndInfo
             { location =
                 RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon}
+                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon} -- assuming locations will always be in correct order in list
                   }
             },
         agent,

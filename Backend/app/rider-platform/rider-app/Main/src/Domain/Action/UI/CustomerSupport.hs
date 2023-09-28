@@ -26,7 +26,7 @@ module Domain.Action.UI.CustomerSupport
 where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
+import qualified Domain.Types.Location as DBLoc
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -52,8 +52,8 @@ data OrderDetails = OrderDetails
     updatedAt :: UTCTime,
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
-    fromLocation :: DBLoc.BookingLocationAPIEntity,
-    toLocation :: Maybe DBLoc.BookingLocationAPIEntity,
+    fromLocation :: DBLoc.LocationAPIEntity,
+    toLocation :: Maybe DBLoc.LocationAPIEntity,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,
     rideBooking :: DRB.BookingAPIEntity
@@ -180,8 +180,8 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
             updatedAt = booking.updatedAt,
             startTime = booking.startTime,
             endTime = Nothing,
-            fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
-            toLocation = DBLoc.makeBookingLocationAPIEntity <$> mbToLocation,
+            fromLocation = DBLoc.makeLocationAPIEntity booking.fromLocation,
+            toLocation = DBLoc.makeLocationAPIEntity <$> mbToLocation,
             travellerName = firstName <> lastName,
             travellerPhone = decMobNum,
             rideBooking = rbStatus

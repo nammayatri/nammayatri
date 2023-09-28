@@ -218,6 +218,8 @@ library
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
+      Domain.Types.Location
+      Domain.Types.LocationMapping
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
@@ -298,6 +300,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
+      SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MessageBuilder
       SharedLogic.Payment
@@ -359,6 +362,8 @@ library
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfig
+      Storage.Beam.Location
+      Storage.Beam.LocationMapping
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.MediaFile
@@ -428,7 +433,6 @@ library
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
-      Storage.Queries.Booking.BookingLocation.Internal
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
@@ -485,6 +489,8 @@ library
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfig
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile

@@ -19,7 +19,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as 
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
-import qualified Domain.Types.Booking.BookingLocation as Domain
+import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Domain
 import Environment
@@ -64,8 +64,8 @@ bookingInfo merchantShortId otpCode = do
     convertVehicleVariant Domain.TAXI = Common.TAXI
     convertVehicleVariant Domain.TAXI_PLUS = Common.TAXI_PLUS
 
-    buildBookingLocation Domain.BookingLocation {..} =
-      Common.BookingLocation
+    buildBookingLocation Domain.Location {..} =
+      Common.Location
         { address = buildLocationAddress address,
           id = cast id,
           ..

@@ -14,10 +14,10 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
@@ -32,8 +32,8 @@ data SearchRequest = SearchRequest
     startTime :: UTCTime,
     validTill :: UTCTime,
     riderId :: Id DP.Person,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: Maybe DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: Maybe DLoc.Location,
     distance :: Maybe HighPrecMeters,
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,

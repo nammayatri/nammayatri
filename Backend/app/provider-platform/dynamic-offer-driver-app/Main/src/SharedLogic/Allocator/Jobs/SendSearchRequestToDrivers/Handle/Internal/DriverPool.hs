@@ -195,7 +195,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
                 goHomeCfg = goHomeConfig,
                 variant = Just searchTry.vehicleVariant,
                 fromLocation = searchReq.fromLocation,
-                toLocation = searchReq.toLocation,
+                toLocation = searchReq.toLocation, -- last or all ?
                 merchantId = searchReq.providerId
               }
 

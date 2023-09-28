@@ -16,45 +16,65 @@
 module Storage.Queries.Booking where
 
 import Control.Applicative
-import Data.Time (addUTCTime)
+import Data.Ord
 import qualified Database.Beam as B
+import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
+import qualified Domain.Types.Location as DL
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Quote ()
 import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 
-createBooking :: MonadFlow m => Booking -> m ()
-createBooking = createWithKV
+createBooking' :: MonadFlow m => Booking -> m ()
+createBooking' = createWithKV
 
 create :: MonadFlow m => Booking -> m ()
 create dBooking = do
-  _ <- QBBL.create (dBooking.fromLocation)
+  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
-    OneWayDetails toLoc -> void $ QBBL.create toLoc.toLocation
+    OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
     RentalDetails _ -> pure ()
-    DriverOfferDetails toLoc -> void $ QBBL.create toLoc.toLocation
-    OneWaySpecialZoneDetails toLoc -> void $ QBBL.create toLoc.toLocation
-  void $ createBooking dBooking
+    DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
+    OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
+  void $ createBooking' dBooking
+
+createBooking :: MonadFlow m => Booking -> m ()
+createBooking booking = do
+  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
+  mbToLocationMap <- case booking.bookingDetails of
+    DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
+    DRB.RentalDetails _ -> return Nothing
+    DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
+    DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
+
+  void $ QLM.create fromLocationMap
+  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
+  create booking
 
 updateStatus :: MonadFlow m => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
@@ -210,18 +230,49 @@ cancelBookings bookingIds now =
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
-    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "fromLocation not found in booking for fromLocationId: " <> show fromLocationId)
+    mappings <- QLM.findByEntityId id
+    (fl, bookingDetails) <-
+      if null mappings
+        then do
+          -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+          logInfo "Accessing Booking Location Table"
+          pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id
+          bookingDetails <- case fareProductType of
+            DFF.ONE_WAY -> do
+              upsertToLocationAndMappingForOldData toLocationId id
+              DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+            DFF.RENTAL -> do
+              qd <- getRentalDetails rentalSlabId
+              case qd of
+                Nothing -> throwError (InternalError "No Rental Details present")
+                Just a -> pure a
+            DFF.DRIVER_OFFER -> do
+              upsertToLocationAndMappingForOldData toLocationId id
+              DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+            DFF.ONE_WAY_SPECIAL_ZONE -> do
+              upsertToLocationAndMappingForOldData toLocationId id
+              DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+          return (pickupLoc, bookingDetails)
+        else do
+          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+          let toLoc = if null toLocationMappings then Nothing else Just $ maximumBy (comparing (.order)) toLocationMappings
+              toLocId = (.locationId.getId) <$> toLoc
+
+          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+          bookingDetails <- case fareProductType of
+            DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
+            DFF.RENTAL -> do
+              qd <- getRentalDetails rentalSlabId
+              case qd of
+                Nothing -> throwError (InternalError "No Rental Details present")
+                Just a -> pure a
+            DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
+            DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+          return (fl, bookingDetails)
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
-    bookingDetails <- case fareProductType of
-      DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-      DFF.RENTAL -> do
-        qd <- getRentalDetails rentalSlabId
-        case qd of
-          Nothing -> throwError (InternalError "No Rental Details present")
-          Just a -> pure a
-      DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-      DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
     pure $
       Just
         Booking
@@ -255,16 +306,16 @@ instance FromTType' BeamB.Booking Booking where
             updatedAt = updatedAt
           }
     where
-      buildOneWayDetails _ = do
-        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+      buildOneWayDetails toLocid = do
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWayBookingDetails
             { toLocation = toLocation,
               distance = distance'
             }
-      buildOneWaySpecialZoneDetails _ = do
-        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
+      buildOneWaySpecialZoneDetails toLocid = do
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWaySpecialZoneBookingDetails
@@ -304,7 +355,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.fulfillmentId = fulfillmentId,
             BeamB.driverId = driverId,
             BeamB.itemId = itemId,
-            BeamB.fromLocationId = getId fromLocation.id,
+            BeamB.fromLocationId = Just $ getId fromLocation.id,
             BeamB.toLocationId = toLocationId,
             BeamB.estimatedFare = realToFrac estimatedFare,
             BeamB.discount = realToFrac <$> discount,
@@ -319,3 +370,28 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }
+
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+
+buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
+buildLocation DBBL.BookingLocation {..} =
+  return $
+    DL.Location
+      { id = cast id,
+        ..
+      }
+
+upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
+upsertFromLocationAndMappingForOldData locationId bookingId = do
+  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING
+  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
+  return pickupLoc
+
+upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m ()
+upsertToLocationAndMappingForOldData toLocationId bookingId = do
+  toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+  dropLoc <- buildLocation toLocation
+  toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING
+  void $ QL.create dropLoc >> QLM.create toLocationMapping
