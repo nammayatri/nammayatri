@@ -14,15 +14,19 @@
 
 module SharedLogic.Payment where
 
+import Data.Time (utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -30,11 +34,12 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
+import Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
-import qualified Tools.Payment as Payment
+import qualified Tools.Payment as TPayment
 
 data MandateOrder = MandateOrder
   { maxAmount :: HighPrecMoney,
@@ -90,7 +95,7 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      createOrderCall = Payment.createOrder merchantId -- api call
+      createOrderCall = TPayment.createOrder merchantId -- api call
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
@@ -115,3 +120,37 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       updatedAt = now,
       createdAt = now
     }
+
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache merchantId req = do
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  if transporterConfig.useOfferListCache
+    then do
+      key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req
+      Hedis.get key >>= \case
+        Just a -> return a
+        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId req
+    else TPayment.offerList merchantId req
+
+cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
+cacheOfferListResponse includeDriverId req resp = do
+  key <- makeOfferListCacheKey includeDriverId req
+  Hedis.setExp key resp 86400
+
+makeOfferListCacheKey :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> m Text
+makeOfferListCacheKey includeDriverId req = do
+  case (req.customer, includeDriverId) of
+    (Just customer, True) -> do
+      return $
+        "OfferList:CId" <> customer.customerId <> ":PId-" <> req.planId <> ":PM-" <> req.paymentMode <> ":n-"
+          <> show req.numOfRides
+          <> ":dt-"
+          <> show (utctDay req.dutyDate)
+          <> ":ft-"
+          <> show (utctDay req.registrationDate)
+    _ ->
+      return $
+        "OfferList:PId-" <> req.planId <> ":PM-" <> req.paymentMode <> ":n-" <> show req.numOfRides <> ":dt-"
+          <> show (utctDay req.dutyDate)
+          <> ":ft-"
+          <> show (utctDay req.registrationDate)

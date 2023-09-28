@@ -443,7 +443,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverId driverId
   transporterConfig_ <- QTC.findByMerchantId plan.merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  offers <- Payment.offerList merchantId =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
+  offers <- SPayment.offerListCache merchantId =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
