@@ -74,6 +74,7 @@ import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
+import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
 import Screens.Handlers (homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
@@ -1254,13 +1255,14 @@ bookingOptionsFlow = do
   action <- UI.bookingOptions
   case action of
     SELECT_CAB state -> do
-      let toSedan = (filter (\item -> item.vehicleVariant == "SEDAN" && item.isSelected) state.data.downgradeOptions) !! 0
-          toHatchBack = (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
-          toTaxi = (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
+      let canDowngradeToSedan = isJust $ (filter (\item -> item.vehicleVariant == "SEDAN" && item.isSelected) state.data.downgradeOptions) !! 0
+          canDowngradeToHatchback = isJust $ (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
+          canDowngradeToTaxi = isJust $ (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-          requiredData = initialData{canDowngradeToSedan = Just (isJust toSedan),canDowngradeToHatchback = Just (isJust toHatchBack) ,canDowngradeToTaxi = Just (isJust toTaxi)}
+          requiredData = initialData{canDowngradeToSedan = Just canDowngradeToSedan,canDowngradeToHatchback = Just canDowngradeToHatchback,canDowngradeToTaxi = Just canDowngradeToTaxi}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
-      modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> BookingOptionsScreenData.initData)
+      modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> BookingOptionsScreenData.initData{data{ downgradeOptions = state.data.downgradeOptions }})
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ data{ vehicleSelected = transformSelectedVehicles state.data.downgradeOptions} })
       driverProfileFlow
     GO_TO_PROFILE -> driverProfileFlow
 
@@ -1514,15 +1516,6 @@ referralScreenFlow = do
                         Just week -> week
                         Nothing -> state.props.selectedWeek
     modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen {props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek }} )
-  if isJust state.data.driverInfo.referralCode then do
-    (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
-    modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen { data { driverPerformance { referrals = getPerformanceres.referrals}}} )
-  else do
-    response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
-    case response of
-      Right (GenerateReferralCodeRes generateReferralCodeRes) -> do
-        modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen { data { driverInfo {referralCode = Just generateReferralCodeRes.referralCode} } } )
-      Left error -> pure unit
   act <- UI.referralScreen
   case act of
     GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN -> homeScreenFlow
@@ -1731,6 +1724,7 @@ homeScreenFlow = do
   getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
   modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+  setValueToLocalStore REFERRALCODE (fromMaybe "" getDriverInfoResp.referralCode)
   let (OrganizationInfo organization) = getDriverInfoResp.organization
   appConfig <- getAppConfig Constants.appConfig
   when appConfig.subscriptionConfig.enableBlocking $ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp)

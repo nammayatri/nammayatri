@@ -583,6 +583,12 @@ type ReferralScreenStateProps = {
   , lastUpdatedAt :: String
 }
 
+type ShareImageConfig = {
+    viewId :: String
+  , code :: String
+  , logoId :: String
+}
+
 -- ################################################ IndividualRideCardState ##################################################
 
 type IndividualRideCardState =
@@ -1737,3 +1743,4 @@ type UpiApps
     , packageName :: String
     , appName :: String
     }
+

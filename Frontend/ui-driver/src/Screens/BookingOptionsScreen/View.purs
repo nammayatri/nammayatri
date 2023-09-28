@@ -14,7 +14,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, ($), (<<<), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width)
-import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
+import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity, getVehicleImage)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -128,7 +128,7 @@ vehicleLogoAndType push state =
         , height WRAP_CONTENT
         ]
         [ imageView
-            [ imageWithFallback $ "ic_suv_ac," <> (getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
+            [ imageWithFallback $ getVehicleImage state.data.vehicleType
             , gravity LEFT
             , height $ V 48
             , width $ V 60

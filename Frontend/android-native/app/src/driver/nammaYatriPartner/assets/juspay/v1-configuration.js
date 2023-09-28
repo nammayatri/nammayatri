@@ -88,6 +88,7 @@ window.getMerchantConfig = function () {
     , "subscriptionConfig" : {
       "enableBlocking" : true,
       "onBoardingSubscription" : true
-    } 
+    }
+    , "referralType" : "LeaderBoard" 
   })
 }
