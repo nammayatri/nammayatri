@@ -914,6 +914,21 @@ export const getPopupObject = function (just, nothing, key){
   return nothing;
 }
 
+export const getPaymentNudgeConfig = function (just, nothing, key){
+  try {
+    var val = JBridge.getFromSharedPrefs(key);
+    if (val == "__failed") {
+      return nothing;
+    } 
+    console.log("zxc console key ", val);
+    console.log("zxc console parsed key ", JSON.parse(val));
+    return just(JSON.parse(val));
+  } catch( e ){
+    console.warn(e);
+  }
+  return nothing;
+}
+
 export const checkPPInitiateStatus = function (cb,services = microapps) {
   if (window.isPPInitiated && checkPPLoadStatus(services)) {
     cb()();

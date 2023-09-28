@@ -913,5 +913,11 @@ const englishStrings = {
   AUTOPAY_SETUP_FAILED : "Autopay Setup Failed!",
   ONE_TIME_REGISTERATION : "One time registration",
   CLEARANCE_AND_REGISTERATION : "Clearance + Registration",
-  UPI_AUTOPAY_SETUP : "UPI Autopay Setup"
+  UPI_AUTOPAY_SETUP : "UPI Autopay Setup",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "I’ll add money in my bank",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Stay on DAILY PER RIDE Plan",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days!",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow!",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides"
 } 

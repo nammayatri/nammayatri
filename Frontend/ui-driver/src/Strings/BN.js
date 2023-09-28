@@ -905,5 +905,11 @@ const bengaliStrings = {
 	AUTOPAY_SETUP_FAILED : "অটোপে সেটআপ ব্যর্থ হয়েছে!",
 	ONE_TIME_REGISTERATION : "একবার নিবন্ধন",
    	CLEARANCE_AND_REGISTERATION : "ক্লিয়ারেন্স + রেজিস্ট্রেশন",
-	UPI_AUTOPAY_SETUP : "UPI অটোপে সেটআপ"
+	UPI_AUTOPAY_SETUP : "UPI অটোপে সেটআপ",
+	I_WILL_ADD_MONEY_IN_MY_BANK : "আমি আমার ব্যাঙ্কে টাকা যোগ করব",
+	STAY_ON_DAILY_PER_RIDE_PLAN : "প্রতিদিন প্রতি রাইড প্ল্যানে থাকুন",
+	FREE_TRIAL_ENDING_IN_2_DAYS :"বিনামূল্যে ট্রায়াল 2 দিনের মধ্যে শেষ!",
+	FREE_TRIAL_ENDING_TOMORROW : "বিনামূল্যে ট্রায়াল আগামীকাল শেষ!",
+	FREE_TRIAL_ENDS_TONIGHT : "বিনামূল্যে ট্রায়াল আজ রাতে শেষ!",
+	JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "রাইডগুলি চালিয়ে যাওয়ার পরিকল্পনায় যোগ দিন"
 }

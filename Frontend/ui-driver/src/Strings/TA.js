@@ -883,5 +883,11 @@ const tamilStrings = {
   AUTOPAY_SETUP_FAILED : "தானாக செலுத்தும் அமைவு தோல்வி!",
   ONE_TIME_REGISTERATION : "ஒரு முறை பதிவு",
   CLEARANCE_AND_REGISTERATION : "அனுமதி + பதிவு",
-  UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு"
+  UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "நான் எனது வங்கியில் பணம் சேர்ப்பேன்",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "தினசரி ஒரு சவாரி திட்டத்தில் இருங்கள்",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"இலவச சோதனை 2 நாட்களில் முடிவடைகிறது",
+  FREE_TRIAL_ENDING_TOMORROW : "இலவச சோதனை நாளை முடிவடைகிறது",
+  FREE_TRIAL_ENDS_TONIGHT : "இலவச சோதனை இன்று இரவு முடிவடைகிறது",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "தொடர்ந்து சவாரி செய்வதற்கான திட்டத்தில் சேரவும்"
 }

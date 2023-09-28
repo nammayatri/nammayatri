@@ -159,6 +159,8 @@ initData = {
         rcActive : false, 
         rcDeactivePopup : false,
         autoPayBanner : NO_SUBSCRIPTION_BANNER,
+        autoPaySet : true,
+        planId : "",
         showAccessbilityPopup : false,
         showRideCompleted : false,
         showRideRating : false,

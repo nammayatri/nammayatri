@@ -852,5 +852,11 @@ const mlStrings = {
   AUTOPAY_SETUP_FAILED : "ഓട്ടോപേ സജ്ജീകരണം പരാജയപ്പെട്ടു!",
   ONE_TIME_REGISTERATION : "ഒറ്റത്തവണ രജിസ്ട്രേഷൻ",
   CLEARANCE_AND_REGISTERATION : "ക്ലിയറൻസ് + രജിസ്ട്രേഷൻ",
-  UPI_AUTOPAY_SETUP : "UPI ഓട്ടോപേ സെറ്റപ്പ്"
+  UPI_AUTOPAY_SETUP : "UPI ഓട്ടോപേ സെറ്റപ്പ്",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "ഞാൻ എന്റെ ബാങ്കിൽ പണം ചേർക്കും",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "ഡെയ്‌ലി പെർ റൈഡ് പ്ലാനിൽ തുടരുക",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"സൗജന്യ ട്രയൽ 2 ദിവസത്തിനുള്ളിൽ അവസാനിക്കും",
+  FREE_TRIAL_ENDING_TOMORROW : "സൗജന്യ ട്രയൽ നാളെ അവസാനിക്കും",
+  FREE_TRIAL_ENDS_TONIGHT : "സൗജന്യ ട്രയൽ ഇന്ന് രാത്രി അവസാനിക്കും",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "റൈഡുകൾ തുടരാനുള്ള പ്ലാനിൽ ചേരുക"
 }

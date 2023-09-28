@@ -307,6 +307,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
+                          | SWITCH_PLAN_HOME_SCREEN HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

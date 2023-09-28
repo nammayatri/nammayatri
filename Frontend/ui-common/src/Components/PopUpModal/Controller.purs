@@ -49,6 +49,7 @@ type Config = {
     cornerRadius :: PTD.Corners,
     margin :: Margin,
     gravity :: Gravity,
+    visibility :: Visibility,
     activeIndex :: Int,
     optionButtonOrientation :: String,
     buttonLayoutMargin :: Margin,
@@ -89,7 +90,8 @@ type TextConfig = {
   margin :: Margin,
   visibility :: Visibility,
   textStyle :: Style,
-  accessibilityHint :: String
+  accessibilityHint :: String,
+  textFromHtml :: String
 }
 type ButtonConfig = {
   background :: String,
@@ -157,6 +159,7 @@ config = {
   , cornerRadius : (PTD.Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
+  , visibility : VISIBLE
   , backgroundColor : Color.black9000
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
@@ -171,7 +174,8 @@ config = {
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
       textStyle : Heading2,
-      accessibilityHint : ""
+      accessibilityHint : "",
+      textFromHtml : ""
     }
   , secondaryText : {
       text : "Text2",
@@ -181,7 +185,8 @@ config = {
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
       textStyle : ParagraphText,
-      accessibilityHint : ""
+      accessibilityHint : "",
+      textFromHtml : ""
     }
   , tipButton: {
      background : Color.white900
@@ -269,7 +274,8 @@ config = {
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
-        accessibilityHint : ""
+        accessibilityHint : "",
+        textFromHtml : ""
       },
       textOpt2 : {
         text : "",
@@ -279,7 +285,8 @@ config = {
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
-        accessibilityHint : ""
+        accessibilityHint : "",
+        textFromHtml : ""
       },
       visibility : false,
       margin : (Margin 0 0 0 0),

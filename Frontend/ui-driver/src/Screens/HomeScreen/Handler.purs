@@ -119,6 +119,9 @@ homeScreen = do
     PostRideFeedback updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ POST_RIDE_FEEDBACK updatedState)
+    SwitchPlan updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SWITCH_PLAN_HOME_SCREEN updatedState)
     ClearPendingDues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)

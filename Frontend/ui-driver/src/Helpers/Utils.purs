@@ -69,7 +69,7 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PaymentPagePayload, PromotionPopupConfig)
+import Services.API (PaymentPagePayload, PromotionPopupConfig, PaymentNudgeConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
@@ -126,6 +126,7 @@ foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) St
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
+foreign import getPaymentNudgeConfig :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PaymentNudgeConfig)
 
 foreign import preFetch :: Effect (Array RenewFile)
 
@@ -145,6 +146,9 @@ generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ 
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
+
+getPaymentNudgeFromSharedPrefs :: KeyStore -> Maybe PaymentNudgeConfig
+getPaymentNudgeFromSharedPrefs key = runFn3 getPaymentNudgeConfig Just Nothing (show key) 
 
 type Period
   = { period :: Int

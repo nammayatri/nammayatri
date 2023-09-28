@@ -912,5 +912,11 @@ const hindiStrings = {
   AUTOPAY_SETUP_FAILED : "ऑटोपे सेटअप विफल!",
   ONE_TIME_REGISTERATION : "एक बार पंजीकरण",
   CLEARANCE_AND_REGISTERATION : "क्लीयरेंस + रजिस्ट्रेशन",
-  UPI_AUTOPAY_SETUP : "UPI ऑटोपे सेटअप"
+  UPI_AUTOPAY_SETUP : "UPI ऑटोपे सेटअप",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "मैं अपने बैंक में पैसे जोड़ूंगा",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "प्रतिदिन प्रति सवारी योजना पर बने रहें",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"नि:शुल्क परीक्षण 2 दिनों में समाप्त हो रहा है",
+  FREE_TRIAL_ENDING_TOMORROW : "नि:शुल्क परीक्षण कल समाप्त हो रहा है",
+  FREE_TRIAL_ENDS_TONIGHT : "नि:शुल्क परीक्षण आज रात समाप्त हो रहा है",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "सवारी लेना जारी रखने की योजना में शामिल हों"
 }

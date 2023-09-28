@@ -910,6 +910,8 @@ type HomeScreenProps =  {
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,
   autoPayBanner :: SubscriptionBannerType,
+  autoPaySet :: Boolean,
+  planId :: String,
   rcActive :: Boolean, 
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
@@ -1822,3 +1824,12 @@ type UpiApps
     , packageName :: String
     , appName :: String
     }
+
+
+data PaymentNudgeSubType =  AUTOPAY_INVOICE_GENERATED | MANUAL_INVOICE_GENERATED | LOW_ACCOUNT_BALANCE | PAYMENT_FAILED_LOW_ACCOUNT_BALANCE | SWITCH_PLAN | AUTOPAY_PAYMENT_FAILED | MANUAL_PAYMENT_FAILED | SWITCH_PLAN_NUDGE | NO_SUB_TYPE
+
+derive instance genericPaymentNudgePaymentSubType :: Generic PaymentNudgeSubType _
+instance showPaymentNudgeSubType :: Show PaymentNudgeSubType where show = genericShow
+instance eqPaymentNudgeSubType :: Eq PaymentNudgeSubType where eq = genericEq
+instance decodePaymentNudgeSubType :: Decode PaymentNudgeSubType where decode = defaultEnumDecode
+instance encodePaymentNudgeSubType :: Encode PaymentNudgeSubType where encode = defaultEnumEncode

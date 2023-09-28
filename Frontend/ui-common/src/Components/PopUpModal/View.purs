@@ -45,6 +45,7 @@ view push state =
     , clickable true
     , accessibility DISABLE
     , background state.backgroundColor
+    , visibility state.visibility
     , afterRender
         ( \action -> do
             if (state.option2.enableTimer || state.option1.enableTimer) then do
@@ -161,11 +162,12 @@ view push state =
             , gravity $ state.secondaryText.gravity
             , padding state.secondaryText.padding
             , margin $ state.secondaryText.margin
-            , (text $ state.secondaryText.text)
             , accessibility ENABLE
             , accessibilityHint $ replaceAll (Pattern ",") (Replacement ":") state.secondaryText.text
             , visibility $ state.secondaryText.visibility
             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+              <> (if state.secondaryText.text /= "" then [text $ state.secondaryText.text]
+                  else [textFromHtml $ state.secondaryText.textFromHtml])
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
@@ -322,6 +324,7 @@ view push state =
                     , margin state.optionWithHtml.image.margin
                     , visibility state.optionWithHtml.image.visibility
                     , padding state.optionWithHtml.image.padding
+                    , gravity CENTER
                 ]
                 , textView $
                 [ textFromHtml $ state.optionWithHtml.textOpt2.text

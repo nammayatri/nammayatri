@@ -42,7 +42,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (ceil, toNumber)
-import Data.Int (toNumber, ceil)
+import Data.Int (toNumber, ceil, fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
@@ -198,6 +198,8 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  let numberOfDaysLeft = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS))
+  in 
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -239,7 +241,13 @@ view push state =
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
+      , case HU.getPaymentNudgeFromSharedPrefs PAYMENT_NUDGE of
+          Just configObject -> if ((isLocalStageOn HomeScreen) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI) then PopUpModal.view (push <<< PaymentNudgeAC configObject) (paymentNudgeConfig false configObject state) else linearLayout[visibility GONE][]
+          Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
+      , if (getValueToLocalNativeStore SHOW_FREE_TRIAL_ENDING == "true" ) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && numberOfDaysLeft < 4 && numberOfDaysLeft > 0
+           then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig numberOfDaysLeft state) 
+           else linearLayout[visibility GONE][]
       , if state.props.showPaymentPendingBlocker && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< DuePaymentPendingAC) (paymentPendingBlockerConfig state) else linearLayout[visibility GONE][]
       , if state.props.softPaymentPendingNudge && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< SoftPaymentPendingAC) (softPaymentPendingNudgeConfig state) else linearLayout[visibility GONE][]
   ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])

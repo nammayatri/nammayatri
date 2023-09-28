@@ -885,5 +885,12 @@ const kannadaStrings = {
   AUTOPAY_SETUP_FAILED : "ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್ ವಿಫಲವಾಗಿದೆ!",
   ONE_TIME_REGISTERATION : "ಒಂದು ಬಾರಿ ನೋಂದಣಿ",
   CLEARANCE_AND_REGISTERATION : "ತೆರವು + ನೋಂದಣಿ",
-  UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್"
+  UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "ನಾನು ನನ್ನ ಬ್ಯಾಂಕ್‌ನಲ್ಲಿ ಹಣವನ್ನು ಸೇರಿಸುತ್ತೇನೆ",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "ಪ್ರತಿದಿನ ಪ್ರತಿ ರೈಡ್ ಯೋಜನೆಯಲ್ಲಿ ಉಳಿಯಿರಿ",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"ಫ್ರೀ ಅವಧಿಯು 2 ದಿನಗಳಲ್ಲಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!",
+  FREE_TRIAL_ENDING_TOMORROW : "ಫ್ರೀ ಅವಧಿಯು ನಾಳೆ ಕೊನೆಗೊಳ್ಳಲಿದೆ!",
+  FREE_TRIAL_ENDS_TONIGHT : "ಫ್ರೀ ಅವಧಿಯು ಇಂದು ರಾತ್ರಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "ಸವಾರಿಗಳನ್ನು ಮುಂದುವರಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "ಸುಲಭ ಪಾವತಿಗಳಿಗಾಗಿ ಆಟೋಪೆಯನ್ನು ಸೆಟಪ್ ಮಾಡಿ"
 }

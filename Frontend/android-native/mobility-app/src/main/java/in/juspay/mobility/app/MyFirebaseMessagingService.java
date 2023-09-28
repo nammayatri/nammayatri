@@ -349,7 +349,59 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             break;
+                        
+                        case NotificationTypes.PAYMENT_NUDGE :
+                            JSONObject jsonObjectPN = new JSONObject();
+                            if (remoteMessage.getData().containsKey("entity_data")) {
+                                entity_payload = new JSONObject(remoteMessage.getData().get("entity_data"));
+                                if (entity_payload.has("subType")) {
+                                    jsonObjectPN.put("subType", entity_payload.getString("subType"));
+                                }
+                                if (entity_payload.has("planId")) {
+                                    jsonObjectPN.put("planId", entity_payload.getString("planId"));
+                                }
+                            }
 
+                            jsonObjectPN.put("title", title);
+                            jsonObjectPN.put("description", body);
+                            jsonObjectPN.put("imageUrl", imageUrl);
+                            sharedPref.edit().putString("PAYMENT_NUDGE", jsonObjectPN.toString()).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            break;
+                        case NotificationTypes.IN_APP_NOTIFICATION_ARRAY :
+                            JSONObject jsonObjectIANA = new JSONObject();
+                            jsonObjectIANA.put("notificationType", notificationType);
+                            if (remoteMessage.getData().containsKey("notification_json")) {
+                                jsonObjectIANA.put("notificationPayload", remoteMessage.getData().get("notification_json"));
+                            }
+                            if (remoteMessage.getData().containsKey("entity_data")) {
+                                jsonObjectIANA.put("entityPayload", remoteMessage.getData().get("entity_data"));
+                            }
+
+                            String data = sharedPref.getString("IN_APP_NOTIFICATION_ARRAY", "[]");
+                            JSONArray jsonArray;
+                            if (data.equals("[]") || data.equals("__failed") || data.equals("(null)")) {
+                                jsonArray = new JSONArray();
+                            }else{
+                                jsonArray = new JSONArray(data);
+                                jsonArray.put(jsonObjectIANA);
+                            }
+                            sharedPref.edit().putString("IN_APP_NOTIFICATION_ARRAY", jsonArray.toString()).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            break;
+                        case NotificationTypes.IN_APP_NOTIFICATION :
+                            JSONObject jsonObjectIAN = new JSONObject();
+                            jsonObjectIAN.put("notificationType", notificationType);
+                            if (remoteMessage.getData().containsKey("notification_json")) {
+                                jsonObjectIAN.put("notificationPayload", remoteMessage.getData().get("notification_json"));
+                            }
+                            if (remoteMessage.getData().containsKey("entity_data")) {
+                                jsonObjectIAN.put("entityPayload", remoteMessage.getData().get("entity_data"));
+                            }
+
+                            sharedPref.edit().putString("IN_APP_NOTIFICATION", jsonObjectIAN.toString()).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            break;
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -545,5 +597,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
         private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
+        private static final String PAYMENT_NUDGE = "PAYMENT_NUDGE";
+
+        private static final String IN_APP_NOTIFICATION_ARRAY = "IN_APP_NOTIFICATION_ARRAY";
+
+        private static final String IN_APP_NOTIFICATION = "IN_APP_NOTIFICATION";
     }
 }

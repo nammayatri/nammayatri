@@ -297,9 +297,12 @@ getDriverInfoFlow = do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
       case getDriverInfoResp.freeTrialDaysLeft of
-        Just value -> do 
-              void $ pure $ setCleverTapUserProp "NY_Free_Trial_Days_Left" (show value)
-        Nothing -> pure unit
+            Just value -> do 
+                  void $ pure $ setCleverTapUserProp "NY_Free_Trial_Days_Left" (show value)
+                  if value < 4 && value > 0 then do setValueToLocalStore SHOW_FREE_TRIAL_ENDING "true"
+                  else setValueToLocalStore SHOW_FREE_TRIAL_ENDING "__failed"
+            Nothing -> pure unit
+      setValueToLocalStore SHOW_FREE_TRIAL_ENDING "true"
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = (GetDriverInfoResp getDriverInfoResp)})
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
@@ -2081,6 +2084,16 @@ homeScreenFlow = do
       _ <- updateStage $ HomeScreenStage HomeScreen 
       homeScreenFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow
+    SWITCH_PLAN_HOME_SCREEN state -> do
+      selectPlanResp <- lift $ lift $ Remote.selectPlan state.props.planId
+      case selectPlanResp of 
+            Right resp -> do
+              void $ pure $ cleverTapCustomEvent "ny_driver_switch_plan"
+              void $ pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "new_plan" state.props.planId
+              subScriptionFlow
+            Left errorPayload -> do 
+              pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+              homeScreenFlow
   pure unit
 
 clearPendingDuesFlow :: FlowBT String Unit

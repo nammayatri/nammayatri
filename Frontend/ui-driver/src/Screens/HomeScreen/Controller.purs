@@ -57,7 +57,7 @@ import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Screens.Types (AutoPayStatus(..))
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), PaymentNudgeConfig(..), GetCurrentPlanResp(..), PlanEntity(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -194,6 +194,9 @@ instance loggableAction :: Loggable Action where
     PaymentStatusAction _ -> pure unit
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
+    PaymentNudgeAC _ _ -> pure unit
+    FreeTrialEndingAC _ -> pure unit
+    PaymentPendingBlockerAC _ _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     _ -> pure unit
 
@@ -224,6 +227,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
                     | ClearPendingDues ST.HomeScreenState
+                    | SwitchPlan ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -277,6 +281,9 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
+            | PaymentNudgeAC PaymentNudgeConfig PopUpModal.Action
+            | FreeTrialEndingAC PopUpModal.Action 
+            | PaymentPendingBlockerAC Boolean PopUpModal.Action
             | DuePaymentPendingAC PopUpModal.Action
             | SoftPaymentPendingAC PopUpModal.Action
             | GetCurrenDuesAction GetCurrentPlanResp
@@ -398,7 +405,36 @@ eval (SoftPaymentPendingAC PopUpModal.DismissPopup) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
   _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
-  continue state {props { softPaymentPendingNudge = false }} false
+  continue state {props { softPaymentPendingNudge = false }}
+
+eval (PaymentNudgeAC (PaymentNudgeConfig ob) PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore PAYMENT_NUDGE "__failed"
+  case (getPaymentNudgeSubType ob.subType) of
+      ST.SWITCH_PLAN_NUDGE -> do
+        exit $ SwitchPlan state {props{planId = ob.planId}}
+      ST.AUTOPAY_PAYMENT_FAILED -> do
+        exit $ ClearPendingDues state
+      ST.MANUAL_INVOICE_GENERATED -> do
+        exit $ ClearPendingDues state
+      _ -> continue state
+
+eval (PaymentNudgeAC (PaymentNudgeConfig ob) PopUpModal.OptionWithHtmlClick ) state = do
+  _ <- pure $ setValueToLocalNativeStore PAYMENT_NUDGE "__failed"
+  case (getPaymentNudgeSubType ob.subType) of
+    ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE -> do
+      _ <- pure $ showDialer (getSupportNumber "") false
+      continue state
+    ST.AUTOPAY_INVOICE_GENERATED -> do
+        exit $ SubscriptionScreen state false
+    _ -> continue state
+
+eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_FREE_TRIAL_ENDING "__failed"
+  exit $ SubscriptionScreen state false
+
+eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_FREE_TRIAL_ENDING "__failed"
+  continue state
 
 eval (DuePaymentPendingAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
@@ -958,5 +994,17 @@ updateMessagesWithCmd state =
     pure NoAction
     ]
 
-  
-  
+getPaymentNudgeSubType :: String -> ST.PaymentNudgeSubType
+getPaymentNudgeSubType subType =
+  case subType of
+    "LOW_ACCOUNT_BALANCE" -> ST.LOW_ACCOUNT_BALANCE
+    "AUTOPAY_INVOICE_GENERATED" -> ST.AUTOPAY_INVOICE_GENERATED
+    "MANUAL_INVOICE_GENERATED" -> ST.MANUAL_INVOICE_GENERATED
+    "PAYMENT_FAILED_LOW_ACCOUNT_BALANCE" -> ST.PAYMENT_FAILED_LOW_ACCOUNT_BALANCE
+    -- "PAYMENT_PENDING_AUTOPAY_SET" -> ST.PAYMENT_PENDING_AUTOPAY_SET
+    -- "PAYMENT_PENDING_AUTOPAY_NOT_SET" -> ST.PAYMENT_PENDING_AUTOPAY_NOT_SET
+    "AUTOPAY_PAYMENT_FAILED" -> ST.AUTOPAY_PAYMENT_FAILED
+    "MANUAL_PAYMENT_FAILED" -> ST.MANUAL_PAYMENT_FAILED
+    "SWITCH_PLAN" -> ST.SWITCH_PLAN_NUDGE
+    _ -> ST.NO_SUB_TYPE
+

@@ -713,5 +713,11 @@ const frenchStrings = {
   AUTOPAY_SETUP_FAILED : "Échec de la configuration du paiement automatique !",
   ONE_TIME_REGISTERATION : "Inscription unique",
   CLEARANCE_AND_REGISTERATION : "Autorisation + Inscription",
-  UPI_AUTOPAY_SETUP : "Configuration du paiement automatique UPI"
+  UPI_AUTOPAY_SETUP : "Configuration du paiement automatique UPI",
+  I_WILL_ADD_MONEY_IN_MY_BANK : "Je vais ajouter de l'argent dans ma banque",
+  STAY_ON_DAILY_PER_RIDE_PLAN : "Restez sur le plan QUOTIDIEN PAR VOYAGE",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Essai gratuit se terminant dans 2 jours !",
+  FREE_TRIAL_ENDING_TOMORROW : "Essai gratuit se terminant demain !",
+  FREE_TRIAL_ENDS_TONIGHT : "L'essai gratuit se termine ce soir !",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Rejoignez un plan pour continuer à faire des courses"
 }
