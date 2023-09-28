@@ -883,5 +883,7 @@ const tamilStrings = {
   AUTOPAY_SETUP_FAILED : "தானாக செலுத்தும் அமைவு தோல்வி!",
   ONE_TIME_REGISTERATION : "ஒரு முறை பதிவு",
   CLEARANCE_AND_REGISTERATION : "அனுமதி + பதிவு",
-  UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு"
+  UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு",
+  WATCH_VIDEO_FOR_HELP : "உதவிக்கு வீடியோவைப் பாருங்கள்",
+  PAYMENT_PENDING_SOFT_NUDGE : "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை"
 }

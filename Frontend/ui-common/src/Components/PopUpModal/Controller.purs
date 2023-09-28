@@ -35,6 +35,7 @@ data Action = OnButton1Click
             | Tipbtnclick Int Int
             | DismissPopup
             | OptionWithHtmlClick
+            | OnSecondaryTextClick
 
 type Config = {
     primaryText :: TextConfig,
@@ -89,7 +90,8 @@ type TextConfig = {
   margin :: Margin,
   visibility :: Visibility,
   textStyle :: Style,
-  accessibilityHint :: String
+  accessibilityHint :: String,
+  suffixImage :: ImageConfig
 }
 type ButtonConfig = {
   background :: String,
@@ -171,7 +173,15 @@ config = {
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
       textStyle : Heading2,
-      accessibilityHint : ""
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
     }
   , secondaryText : {
       text : "Text2",
@@ -181,7 +191,15 @@ config = {
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
       textStyle : ParagraphText,
-      accessibilityHint : ""
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
     }
   , tipButton: {
      background : Color.white900
@@ -269,7 +287,15 @@ config = {
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
-        accessibilityHint : ""
+        accessibilityHint : "", 
+        suffixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
+        }
       },
       textOpt2 : {
         text : "",
@@ -279,7 +305,15 @@ config = {
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
-        accessibilityHint : ""
+        accessibilityHint : "", 
+        suffixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
+        }
       },
       visibility : false,
       margin : (Margin 0 0 0 0),

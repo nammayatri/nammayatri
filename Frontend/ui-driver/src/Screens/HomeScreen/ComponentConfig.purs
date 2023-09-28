@@ -30,6 +30,7 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
+import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
@@ -47,15 +48,15 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
+import Resource.Constants as Const
 import Screens.Types (SubscriptionBannerType(..))
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
-import Components.RideCompletedCard.Controller (Theme(..))
-import Resource.Constants as Const
+
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
 rideActionModalConfig state = let
@@ -319,12 +320,23 @@ softPaymentPendingNudgeConfig state =
     dismissPopup = true,
     topTitle = Just $ getString PAYMENT_PENDING,
     primaryText {
-      text = ""
+      text = getString PAYMENT_PENDING_SOFT_NUDGE
     , margin = Margin 16 16 16 4
-    , visibility = GONE },
+    , textStyle = SubHeading2
+    , color = Color.black700
+    , visibility = VISIBLE },
     secondaryText {
-      text = getString PAYMENT_PENDING_ALERT_DESC
+      text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+    , textStyle = SubHeading2
     , margin = MarginBottom 24
+    , suffixImage = {
+        visibility : VISIBLE
+        , imageUrl : "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+        , height : (V 24)
+        , width : (V 24)
+        , margin : MarginLeft 4 
+        , padding : Padding 0 0 0 0
+      }
     },
     option1 {
       text = getString CLEAR_DUES <> " (₹" <> show state.data.totalPendingManualDues <> ") "
