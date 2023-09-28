@@ -34,11 +34,6 @@ window.getMerchantConfig = function () {
         "name": "हिंदी",
         "value": "HI_IN",
         "subtitle": "Hindi"
-      },
-      {
-        "name":"தமிழ்",
-        "value":"TA_IN", 
-        "subtitle": "Tamil"
       }
     ],
     "engilshInNative" : "ইংরেজি",
@@ -101,5 +96,6 @@ window.getMerchantConfig = function () {
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
+    , "referralType" : "QRScreen"
   })
 }

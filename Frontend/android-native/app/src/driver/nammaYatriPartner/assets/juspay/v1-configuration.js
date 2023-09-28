@@ -88,5 +88,7 @@ window.getMerchantConfig = function () {
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false
       }
+    }
+    , "referralType" : "LeaderBoard" 
   })
 }

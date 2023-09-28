@@ -1492,10 +1492,17 @@ export const shareTextMessage = function(str){
 }
 
 export const shareImageMessage = function(message){
-  return function (imageName){
-    if(JBridge.shareTextMessage){
-      JBridge.shareImageMessage(message,imageName);
-    }
+  return function (data){
+      try{
+        if(JBridge.shareImageMessage){
+          JBridge.shareImageMessage(message,JSON.stringify(data));
+        }
+      }
+      catch (e){
+        if(JBridge.shareTextMessage){
+          JBridge.shareTextMessage("", message);
+        }
+      }
   }
 }
 
