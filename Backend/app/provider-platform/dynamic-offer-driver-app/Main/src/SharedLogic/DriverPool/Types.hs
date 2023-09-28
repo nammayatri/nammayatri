@@ -19,6 +19,7 @@ module SharedLogic.DriverPool.Types
     DriverPoolResult (..),
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
+    DriverPoolWithActualDistResultWithFlags (..),
     PoolRadiusStep,
     PoolBatchNum,
   )
@@ -109,3 +110,9 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
 
 instance HasCoordinates DriverPoolWithActualDistResult where
   getCoordinates r = getCoordinates r.driverPoolResult
+
+data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
+  { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
+    isGoHomeBatch :: Bool,
+    prevBatchDrivers :: [Id Driver]
+  }

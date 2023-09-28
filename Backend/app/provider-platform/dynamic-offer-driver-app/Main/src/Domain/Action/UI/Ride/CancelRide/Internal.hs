@@ -47,6 +47,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
@@ -196,7 +197,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   newSearchTry <- buildSearchTry searchTry
 
   _ <- QST.create newSearchTry
-
+  goHomeCfg <- CQGHC.findByMerchantId merchant.id
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, _) <-
     sendSearchRequestToDrivers'
@@ -205,6 +206,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
       newSearchTry
       merchant
       driverExtraFeeBounds
+      goHomeCfg
 
   case res of
     ReSchedule _ -> do

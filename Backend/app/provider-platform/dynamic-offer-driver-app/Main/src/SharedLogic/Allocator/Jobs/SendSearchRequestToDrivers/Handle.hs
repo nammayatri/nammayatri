@@ -20,7 +20,10 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
   )
 where
 
+import Domain.Types.GoHomeConfig (GoHomeConfig)
+import Domain.Types.Person (Driver)
 import Kernel.Prelude
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.DriverPool
@@ -36,8 +39,8 @@ data MetricsHandle m = MetricsHandle
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
-    getNextDriverPoolBatch :: m ([DriverPoolWithActualDistResult], Bool),
-    sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
+    getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
+    sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
@@ -46,8 +49,8 @@ data Handle m = Handle
     cancelSearchTry :: m ()
   }
 
-handler :: HandleMonad m => Handle m -> m (ExecutionResult, Bool)
-handler h@Handle {..} = do
+handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+handler h@Handle {..} goHomeCfg = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms (_, _) -> metrics.putTaskDuration ms) $ do
@@ -62,10 +65,10 @@ handler h@Handle {..} = do
           then do
             logInfo "Received enough quotes from drivers."
             return (Complete, False)
-          else processRequestSending h
+          else processRequestSending h goHomeCfg
 
-processRequestSending :: HandleMonad m => Handle m -> m (ExecutionResult, Bool)
-processRequestSending Handle {..} = do
+processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+processRequestSending Handle {..} goHomeCfg = do
   mLastProcTime <- setBatchDurationLock
   case mLastProcTime of
     Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
@@ -78,13 +81,13 @@ processRequestSending Handle {..} = do
           cancelSearchTry
           return (Complete, False)
         else do
-          (driverPool, isGoToBatch) <- getNextDriverPoolBatch
-          if null driverPool
+          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
+          if null driverPoolWithFlags.driverPoolWithActualDistResult
             then do
               metrics.incrementFailedTaskCounter
               logInfo "No driver available"
               cancelSearchTry
-              return (Complete, isGoToBatch)
+              return (Complete, driverPoolWithFlags.isGoHomeBatch)
             else do
-              sendSearchRequestToDrivers driverPool
-              ReSchedule <$> getRescheduleTime <&> (,isGoToBatch)
+              sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+              ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
