@@ -602,8 +602,11 @@ sendOverlay ::
   Maybe Text ->
   [Text] ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Value ->
   m ()
-sendOverlay merchantId personId mbDeviceToken mbTitle description imageUrl okButtonText cancelButtonText actions link = do
+sendOverlay merchantId personId mbDeviceToken mbTitle description imageUrl okButtonText cancelButtonText actions link endPoint method reqBody = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
@@ -616,7 +619,7 @@ sendOverlay merchantId personId mbDeviceToken mbTitle description imageUrl okBut
           fcmEntityIds = personId.getId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification mbTitle description imageUrl okButtonText cancelButtonText actions link
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification mbTitle description imageUrl okButtonText cancelButtonText actions link endPoint method reqBody
         }
     title = FCMNotificationTitle $ fromMaybe "Title" mbTitle -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description

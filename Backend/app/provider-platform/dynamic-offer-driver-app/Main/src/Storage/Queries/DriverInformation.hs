@@ -72,6 +72,38 @@ fetchAllByIds merchantId driversIds = do
 fetchAllAvailableByIds :: MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
+-- findAllNotNotifiedWithDues :: MonadFlow m => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
+-- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
+--   findAllWithOptionsDb
+--     [ Se.And
+--         [ Se.Is BeamDI.paymentPending $ Se.Eq True,
+--           Se.Is BeamDI.merchantId $ Se.Eq merchantId,
+--           Se.Or
+--             [ Se.Is BeamDI.lastNotifiedForDueAt $ Se.Eq Nothing,
+--               Se.Is BeamDI.lastNotifiedForDueAt $ Se.GreaterThanOrEq (Just lastNotifiedLimit)
+--             ]
+--         ]
+--     ]
+--     (Se.Desc BeamDI.createdAt)
+--     (Just limit)
+--     Nothing
+
+-- findAllNotNotifiedWithDues :: MonadFlow m => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
+-- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
+--   findAllWithOptionsDb
+--     [ Se.And
+--         [ Se.Is BeamDI.paymentPending $ Se.Eq True,
+--           Se.Is BeamDI.merchantId $ Se.Eq merchantId,
+--           Se.Or
+--             [ Se.Is BeamDI.lastNotifiedForDueAt $ Se.Eq Nothing,
+--               Se.Is BeamDI.lastNotifiedForDueAt $ Se.GreaterThanOrEq (Just lastNotifiedLimit)
+--             ]
+--         ]
+--     ]
+--     (Se.Desc BeamDI.createdAt)
+--     (Just limit)
+--     Nothing
+
 updateActivity :: MonadFlow m => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity (Id driverId) isActive mode = do
   now <- getCurrentTime

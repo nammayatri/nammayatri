@@ -169,6 +169,7 @@ let AllocatorJobType =
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
+      | SendOverlay
       >
 
 let jobInfoMapx =
@@ -190,6 +191,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.OrderAndNotificationStatusUpdate
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

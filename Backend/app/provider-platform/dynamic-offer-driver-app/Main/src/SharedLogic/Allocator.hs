@@ -19,6 +19,7 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
@@ -27,7 +28,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue | UnblockDriver | SendPDNNotificationToDriver | MandateExecution | CalculateDriverFees | OrderAndNotificationStatusUpdate
+data AllocatorJobType
+  = SendSearchRequestToDriver
+  | SendPaymentReminderToDriver
+  | UnsubscribeDriverForPaymentOverdue
+  | UnblockDriver
+  | SendPDNNotificationToDriver
+  | MandateExecution
+  | CalculateDriverFees
+  | OrderAndNotificationStatusUpdate
+  | SendOverlay
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -43,6 +53,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
+  restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -130,3 +141,16 @@ newtype OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpda
 instance JobInfoProcessor 'OrderAndNotificationStatusUpdate
 
 type instance JobContent 'OrderAndNotificationStatusUpdate = OrderAndNotificationStatusUpdateJobData
+
+data SendOverlayJobData = SendOverlayJobData
+  { merchantId :: Id DM.Merchant,
+    overlayKey :: Text,
+    udf1 :: Maybe Text,
+    condition :: OverlayCondition,
+    rescheduleInterval :: Maybe Seconds
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendOverlay
+
+type instance JobContent 'SendOverlay = SendOverlayJobData

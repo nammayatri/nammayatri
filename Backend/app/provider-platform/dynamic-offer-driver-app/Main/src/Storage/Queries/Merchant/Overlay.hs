@@ -65,5 +65,8 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.okButtonText = okButtonText,
         BeamMPN.cancelButtonText = cancelButtonText,
         BeamMPN.actions = actions,
-        BeamMPN.link = link
+        BeamMPN.link = link,
+        BeamMPN.method = method,
+        BeamMPN.reqBody = reqBody,
+        BeamMPN.endPoint = endPoint
       }
