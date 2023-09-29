@@ -24,7 +24,6 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as AadhaarOtp
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -73,7 +72,6 @@ deleteDriver merchantShortId reqDriverId = do
   AadhaarOtp.deleteByPersonIdForVerify reqDriverId
   AV.deleteByPersonId reqDriverId
   QPerson.deleteById reqDriverId
-  QDriverLocation.deleteById reqDriverId
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
 

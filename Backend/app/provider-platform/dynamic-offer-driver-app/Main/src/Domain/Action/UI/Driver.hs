@@ -178,7 +178,6 @@ import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDG
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
-import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -560,8 +559,6 @@ createDriver admin req = do
   createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
   _ <- QMeta.create metaData
-  now <- getCurrentTime
-  QDriverLocation.create person.id initLatLong now admin.merchantId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -581,7 +578,6 @@ createDriver admin req = do
   return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
-    initLatLong = LatLong 0 0
     makeIdleDriverFlowStatus person =
       DDFS.DriverFlowStatus
         { personId = person.id,
@@ -682,10 +678,8 @@ setActivity (personId, merchantId) isActive mode = do
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  when enableLocationTrackingService do
-    whenJust mode $ \md -> do
-      void $ LF.driverDetails personId md
+  whenJust mode $ \md -> do
+    void $ LF.driverDetails personId md
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
@@ -882,7 +876,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, EsqLocDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, EsqLocDBFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -895,10 +889,8 @@ deleteDriver admin driverId = do
   QR.deleteByPersonId driverId
   QVehicle.deleteById driverId
   QDHL.deleteByDriverId driverId
-  QDriverLocation.deleteById driverId
   QDFS.deleteById driverId
   QPerson.deleteById driverId
-  QDriverLocation.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
 

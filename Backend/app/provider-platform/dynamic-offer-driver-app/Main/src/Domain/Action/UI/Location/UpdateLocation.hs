@@ -18,7 +18,7 @@ module Domain.Action.UI.Location.UpdateLocation
     RideStatus,
     Waypoint (..),
     UpdateLocationHandle (..),
-    buildUpdateLocationHandle,
+    -- buildUpdateLocationHandle,
     updateLocationHandler,
   )
 where
@@ -29,9 +29,9 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
-import Environment (Flow)
+-- import Environment (Flow)
 import GHC.Records.Extra
-import Kernel.Beam.Functions
+-- import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -48,12 +48,12 @@ import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
-import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.DriverInformation as DInfo
-import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QRide
+
+-- import qualified Storage.Queries.Person as QP
+-- import qualified Storage.Queries.Ride as QRide
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -93,21 +93,21 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   }
   deriving (Generic, FromJSON, ToJSON)
 
-buildUpdateLocationHandle ::
-  Id Person.Person ->
-  Flow (UpdateLocationHandle Flow)
-buildUpdateLocationHandle driverId = do
-  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
-  pure $
-    UpdateLocationHandle
-      { driver,
-        findDriverLocation = DrLoc.findById driverId,
-        upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
-        getAssignedRide = QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
-        addIntermediateRoutePoints = \rideId ->
-          LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
-      }
+-- buildUpdateLocationHandle ::
+--   Id Person.Person ->
+--   Flow (UpdateLocationHandle Flow)
+-- buildUpdateLocationHandle driverId = do
+--   driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+--   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
+--   pure $
+--     UpdateLocationHandle
+--       { driver,
+--         findDriverLocation = DrLoc.findById driverId,
+--         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
+--         getAssignedRide = QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
+--         addIntermediateRoutePoints = \rideId ->
+--           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
+--       }
 
 streamLocationUpdates ::
   ( MonadFlow m,

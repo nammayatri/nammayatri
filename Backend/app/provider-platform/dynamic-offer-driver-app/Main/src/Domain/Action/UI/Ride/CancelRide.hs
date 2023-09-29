@@ -27,7 +27,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.DriverLocation as DDriverLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -41,7 +40,6 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.DriverLocation as QDrLoc
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -58,7 +56,6 @@ type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    findDriverLocationId :: Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
@@ -70,7 +67,6 @@ cancelRideHandle =
     { findRideById = QRide.findById,
       findById = QPerson.findById,
       cancelRide = CInternal.cancelRideImpl,
-      findDriverLocationId = QDrLoc.findById,
       findBookingByIdInReplica = B.runInReplica . QRB.findById,
       pickUpDistance = driverDistanceToPickup
     }
@@ -146,13 +142,9 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
               else do
                 return (Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          enableLocationTrackingService <- asks (.enableLocationTrackingService)
           mbLocation <- do
-            if enableLocationTrackingService
-              then do
-                driverLocations <- LF.driversLocation [driverId]
-                return $ listToMaybe driverLocations
-              else findDriverLocationId driverId
+            driverLocations <- LF.driversLocation [driverId]
+            return $ listToMaybe driverLocations
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)

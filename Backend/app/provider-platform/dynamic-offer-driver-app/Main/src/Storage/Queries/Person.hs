@@ -60,7 +60,6 @@ import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverInformation.Internal as Int
-import qualified Storage.Queries.DriverLocation as QueriesDL
 import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
@@ -155,11 +154,12 @@ getDriverInformations driverLocations =
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
 
-getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive before = do
-  driverLocations <- QueriesDL.getDriverLocations before
-  driverInfos <- getDriverInformations driverLocations
-  getDriversList driverInfos
+getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive _before = do
+  -- driverLocations <- QueriesDL.getDriverLocations before
+  -- driverInfos <- getDriverInformations driverLocations
+  -- getDriversList driverInfos
+  pure []
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -173,13 +173,8 @@ findAllDriversByIdsFirstNameAsc ::
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
-findAllDriversByIdsFirstNameAsc merchantId driverIds = do
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  driverLocs <- do
-    if enableLocationTrackingService
-      then do
-        LF.driversLocation driverIds
-      else QueriesDL.getDriverLocs driverIds merchantId
+findAllDriversByIdsFirstNameAsc _merchantId driverIds = do
+  driverLocs <- LF.driversLocation driverIds
   driverInfos <- Int.getDriverInfos $ map ((.getId) . DDL.driverId) driverLocs
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle

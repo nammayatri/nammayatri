@@ -35,7 +35,6 @@ import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
@@ -56,7 +55,6 @@ import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QD
-import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -284,11 +282,9 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
-  now <- getCurrentTime
   _ <- QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
-  QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
     makeIdleDriverFlowStatus person =
@@ -297,7 +293,6 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboa
           flowStatus = DDFS.IDLE,
           updatedAt = person.updatedAt
         }
-    initLatLong = LatLong 0 0
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],

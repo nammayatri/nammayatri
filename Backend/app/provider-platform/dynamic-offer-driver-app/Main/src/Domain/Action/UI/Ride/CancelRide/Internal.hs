@@ -38,7 +38,6 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
@@ -102,9 +101,7 @@ cancelRideImpl rideId bookingCReason = do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-    enableLocationTrackingService <- asks (.enableLocationTrackingService)
-    when enableLocationTrackingService $
-      void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+    void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
@@ -148,18 +145,16 @@ cancelRideTransaction ::
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
-    HasField "enableLocationTrackingService" r Bool
+    EsqLocRepDBFlow m r
   ) =>
   Id SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason merchantId = do
+cancelRideTransaction bookingId ride bookingCReason _merchantId = do
   let driverId = cast ride.driverId
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  void $ DLoc.updateOnRide merchantId ride.driverId False
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus bookingId SRB.CANCELLED

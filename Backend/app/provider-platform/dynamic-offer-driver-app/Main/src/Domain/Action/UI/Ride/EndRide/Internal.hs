@@ -68,7 +68,6 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
-import SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -104,8 +103,7 @@ endRideTransaction ::
     EventStreamFlow m r,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "enableLocationTrackingService" r Bool
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -117,7 +115,6 @@ endRideTransaction ::
   Id Merchant ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
-  DLoc.updateOnRide merchantId ride.driverId False
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
