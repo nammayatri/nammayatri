@@ -441,6 +441,16 @@ updateAutoPayToManual driverFeeId = do
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
+updateManualToAutoPay :: MonadFlow m => Id DriverFee -> m ()
+updateManualToAutoPay driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.feeType RECURRING_EXECUTION_INVOICE,
+      Se.Set BeamDF.status PAYMENT_PENDING,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
 updateRetryCount :: MonadFlow m => Int -> UTCTime -> Id DriverFee -> m ()
 updateRetryCount retryCount now (Id driverFeeId) = do
   updateOneWithKV
