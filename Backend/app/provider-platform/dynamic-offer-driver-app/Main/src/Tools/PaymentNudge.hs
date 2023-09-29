@@ -22,7 +22,6 @@ import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
-import qualified Domain.Types.Merchant.PushNotification as DPN
 import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
@@ -34,14 +33,23 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.CachedQueries.Merchant.PushNotification as CMP
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Person as QDP
-import Tools.Notifications (notifyPaymentNudge)
+import Tools.Notifications (sendOverlay)
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+switchPlanBudgeKey :: Text
+switchPlanBudgeKey = "SWITCH_PLAN"
+
+autopayPaymentFailedNudgeKey :: Text
+autopayPaymentFailedNudgeKey = "PAYMENT_FAILED_AUTOPAY"
+
+maunalPaymentFailedNudgeKey :: Text
+maunalPaymentFailedNudgeKey = "PAYMENT_FAILED_MANUAL"
 
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
@@ -119,14 +127,14 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
           }
 
 switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()
-switchPlanNudge driver numOfRides saveUpto planId = do
-  mPushNotification <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId DPN.PLAN_SWITCH (fromMaybe ENGLISH driver.language) Nothing
-  whenJust mPushNotification $ \pn -> do
-    let body =
-          pn.body
-            & T.replace (templateText "numberOfRides") (show numOfRides)
-            & T.replace (templateText "saveUpto") (show saveUpto)
-    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon (Just planId)
+switchPlanNudge driver numOfRides saveUpto _ = do
+  mOverlay <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId switchPlanBudgeKey (fromMaybe ENGLISH driver.language) Nothing
+  whenJust mOverlay $ \overlay -> do
+    let description =
+          T.replace (templateText "numberOfRides") (show numOfRides)
+            . T.replace (templateText "saveUpto") (show saveUpto)
+            <$> overlay.description
+    sendOverlay driver.merchantId driver.id driver.deviceToken overlay.title description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link
 
 notifyPaymentFailure :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> PaymentMode -> Maybe Text -> m ()
 notifyPaymentFailure driverId paymentMode mbBankErrorCode = do
@@ -134,10 +142,8 @@ notifyPaymentFailure driverId paymentMode mbBankErrorCode = do
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
   let totalDues = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dueDriverFees
 
-  let pnKey = if paymentMode == AUTOPAY then DPN.PAYMENT_FAILED_AUTOPAY else DPN.PAYMENT_FAILED_MANUAL
-  mPushNotification <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId pnKey (fromMaybe ENGLISH driver.language) mbBankErrorCode
-  whenJust mPushNotification $ \pn -> do
-    let body =
-          pn.body
-            & T.replace (templateText "dueAmount") (show totalDues)
-    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon Nothing
+  let pnKey = if paymentMode == AUTOPAY then autopayPaymentFailedNudgeKey else maunalPaymentFailedNudgeKey
+  mOverlay <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId pnKey (fromMaybe ENGLISH driver.language) mbBankErrorCode
+  whenJust mOverlay $ \overlay -> do
+    let description = T.replace (templateText "dueAmount") (show totalDues) <$> overlay.description
+    sendOverlay driver.merchantId driver.id driver.deviceToken overlay.title description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link

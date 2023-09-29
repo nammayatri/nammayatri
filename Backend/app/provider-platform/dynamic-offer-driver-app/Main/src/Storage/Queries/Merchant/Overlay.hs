@@ -13,7 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Merchant.PushNotification
+module Storage.Queries.Merchant.Overlay
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
@@ -21,44 +21,49 @@ module Storage.Queries.Merchant.PushNotification
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.PushNotification
+import Domain.Types.Merchant.Overlay
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
-import qualified Storage.Beam.Merchant.PushNotification as BeamMPN
+import qualified Storage.Beam.Merchant.Overlay as BeamMPN
 
-findByMerchantIdPNKeyLangaugeUdf :: MonadFlow m => Id Merchant -> PushNotificationKey -> Language -> Maybe Text -> m (Maybe PushNotification)
+findByMerchantIdPNKeyLangaugeUdf :: MonadFlow m => Id Merchant -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1 =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamMPN.merchantId $ Se.Eq (getId id),
-          Se.Is BeamMPN.pushNotificationKey $ Se.Eq pnKey,
+          Se.Is BeamMPN.overlayKey $ Se.Eq pnKey,
           Se.Is BeamMPN.language $ Se.Eq language,
           Se.Is BeamMPN.udf1 $ Se.Eq udf1
         ]
     ]
 
-instance FromTType' BeamMPN.PushNotification PushNotification where
-  fromTType' BeamMPN.PushNotificationT {..} = do
+instance FromTType' BeamMPN.Overlay Overlay where
+  fromTType' BeamMPN.OverlayT {..} = do
     pure $
       Just
-        PushNotification
-          { merchantId = Id merchantId,
+        Overlay
+          { id = Id id,
+            merchantId = Id merchantId,
             ..
           }
 
-instance ToTType' BeamMPN.PushNotification PushNotification where
-  toTType' PushNotification {..} = do
-    BeamMPN.PushNotificationT
-      { BeamMPN.merchantId = getId merchantId,
-        BeamMPN.pushNotificationKey = pushNotificationKey,
+instance ToTType' BeamMPN.Overlay Overlay where
+  toTType' Overlay {..} = do
+    BeamMPN.OverlayT
+      { BeamMPN.id = getId id,
+        BeamMPN.merchantId = getId merchantId,
+        BeamMPN.overlayKey = overlayKey,
         BeamMPN.language = language,
         BeamMPN.udf1 = udf1,
-        BeamMPN.notificationSubType = notificationSubType,
-        BeamMPN.icon = icon,
-        BeamMPN.body = body,
-        BeamMPN.title = title
+        BeamMPN.title = title,
+        BeamMPN.description = description,
+        BeamMPN.imageUrl = imageUrl,
+        BeamMPN.okButtonText = okButtonText,
+        BeamMPN.cancelButtonText = cancelButtonText,
+        BeamMPN.actions = actions,
+        BeamMPN.link = link
       }

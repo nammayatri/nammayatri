@@ -13,7 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.Merchant.PushNotification
+module Storage.CachedQueries.Merchant.Overlay
   ( findByMerchantIdPNKeyLangaugeUdf,
   )
 where
@@ -21,25 +21,25 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.PushNotification
+import Domain.Types.Merchant.Overlay
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.PushNotification as Queries
+import qualified Storage.Queries.Merchant.Overlay as Queries
 
-findByMerchantIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> PushNotificationKey -> Language -> Maybe Text -> m (Maybe PushNotification)
+findByMerchantIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1 =
   Hedis.get (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
-    Just a -> return . Just $ coerce @(PushNotificationD 'Unsafe) @PushNotification a
-    Nothing -> flip whenJust cachePushNotification /=<< Queries.findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1
+    Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
+    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1
 
-cachePushNotification :: CacheFlow m r => PushNotification -> m ()
-cachePushNotification pn = do
+cacheOverlay :: CacheFlow m r => Overlay -> m ()
+cacheOverlay pn = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantId pn.pushNotificationKey pn.language pn.udf1
-  Hedis.setExp idKey (coerce @PushNotification @(PushNotificationD 'Unsafe) pn) expTime
+  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantId pn.overlayKey pn.language pn.udf1
+  Hedis.setExp idKey (coerce @Overlay @(OverlayD 'Unsafe) pn) expTime
 
-makeMerchantIdPNKeyLangaugeUdf :: Id Merchant -> PushNotificationKey -> Language -> Maybe Text -> Text
-makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:PushNotification:MerchantId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
+makeMerchantIdPNKeyLangaugeUdf :: Id Merchant -> Text -> Language -> Maybe Text -> Text
+makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:MerchantId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
