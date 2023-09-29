@@ -35,6 +35,7 @@ import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
@@ -58,6 +59,7 @@ data DriverOfferAPIs = DriverOfferAPIs
     merchant :: MerchantAPIs,
     message :: MessageAPIs,
     volunteer :: VolunteerAPIs,
+    overlay :: OverlayAPIs,
     driverReferral :: DriverReferralAPIs,
     driverRegistration :: DriverRegistrationAPIs,
     issue :: IssueAPIs,
@@ -182,6 +184,14 @@ data VolunteerAPIs = VolunteerAPIs
     assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
   }
 
+data OverlayAPIs = OverlayAPIs
+  { createOverlay :: Overlay.CreateOverlayReq -> Euler.EulerClient APISuccess,
+    deleteOverlay :: Overlay.DeleteOverlayReq -> Euler.EulerClient APISuccess,
+    listOverlay :: Euler.EulerClient Overlay.ListOverlayResp,
+    overlayInfo :: Overlay.OverlayInfoReq -> Euler.EulerClient Overlay.OverlayInfoResp,
+    scheduleOverlay :: Overlay.ScheduleOverlay -> Euler.EulerClient APISuccess
+  }
+
 data RevenueAPIs = RevenueAPIs
   { getCashCollectionHistory :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Euler.EulerClient Revenue.CashCollectionListRes,
     getAllDriverFeeHistory :: Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.AllDriverFeeRes
@@ -218,6 +228,7 @@ mkDriverOfferAPIs merchantId token = do
   let volunteer = VolunteerAPIs {..}
   let issue = IssueAPIs {..}
   let revenue = RevenueAPIs {..}
+  let overlay = OverlayAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
@@ -230,7 +241,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverRegistrationClient
       :<|> volunteerClient
       :<|> issueClient
-      :<|> revenueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> revenueClient
+      :<|> overlayClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     planList
       :<|> planSelect
@@ -338,6 +350,12 @@ mkDriverOfferAPIs merchantId token = do
 
     bookingInfo
       :<|> assignCreateAndStartOtpRide = volunteerClient
+
+    createOverlay
+      :<|> deleteOverlay
+      :<|> listOverlay
+      :<|> overlayInfo
+      :<|> scheduleOverlay = overlayClient
 
     issueCategoryList
       :<|> issueList

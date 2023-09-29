@@ -23,6 +23,7 @@ import qualified API.Dashboard.Fleet.Registration as Fleet
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
+import qualified API.Dashboard.Overlay as Overlay
 import qualified API.Dashboard.Revenue as Revenue
 import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.Subscription as Subscription
@@ -54,6 +55,7 @@ type API' =
            :<|> Volunteer.API
            :<|> Issue.API
            :<|> Revenue.API
+           :<|> Overlay.API
        )
 
 handler :: FlowServer API
@@ -70,6 +72,7 @@ handler =
         :<|> Volunteer.handler merchantId
         :<|> Issue.handler merchantId
         :<|> Revenue.handler merchantId
+        :<|> Overlay.handler merchantId
   )
     :<|> exotelHandler
     :<|> fleetHandler

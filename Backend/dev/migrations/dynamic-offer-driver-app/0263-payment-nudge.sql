@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.merchant_overlay
     link text
 );
 
-CREATE INDEX idx_merchant_overlay_key ON merchant_overlay (merchant_id,overlay_key);
+CREATE INDEX idx_merchant_overlay_key ON atlas_driver_offer_bpp.merchant_overlay (merchant_id,overlay_key);
 
 INSERT INTO atlas_driver_offer_bpp.merchant_overlay (id, merchant_id, language, overlay_key, udf1, image_url, title, description, ok_button_text, cancel_button_text) VALUES
     (atlas_driver_offer_bpp.uuid_generate_v4(), '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'ENGLISH', 'PAYMENT_FAILED_AUTOPAY', 'Z9', 'https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_save_more', 'Low Account Balance', 'Your Bank Account balance is low.<br>Add <b> \\u20B9 {#dueAmount#} </b> to enjoy uninterrupted rides.', 'Okay', 'Cancel'),

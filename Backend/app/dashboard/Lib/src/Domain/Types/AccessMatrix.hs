@@ -167,13 +167,18 @@ data UserActionType
   | CURRENT_PLAN
   | PAYMENT_HISTORY
   | PAYMENT_HISTORY_ENTITY_DETAILS
+  | CREATE_OVERLAY
+  | DELETE_OVERLAY
+  | LIST_OVERLAY
+  | OVERLAY_INFO
+  | SCHEDULE_OVERLAY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''ApiEntity]

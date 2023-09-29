@@ -30,6 +30,41 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.Overlay as BeamMPN
 
+create :: MonadFlow m => Overlay -> m ()
+create = createWithKV
+
+createMany :: MonadFlow m => [Overlay] -> m ()
+createMany = traverse_ create
+
+deleteByOverlayKeyMerchantIdUdf :: MonadFlow m => Id Merchant -> Text -> Maybe Text -> m ()
+deleteByOverlayKeyMerchantIdUdf merchantId overlayKey udf1 =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamMPN.overlayKey (Se.Eq overlayKey),
+          Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+          Se.Is BeamMPN.udf1 $ Se.Eq udf1
+        ]
+    ]
+
+findAllByLanguage :: MonadFlow m => Id Merchant -> Language -> m [Overlay]
+findAllByLanguage merchantId language =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+          Se.Is BeamMPN.language $ Se.Eq language
+        ]
+    ]
+
+findAllByOverlayKeyUdf :: MonadFlow m => Id Merchant -> Text -> Maybe Text -> m [Overlay]
+findAllByOverlayKeyUdf merchantId overlayKey udf1 =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+          Se.Is BeamMPN.overlayKey $ Se.Eq overlayKey,
+          Se.Is BeamMPN.udf1 $ Se.Eq udf1
+        ]
+    ]
+
 findByMerchantIdPNKeyLangaugeUdf :: MonadFlow m => Id Merchant -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1 =
   findOneWithKV
