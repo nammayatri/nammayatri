@@ -90,8 +90,11 @@ data DriversAPIs = DriversAPIs
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    addVehicleForFleet :: Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
+    addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     getAllVehicleForFleet :: Text -> Euler.EulerClient Driver.ListVehicleRes,
+    fleetUnlinkVehicle :: Text -> Text -> Maybe Text -> Text -> Euler.EulerClient APISuccess,
+    fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
+    fleetStats :: Text -> Euler.EulerClient Driver.FleetStatsRes,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
@@ -261,6 +264,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> addVehicle
       :<|> addVehicleForFleet
       :<|> getAllVehicleForFleet
+      :<|> fleetUnlinkVehicle
+      :<|> fleetRemoveVehicle
+      :<|> fleetStats
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC

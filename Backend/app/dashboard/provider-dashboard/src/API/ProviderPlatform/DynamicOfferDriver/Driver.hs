@@ -71,6 +71,9 @@ type API =
            :<|> AddVehicleAPI
            :<|> AddVehicleForFleetAPI
            :<|> GetAllVehicleForFleetAPI
+           :<|> FleetUnlinkVehicleAPI
+           :<|> FleetRemoveVehicleAPI
+           :<|> FleetStatsAPI
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
@@ -194,6 +197,18 @@ type GetAllVehicleForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'GET_ALL_VEHICLE_FOR_FLEET
     :> Common.GetAllVehicleForFleetAPI
 
+type FleetUnlinkVehicleAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_UNLINK_VEHICLE
+    :> Common.FleetUnlinkVehicleAPI
+
+type FleetRemoveVehicleAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_REMOVE_VEHICLE
+    :> Common.FleetRemoveVehicleAPI
+
+type FleetStatsAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_STATS
+    :> Common.FleetStatsAPI
+
 type UpdateDriverNameAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
@@ -250,6 +265,9 @@ handler merchantId =
     :<|> addVehicle merchantId
     :<|> addVehicleForFleet merchantId
     :<|> getAllVehicleForFleet merchantId
+    :<|> fleetUnlinkVehicle merchantId
+    :<|> fleetRemoveVehicle merchantId
+    :<|> fleetStats merchantId
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
@@ -416,16 +434,31 @@ addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.addVehicle) driverId req
 
-addVehicleForFleet :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicleForFleet merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
+addVehicleForFleet :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Maybe Text -> Common.AddVehicleReq -> FlowHandler APISuccess
+addVehicleForFleet merchantShortId apiTokenInfo phoneNo mbMobileCountryCode req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.addVehicleForFleet) phoneNo apiTokenInfo.personId.getId req
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.addVehicleForFleet) phoneNo mbMobileCountryCode apiTokenInfo.personId.getId req
 
 getAllVehicleForFleet :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.ListVehicleRes
 getAllVehicleForFleet merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.getAllVehicleForFleet) apiTokenInfo.personId.getId
+
+fleetUnlinkVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Maybe Text -> Text -> FlowHandler APISuccess
+fleetUnlinkVehicle merchantShortId apiTokenInfo vehicleNo mbMobileCountryCode mobileNo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetUnlinkVehicle) apiTokenInfo.personId.getId vehicleNo mbMobileCountryCode mobileNo
+
+fleetRemoveVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler APISuccess
+fleetRemoveVehicle merchantShortId apiTokenInfo vehicleNo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetRemoveVehicle) apiTokenInfo.personId.getId vehicleNo
+
+fleetStats :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.FleetStatsRes
+fleetStats merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetStats) apiTokenInfo.personId.getId
 
 updateDriverName :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do

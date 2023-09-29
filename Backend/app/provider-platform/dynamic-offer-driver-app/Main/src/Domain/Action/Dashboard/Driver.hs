@@ -48,12 +48,16 @@ module Domain.Action.Dashboard.Driver
     getPaymentHistory,
     addVehicleForFleet,
     getAllVehicleForFleet,
+    fleetUnlinkVehicle,
+    fleetRemoveVehicle,
+    fleetStats,
   )
 where
 
 import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
+import Data.List (zipWith4)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
@@ -70,6 +74,7 @@ import Domain.Types.DriverOnboarding.DriverRCAssociation
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -103,9 +108,11 @@ import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicens
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
+import Storage.Queries.Vehicle (findByRegistrationNo)
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -691,12 +698,13 @@ addVehicle merchantShortId reqDriverId req = do
 
 ---------------------------------------------------------------------
 
-addVehicleForFleet :: ShortId DM.Merchant -> Text -> Text -> Common.AddVehicleReq -> Flow APISuccess
-addVehicleForFleet merchantShortId reqDriverPhoneNo fleetOwnerId req = do
+addVehicleForFleet :: ShortId DM.Merchant -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> Flow APISuccess
+addVehicleForFleet merchantShortId reqDriverPhoneNo mbMobileCountryCode fleetOwnerId req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   phoneNumberHash <- getDbHash reqDriverPhoneNo
-  driver <- QPerson.findByMobileNumberAndMerchant "+91" phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
+  driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist driver.id.getId)
@@ -988,3 +996,107 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
       AV.create aadhaarEntity
   QDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
+
+fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Text -> Maybe Text -> Text -> Flow APISuccess
+fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo mbMobileCountryCode newDriverMobileNo = do
+  merchant <- findMerchantByShortId merchantShortId
+  vehicle <- QVehicle.findByRegistrationNo vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
+  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
+  unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
+  let oldDriverId = vehicle.driverId
+  mobileNumberHash <- getDbHash newDriverMobileNo
+  newDriver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash merchant.id >>= fromMaybeM (PersonDoesNotExist newDriverMobileNo)
+  unless (oldDriverId /= newDriver.id) $ throwError (DriverAlreadyLinkedWithVehicle $ show newDriver.id)
+  DomainRC.deactivateCurrentRC oldDriverId
+  _ <- QVehicle.deleteById oldDriverId
+  _ <- QDriverInfo.updateEnabledVerifiedState oldDriverId False False
+  logTagInfo "dashboard -> unlinkVehicle : " (show oldDriverId)
+  Redis.set (DomainRC.makeFleetOwnerKey vehicleNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+  void $ runVerifyRCFlow newDriver.id merchant (mkVehicleReq vehicle newDriver)
+  logTagInfo "dashboard -> addVehicle : " (show newDriver.id)
+  pure Success
+  where
+    mkVehicleReq vehicle newDriver =
+      Common.AddVehicleReq
+        { variant = castVehicleVariantDashboard vehicle.variant,
+          registrationNo = vehicle.registrationNo,
+          vehicleClass = vehicle.vehicleClass,
+          capacity = vehicle.capacity,
+          colour = vehicle.color,
+          energyType = vehicle.energyType,
+          model = vehicle.model,
+          make = vehicle.make,
+          driverName = newDriver.firstName <> " " <> fromMaybe "" newDriver.lastName
+        }
+
+fleetRemoveVehicle :: ShortId DM.Merchant -> Text -> Text -> Flow APISuccess
+fleetRemoveVehicle _merchantShortId fleetOwnerId_ vehicleNo = do
+  vehicle <- findByRegistrationNo vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
+  unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
+  QVehicle.upsert (updatedVehicle vehicle)
+  pure Success
+  where
+    updatedVehicle DVeh.Vehicle {..} = DVeh.Vehicle {fleetOwnerId = Nothing, ..}
+
+fleetStats :: ShortId DM.Merchant -> Text -> Flow Common.FleetStatsRes
+fleetStats _merchantShortId fleetOwnerId = do
+  allFleetVehicles <- QVehicle.findAllByFleetOwnerId fleetOwnerId
+  allFleetDrivers <- mapM (\veh -> QPerson.findById veh.driverId >>= fromMaybeM (PersonNotFound veh.driverId.getId)) allFleetVehicles
+  allFleetDriverStats <- mapM (\per -> QDriverStats.findById per.id) allFleetDrivers
+  allFleetDriverInfos <- mapM (\per -> QDriverInfo.findById per.id) allFleetDrivers
+  pure $ mkFleetStatsRes allFleetVehicles allFleetDrivers allFleetDriverStats allFleetDriverInfos
+  where
+    mkFleetStatsRes :: [DVeh.Vehicle] -> [DP.Person] -> [Maybe DDriverStats.DriverStats] -> [Maybe DrInfo.DriverInformation] -> Common.FleetStatsRes
+    mkFleetStatsRes allV allD allDSt allDI = do
+      let vehicleStats = zipWith4 mkFleetVehicleStatsListItem allV allD allDSt allDI
+      let initialStats = (0, 0, 0, 0, 0)
+      let (vehiclesInFleet, totalRidesCompleted, totalRidesCancelled, totalRidesAssigned, totalEarnings) =
+            foldl calculateStats initialStats vehicleStats
+      let totalCancellationPer = (fromIntegral totalRidesCancelled * 100) / fromIntegral (nonZero (Just totalRidesAssigned))
+      Common.FleetStatsRes
+        { vehiclesInFleet,
+          totalRidesCompleted,
+          totalEarnings = fromIntegral totalEarnings,
+          totalConversionPer = (fromIntegral totalRidesCompleted * 100) / fromIntegral (nonZero (Just totalRidesAssigned)),
+          totalAcceptancePer = (fromIntegral (totalRidesAssigned - totalRidesCancelled) * 100) / fromIntegral (nonZero (Just totalRidesAssigned)),
+          totalCancellationPer,
+          vehicleStats
+        }
+
+    mkFleetVehicleStatsListItem :: DVeh.Vehicle -> DP.Person -> Maybe DDriverStats.DriverStats -> Maybe DrInfo.DriverInformation -> Common.FleetVehicleStatsListItem
+    mkFleetVehicleStatsListItem vehicle driver driverStats drInfo = do
+      let ridesAssigned = (.totalRidesAssigned) =<< driverStats
+      let ridesCancelled = (.ridesCancelled) =<< driverStats
+      Common.FleetVehicleStatsListItem
+        { vehicleRegNo = vehicle.registrationNo,
+          driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName,
+          status = (\dInfo -> castDriverMode <$> dInfo.mode) =<< drInfo,
+          vehicleType = castVehicleVariantDashboard vehicle.variant,
+          totalRides = (.totalRides) <$> driverStats,
+          earnings = (.totalEarnings) <$> driverStats,
+          rating = driver.rating,
+          ridesAssigned,
+          ridesCancelled
+        }
+
+    calculateStats ::
+      (Int, Int, Int, Int, Money) ->
+      Common.FleetVehicleStatsListItem ->
+      (Int, Int, Int, Int, Money)
+    calculateStats (tv, tr, trc, tra, tear) fvsli =
+      let totalRides = fromMaybe 0 fvsli.totalRides
+          ridesCancelled = fromMaybe 0 fvsli.ridesCancelled
+          ridesAssigned = fromMaybe 0 fvsli.ridesAssigned
+          earnings = fromMaybe 0 fvsli.earnings
+       in (tv + 1, tr + totalRides, trc + ridesCancelled, tra + ridesAssigned, tear + earnings)
+
+    nonZero Nothing = 1
+    nonZero (Just a)
+      | a <= 0 = 1
+      | otherwise = a
+
+castDriverMode :: DrInfo.DriverMode -> Common.DriverMode
+castDriverMode = \case
+  DrInfo.ONLINE -> Common.ONLINE
+  DrInfo.OFFLINE -> Common.OFFLINE
+  DrInfo.SILENT -> Common.SILENT
