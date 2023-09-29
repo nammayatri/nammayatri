@@ -417,7 +417,7 @@ messageNotificationView push state =
   , width MATCH_PARENT
   , margin $ Margin 16 10 16 0
   , orientation VERTICAL
-  , visibility if state.props.showChatNotification then VISIBLE else GONE
+  , visibility if state.props.showChatNotification && state.props.currentSearchResultType /= QUOTES then VISIBLE else GONE
   ][ linearLayout
       [ height $ V 22
       , width MATCH_PARENT
