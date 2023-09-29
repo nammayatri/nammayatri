@@ -77,6 +77,10 @@ data KeyStore
   | LAST_LOGIN
   | SELECTED_VARIANT
   | COUNTRY_CODE
+  | DISABILITY_UPDATED
+  | DISABILITY_POPUP_TRIGGERED
+  | BUNDLE_TIME_OUT
+  | NOTIFIED_CUSTOMER
 
 derive instance genericKeyStore :: Generic KeyStore _
 
