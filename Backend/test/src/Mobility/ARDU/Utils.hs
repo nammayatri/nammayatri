@@ -52,7 +52,6 @@ import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.Merch
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
-import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
@@ -105,19 +104,6 @@ getBPPRideById rideId = do
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
-getBPPDriverLocation ::
-  Id TPerson.Person ->
-  ClientsM LatLong
-getBPPDriverLocation driverId = do
-  mbRes <- liftIO $ runARDUFlow "" $ findById driverId
-  mbRes `shouldSatisfy` isJust
-  let res = fromJust mbRes
-  pure $
-    LatLong
-      { lat = res.lat,
-        lon = res.lon
-      }
-
 getBPPDriverInformation ::
   Id TPerson.Person ->
   ClientsM TDrInfo.DriverInformation
@@ -126,12 +112,10 @@ getBPPDriverInformation driverId =
 
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
-setupDriver driver initialPoint = do
+setupDriver driver _initialPoint = do
   void . callBPP $ API.ui.driver.setDriverOnline driver.token True (Just TDrInfo.ONLINE)
-  -- Moves driver to the pickup point
-  preUpdate <- liftIO $ API.buildUpdateLocationRequest $ initialPoint :| []
-  void . callBPP $
-    API.ui.location.updateLocation driver.token preUpdate
+
+-- Moves driver to the pickup point
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do

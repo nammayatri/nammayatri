@@ -25,7 +25,6 @@ where
 
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.DriverLocation as DDrLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -50,7 +49,6 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -70,7 +68,6 @@ data DashboardStartRideReq = DashboardStartRideReq
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
@@ -85,7 +82,6 @@ buildStartRideHandle merchantId = do
     ServiceHandle
       { findRideById = QRide.findById,
         findBookingById = QRB.findById,
-        findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
@@ -151,7 +147,6 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
   point <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
@@ -163,17 +158,13 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         Just point -> pure point
         Nothing -> do
           driverLocation <- do
-            if enableLocationTrackingService
-              then do
-                driverLocations <- LF.driversLocation [driverId]
-                listToMaybe driverLocations & fromMaybeM LocationNotFound
-              else findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
+            driverLocations <- LF.driversLocation [driverId]
+            listToMaybe driverLocations & fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
-    when enableLocationTrackingService $ do
-      ltsRes <- LF.rideStart rideId point.lat point.lon booking.providerId driverId
-      logTagInfo "ltsRes" (show ltsRes)
+    ltsRes <- LF.rideStart rideId point.lat point.lon booking.providerId driverId
+    logTagInfo "ltsRes" (show ltsRes)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId

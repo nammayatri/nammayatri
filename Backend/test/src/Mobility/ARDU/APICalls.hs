@@ -16,10 +16,8 @@ module Mobility.ARDU.APICalls where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
-import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
-import Data.Time
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
@@ -36,8 +34,7 @@ import Servant.Client
 data UIAPIs = UIAPIs
   { healthCheck :: ClientM Text,
     ride :: RideAPIs,
-    driver :: DriverAPIs,
-    location :: LocationAPIs
+    driver :: DriverAPIs
   }
 
 data RideAPIs = RideAPIs
@@ -59,10 +56,6 @@ data DriverAPIs = DriverAPIs
     remove :: Text -> ClientM APISuccess
   }
 
-newtype LocationAPIs = LocationAPIs
-  { updateLocation :: RegToken -> NonEmpty LocationAPI.Waypoint -> ClientM APISuccess
-  }
-
 -- most of apis do not used in tests, so let's simplify API type
 type HealthCheckAPI = Get '[JSON] Text
 
@@ -70,7 +63,6 @@ type UIAPI =
   "ui"
     :> ( HealthCheckAPI
            :<|> DriverAPI.API
-           :<|> LocationAPI.API
            :<|> RideAPI.API
        )
 
@@ -78,12 +70,10 @@ ui :: UIAPIs
 ui = do
   let ride = RideAPIs {..}
   let driver = DriverAPIs {..}
-  let location = LocationAPIs {..}
   UIAPIs {..}
   where
     healthCheck
       :<|> driverClient
-      :<|> locationClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
     _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
@@ -110,8 +100,6 @@ ui = do
                       )
                :<|> _
              ) = driverClient
-
-    (_ :<|> updateLocation) = locationClient
 
 newtype DashboardAPIs = DashboardAPIs
   { ride :: DashboardRideAPIs
@@ -142,17 +130,6 @@ buildStartRideReq otp initialPoint =
     { RideAPI.rideOtp = otp,
       point = initialPoint
     }
-
-buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty LocationAPI.Waypoint)
-buildUpdateLocationRequest pts =
-  forM pts $ \ll -> do
-    now <- getCurrentTime
-    return $
-      LocationAPI.Waypoint
-        { pt = ll,
-          ts = now,
-          acc = Nothing
-        }
 
 getDriverOfferBppBaseUrl :: BaseUrl
 getDriverOfferBppBaseUrl =

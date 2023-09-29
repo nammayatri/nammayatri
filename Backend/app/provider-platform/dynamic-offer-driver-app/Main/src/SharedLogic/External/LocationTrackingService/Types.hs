@@ -85,4 +85,4 @@ newtype DriversLocationReq = DriversLocationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-type HasLocationService m r = (HasField "enableLocationTrackingService" r Bool, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])
+type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])

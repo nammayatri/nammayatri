@@ -44,7 +44,6 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -137,9 +136,7 @@ handler transporter req quote = do
 
           ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-          enableLocationTrackingService <- asks (.enableLocationTrackingService)
-          when enableLocationTrackingService $ do
-            void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+          void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
@@ -150,7 +147,6 @@ handler transporter req quote = do
           -- critical updates
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QRide.createRide ride
-          DLoc.updateOnRide driver.merchantId driver.id True
 
           -- non-critical updates
           when isNewRider $ QRD.create riderDetails
@@ -344,8 +340,7 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasField "enableLocationTrackingService" r Bool
+    HasLongDurationRetryCfg r c
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -364,7 +359,6 @@ cancelBooking booking mbDriver transporter = do
   QBCR.upsert bookingCancellationReason
   whenJust mbRide $ \ride -> do
     QRide.updateStatus ride.id DRide.CANCELLED
-    DLoc.updateOnRide booking.providerId ride.driverId False
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
 
@@ -402,8 +396,7 @@ validateRequest ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c,
-    HasField "enableLocationTrackingService" r Bool
+    HasLongDurationRetryCfg r c
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

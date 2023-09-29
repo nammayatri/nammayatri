@@ -59,7 +59,6 @@ import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
@@ -232,13 +231,9 @@ rideInfo merchantShortId reqRideId = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
   mDriverLocation <- do
-    if enableLocationTrackingService
-      then do
-        driverLocations <- LF.driversLocation [driverId]
-        return $ listToMaybe driverLocations
-      else QDrLoc.findById driverId
+    driverLocations <- LF.driversLocation [driverId]
+    return $ listToMaybe driverLocations
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED

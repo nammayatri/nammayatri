@@ -79,7 +79,6 @@ data HandlerEnv = HandlerEnv
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    enableLocationTrackingService :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType
