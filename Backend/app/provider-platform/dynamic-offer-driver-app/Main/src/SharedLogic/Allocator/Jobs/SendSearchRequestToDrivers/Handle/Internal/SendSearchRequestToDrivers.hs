@@ -17,10 +17,13 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
   )
 where
 
+import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
@@ -38,6 +41,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
@@ -58,8 +62,10 @@ sendSearchRequestToDrivers ::
   Maybe DFP.DriverExtraFeeBounds ->
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
+  [Id Driver] ->
+  GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
+sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
@@ -77,7 +83,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
   forM_ searchRequestsForDrivers $ \sReqFD -> do
     QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}

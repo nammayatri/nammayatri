@@ -15,6 +15,7 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
@@ -32,6 +33,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -62,7 +64,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds
+  goHomeCfg <- CQGHC.findByMerchantId merchant.id
+  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
   return res
 
 sendSearchRequestToDrivers' ::
@@ -82,9 +85,10 @@ sendSearchRequestToDrivers' ::
   SearchTry ->
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
+  GoHomeConfig ->
   m (ExecutionResult, Bool)
-sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds = do
-  handler handle
+sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
+  handler handle goHomeCfg
   where
     handle =
       Handle
