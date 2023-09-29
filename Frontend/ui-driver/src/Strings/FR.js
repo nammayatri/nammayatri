@@ -715,5 +715,6 @@ const frenchStrings = {
   CLEARANCE_AND_REGISTERATION : "Autorisation + Inscription",
   UPI_AUTOPAY_SETUP : "Configuration du paiement automatique UPI",
   WATCH_VIDEO_FOR_HELP : "Regarder la vidéo pour obtenir de l'aide",
-  PAYMENT_PENDING_SOFT_NUDGE : "La limite des cotisations sera bientôt atteinte.Cotisation claire pour profiter des manèges sans escale"
+  PAYMENT_PENDING_SOFT_NUDGE : "La limite des cotisations sera bientôt atteinte.Cotisation claire pour profiter des manèges sans escale",
+  CLEAR_YOUR_DUES_EARLY : "Effacez vos cotisations tôt"
 }
