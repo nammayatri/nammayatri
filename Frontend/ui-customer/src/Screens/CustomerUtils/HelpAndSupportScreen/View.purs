@@ -41,7 +41,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, show, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
+import Prelude (Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
@@ -452,16 +452,17 @@ topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
   , image :: String
 }
 topicsList state = [
-  { action : ContactUs
-  , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
-  , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
-  },
-  { action : CallSupport
-  , title : (getString CONTACT_SUPPORT)
-  , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
-  } ] <> if state.data.config.showDeleteAccount then [
-    { action : DeleteAccount
-  , title : (getString REQUEST_TO_DELETE_ACCOUNT)
-  , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
-  }
-  ] else []
+    { action : ContactUs
+    , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
+    , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
+    }
+  ] <> if state.data.config.enableContactSupport then 
+        [ { action : CallSupport
+          , title : (getString CONTACT_SUPPORT)
+          , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
+          } ] else []
+    <> if state.data.config.showDeleteAccount then 
+        [ { action : DeleteAccount
+          , title : (getString REQUEST_TO_DELETE_ACCOUNT)
+          , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
+          } ] else []

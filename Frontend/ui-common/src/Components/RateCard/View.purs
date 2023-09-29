@@ -151,7 +151,7 @@ defaultRateCardView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      ][ linearLayout
+      ] $ [ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , padding $ PaddingHorizontal 20 20
@@ -241,9 +241,31 @@ defaultRateCardView push config =
                   ][]
                 ]
               )config.otherOptions)
-      ]
+      ] <> if config.fareInfoText /= "" then [fareInfoTextView push config] else []  
   ]
       
+fareInfoTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+fareInfoTextView push config = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ PaddingHorizontal 20 20
+  , margin $ MarginTop 8
+  ][  textView $ 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.red
+      , text "*"
+      , padding $ PaddingRight 5
+      ] <> FontStyle.body3 LanguageStyle
+    , textView $ 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.black700
+      , text $ config.fareInfoText
+      ] <> FontStyle.paragraphText LanguageStyle
+  ]
+
 driverAdditionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 driverAdditionView push config = 
     linearLayout

@@ -58,6 +58,7 @@ type AppConfig =
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , customerTip :: CustomerTip
+  , enableContactSupport :: Boolean
   } 
 
 type NotifyRideConfirmationConfig = {

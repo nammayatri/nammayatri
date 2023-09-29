@@ -441,8 +441,11 @@ currentFlowStatus = do
         liftFlowBT $ hideLoader
         accountSetUpScreenFlow
       else do
-          modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
-          setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
+        let tag = case (response.disability) of
+                      Just value -> value
+                      Nothing -> ""
+        modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{ disability = Just {tag : tag, id : "", description: ""}, settingSideBar{name =fromMaybe ""  response.firstName}}})
+        setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
       if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}} , props {isBanner = false}})
         else pure unit
@@ -823,7 +826,7 @@ homeScreenFlow = do
                 (LatLong destinationLocation) = (destinationDetailResponse.location)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon} })
           _          -> pure unit
-
+        updateSourceLocation ""
         (GlobalState updatedState) <- getState
         let bothLocationChangedState = updatedState.homeScreen
         _ <- pure $ spy "destination prediction clicked state ---->>> " bothLocationChangedState
@@ -969,7 +972,7 @@ homeScreenFlow = do
             _ <- pure $ removeAllPolylines ""
             _ <- pure $ spy "INSIDE ELSE IF OF ONGOING" state.props.currentStage
             _ <- updateLocalStage HomeScreen
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability, settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})             
             homeScreenFlow
           else do
             lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
@@ -988,7 +991,7 @@ homeScreenFlow = do
       liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
       liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
       removeChatService ""
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability, settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
@@ -1050,7 +1053,7 @@ homeScreenFlow = do
                                       removeChatService ""
                                       setValueToLocalStore PICKUP_DISTANCE "0"
                                       lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner, showChatNotification = false}})
+                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{ disability = state.data.disability,settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner, showChatNotification = false}})                                      
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                       permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
                                       permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -1099,7 +1102,7 @@ homeScreenFlow = do
                                         , exit_app : false
                                         }
                                         }
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props {isBanner=state.props.isBanner}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability,settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props {isBanner=state.props.isBanner}})
       if state.props.currentStage == RideCompleted then
         if (getSearchType unit) == "direct_search" then do
           _ <- updateLocalStage SearchLocationModel
@@ -1158,7 +1161,7 @@ homeScreenFlow = do
         _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
         _ <- pure $ currentPosition ""
         _ <- updateLocalStage HomeScreen
-        modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isBanner = state.homeScreen.props.isBanner}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{ disability = state.homeScreen.data.disability, settingSideBar{ gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isBanner = state.homeScreen.props.isBanner}})
         homeScreenFlow
     CHECK_CURRENT_STATUS -> do
       (GlobalState state) <- getState
@@ -1168,7 +1171,7 @@ homeScreenFlow = do
       _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
       _ <- pure $ currentPosition ""
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isBanner = state.homeScreen.props.isBanner}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{disability = state.homeScreen.data.disability, settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isBanner = state.homeScreen.props.isBanner}})
       currentFlowStatus
     UPDATE_LOCATION_NAME state lat lon -> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat lon)
@@ -1278,6 +1281,7 @@ homeScreenFlow = do
           homeScreenFlow
     UPDATE_SAVED_LOCATION -> do
       savedLocationResp <- lift $ lift $ Remote.getSavedLocationList ""
+      updateSourceLocation ""
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
           recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
@@ -1786,6 +1790,10 @@ myProfileScreenFlow = do
       case resp of
         Right response -> do
           setValueToLocalStore USER_NAME stringName
+          let tag = case disability of
+                      Just (Disability value) -> value.tag
+                      Nothing -> ""
+          modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{ disability = Just {id : "", tag : tag, description : "" }}})
           case gender of
             Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just gender}}, props{isBanner = false}})
             _ -> pure unit
@@ -2391,3 +2399,15 @@ rideCompletedDetails (RideBookingRes resp) = do
           {key : "Difference between estimated and actual fares",value : unsafeToForeign $  "₹" <> (show $ resp.estimatedFare - finalAmount)},
           {key : "Driver pickup charges",value : unsafeToForeign $  "₹ 10"},
           {key : "Night ride",value : unsafeToForeign $  show $ nightChargesVal}]
+
+updateSourceLocation :: String ->  FlowBT String Unit
+updateSourceLocation _ = do 
+  (GlobalState currentState) <- getState
+  let disabled = case currentState.homeScreen.data.disability of 
+                      Just val -> Just val.tag
+                      Nothing -> Just ""
+  when (disabled == Just "BLIND_LOW_VISION" ) $ do
+    PlaceName address <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing } })
+    pure unit
+  pure unit 

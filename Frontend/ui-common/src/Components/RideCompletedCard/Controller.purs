@@ -43,7 +43,8 @@ type Config = {
   theme :: Theme,
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
-  viewsByOrder :: Array RideCompletedElements
+  viewsByOrder :: Array RideCompletedElements,
+  enableContactSupport :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -141,7 +142,8 @@ config = {
   theme : DARK,
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
-  viewsByOrder : []
+  viewsByOrder : [],
+  enableContactSupport : true
 }
 
 type CustomerIssueCard = {

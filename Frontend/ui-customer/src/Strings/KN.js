@@ -232,7 +232,7 @@ const kannadaStrings = {
   "NOT_NOW": "ಈಗಲ್ಲ",
   "OF": "ರಲ್ಲಿ",
   "LOST_SOMETHING": "ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡಿದ್ದೀರಾ?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "ಡ್ರೈವರ್‌ನೊಂದಿಗೆ ನೇರವಾಗಿ ಸಂಪರ್ಕಿಸಲು ನೀವು ಕಾಲ್‌ಬ್ಯಾಕ್ ಅನ್ನು ವಿನಂತಿಸಬಹುದು",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "ನೀವು ಡ್ರೈವರ್‌ನಿಂದ ಕಾಲ್‌ಬ್ಯಾಕ್ ವಿನಂತಿಸಬಹುದು",
   "CALL_DRIVER": "ಚಾಲಕನೊಂದಿಗೆ ಸಂಪರ್ಕಪಡಿಸಿ",
   "NO_MORE_RIDES": "ಇನ್ನು ರೈಡ್‌ಗಳಿಲ್ಲ",
   "CONTACT_SUPPORT": "ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ",
@@ -618,5 +618,10 @@ const kannadaStrings = {
   "AC_SUV" : "ಎಸಿ ಎಸ್ಯುವಿ",
   "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ",
   "ERNAKULAM_LIMIT_CHARGE": "ಪಿಕಪ್ ಅಥವಾ ಗಮ್ಯಸ್ಥಾನವು ಎರ್ನಾಕುಲಂ ಕಾರ್ಪೊರೇಷನ್ ಮಿತಿಯಿಂದ ಹೊರಗಿದ್ದರೆ ದರವು 1.5x ಆಗಿರುತ್ತದೆ",
-  "SELECT_LOCATION_ON_MAP" : "ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+  "SELECT_LOCATION_ON_MAP" : "ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  "DOWNLOAD_DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+  "VIEW_DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿಯನ್ನು ವೀಕ್ಷಿಸಿ",
+  "DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿ",
+  "HELP" : "ಸಹಾಯ",
+  "FARE_INFO_TEXT" : ""
 }

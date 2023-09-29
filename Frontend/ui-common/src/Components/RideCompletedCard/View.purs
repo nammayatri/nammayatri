@@ -80,40 +80,7 @@ topCardView config push =
         , gravity CENTER 
         , margin $ MarginTop 5
         ][if config.topCard.topPill.visible then topPillView config push else dummyTextView]
-      , linearLayout[
-          width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity RIGHT
-        ][imageView
-  -- Will be enabled after designes are changed
-  -- ]<> if config.theme == LIGHT then [stroke $ "1,"<>Color.grey800
-  --                                   , cornerRadii $ Corners 16.0 false false true true
-  --                                   ] 
-  --                               else [])
-  -- [  linearLayout
-  --     [ width MATCH_PARENT
-  --     , height WRAP_CONTENT
-  --     , gravity RIGHT
-  --     , layoutGravity "right"
-  --     , margin $ MarginLeft 40
-  --     , padding $ PaddingTop safeMarginTop
-  --     ][ if config.topCard.topPill.visible then 
-  --           linearLayout[
-  --             width MATCH_PARENT
-  --           , height WRAP_CONTENT
-  --           , gravity CENTER
-  --           , margin $ MarginLeft 40
-  --           ][topPillView config push] else dummyTextView
-  --       , imageView
-          [ height $ V 40
-          , width $ V 40
-          , accessibility config.accessibility
-          , accessibilityHint "Contact Support : Button"
-          , imageWithFallback if config.theme == LIGHT then ("ny_ic_black_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_black_headphone.png") else ("ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png")
-          , onClick push $ const Support
-          ]
-        ]
-      ]
+        , if config.enableContactSupport then  contactSupportView config push else dummyTextView ]
     , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -176,6 +143,22 @@ topCardView config push =
           , accessibility DISABLE
           , imageWithFallback $ if config.theme == LIGHT then ("ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png") else ("ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png")
           ]
+      ]
+  ]
+
+contactSupportView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+contactSupportView config push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity RIGHT
+  ][  imageView
+      [ height $ V 40
+      , width $ V 40
+      , accessibility config.accessibility
+      , accessibilityHint "Contact Support : Button"
+      , imageWithFallback $ "ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png"
+      , onClick push $ const Support
       ]
   ]
 

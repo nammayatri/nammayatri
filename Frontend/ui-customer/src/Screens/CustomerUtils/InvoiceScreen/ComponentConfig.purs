@@ -42,7 +42,7 @@ genericHeaderConfig state = let
        , visibility = VISIBLE
        }
     , textConfig
-      { text = (getString INVOICE)
+      { text = (getString DRIVER_RECEIPT)
       , color = Color.darkCharcoal
       }
     , suffixImageConfig
