@@ -493,8 +493,12 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber = do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
+  when mbFleet $ do
+    when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
+    vehicleInfo <- QVehicle.findByVehicleNoAndFleetOwnerId (fromMaybe " " mbVehicleNumber) fleetOwnerId
+    when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
@@ -764,7 +768,7 @@ castVehicleVariantDashboard = \case
 ---------------------------------------------------------------------
 getAllVehicleForFleet :: ShortId DM.Merchant -> Text -> Flow Common.ListVehicleRes
 getAllVehicleForFleet _ fleetOwnerId = do
-  vehicleList <- QVehicle.findByFleetOwnerId (Just fleetOwnerId)
+  vehicleList <- QVehicle.findByFleetOwnerId fleetOwnerId
   return $ Common.ListVehicleRes {vehicles = map convertToVehicleAPIEntity vehicleList}
 
 convertToVehicleAPIEntity :: DVeh.Vehicle -> Common.VehicleAPIEntity
