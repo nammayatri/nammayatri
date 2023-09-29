@@ -128,7 +128,8 @@ data AppCfg = AppCfg
     enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
     modelNamesMap :: M.Map Text Text,
-    maxMessages :: Text
+    maxMessages :: Text,
+    dontEnableForDb :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -204,7 +205,8 @@ data AppEnv = AppEnv
     enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text
+    modelNamesHashMap :: HM.Map Text Text,
+    dontEnableForDb :: [Text]
   }
   deriving (Generic)
 

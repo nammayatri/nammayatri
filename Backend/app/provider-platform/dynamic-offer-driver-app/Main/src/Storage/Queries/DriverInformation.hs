@@ -32,7 +32,6 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Person (findAllPersonWithDriverInfos)
 import qualified Prelude
@@ -267,11 +266,11 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
       pure $ zip p di
     Left _ -> pure []
 
-getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive before = do
-  driverLocations <- QDL.getDriverLocations before
-  driverInfos <- getDriverInfos driverLocations
-  getDrivers driverInfos
+-- getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m) => UTCTime -> m [Person]
+-- getDriversWithOutdatedLocationsToMakeInactive before = do
+-- driverLocations <- QDL.getDriverLocations before
+-- driverInfos <- getDriverInfos driverLocations
+-- getDrivers driverInfos
 
 getDrivers ::
   MonadFlow m =>

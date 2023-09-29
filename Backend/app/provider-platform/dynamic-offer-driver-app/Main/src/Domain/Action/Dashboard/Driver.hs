@@ -96,7 +96,6 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
-import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
@@ -990,14 +989,13 @@ data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId dbSyncTime = do
-  merchant <- findMerchantByShortId merchantShortId
+  _merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   let dbSyncInterVal = addUTCTime (fromIntegral (- fromMaybe 1 dbSyncTime) * 60) now
   driverInfos <- B.runInReplica $ QPerson.getOnRideStuckDriverIds dbSyncInterVal
   driverIds <-
     mapM
       ( \driverInf -> do
-          void $ DLoc.updateOnRide merchant.id driverInf.driverId False
           return (cast driverInf.driverId)
       )
       driverInfos

@@ -30,21 +30,17 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Beam.Functions as B
-import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified SharedLogic.DriverLocation as SDrLoc
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDrInfo
-import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -70,13 +66,6 @@ stuckBookingsCancel merchantShortId req = do
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  driverLocations <-
-    if enableLocationTrackingService
-      then do
-        LF.driversLocation stuckPersonIds
-      else do
-        catMaybes <$> traverse SDrLoc.findById stuckPersonIds
   QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
   QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
@@ -85,9 +74,6 @@ stuckBookingsCancel merchantShortId req = do
     if item.driverActive
       then QDFS.updateStatus item.driverId DDFS.ACTIVE
       else QDFS.updateStatus item.driverId DDFS.IDLE
-  for_ driverLocations $ \location -> do
-    let latLong = LatLong location.lat location.lon
-    void $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 

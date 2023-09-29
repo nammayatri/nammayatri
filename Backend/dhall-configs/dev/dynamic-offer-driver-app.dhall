@@ -288,7 +288,6 @@ in  { esqDBCfg
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.DbBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , enableLocationTrackingService = False
     , dontEnableForDb
     , maxMessages
     , modelNamesMap
