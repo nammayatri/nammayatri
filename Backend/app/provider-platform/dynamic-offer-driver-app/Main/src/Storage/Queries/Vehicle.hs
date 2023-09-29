@@ -124,8 +124,11 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id mercha
                   $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] vehicles)
 
-findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
+findByRegistrationNo :: MonadFlow m => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
+
+findAllByFleetOwnerId :: MonadFlow m => Text -> m [Vehicle]
+findAllByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
 
 instance FromTType' BeamV.Vehicle Vehicle where
   fromTType' BeamV.VehicleT {..} = do

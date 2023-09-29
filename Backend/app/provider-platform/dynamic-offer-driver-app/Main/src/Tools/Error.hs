@@ -744,3 +744,21 @@ instance IsHTTPError SubscriptionError where
     OngoingManualPayment -> E400
 
 instance IsAPIError SubscriptionError
+
+newtype FleetErrors
+  = FleetOwnerVehicleMismatchError Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FleetErrors
+
+instance IsBaseError FleetErrors where
+  toMessage = \case
+    FleetOwnerVehicleMismatchError fleetOwnerId -> Just $ "Vehicle does not belong to fleet owner with id " <> show fleetOwnerId
+
+instance IsHTTPError FleetErrors where
+  toErrorCode = \case
+    FleetOwnerVehicleMismatchError _ -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
+  toHttpCode = \case
+    FleetOwnerVehicleMismatchError _ -> E400
+
+instance IsAPIError FleetErrors

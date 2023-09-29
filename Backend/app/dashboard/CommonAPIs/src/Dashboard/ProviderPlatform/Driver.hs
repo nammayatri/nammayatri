@@ -25,9 +25,10 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney, MandatoryQueryParam, Money)
+import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Servant hiding (Summary, throwError)
@@ -667,6 +668,7 @@ instance HideSecrets AddVehicleReq where
 
 type AddVehicleForFleetAPI =
   Capture "mobileNo" Text
+    :> QueryParam "countryCode" Text
     :> "addVehicle"
     :> "fleet"
     :> ReqBody '[JSON] AddVehicleReq
@@ -697,6 +699,64 @@ data VehicleAPIEntity = VehicleAPIEntity
 
 ---------------------------------------------------------
 
+-- unlink vehicle ---------------------------------------
+
+type FleetUnlinkVehicleAPI =
+  Capture "vehicleNo" Text
+    :> QueryParam "countryCode" Text
+    :> Capture "driverMobileNo" Text
+    :> "unlink"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- remove fleet vehicle ---------------------------------------
+
+type FleetRemoveVehicleAPI =
+  Capture "vehicleNo" Text
+    :> "remove"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- fleet driver stats ---------------------------------------
+
+type FleetStatsAPI =
+  "stats"
+    :> Get '[JSON] FleetStatsRes
+
+data FleetStatsRes = FleetStatsRes
+  { vehiclesInFleet :: Int,
+    totalRidesCompleted :: Int,
+    totalEarnings :: HighPrecMoney,
+    totalConversionPer :: Double,
+    totalAcceptancePer :: Double,
+    totalCancellationPer :: Double,
+    vehicleStats :: [FleetVehicleStatsListItem]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data Vehicle
+
+data DriverMode
+  = ONLINE
+  | OFFLINE
+  | SILENT
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable DriverMode
+
+data FleetVehicleStatsListItem = FleetVehicleStatsListItem
+  { vehicleRegNo :: Text,
+    driverName :: Text,
+    status :: Maybe DriverMode,
+    vehicleType :: Variant,
+    totalRides :: Maybe Int,
+    earnings :: Maybe Money,
+    rating :: Maybe Centesimal,
+    ridesAssigned :: Maybe Int,
+    ridesCancelled :: Maybe Int
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+---------------------------------------------------------
 -- update driver name -----------------------------------
 
 type UpdateDriverNameAPI =
@@ -753,3 +813,6 @@ type IncrementDriverGoToCountAPI =
   Capture "driverId" (Id Driver)
     :> "incrementGoToCount"
     :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- Get Route driver ids ---------------------------------------

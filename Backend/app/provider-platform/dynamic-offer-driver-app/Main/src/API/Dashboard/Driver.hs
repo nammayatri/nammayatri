@@ -54,6 +54,9 @@ type API =
            :<|> Common.AddVehicleAPI
            :<|> AddVehicleForFleetAPI
            :<|> GetAllVehicleForFleetAPI
+           :<|> FleetUnlinkVehicleAPI
+           :<|> FleetRemoveVehicleAPI
+           :<|> FleetStatsAPI
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
@@ -108,6 +111,7 @@ type DriverPaymentHistoryEntityDetailsAPI =
 
 type AddVehicleForFleetAPI =
   Capture "mobileNo" Text
+    :> QueryParam "mobileCountryCode" Text
     :> Capture "fleetOwnerId" Text
     :> "addVehicle"
     :> "fleet"
@@ -132,6 +136,25 @@ type DriverInfoAPI =
     :> Capture "fleetOwnerId" Text
     :> Capture "mbFleet" Bool
     :> Get '[JSON] Common.DriverInfoRes
+
+type FleetUnlinkVehicleAPI =
+  Capture "fleetOwnerId" Text
+    :> Capture "vehicleNo" Text
+    :> QueryParam "mobileCountryCode" Text
+    :> Capture "driverMobileNo" Text
+    :> "unlink"
+    :> Post '[JSON] APISuccess
+
+type FleetRemoveVehicleAPI =
+  Capture "fleetOwnerId" Text
+    :> Capture "vehicleNo" Text
+    :> "remove"
+    :> Post '[JSON] APISuccess
+
+type FleetStatsAPI =
+  Capture "fleetOwnerId" Text
+    :> "stats"
+    :> Get '[JSON] Common.FleetStatsRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -161,6 +184,9 @@ handler merchantId =
     :<|> addVehicle merchantId
     :<|> addVehicleForFleet merchantId
     :<|> getAllVehicleForFleet merchantId
+    :<|> fleetUnlinkVehicle merchantId
+    :<|> fleetRemoveVehicle merchantId
+    :<|> fleetStats merchantId
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
@@ -245,11 +271,20 @@ updateByPhoneNumber merchantShortId mobileNo = withFlowHandlerAPI . DDriver.upda
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId driverId
 
-addVehicleForFleet :: ShortId DM.Merchant -> Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicleForFleet merchantShortId phoneNo fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId phoneNo fleetOwnerId
+addVehicleForFleet :: ShortId DM.Merchant -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
+addVehicleForFleet merchantShortId phoneNo mbMobileCountryCode fleetOwnerId = withFlowHandlerAPI . DDriver.addVehicleForFleet merchantShortId phoneNo mbMobileCountryCode fleetOwnerId
 
 getAllVehicleForFleet :: ShortId DM.Merchant -> Text -> FlowHandler Common.ListVehicleRes
 getAllVehicleForFleet merchantId = withFlowHandlerAPI . DDriver.getAllVehicleForFleet merchantId
+
+fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Text -> Maybe Text -> Text -> FlowHandler APISuccess
+fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo mbMobileCountryCode = withFlowHandlerAPI . DDriver.fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo mbMobileCountryCode
+
+fleetRemoveVehicle :: ShortId DM.Merchant -> Text -> Text -> FlowHandler APISuccess
+fleetRemoveVehicle merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.fleetRemoveVehicle merchantShortId fleetOwnerId
+
+fleetStats :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetStatsRes
+fleetStats merchantShortId = withFlowHandlerAPI . DDriver.fleetStats merchantShortId
 
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId
