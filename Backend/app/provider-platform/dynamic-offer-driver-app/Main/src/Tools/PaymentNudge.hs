@@ -46,6 +46,11 @@ templateText txt = "{#" <> txt <> "#}"
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
 
+data PlanAmountEntity = PlanAmountEntity
+  { finalAmount :: HighPrecMoney,
+    planId :: Text
+  }
+
 sendSwitchPlanNudge ::
   ( EsqDBFlow m r,
     EncFlow m r,
@@ -66,12 +71,12 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
         availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantIdAndPaymentMode transporterConfig.merchantId currPlan.paymentMode)
 
         driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
-        offeredAmounts <- getOfferedAmount currentTotal driver `mapM` availablePlans
+        offeredAmountsEntity <- getOfferedAmount currentTotal driver `mapM` availablePlans
 
-        unless (null offeredAmounts) do
-          let bestAmount = minimum offeredAmounts
-          when (currentTotal > bestAmount) $
-            switchPlanNudge driver numRides (currPlan.maxAmount - bestAmount)
+        unless (null offeredAmountsEntity) do
+          let bestAmountEntity = minimumBy (comparing (.finalAmount)) offeredAmountsEntity
+          when (currentTotal > bestAmountEntity.finalAmount) $
+            switchPlanNudge driver numRides (currPlan.maxAmount - bestAmountEntity.finalAmount) bestAmountEntity.planId
       _ -> return ()
   where
     checkPlanEligible currPlan ePlan = return (ePlan.paymentMode == currPlan.paymentMode && ePlan.planBaseAmount /= currPlan.planBaseAmount)
@@ -87,10 +92,16 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
       let mandateSetupDate = maybe now (\date -> if driverInfo.autoPayStatus == Just DI.ACTIVE then date else now) mbMandateSetupDate
       offersResp <- TPayment.offerList transporterConfig.merchantId =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
       if null offersResp.offerResp
-        then return amount
+        then return (mkOfferedAmountsEntity amount plan.id)
         else do
           let bestOffer = minimumBy (comparing (.finalOrderAmount)) offersResp.offerResp
-          return bestOffer.finalOrderAmount
+          return (mkOfferedAmountsEntity bestOffer.finalOrderAmount plan.id)
+
+    mkOfferedAmountsEntity amount planId =
+      PlanAmountEntity
+        { finalAmount = amount,
+          planId = planId.getId
+        }
 
     makeOfferReq date paymentMode_ plan driver = do
       now <- getCurrentTime
@@ -107,15 +118,15 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1
           }
 
-switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> m ()
-switchPlanNudge driver numOfRides saveUpto = do
+switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()
+switchPlanNudge driver numOfRides saveUpto planId = do
   mPushNotification <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId DPN.PLAN_SWITCH (fromMaybe ENGLISH driver.language) Nothing
   whenJust mPushNotification $ \pn -> do
     let body =
           pn.body
             & T.replace (templateText "numberOfRides") (show numOfRides)
             & T.replace (templateText "saveUpto") (show saveUpto)
-    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon
+    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon (Just planId)
 
 notifyPaymentFailure :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> PaymentMode -> Maybe Text -> m ()
 notifyPaymentFailure driverId paymentMode mbBankErrorCode = do
@@ -129,4 +140,4 @@ notifyPaymentFailure driverId paymentMode mbBankErrorCode = do
     let body =
           pn.body
             & T.replace (templateText "dueAmount") (show totalDues)
-    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon
+    notifyPaymentNudge driver.merchantId driver.id driver.deviceToken pn.notificationSubType pn.title body pn.icon Nothing
