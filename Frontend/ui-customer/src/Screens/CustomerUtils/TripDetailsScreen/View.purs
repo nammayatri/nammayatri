@@ -372,7 +372,7 @@ ratingAndInvoiceView state push =
     --   , gravity RIGHT
     --   , onClick push $ (const DownloadInvoice)
     --   ][  textView
-    --       [ text (getString DOWNLOAD_INVOICE)
+    --       [ text (getString DOWNLOAD_DRIVER_RECEIPT)
     --       , textSize FontSize.a_12
     --       , color Color.blue900
     --       , visibility if not state.props.invoiceDownloaded then VISIBLE else GONE
@@ -393,7 +393,7 @@ invoiceView state push =
     , onClick push $ (const ViewInvoice)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView $
-        [ text (getString VIEW_INVOICE)
+        [ text (getString VIEW_DRIVER_RECEIPT)
         , accessibilityHint "View Invoice : Button"
         , accessibility ENABLE
         , color Color.darkCharcoal

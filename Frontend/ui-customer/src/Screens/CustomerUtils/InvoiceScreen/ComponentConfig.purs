@@ -25,7 +25,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Styles.Colors as Color
 import Common.Types.App
-import Prelude ((<>))
+import Prelude ((<>), (==))
+import MerchantConfig.Utils as MU
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 
@@ -42,7 +43,7 @@ genericHeaderConfig state = let
        , visibility = VISIBLE
        }
     , textConfig
-      { text = (getString INVOICE)
+      { text = if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then (getString DRIVER_RECEIPT) else (getString INVOICE)
       , color = Color.darkCharcoal
       }
     , suffixImageConfig

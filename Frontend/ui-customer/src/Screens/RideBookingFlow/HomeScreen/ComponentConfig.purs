@@ -607,7 +607,7 @@ rateCardConfig state =
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
-
+        , fareInfoText = (getString FARE_INFO_TEXT)
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
@@ -1156,7 +1156,8 @@ rideCompletedCardConfig state = let
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true
         },
-        primaryButtonConfig = skipButtonConfig state
+        primaryButtonConfig = skipButtonConfig state,
+        enableContactSupport = state.data.config.enableContactSupport
       }
   in config'
 

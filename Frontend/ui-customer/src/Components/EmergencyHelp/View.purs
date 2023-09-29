@@ -486,11 +486,12 @@ type CardData =  { action :: Action
  }
 
 supportList :: EmergencyHelpModelState -> Array (CardData)
-supportList state = [
-  { action :  ContactSupportPopup
-  , title : getString CALL_NAMMA_YATRI_SUPPORT
-  , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION },
-  { action : CallPolicePopup
-  , title : getString CALL_EMERGENCY_CENTRE
-  , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }
-]
+supportList state = 
+  if state.config.enableContactSupport then 
+    [{ action :  ContactSupportPopup
+    , title : getString CALL_NAMMA_YATRI_SUPPORT
+    , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]
+  else [] 
+  <> [{ action : CallPolicePopup
+      , title : getString CALL_EMERGENCY_CENTRE
+      , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]

@@ -233,7 +233,7 @@ const englishStrings = {
   "NOT_NOW": "Not Now",
   "OF": "of",
   "LOST_SOMETHING": "Lost Something?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "You can request a callback to connect with the driver directly",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "You can request a callback from driver",
   "CALL_DRIVER": "Call Driver",
   "NO_MORE_RIDES": "No more rides",
   "CONTACT_SUPPORT": "Contact Support",
@@ -622,5 +622,10 @@ const englishStrings = {
   "AC_SUV" : "AC SUV",
   "RIDE_TYPE" : "Ride Type",
   "ERNAKULAM_LIMIT_CHARGE": "Fare will be 1.5x if the pickup or destination lies outside Ernakulam corporation limits",
-  "SELECT_LOCATION_ON_MAP" : "Select location on map"
+  "SELECT_LOCATION_ON_MAP" : "Select location on map",
+  "DOWNLOAD_DRIVER_RECEIPT" : "Download Driver Receipt",
+  "VIEW_DRIVER_RECEIPT" : "View Driver Receipt",
+  "DRIVER_RECEIPT" : "Driver Receipt",
+  "HELP" : "Help",
+  "FARE_INFO_TEXT" : ""
 }

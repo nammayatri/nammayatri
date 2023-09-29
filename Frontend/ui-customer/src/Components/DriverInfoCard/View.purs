@@ -65,6 +65,7 @@ view push state =
       , width MATCH_PARENT
       , gravity RIGHT
       , padding $ PaddingHorizontal 16 16
+      , visibility if state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
       ][supportButton push state]
     , mapOptionsView push state
     , messageNotificationView push state
@@ -317,7 +318,7 @@ mapOptionsView push state =
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
       ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else (textView[height $ V 0])
-        , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
+        , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else if state.data.config.driverInfoConfig.showTrackingButton then locationTrackButton push state else supportButton push state
       ]
     ]
 
@@ -333,12 +334,13 @@ supportButton push state =
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
   , margin $ MarginTop 10
+  , gravity CENTER_HORIZONTAL
   , cornerRadius 20.0
   ][ imageView
       [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
       , height $ V 18
       , width $ V 18
-      , margin $ Margin 10 10 10 4
+      , margin $ Margin 10 10 10 10
       , accessibilityHint "Share Ride : Button"
       , accessibility ENABLE
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
@@ -347,14 +349,15 @@ supportButton push state =
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
-      , margin (MarginTop 8 )
+      , visibility (if (getValueFromConfig "enableShareRide") == "true" && state.data.config.enableContactSupport then VISIBLE else GONE)
+      , margin (MarginTop 2 )
       , background Color.lightGreyShade
       ][]
     , imageView
       [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
+      , visibility if state.data.config.enableContactSupport then VISIBLE else GONE
       , margin $ Margin 10 12 10 10
       , accessibilityHint "Contact Customer Support : Button"
       , accessibility ENABLE

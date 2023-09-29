@@ -309,7 +309,8 @@ type InvoiceScreenData =
     date :: String ,
     selectedItem :: IndividualRideCardState,
     config :: AppConfig,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    pdfHeading :: String
   }
 
 type InvoiceScreenProps =

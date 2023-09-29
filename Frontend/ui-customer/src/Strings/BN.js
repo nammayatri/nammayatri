@@ -228,7 +228,7 @@ const bengaliStrings = {
   "NOT_NOW": "এখন না",
   "OF": "এর",
   "LOST_SOMETHING": "কিছু হারিয়েছে?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "ড্রাইভারের সাথে সংযোগ করার চেষ্টা করুন",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "আপনি ড্রাইভার থেকে একটি কলব্যাক অনুরোধ করতে পারেন",
   "CALL_DRIVER": "ড্রাইভারকে কল করুন",
   "NO_MORE_RIDES": "আর কোনও রাইড নেই",
   "CONTACT_SUPPORT": "সহায়তার সাথে যোগাযোগ করুন",
@@ -638,5 +638,10 @@ const bengaliStrings = {
   "AC_SUV" : "এসি এসইউভি",
   "RIDE_TYPE" : "রাইড টাইপ",
   "ERNAKULAM_LIMIT_CHARGE": "পিকআপ বা গন্তব্য যদি এর্নাকুলাম কর্পোরেশনের সীমার বাইরে থাকে তবে ভাড়া 1.5x হবে",
-  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন"
+  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন",
+  "DOWNLOAD_DRIVER_RECEIPT" : "ড্রাইভার রসিদ ডাউনলোড করুন",
+  "VIEW_DRIVER_RECEIPT" : "ড্রাইভারের রসিদ দেখুন",
+  "DRIVER_RECEIPT" : "ড্রাইভার রসিদ",
+  "HELP" : "সাহায্য",
+  "FARE_INFO_TEXT" : ""
 }

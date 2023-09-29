@@ -226,7 +226,7 @@ const malayalamStrings = {
   "NOT_NOW": "ഇപ്പോൾ വേണ്ട",
   "OF": "ന്റെ",
   "LOST_SOMETHING": "എന്തെങ്കിലും നഷ്ടപ്പെട്ടോ?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "ഡ്രൈവറുമായി ബന്ധപ്പെടാൻ ശ്രമിക്കുക",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "നിങ്ങൾക്ക് ഡ്രൈവറിൽ നിന്ന് ഒരു കോൾബാക്ക് അഭ്യർത്ഥിക്കാം",
   "CALL_DRIVER": "ഡ്രൈവറെ വിളിക്കുക",
   "NO_MORE_RIDES": "ഇതിൽ കൂടുതൽ റൈഡുകൾ നിലവിൽ ഇല്ല",
   "CONTACT_SUPPORT": "സപ്പോർട്ട് ടീമുമായി ബന്ധപെടുക",
@@ -635,5 +635,10 @@ const malayalamStrings = {
   "AC_SUV" : "എസി എസ്‌യുവി",
   "RIDE_TYPE" : "റൈഡ് തരം",
   "ERNAKULAM_LIMIT_CHARGE": "പിക്കപ്പ് /ലക്ഷ്യസ്ഥാനം എറണാകുളം കോർപ്പറേഷൻ പരിധിക്ക് പുറത്താണെങ്കിൽ നിരക്ക് 1.5 മടങ്ങ് ആയിരിക്കും.",
-  "SELECT_LOCATION_ON_MAP" : "മാപ്പിൽ ലൊക്കേഷൻ തിരഞ്ഞെടുക്കുക"
+  "SELECT_LOCATION_ON_MAP" : "മാപ്പിൽ ലൊക്കേഷൻ തിരഞ്ഞെടുക്കുക",
+  "DOWNLOAD_DRIVER_RECEIPT" : "ഡ്രൈവർ രസീത് ഡൗൺലോഡ് ചെയ്യുക",
+  "VIEW_DRIVER_RECEIPT" : "ഡ്രൈവർ രസീത് കാണുക",
+  "DRIVER_RECEIPT" : "ഡ്രൈവർ രസീത്",
+  "HELP" : "സഹായം",
+  "FARE_INFO_TEXT" : ""
 }

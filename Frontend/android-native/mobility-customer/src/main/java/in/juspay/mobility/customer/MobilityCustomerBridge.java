@@ -917,13 +917,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 JSONObject state = new JSONObject(str);
                 JSONObject data = state.getJSONObject("data");
                 String userName = getKeysInSharedPref("USER_NAME");
+                String pdfHeading = data.getString("pdfHeading");
                 JSONObject selectedItem = data.getJSONObject("selectedItem");
                 JSONArray fares = selectedItem.getJSONArray("faresList");
                 PdfDocument pdfDocument = new PdfDocument();
                 PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
                 PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
                 JuspayLogger.d(OTHERS, "PDF Document Created");
-                View content = getInvoiceLayout(selectedItem, fares, userName, context);
+                View content = getInvoiceLayout(selectedItem, fares, userName, pdfHeading,  context);
                 JuspayLogger.d(OTHERS, "PDF Layout inflated");
                 content.measure(page.getCanvas().getWidth(), page.getCanvas().getHeight());
                 content.layout(0, 0, page.getCanvas().getWidth(), page.getCanvas().getHeight());
@@ -932,10 +933,15 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 JuspayLogger.d(OTHERS, "PDF Document canvas drawn");
                 String fileNameformat;
                 String serviceName = context.getResources().getString(R.string.service);
+                String notificationHeading = context.getString(R.string.invoice_downloaded);
+                String notificationSubheading = context.getString(R.string.invoice_for_your_ride_is_downloaded);
+                System.out.println("service name ::" + serviceName);
                 if (serviceName.equals("yatrisathiconsumer")) {
                     fileNameformat = "YS_RIDE_";
-                } else if (serviceName.equals("nammayatri")) {
+                } else if (serviceName.equals("nammayatriconsumer")) {
                     fileNameformat = "NY_RIDE_";
+                    notificationHeading = context.getString(R.string.driver_receipt_downloaded);
+                    notificationSubheading = context.getString(R.string.driver_receipt_for_your_ride_is_downloaded);
                 } else {
                     fileNameformat = "YATRI_RIDE_";
                 }
@@ -950,7 +956,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     JuspayLogger.d(OTHERS, "PDF Document written to path " + file.getPath());
                     Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
                     invoice = null;
-                    showNotificationWithURI(path, context.getString(R.string.invoice_downloaded), context.getString(R.string.invoice_for_your_ride_is_downloaded), "application/pdf", "Invoice", "Invoice Download");
+                    showNotificationWithURI(path, notificationHeading, notificationSubheading, "application/pdf", "Invoice", "Invoice Download");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -963,7 +969,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @SuppressLint("SetTextI18n")
-    private View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
+    private View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, String heading, Context context) throws JSONException {
         JuspayLogger.d(OTHERS, "PDF Document inside inflate View");
         View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
         JuspayLogger.d(OTHERS, "PDF Document inflated View");
@@ -973,6 +979,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         textView.setText(user.trim());
         textView = invoiceLayout.findViewById(R.id.paymentDetail);
         textView.setText(selectedRide.getString("totalAmount"));
+        textView = invoiceLayout.findViewById(R.id.headingText);
+        textView.setText(heading);
         LinearLayout fareBreakupElements = invoiceLayout.findViewById(R.id.fareBreakupElements);
         fareBreakupElements.setOrientation(LinearLayout.VERTICAL);
 
