@@ -63,4 +63,11 @@ commonConfig =
             , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
             }
           }
+        , estimateAndQuoteConfig : 
+            { variants :
+                { acVariant : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV"]
+                , nonAcVariant : ["TAXI"]
+                , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV", "TAXI"]
+                }
+            }
         }

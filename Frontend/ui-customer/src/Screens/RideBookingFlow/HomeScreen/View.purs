@@ -132,7 +132,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
-                  _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
+                  _ <- countDown initialState.props.searchExpire "findingQuotes" push SearchExpireCountDown
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
@@ -1985,7 +1985,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                   case ((routeResp) !! 0) of
                     Just (Route routes) -> do
                       _ <- pure $ removeAllPolylines ""
-                      let newPoints = getExtendedPath (walkCoordinates routes.points)
+                      let (Snapped routePoints) = routes.points
+                          newPoints = if length routePoints > 1 then
+                                        getExtendedPath (walkCoordinates routes.points)
+                                      else
+                                        walkCoordinate srcLat srcLon dstLat dstLon
                           newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                       liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag
                       _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
