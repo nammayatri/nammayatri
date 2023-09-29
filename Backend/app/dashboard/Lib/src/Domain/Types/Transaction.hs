@@ -14,6 +14,7 @@
 
 module Domain.Types.Transaction where
 
+import qualified "dynamic-offer-driver-app" API.Dashboard.Overlay as BPP
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
@@ -80,4 +81,5 @@ data Endpoint
   | CancelAPI BAP.RideCancelEndPoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   | SubscriptionAPI BPP.SubscriptionEndpoint
+  | OverlayAPI BPP.OverlayEndpoint
   deriving (Show, Read)

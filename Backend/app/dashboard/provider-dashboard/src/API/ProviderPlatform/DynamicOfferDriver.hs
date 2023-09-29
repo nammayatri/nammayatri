@@ -25,6 +25,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as Drive
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
+import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
 import qualified API.ProviderPlatform.DynamicOfferDriver.Revenue as Revenue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
@@ -48,6 +49,7 @@ type API =
            :<|> Issue.API
            :<|> Volunteer.API
            :<|> Revenue.API
+           :<|> Overlay.API
        )
 
 handler :: FlowServer API
@@ -63,3 +65,4 @@ handler merchantId =
     :<|> Issue.handler merchantId
     :<|> Volunteer.handler merchantId
     :<|> Revenue.handler merchantId
+    :<|> Overlay.handler merchantId

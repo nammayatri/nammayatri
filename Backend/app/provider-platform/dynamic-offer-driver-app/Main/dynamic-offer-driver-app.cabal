@@ -42,6 +42,7 @@ library
       API.Dashboard.Issue
       API.Dashboard.Merchant
       API.Dashboard.Message
+      API.Dashboard.Overlay
       API.Dashboard.Revenue
       API.Dashboard.Ride
       API.Dashboard.Subscription
@@ -117,6 +118,7 @@ library
       Domain.Action.Dashboard.Issue
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Message
+      Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Revenue
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Volunteer

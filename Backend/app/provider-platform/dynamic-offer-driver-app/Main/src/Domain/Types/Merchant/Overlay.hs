@@ -25,7 +25,7 @@ import Kernel.Types.Id
 data OverlayCondition
   = PaymentPendingGreaterThan Int
   | InactiveAutopay
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data OverlayD (s :: UsageSafety) = Overlay
   { id :: Id Overlay,
