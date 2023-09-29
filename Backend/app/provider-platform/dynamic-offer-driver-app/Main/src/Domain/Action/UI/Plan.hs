@@ -14,7 +14,7 @@
 
 module Domain.Action.UI.Plan where
 
-import Data.List (groupBy)
+import Data.List (groupBy, intersect)
 import qualified Data.Map as M
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
@@ -368,7 +368,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getCurrentTime
-  let currentDues = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverManualDuesFees
+  let currentDues = calculateDues driverManualDuesFees
   let maxMandateAmount = max plan.maxAmount currentDues
   case driverRegisterationFee of
     Just registerFee -> do
@@ -385,7 +385,8 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
               QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
               createMandateInvoiceAndOrder driverId merchantId plan
             else do
-              if inv.maxMandateAmount == Just maxMandateAmount
+              isReusableInvoice <- checkIfInvoiceIsReusable inv (registerFee : driverManualDuesFees)
+              if inv.maxMandateAmount == Just maxMandateAmount && isReusableInvoice
                 then SPayment.createOrder (driverId, merchantId) (registerFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) INV.MANDATE_SETUP_INVOICE (Just (inv.id, inv.invoiceShortId))
                 else do
                   QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
@@ -437,6 +438,13 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             schedulerTryCount = 0,
             collectedAt = Nothing
           }
+    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
+    checkIfInvoiceIsReusable invoice newDriverFees = do
+      allDriverFeeClubedToInvoice <- QINV.findById invoice.id
+      let oldLinkedDriverFeeIds = allDriverFeeClubedToInvoice <&> (.driverFeeId)
+      let newDriverFeeIds = newDriverFees <&> (.id)
+      let intersectionOfDriverFeeIds = oldLinkedDriverFeeIds `intersect` newDriverFeeIds
+      return $ length oldLinkedDriverFeeIds == length intersectionOfDriverFeeIds && length newDriverFeeIds == length intersectionOfDriverFeeIds
 
 convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanEntity
 convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do

@@ -266,16 +266,19 @@ processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Pa
 processNotification notificationId notificationStatus = do
   notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
   let driverFeeId = notification.driverFeeId
-  case notificationStatus of
-    Juspay.NOTIFICATION_FAILURE -> do
-      --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
-      QDF.updateAutoPayToManual driverFeeId
-      QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
-    Juspay.SUCCESS -> do
-      --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
-      QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
-    _ -> pure ()
-  QNTF.updateNotificationStatusById notification.id notificationStatus
+  unless (notification.status == Juspay.SUCCESS) $ do
+    case notificationStatus of
+      Juspay.NOTIFICATION_FAILURE -> do
+        --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
+        QDF.updateAutoPayToManual driverFeeId
+        QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
+      Juspay.SUCCESS -> do
+        --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
+        QIN.updateInvoiceStatusByDriverFeeIds INV.ACTIVE_INVOICE [driverFeeId]
+        QDF.updateManualToAutoPay driverFeeId
+        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
+      _ -> pure ()
+    QNTF.updateNotificationStatusById notification.id notificationStatus
 
 processMandate :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Payment.MandateStatus -> Maybe UTCTime -> Maybe UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> m ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
@@ -284,8 +287,8 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
   when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName mandatePaymentFlow
-  QDP.updateMandateIdByDriverId driverId mandateId
   when (mandateStatus == Payment.ACTIVE) $ do
+    QDP.updateMandateIdByDriverId driverId mandateId
     driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
@@ -298,21 +301,23 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       QDI.updateSubscription True (cast driverPlan.driverId)
       QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
-    driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
-    driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
+    mbDriverPlan <- QDP.findByMandateId mandateId
+    driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      --- did this because only update payer vpa on transaction charged just capturing payer app ------
-      QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow
-      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
-      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverPlan.driverId)
-      when (mandateStatus == Payment.PAUSED) $ do
-        QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
-        QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
-        notifyPaymentModeManualOnPause driver.merchantId driver.id driver.deviceToken
-      when (mandateStatus == Payment.REVOKED) $ do
-        QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
-        QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
-        notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
+      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
+      QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
+      case mbDriverPlan of
+        Just driverPlan -> do
+          QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
+          when (mandateStatus == Payment.PAUSED) $ do
+            QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
+            QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
+            notifyPaymentModeManualOnPause driver.merchantId driver.id driver.deviceToken
+          when (mandateStatus == Payment.REVOKED) $ do
+            QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
+            QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
+            notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
+        Nothing -> pure ()
   where
     castAutoPayStatus = \case
       Payment.CREATED -> Just DI.PENDING
