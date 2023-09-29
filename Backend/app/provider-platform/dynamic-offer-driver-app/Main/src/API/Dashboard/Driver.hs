@@ -43,7 +43,7 @@ type API =
            :<|> DriverCashExemptionAPI
            :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
-           :<|> Common.DriverInfoAPI
+           :<|> DriverInfoAPI
            :<|> Common.DeleteDriverAPI
            :<|> Common.UnlinkVehicleAPI
            :<|> Common.UnlinkDLAPI
@@ -121,6 +121,17 @@ type GetAllVehicleForFleetAPI =
     :> "getAllVehicle"
     :> "fleet"
     :> Get '[JSON] Common.ListVehicleRes
+
+type DriverInfoAPI =
+  "info"
+    :> QueryParam "mobileNumber" Text
+    :> QueryParam "mobileCountryCode" Text
+    :> QueryParam "vehicleNumber" Text
+    :> QueryParam "dlNumber" Text
+    :> QueryParam "rcNumber" Text
+    :> Capture "fleetOwnerId" Text
+    :> Capture "mbFleet" Bool
+    :> Get '[JSON] Common.DriverInfoRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -207,8 +218,8 @@ unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merch
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbRcNumber mbDlNumber fleetOwnerId = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId
 
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId = withFlowHandlerAPI . DDriver.deleteDriver merchantShortId

@@ -57,8 +57,11 @@ upsert a@Vehicle {..} = do
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
 
-findByFleetOwnerId :: (MonadFlow m) => Maybe Text -> m [Vehicle]
-findByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq fleetOwnerId]
+findByFleetOwnerId :: (MonadFlow m) => Text -> m [Vehicle]
+findByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq (Just fleetOwnerId)]
+
+findByVehicleNoAndFleetOwnerId :: (MonadFlow m) => Text -> Text -> m (Maybe Vehicle)
+findByVehicleNoAndFleetOwnerId registrationNo fleetOwnerId = findOneWithKV [Se.And [Se.Is BeamV.registrationNo $ Se.Eq registrationNo, Se.Is BeamV.fleetOwnerId $ Se.Eq (Just fleetOwnerId)]]
 
 updateVehicleRec :: MonadFlow m => Vehicle -> m ()
 updateVehicleRec vehicle = do

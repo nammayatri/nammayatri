@@ -25,19 +25,23 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Com
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
+import "lib-dashboard" Tools.Error
 
 type API =
   "driver"
@@ -372,7 +376,10 @@ driverInfo merchantShortId apiTokenInfo mbMobileNumber mbMobileCountryCode mbVeh
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber
+  encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber apiTokenInfo.personId.getId mbFleet
 
 deleteDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
