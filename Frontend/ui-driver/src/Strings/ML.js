@@ -854,5 +854,6 @@ const mlStrings = {
   CLEARANCE_AND_REGISTERATION : "ക്ലിയറൻസ് + രജിസ്ട്രേഷൻ",
   UPI_AUTOPAY_SETUP : "UPI ഓട്ടോപേ സെറ്റപ്പ്",
   WATCH_VIDEO_FOR_HELP : "സഹായത്തിനായി വീഡിയോ കാണുക",
-  PAYMENT_PENDING_SOFT_NUDGE : "കുടിശ്ശിക പരിധി ഉടൻ എത്തും.നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ കുടിശ്ശിക മായ്ക്കുക"
+  PAYMENT_PENDING_SOFT_NUDGE : "കുടിശ്ശിക പരിധി ഉടൻ എത്തും.നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ കുടിശ്ശിക മായ്ക്കുക",
+  CLEAR_YOUR_DUES_EARLY : "നിങ്ങളുടെ കുടിശ്ശിക നേരത്തെ മായ്ക്കുക"
 }

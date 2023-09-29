@@ -907,5 +907,6 @@ const bengaliStrings = {
    	CLEARANCE_AND_REGISTERATION : "ক্লিয়ারেন্স + রেজিস্ট্রেশন",
 	UPI_AUTOPAY_SETUP : "UPI অটোপে সেটআপ",
 	WATCH_VIDEO_FOR_HELP : "সাহায্যের জন্য ভিডিও দেখুন",
-	PAYMENT_PENDING_SOFT_NUDGE : "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন"
+	PAYMENT_PENDING_SOFT_NUDGE : "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন",
+	CLEAR_YOUR_DUES_EARLY : "আপনার বকেয়া তাড়াতাড়ি সাফ করুন"
 }
