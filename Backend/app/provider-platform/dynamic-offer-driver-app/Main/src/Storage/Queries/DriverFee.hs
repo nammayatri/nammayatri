@@ -127,14 +127,11 @@ findAllFeesInRangeWithStatus mbMerchantId startTime endTime status mbLimit =
     mbLimit
     Nothing
 
-findFeesInRangeAndDriverIdsWithStatus :: MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> [Id Person] -> m [DriverFee]
-findFeesInRangeAndDriverIdsWithStatus startTime endTime status driverIds =
+findPendingPaymentByDrivers :: MonadFlow m => [Id Person] -> m [DriverFee]
+findPendingPaymentByDrivers driverIds =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq status,
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+        [ Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
           Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
         ]
     ]
@@ -189,30 +186,6 @@ findOngoingAfterEndTime (Id driverId) now =
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
     ]
-
--- findDriverFeeInRangeWithNotifcationNotSentAndStatus :: MonadFlow m => Integer -> UTCTime -> UTCTime -> Domain.DriverFeeStatus -> m [DriverFee]
--- findDriverFeeInRangeWithNotifcationNotSentAndStatus limit startTime endTime status = do
---   dbConf <- getMasterBeamConfig
---   res <- L.runDB dbConf $
---     L.findRows $
---       B.select $
---         B.limit_ limit $
---           B.filter_
---             ( \(driverFee, notification) ->
---                 notification.driverFeeId B./=. driverFee.id
---                   B.&&. driverFee.createdAt B.>=. B.val_ startTime
---                   B.&&. driverFee.createdAt B.<=. B.val_ endTime
---                   B.&&. driverFee.status B.==. B.val_ status
---             )
---             do
---               driverFee <- B.all_ (SBC.driverFee SBC.atlasDB)
---               notifications <- B.join_' (SBC.notification SBC.atlasDB) (\notification'' -> BeamN.driverFeeId notification'' B.==?. BeamDF.id driverFee)
---               pure (driverFee, notifications)
---   case res of
---     Right res' -> do
---       let driverFee' = fst <$> res'
---       catMaybes <$> mapM fromTType' driverFee'
---     Left _ -> pure []
 
 findDriverFeeInRangeWithNotifcationNotSentAndStatus :: MonadFlow m => Id Merchant -> Int -> UTCTime -> UTCTime -> Domain.DriverFeeStatus -> m [DriverFee]
 findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime status = do

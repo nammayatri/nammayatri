@@ -15,11 +15,17 @@
 
 module Domain.Types.Merchant.Overlay where
 
+import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+
+data OverlayCondition
+  = PaymentPendingGreaterThan Int
+  | InactiveAutopay
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data OverlayD (s :: UsageSafety) = Overlay
   { id :: Id Overlay,
@@ -33,7 +39,10 @@ data OverlayD (s :: UsageSafety) = Overlay
     okButtonText :: Maybe Text,
     cancelButtonText :: Maybe Text,
     actions :: [Text],
-    link :: Maybe Text
+    link :: Maybe Text,
+    method :: Maybe Text,
+    reqBody :: Value,
+    endPoint :: Maybe Text
   }
   deriving (Generic, Show)
 

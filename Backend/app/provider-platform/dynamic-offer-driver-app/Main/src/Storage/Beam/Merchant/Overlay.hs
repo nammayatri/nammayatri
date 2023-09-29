@@ -15,6 +15,7 @@
 
 module Storage.Beam.Merchant.Overlay where
 
+import Data.Aeson
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -39,7 +40,10 @@ data OverlayT f = OverlayT
     okButtonText :: B.C f (Maybe Text),
     cancelButtonText :: B.C f (Maybe Text),
     actions :: B.C f [Text],
-    link :: B.C f (Maybe Text)
+    link :: B.C f (Maybe Text),
+    method :: B.C f (Maybe Text),
+    reqBody :: B.C f Value,
+    endPoint :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
