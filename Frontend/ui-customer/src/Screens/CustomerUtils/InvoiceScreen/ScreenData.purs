@@ -19,6 +19,9 @@ import Screens.Types (InvoiceScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Prelude ((==))
+import MerchantConfig.Utils as MU
+import Common.Types.App (LazyCheck(..))
 
 initData :: InvoiceScreenState
 initData = {
@@ -30,7 +33,8 @@ initData = {
     date : "wed,10,45",
     selectedItem : dummyIndividualCard,
     config : DC.config,
-    logField : empty
+    logField : empty,
+    pdfHeading : if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then ", here's your driver receipt" else ", here's your invoice"
   },
   props: {
     paymentMode : "Cash"

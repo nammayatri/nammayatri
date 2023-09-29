@@ -48,6 +48,8 @@
     <string name="tip">ಟಿಪ್</string>
     <string name="qr_for_your_vpa_is_downloaded">ನಿಮ್ಮ vpa ಗಾಗಿ QR ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="invoice_downloaded">ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="driver_receipt_downloaded">ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="driver_receipt_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="qr_downloaded">Qr ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ !!!</string>
 

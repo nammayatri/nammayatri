@@ -47,7 +47,8 @@
                     android:layout_marginTop="3px"
                     android:fontFamily="@font/plus_jakartasans_medium"
                     android:lineHeight="28px"
-                    android:text=", here’s your invoice"
+                    android:id="@+id/headingText"
+                    android:text=", here’s your driver receipt"
                     android:textColor="@color/Black800"
                     android:textFontWeight="500"
                     android:textSize="24px" />

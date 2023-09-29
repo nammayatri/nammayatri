@@ -232,7 +232,7 @@ const hindiStrings = {
   "NOT_NOW": "अभी नहीं",
   "OF": "में से",
   "LOST_SOMETHING": "क्या आपने कुछ खोया है?",
-  "TRY_CONNECTING_WITH_THE_DRIVER": "आप सीधे ड्राइवर पार्टनर से जुड़ने के लिए कॉलबैक का अनुरोध कर सकते हैं",
+  "TRY_CONNECTING_WITH_THE_DRIVER": "आप ड्राइवर से कॉलबैक का अनुरोध कर सकते हैं",
   "CALL_DRIVER": "ड्राइवर से संपर्क करें",
   "NO_MORE_RIDES": "कोई और सवारी नहीं",
   "CONTACT_SUPPORT": "सहयोग टीम से संपर्क करें",
@@ -622,5 +622,12 @@ const hindiStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी भेजा गया है", 
   "SENT_OTP_VIA_SMS" : "ओटीपी एसएमएस के माध्यम से भेजा गया है",
   "ERNAKULAM_LIMIT_CHARGE": "यदि पिकअप या गंतव्य एर्नाकुलम निगम सीमा के बाहर है तो किराया 1.5 गुना होगा",
-  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें"
+  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें",
+  "SENT_OTP_ VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से OTP भेजा गया",  
+  "SENT_OTP_VIA_SMS" : "SMS के माध्यम से भेजा गया OTP",
+  "DOWNLOAD_DRIVER_RECEIPT" : "ड्राइवर रसीद डाउनलोड करें",
+  "VIEW_DRIVER_RECEIPT" : "ड्राइवर रसीद देखें",
+  "DRIVER_RECEIPT" : "ड्राइवर रसीद",
+  "HELP" : "सहायता",
+  "FARE_INFO_TEXT" : ""
 }

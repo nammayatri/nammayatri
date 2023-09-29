@@ -239,7 +239,7 @@ export function getStringValue(key) {
     "NOT_NOW" : "Pas maintenant",
     "OF" : "de",
     "LOST_SOMETHING" : "Vous avez perdu quelque chose?",
-    "TRY_CONNECTING_WITH_THE_DRIVER" : "Vous pouvez demander un rappel pour vous connecter directement avec le pilote",
+    "TRY_CONNECTING_WITH_THE_DRIVER" : "Vous pouvez demander un rappel au chauffeur",
     "CALL_DRIVER" : "Appeler le conducteur",
     "NO_MORE_RIDES" : "Plus de manèges",
     "CONTACT_SUPPORT" : "Contactez le support",
