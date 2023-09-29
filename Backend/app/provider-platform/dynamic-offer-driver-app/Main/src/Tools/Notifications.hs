@@ -584,8 +584,9 @@ notifyPaymentNudge ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
   m ()
-notifyPaymentNudge merchantId personId mbDeviceToken notificationSubType title_ body_ icon = do
+notifyPaymentNudge merchantId personId mbDeviceToken notificationSubType title_ body_ icon mbPlanId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
@@ -596,8 +597,13 @@ notifyPaymentNudge merchantId personId mbDeviceToken notificationSubType title_ 
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
-          fcmEntityData = Just notificationSubType,
+          fcmEntityData = Just mkFcmEntityData,
           fcmNotificationJSON = FCM.createAndroidNotificationWithIcon title body notifType icon
         }
     title = FCMNotificationTitle title_
     body = FCMNotificationBody body_
+    mkFcmEntityData =
+      FCMEntityData
+        { subType = notificationSubType,
+          planId = mbPlanId
+        }

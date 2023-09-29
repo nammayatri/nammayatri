@@ -20,6 +20,7 @@ import Domain.Types.Merchant (Merchant)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.JSON
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data PushNotificationKey
@@ -60,3 +61,15 @@ type PushNotification = PushNotificationD 'Safe
 instance FromJSON (PushNotificationD 'Unsafe)
 
 instance ToJSON (PushNotificationD 'Unsafe)
+
+data FCMEntityData = FCMEntityData
+  { subType :: NotificationSubType,
+    planId :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance ToJSON FCMEntityData where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON FCMEntityData where
+  parseJSON = genericParseJSON removeNullFields
