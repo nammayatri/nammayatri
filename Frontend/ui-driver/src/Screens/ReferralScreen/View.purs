@@ -98,14 +98,14 @@ screen initialState =
                             pure unit
                     ST.QRScreen -> do 
                       let refCode = getValueToLocalStore REFERRALCODE
+                      (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
+                      lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes getPerformanceres)
                       if (any (_ == refCode) ["__failed", "", "(null)"]) then do
-                        (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
-                        lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes getPerformanceres)
-                        else do 
                           response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
                           case response of
                             Right (GenerateReferralCodeRes generateReferralCodeRes) -> lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes generateReferralCodeRes))
                             Left error -> pure unit
+                      else pure unit 
                     _ -> pure unit
                 pure (pure unit)
               )

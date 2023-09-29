@@ -55,6 +55,5 @@ commonConfig =
         , rideActionModelConfig : {
             showVehicleVariant : true
           }
-          }
         , referralType : "QRScreen"
         }
