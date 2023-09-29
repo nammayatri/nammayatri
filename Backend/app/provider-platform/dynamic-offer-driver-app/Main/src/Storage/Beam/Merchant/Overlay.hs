@@ -13,12 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Storage.Beam.Merchant.PushNotification where
+module Storage.Beam.Merchant.Overlay where
 
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Domain.Types.Merchant.PushNotification as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
@@ -28,26 +27,30 @@ import Lib.Utils ()
 import Sequelize
 import Tools.Beam.UtilsTH
 
-data PushNotificationT f = PushNotificationT
-  { merchantId :: B.C f Text,
-    pushNotificationKey :: B.C f Domain.PushNotificationKey,
+data OverlayT f = OverlayT
+  { id :: B.C f Text,
+    merchantId :: B.C f Text,
+    overlayKey :: B.C f Text,
     language :: B.C f Language,
     udf1 :: B.C f (Maybe Text),
-    notificationSubType :: B.C f Domain.NotificationSubType,
-    icon :: B.C f (Maybe Text),
-    title :: B.C f Text,
-    body :: B.C f Text
+    title :: B.C f (Maybe Text),
+    description :: B.C f (Maybe Text),
+    imageUrl :: B.C f (Maybe Text),
+    okButtonText :: B.C f (Maybe Text),
+    cancelButtonText :: B.C f (Maybe Text),
+    actions :: B.C f [Text],
+    link :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table PushNotificationT where
-  data PrimaryKey PushNotificationT f
-    = Id (B.C f Domain.PushNotificationKey)
+instance B.Table OverlayT where
+  data PrimaryKey OverlayT f
+    = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . pushNotificationKey
+  primaryKey = Id . id
 
-type PushNotification = PushNotificationT Identity
+type Overlay = OverlayT Identity
 
-$(enableKVPG ''PushNotificationT ['merchantId, 'pushNotificationKey] [])
+$(enableKVPG ''OverlayT ['id] [['merchantId, 'overlayKey]])
 
-$(mkTableInstances ''PushNotificationT "merchant_push_notification")
+$(mkTableInstances ''OverlayT "merchant_overlay")

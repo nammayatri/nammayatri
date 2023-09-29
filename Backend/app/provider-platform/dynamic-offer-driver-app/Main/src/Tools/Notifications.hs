@@ -18,7 +18,6 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Merchant
-import Domain.Types.Merchant.PushNotification as MPN
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
@@ -54,7 +53,8 @@ notifyOnNewSearchRequestAvailable merchantId personId mbDeviceToken entityData =
           fcmEntityType = FCM.SearchRequest,
           fcmEntityIds = entityData.searchTryId.getId,
           fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "New ride available for offering"
     body =
@@ -93,7 +93,8 @@ notifyOnCancel merchantId booking personId mbDeviceToken cancellationSource = do
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId booking.id,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
+          fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body = FCMNotificationBody
@@ -150,7 +151,8 @@ notifyOnRegistration merchantId regToken personId mbToken = do
           fcmEntityType = FCM.Merchant,
           fcmEntityIds = getId tokenId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
     body =
@@ -212,7 +214,8 @@ sendNotificationToDriver merchantId displayOption priority notificationType noti
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId driverId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notificationType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCM.FCMNotificationTitle notificationTitle
     body =
@@ -243,7 +246,8 @@ sendMessageToDriver merchantId displayOption priority notificationType notificat
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId messageId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notificationType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCM.FCMNotificationTitle notificationTitle
     body =
@@ -276,7 +280,8 @@ notifyDriverNewAllocation merchantId bookingId personId mbToken = do
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId bookingId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST,
+          fcmOverlayNotificationJSON = Nothing
         }
 
 notifyFarePolicyChange ::
@@ -304,7 +309,8 @@ notifyFarePolicyChange merchantId coordinatorId mbToken = do
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FARE_POLICY_CHANGED
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FARE_POLICY_CHANGED,
+          fcmOverlayNotificationJSON = Nothing
         }
 
 notifyDiscountChange ::
@@ -332,7 +338,8 @@ notifyDiscountChange merchantId coordinatorId mbToken = do
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED,
+          fcmOverlayNotificationJSON = Nothing
         }
 
 notifyDriverClearedFare ::
@@ -363,7 +370,8 @@ notifyDriverClearedFare merchantId driverId sReqId fare mbToken = do
           fcmEntityType = FCM.SearchRequest,
           fcmEntityIds = getId sReqId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CLEARED_FARE
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CLEARED_FARE,
+          fcmOverlayNotificationJSON = Nothing
         }
 
 notifyOnCancelSearchRequest ::
@@ -387,7 +395,8 @@ notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchTryId = do
           fcmEntityType = FCM.SearchRequest,
           fcmEntityIds = searchTryId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Search Request cancelled!"
     body =
@@ -417,7 +426,8 @@ notifyPaymentFailed merchantId personId mbDeviceToken orderId = do
           fcmEntityType = FCM.PaymentOrder,
           fcmEntityIds = orderId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment Failed!"
     body =
@@ -447,7 +457,8 @@ notifyPaymentPending merchantId personId mbDeviceToken orderId = do
           fcmEntityType = FCM.PaymentOrder,
           fcmEntityIds = orderId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment Pending!"
     body =
@@ -477,7 +488,8 @@ notifyPaymentSuccess merchantId personId mbDeviceToken orderId = do
           fcmEntityType = FCM.PaymentOrder,
           fcmEntityIds = orderId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment Successful!"
     body =
@@ -506,7 +518,8 @@ notifyPaymentModeManualOnCancel merchantId personId mbDeviceToken = do
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
@@ -535,7 +548,8 @@ notifyPaymentModeManualOnPause merchantId personId mbDeviceToken = do
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
@@ -564,7 +578,8 @@ notifyPaymentModeManualOnSuspend merchantId personId mbDeviceToken = do
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
         }
     title = FCMNotificationTitle "Payment mode changed to manual"
     body =
@@ -573,37 +588,35 @@ notifyPaymentModeManualOnSuspend merchantId personId mbDeviceToken = do
           [ "Your UPI Autopay has been suspended. You can clear your dues manually from the Plan page."
           ]
 
-notifyPaymentNudge ::
+sendOverlay ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  MPN.NotificationSubType ->
-  Text ->
-  Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  [Text] ->
   Maybe Text ->
   m ()
-notifyPaymentNudge merchantId personId mbDeviceToken notificationSubType title_ body_ icon mbPlanId = do
+sendOverlay merchantId personId mbDeviceToken mbTitle description imageUrl okButtonText cancelButtonText actions link = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
-    notifType = FCM.PAYMENT_NUDGE
+    notifType = FCM.DRIVER_NOTIFY
     notificationData =
       FCM.FCMData
         { fcmNotificationType = notifType,
-          fcmShowNotification = FCM.SHOW,
+          fcmShowNotification = if isJust mbTitle then FCM.SHOW else FCM.DO_NOT_SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
-          fcmEntityData = Just mkFcmEntityData,
-          fcmNotificationJSON = FCM.createAndroidNotificationWithIcon title body notifType icon
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification mbTitle description imageUrl okButtonText cancelButtonText actions link
         }
-    title = FCMNotificationTitle title_
-    body = FCMNotificationBody body_
-    mkFcmEntityData =
-      FCMEntityData
-        { subType = notificationSubType,
-          planId = mbPlanId
-        }
+    title = FCMNotificationTitle $ fromMaybe "Title" mbTitle -- if nothing then anyways fcmShowNotification is false
+    body = FCMNotificationBody $ fromMaybe "Description" description
