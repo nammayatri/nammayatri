@@ -887,5 +887,6 @@ const kannadaStrings = {
   CLEARANCE_AND_REGISTERATION : "ತೆರವು + ನೋಂದಣಿ",
   UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್",
   WATCH_VIDEO_FOR_HELP : "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ",
-  PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ"
+  PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ",
+  CLEAR_YOUR_DUES_EARLY : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ"
 }
