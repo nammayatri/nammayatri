@@ -45,3 +45,9 @@ helpAndSupportScreen = do
       let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState{data{email=email}})
     ConfirmDeleteAccount updatedState -> App.BackT $ App.NoBack <$> (pure $ DELETE_USER_ACCOUNT updatedState)
+    GoToReportedIssueScreen updatedState -> App.BackT $ App.BackPoint <$> pure (REPORTED_ISSUE_SCREEN updatedState)
+    GoToResolvedIssueScreen updatedState -> App.BackT $ App.BackPoint <$> pure (RESOLVED_ISSUE_SCREEN updatedState)
+    GoToHelpAndSupportScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState)
+    GoToRideSelectionScreen selectedCategory -> App.BackT $ App.BackPoint <$> (pure $ RIDE_SELECTION_SCREEN selectedCategory)
+    GoToChatScreen selectedCategory -> App.BackT $ App.BackPoint <$> (pure $ ISSUE_CHAT_SCREEN selectedCategory)
+    GoToOldChatScreen selectedIssue -> App.BackT $ App.BackPoint <$> (pure $ OPEN_OLD_ISSUE_CHAT_SCREEN selectedIssue)

@@ -15,6 +15,7 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
+import Components.IssueView as IssueViewController
 import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/))
 import PrestoDOM (Eval, continue, exit)
 import Screens.Types (CategoryListType,HelpAndSupportScreenState,IssueModalType(..),IssueInfo)
@@ -25,11 +26,11 @@ import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
 import Services.Config (getSupportNumber)
-import JBridge (showDialer)
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toStringJSON)
+import JBridge (showDialer, differenceBetweenTwoUTC)
+import Helpers.Utils (getTime,getCurrentUTC,toStringJSON)
 import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Components.IssueListFlow as IssueListFlow
+import Components.IssueList as IssueList
 import Screens (ScreenName(..), getScreen)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
@@ -76,7 +77,7 @@ data Action = NoAction
              | RideHistoryAPIResponse GetRidesHistoryResp
              | AfterRender
              | NoRidesAction
-             | IssueScreenModal IssueListFlow.Action
+             | IssueScreenModal IssueList.Action
              | OnClickOngoingIssues
              | OnClickResolvedIssues
              | FetchIssueListApiCall (Array IssueReportDriverListItem)
@@ -96,10 +97,10 @@ eval (OptionClick optionIndex) state = do
     CallSupportCenter -> do
       _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
       continue state
-eval (IssueScreenModal (IssueListFlow.AfterRender )) state = continue state
-eval (IssueScreenModal (IssueListFlow.BackPressed )) state = exit (GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }})
-eval (IssueScreenModal  (IssueListFlow.Remove issueId  )) state = exit $ RemoveIssue issueId state
-eval (IssueScreenModal (IssueListFlow.CallSupportCenter )) state = do
+eval (IssueScreenModal (IssueList.AfterRender )) state = continue state
+eval (IssueScreenModal (IssueList.BackPressed )) state = exit (GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }})
+eval (IssueScreenModal (IssueList.IssueViewAction (IssueViewController.Remove issueId)  )) state = exit $ RemoveIssue issueId state
+eval (IssueScreenModal (IssueList.IssueViewAction (IssueViewController.CallSupportCenter ))) state = do
        _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
        continue state
 eval (FetchIssueListApiCall issueList) state = do

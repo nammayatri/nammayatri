@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.TimeZone;
+
 import javax.net.ssl.HttpsURLConnection;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
@@ -375,7 +377,8 @@ public class ChatService extends Service {
             date = new Date(System.currentTimeMillis());
         }
         /*   add this to date format if date is needed ---> dd MMM yyyy   */
-        DateFormat dateFormat = new SimpleDateFormat("h:mm a", Locale.ENGLISH);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss'Z'", Locale.ENGLISH);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         return dateFormat.format(date);
     }
 

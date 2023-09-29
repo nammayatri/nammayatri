@@ -17,7 +17,7 @@ module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (DeleteStatus(..))
+import Screens.Types (DeleteStatus(..), IssueModalType(..))
 import MerchantConfig.DefaultConfig as DC
 import Data.Maybe(Maybe(..))
 import Foreign.Object (empty)
@@ -46,7 +46,12 @@ initData = {
     accountStatus : ACTIVE,
     config : DC.config,
     vehicleVariant : Nothing,
-    logField : empty
+    logField : empty,
+    issueList : [],
+    resolvedIssueList : [],
+    ongoingIssueList : [],
+    issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
+    categories : []
   },
   props:{
     apiFailure : false

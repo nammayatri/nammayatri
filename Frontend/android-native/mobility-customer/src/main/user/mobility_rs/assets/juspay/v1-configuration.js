@@ -191,5 +191,6 @@ window.getMerchantConfig = function () {
         }
       }
     , "enableContactSupport" : false
+    , "showIssueOption": false
   })
 }

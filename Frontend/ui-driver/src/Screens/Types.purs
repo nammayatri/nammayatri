@@ -35,6 +35,12 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
+import Styles.Types (FontSize)
+import Components.ChatView.Controller as ChatView
+import MerchantConfig.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
 import Styles.Types (FontSize)
@@ -1128,11 +1134,29 @@ type ReportIssueChatScreenData = {
   categoryAction :: String,
   addedImages :: Array { image :: String, imageName :: String },
   categoryId :: String,
-  recordAudioState :: RecordAudioModel.RecordAudioModelState,
-  addImagesState :: { images :: Array { image :: String, imageName :: String }, stateChanged :: Boolean, isLoading :: Boolean, imageMediaIds :: Array String },
-  viewImageState :: { image :: String, imageName :: Maybe String },
+  recordAudioState :: {
+    timer         :: String,
+    isRecording   :: Boolean,
+    isUploading   :: Boolean,
+    recordedFile  :: Maybe String,
+    recordingDone :: Boolean,
+    openAddAudioModel :: Boolean
+  },
+  addImagesState :: {
+    images :: Array {image :: String, imageName :: String},
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  },
+  viewImageState :: {
+    image :: String,
+    imageName :: Maybe String
+  },
   recordedAudioUrl :: Maybe String,
-  addAudioState :: { audioFile :: Maybe String, stateChanged :: Boolean },
+  addAudioState :: {
+    audioFile :: Maybe String,
+    stateChanged :: Boolean
+  },
   uploadedImagesIds :: Array String,
   uploadedAudioId :: Maybe String,
   options :: Array
@@ -1151,7 +1175,8 @@ type ReportIssueChatScreenProps = {
   isReversedFlow :: Boolean,
   showViewImageModel :: Boolean,
   isPopupModelOpen :: Boolean,
-  submitIsInProgress :: Boolean
+  submitIsInProgress :: Boolean,
+  timerId :: String
 }
 
 type IssueInfo = {
@@ -1160,7 +1185,6 @@ type IssueInfo = {
     status :: String,
     category :: String,
     createdAt :: String
-
 }
 
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL

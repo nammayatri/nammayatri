@@ -32,6 +32,7 @@ initData =
       , receivedResponse: false
       , apiFailure: false
       , fromNavBar: true
+      , optionsVisibility: true
       }
   , data:
       { selectedItem: dummyIndividualCard
@@ -105,4 +106,6 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
   , isSrcServiceable : true
+  , optionsVisibility : true
+  , merchantExoPhone : ""
 }

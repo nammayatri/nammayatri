@@ -163,4 +163,5 @@ config =
   , purpleRideConfig : {
       genericVideoUrl : "" 
   }
+  , showIssueOption : true
   }

@@ -21,7 +21,7 @@ public class AudioRecorder {
 
     public void startRecording(Context context) {
         Log.d(LOG_TAG, "Recording in audio recorder");
-        fileName = context.getFilesDir().getAbsolutePath() + "namma_yatri_audio_record.mp3";
+        fileName = context.getFilesDir().getAbsolutePath() + "/namma_yatri_audio_record.mp3";
         recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);

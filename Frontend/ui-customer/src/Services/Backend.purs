@@ -883,3 +883,191 @@ getPersonStatsBT _ = do
     where
     errorHandler errorPayload = do
             BackT $ pure GoBack 
+ 
+
+----------------------------------- fetchIssueList ----------------------------------------
+
+fetchIssueListBT :: String -> FlowBT String FetchIssueListResp
+fetchIssueListBT language = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.fetchIssueList language) (\x → x) errorHandler (lift $ lift $ callAPI headers (FetchIssueListReq language))
+    where
+        errorHandler errorPayload =  do
+            BackT $ pure GoBack
+    -- pure $ FetchIssueListResp { issues: [IssueReportCustomerListItem { issueReportId: "12345", status: "AWAIT", category: "Lost Item", createdAt: "2023-07-29 12:34:56" },
+    -- IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    --     IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    --     IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    --     IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    --     IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    --     IssueReportCustomerListItem { issueReportId: "678910", status: "NEW", category: "App Related Issue", createdAt: "2023-07-29 12:34:56"},
+    -- IssueReportCustomerListItem { issueReportId: "6732910", status: "NEW", category: "Lost Item", createdAt: "2023-07-28 12:34:56" },
+    -- IssueReportCustomerListItem { issueReportId: "98765", status: "RESOLVED", category: "App Related Issue", createdAt: "2023-06-31 12:34:56" }]}
+
+
+--------------------------------------------- Driver Report Issue ---------------------------------------------
+getCategoriesBT :: String -> FlowBT String GetCategoriesRes
+getCategoriesBT language = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getCategories language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetCategoriesReq language))
+      where
+        errorHandler errorPayload = do
+            BackT $ pure GoBack
+    -- pure $ GetCategoriesRes { categories : [ Category {
+    --     logoUrl: "ny_ic_lost_and_found,https://assets.juspay.in/nammayatri/images/common/ny_ic_lost_and_found.png",
+    --     label: "LOST_AND_FOUND",
+    --     issueCategoryId: "1",
+    --     category: "lost and found"
+    -- }, Category {
+    --     logoUrl: "ny_ic_driver_related_issue,https://assets.juspay.in/nammayatri/images/common/ny_ic_driver_related_issue.png",
+    --     label: "DRIVER_RELATED",
+    --     issueCategoryId: "2",
+    --     category: "driver related issues"
+    -- }, Category {
+    --     logoUrl: "ny_ic_app_related_issue,https://assets.juspay.in/nammayatri/images/common/ny_ic_app_related_issue.png",
+    --     label: "APP_RELATED",
+    --     issueCategoryId: "3",
+    --     category: "app related issues"
+    -- }, Category{
+    --     logoUrl: "ny_ic_ride_related_issue,https://assets.juspay.in/nammayatri/images/common/ny_ic_ride_related_issue.png",
+    --     label: "RIDE_RELATED",
+    --     issueCategoryId: "4",
+    --     category: "ride related issues"
+    -- }]}
+
+getOptionsBT :: String -> String -> String -> String -> FlowBT String GetOptionsRes
+getOptionsBT language categoryId optionId issueReportId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getOptions categoryId optionId issueReportId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetOptionsReq categoryId optionId issueReportId language))
+        where
+          errorHandler errorPayload = do
+            BackT $ pure GoBack
+    -- if categoryId /= "" && (optionId == "" && optionId /= "1"  && optionId /= "2")
+    --     then (pure $ GetOptionsRes { options : [ Option {
+    --             option: "Poor driver behaviour",
+    --             label: "OPTION_1",
+    --             issueOptionId: "1"
+    --         }, Option {
+    --             option: "Safety Concerns",
+    --             label: "OPTION_2",
+    --             issueOptionId: "2"
+    --         }, Option {
+    --             option: "Hygiene of the auto",
+    --             label: "OPTION_#",
+    --             issueOptionId: "3"
+    --         }, Option {
+    --             option: "Call Driver",
+    --             label: "CALL_THE_DRIVER",
+    --             issueOptionId: "4"
+    --         }, Option {
+    --             option: "Call Support",
+    --             label: "CALL_THE_SUPPORT",
+    --             issueOptionId: "5"
+    --         }], messages : [Message {id : "1" , message : "Hey XYZ, We’re really sorry to hear you have been facing Driver related issues."}, 
+    --             Message {id : "1" , message : "Please select the type of issue you are facing so we can help you out better"}]})
+    --     else 
+    --         if optionId == "1"  && optionId /= "2"
+    --             then
+    --                 pure $ GetOptionsRes { options : [ Option {
+    --                 option: "Inappropriate Behaviour",
+    --                 label: "OPTION_1",
+    --                 issueOptionId: "11"
+    --             }, Option {
+    --                 option: "Abusive Language",
+    --                 label: "OPTION_2",
+    --                 issueOptionId: "12"
+    --             }], messages : [Message {id : "1" , message : "Please select an option that best represents your issue."}]}
+    --             else
+    --                 pure $ GetOptionsRes { options : [], messages : [Message {id : "1" , message : "Please describe and submit your issue."}]}
+
+postIssueBT :: String -> PostIssueReqBody -> FlowBT String PostIssueRes
+postIssueBT language payload = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.postIssue language) (\x -> x) errorHandler (lift $ lift $ callAPI headers (PostIssueReq language payload))
+    where
+    errorHandler errorPayload = do
+        BackT $ pure GoBack
+    -- pure $ PostIssueRes {
+    --     issueReportId: "12345",
+    --     messages : [Message {id : "1" , message : "Will get back to you within 24 hours"}]
+    -- }
+
+issueInfoBT :: String -> String -> FlowBT String IssueInfoRes
+issueInfoBT language issueId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.issueInfo issueId language) (\x -> x) errorHandler (lift $ lift $ callAPI headers (IssueInfoReq issueId language))
+        where
+          errorHandler errorPayload = do
+                BackT $ pure GoBack
+    -- if issueId == "678910"
+    -- then
+    --     pure $ IssueInfoRes { 
+    --         mediaFiles      : []
+    --         , description   : "Old Chat is this"
+    --         , issueReportId : "12345"
+    --         , categoryId    : "56789"
+    --         , chats : []
+    --         , options : []
+    --         , categoryLabel : "Lost and found"
+    --     }
+    -- else
+    --     if issueId == "12345"
+    --     then
+    --         pure $ IssueInfoRes { 
+    --             mediaFiles      : []
+    --             , description   : "Old Chat is this"
+    --             , issueReportId : "12345"
+    --             , categoryId    : "56789"
+    --             , categoryLabel : "Lost and found"
+    --             , chats : [ChatDetail{
+    --                 timestamp : "2023-08-14T12:34:04.398981Z",
+    --                 content : Just "Bot Text",
+    --                 id : "id",
+    --                 label : Just "somelabel",
+    --                 chatType : "text",
+    --                 sender : "Bot"
+    --             },
+    --             ChatDetail{
+    --                 timestamp : "123",
+    --                 content : Just "Customer text",
+    --                 id : "id",
+    --                 label : Just "somelabel",
+    --                 chatType : "text",
+    --                 sender : "Customer"
+    --             },
+    --             ChatDetail{
+    --                 timestamp : "123",
+    --                 content : Just "Closed after 2 hours",
+    --                 id : "id",
+    --                 label : Just "STILL_HAVE_AN_ISSUE",
+    --                 chatType : "text",
+    --                 sender : "Customer"
+    --             }]
+    --             , options : [ ]
+    --         }
+    --     else
+    --         pure $ IssueInfoRes { 
+    --             mediaFiles      : []
+    --             , description   : "The thing you typed coming from backend"
+    --             , issueReportId : "12345"
+    --             , categoryId    : "56789"
+    --             , chats : []
+    --             , options : []
+    --             , categoryLabel : "Lost and found"
+    --         }
+
+updateIssue :: String -> String -> UpdateIssueReqBody -> FlowBT String UpdateIssueRes
+updateIssue language issueId req = do
+        -- (pure $ UpdateIssueRes { messages : [Message {id : "1" , message : "Hey XYZ, We’re really sorry to hear you have been facing Driver related issues."}, 
+        --         Message {id : "1" , message : "Please select the type of issue you are facing so we can help you out better"}]})
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.updateIssue issueId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (UpdateIssueReq issueId language req))
+        where
+          errorHandler errorPayload = do
+                BackT $ pure GoBack
+

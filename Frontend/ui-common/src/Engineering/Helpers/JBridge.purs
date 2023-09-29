@@ -109,6 +109,7 @@ foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
+foreign import storeCallBackUploadMultiPartData :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
@@ -124,6 +125,7 @@ foreign import requestLocation  :: Unit -> Effect Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+foreign import clearWaitingTimer :: String -> Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
@@ -203,6 +205,14 @@ foreign import storeCallBackInternetAction :: forall action. (action -> Effect U
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
+foreign import clearFocus :: String -> Effect Unit
+foreign import removeMediaPlayer :: String -> Effect Unit
+foreign import renderBase64ImageFile :: String -> String -> Boolean -> String -> Effect Unit
+foreign import saveAudioFile :: String -> Effect String
+foreign import uploadMultiPartData :: String -> String -> String -> Effect Unit
+foreign import startAudioRecording :: String -> Effect Boolean
+foreign import stopAudioRecording :: String -> Effect String
+foreign import differenceBetweenTwoUTC :: String -> String -> Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean

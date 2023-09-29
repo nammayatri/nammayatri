@@ -172,5 +172,7 @@ window.getMerchantConfig = function () {
     }
     , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
     }
+    , "showIssueOption": false
+    
   })
 }

@@ -42,7 +42,7 @@ JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 window.isObject = function (object) {
   return (typeof object == "object");
 }
-window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange"];
+window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen"];
 window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED"];
 
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
@@ -220,6 +220,26 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
     window.activityResultListeners[requestCode](resultCode, bundle);
     window.activityResultListeners[requestCode] = undefined;
   }
+}
+
+window["onEvent'"] = function (event, args) {
+  console.log(event, args);
+  if (event == "onPause") {
+    previousDateObject = new Date();
+    window.onPause();
+  } else if (event == "onResume") {
+    window.onResume();
+    refreshFlow();
+  } else if (event == "onLocationChanged" && !(window.receiverFlag)) {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
+  } else if (event == "onKeyboardOpen" || event == "onKeyboardClose") {
+    if(window.keyBoardCallback){
+      window.keyBoardCallback(event);
+    }
+  }
+  purescript.onEvent(event)();
 }
 
 function refreshFlow(){

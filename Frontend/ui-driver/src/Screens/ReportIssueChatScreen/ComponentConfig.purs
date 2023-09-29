@@ -27,6 +27,10 @@ import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(.
 import Styles.Colors (black500, black700, black900, blue800, primaryButtonColor, white900) as Color
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
+import Components.AddAudioModel (config, AddAudioModelState) as AddAudioModel
+import Components.AddImagesModel (config, AddImagesModelState) as AddImagesModel
+import Components.RecordAudioModel (config, RecordAudioModelState) as RecordAudioModel
+import Components.ViewImageModel (config, ViewImageModelState) as ViewImageModel
 import Components.PopUpModal as PopUpModal
 import Screens.Types (ReportIssueChatScreenState)
 import Language.Strings (getString)
@@ -62,34 +66,6 @@ primaryButtonConfig text = let
       }
   in primaryButtonConfig'
 
-
-addAudioModelConfig :: ReportIssueChatScreenState -> PopUpModal.Config
-addAudioModelConfig state =
-  let
-    config' = PopUpModal.config
-
-    popUpConfig' =
-      config'
-        {
-          editTextVisibility = VISIBLE
-        -- , dismissPopupConfig { visibility = VISIBLE, height = V 12, width = V 12, margin = (Margin 0 21 22 0), padding = (Padding 8 8 8 8) }
-        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT), text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
-        , primaryText { text = (getString ADD_A_COMMENT) }
-        , secondaryText { visibility = GONE }
-        -- , option1 { visibility = false }
-        , option2
-          { text = (getString POST_COMMENT)
-          , background = Color.white900
-          , color = Color.blue800
-          , strokeColor = Color.white900
-          , padding = (Padding 16 0 16 0)
-          -- , isClickable = state.commentBtnActive
-          }
-        -- , cornerRadius = (Corners 15.0 true true true true)
-        }
-  in
-    popUpConfig'
-    
 doneButtonConfig :: ReportIssueChatScreenState -> PrimaryButton.Config
 doneButtonConfig state = let
     config = PrimaryButton.config
@@ -118,3 +94,63 @@ cancelButtonConfig state = let
       , id = "ReportIssueChatScreenCancelPrimaryButton"
       }
   in primaryButtonConfig'
+
+addAudioModelConfig :: ReportIssueChatScreenState -> AddAudioModel.AddAudioModelState
+addAudioModelConfig state = let 
+    config = AddAudioModel.config
+    addAudioModelConfig' = config
+      {
+        addedVoiceNoteText = getString ADDED_VOICE_NOTE,
+        noVoiceNoteAddedText = getString NO_VOICE_NOTE_ADDED,
+        addVoiceNoteText = getString ADD_VOICE_NOTE,
+        deleteText= getString DELETE,
+        doneButtonText = getString DONE,
+        audioFile = state.data.addAudioState.audioFile,
+        stateChanged = state.data.addAudioState.stateChanged
+      }
+  in addAudioModelConfig'
+
+recordAudioModelConfig :: ReportIssueChatScreenState -> RecordAudioModel.RecordAudioModelState
+recordAudioModelConfig state = let 
+    config = RecordAudioModel.config
+    recordAudioModelConfig' = config
+      {
+        recordVoiceNoteText = getString RECORD_VOICE_NOTE,
+        timer = state.data.recordAudioState.timer,
+        isRecording = state.data.recordAudioState.isRecording,
+        isUploading = state.data.recordAudioState.isUploading,
+        recordedFile = state.data.recordAudioState.recordedFile,
+        recordingDone = state.data.recordAudioState.recordingDone,
+        openAddAudioModel = state.data.recordAudioState.openAddAudioModel
+      }
+  in recordAudioModelConfig'
+
+viewImageModelConfig :: ReportIssueChatScreenState -> ViewImageModel.ViewImageModelState
+viewImageModelConfig state = let 
+    config = ViewImageModel.config
+    viewImageModelConfig' = config
+      {
+        imagePreviewText = getString IMAGE_PREVIEW,
+        image = state.data.viewImageState.image,
+        imageName = state.data.viewImageState.imageName
+      }
+  in viewImageModelConfig'
+
+addImageModelConfig :: ReportIssueChatScreenState -> AddImagesModel.AddImagesModelState
+addImageModelConfig state = let 
+    config = AddImagesModel.config
+    addImageModelConfig' = config
+      {
+        doneButtonText  = getString DONE,
+        addedImagesText = getString ADDED_IMAGES,
+        noImagesAddedText = getString NO_IMAGES_ADDED,
+        viewText = getString VIEW,
+        deleteText = getString DELETE,
+        addAnotherText = getString ADD_ANOTHER,
+        addImageText = getString ADD_IMAGE,
+        images = state.data.addImagesState.images,
+        stateChanged = state.data.addImagesState.stateChanged,
+        isLoading = state.data.addImagesState.isLoading,
+        imageMediaIds = state.data.addImagesState.imageMediaIds 
+      }
+  in addImageModelConfig'

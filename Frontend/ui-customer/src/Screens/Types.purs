@@ -22,6 +22,10 @@ import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Components.ChatView.Controller (ChatComponent, Config)
+import Components.RecordAudioModel.Controller as RecordAudioModel
+import Components.ViewImageModel.Controller as ViewImageModel
+import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -30,10 +34,11 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
+import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity,EstimateAPIEntity(..), QuoteAPIEntity, Route, RideBookingRes, Chat)
+
 
 type Contacts = {
   name :: String,
@@ -372,8 +377,119 @@ type HelpAndSupportScreenData =
     accountStatus :: DeleteStatus ,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    issueList :: Array IssueInfo,
+    ongoingIssueList :: Array IssueInfo,
+    resolvedIssueList :: Array IssueInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CategoryListType
   }
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: String
+  , categoryLabel :: String
+  , categoryId :: String
+  }
+
+type RideSelectionScreenState =
+  {
+    shimmerLoader :: AnimationState,
+    prestoListArrayItems :: Array ItemState,
+    itemsRides :: Array IndividualRideCardState,
+    props :: RideSelectionScreenProps,
+    data :: RideSelectionScreenData,
+    selectedCategory :: CategoryListType,
+    selectedItem :: Maybe IndividualRideCardState
+  }  
+
+type RideSelectionScreenData = {
+    offsetValue :: Int,
+    loadMoreText :: String,
+    config :: AppConfig,
+    logField :: Object Foreign,
+    isSrcServiceable :: Boolean
+  }
+
+type RideSelectionScreenProps = {
+  loaderButtonVisibility :: Boolean,
+  loadMoreDisabled :: Boolean,
+  receivedResponse :: Boolean,
+  apiFailure :: Boolean,
+  fromNavBar :: Boolean,
+  optionsVisibility :: Boolean
+}
+
+type ReportIssueChatScreenState = {
+    data :: ReportIssueChatScreenData,
+    props :: ReportIssueChatScreenProps
+}
+
+type ReportIssueChatScreenData = {
+  tripId :: Maybe String,
+  categoryName :: String,
+  messageToBeSent :: String,
+  issueId :: Maybe String,
+  chatConfig :: Config,
+  selectedOption :: Maybe Option,
+  addedImages :: Array { image :: String, imageName :: String },
+  categoryId :: String,
+  recordAudioState :: {
+    timer         :: String,
+    isRecording   :: Boolean,
+    isUploading   :: Boolean,
+    recordedFile  :: Maybe String,
+    recordingDone :: Boolean,
+    openAddAudioModel :: Boolean
+  },
+  addImagesState :: {
+    images :: Array {image :: String, imageName :: String},
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  },
+  viewImageState :: {
+    image :: String,
+    imageName :: Maybe String
+  },
+  recordedAudioUrl :: Maybe String,
+  addAudioState :: {
+    audioFile :: Maybe String,
+    stateChanged :: Boolean
+  },
+  uploadedImagesIds :: Array String,
+  uploadedAudioId :: Maybe String,
+  options :: Array Option,
+  chats :: Array Chat,
+  showStillHaveIssue :: Boolean,
+  isResolved :: Boolean,
+  merchantExoPhone :: Maybe String
+}
+
+type Option = { issueOptionId :: String
+              , option :: String
+              , label :: String
+              }
+
+type ReportIssueChatScreenProps = {
+  showSubmitComp :: Boolean,
+  showImageModel :: Boolean,
+  showAudioModel :: Boolean,
+  showRecordModel :: Boolean,
+  showCallDriverModel :: Boolean,
+  showCallSupportModel :: Boolean,
+  showViewImageModel :: Boolean,
+  isPopupModelOpen :: Boolean,
+  isKeyboardOpen :: Boolean, 
+  timerId :: String
+}
+
+type IssueInfo = {
+    issueReportId :: String,
+    status :: String,
+    category :: String,
+    createdAt :: String
+}
 
 type HelpAndSuportScreenProps =
   {
@@ -418,7 +534,8 @@ type MyRideScreenProps = {
   loadMoreDisabled :: Boolean,
   receivedResponse :: Boolean,
   apiFailure :: Boolean,
-  fromNavBar :: Boolean
+  fromNavBar :: Boolean,
+  optionsVisibility :: Boolean
 }
 -- ################################################ IndividualRideCardState ##################################################
 
@@ -461,6 +578,8 @@ type IndividualRideCardState =
   , zoneType :: ZoneType
   , vehicleVariant :: Maybe VehicleVariant
   , isSrcServiceable :: Boolean
+  , optionsVisibility :: Boolean
+  , merchantExoPhone :: String
   }
 
 
@@ -1305,3 +1424,8 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RESOLVED_ISSUES_MODAL
+
+derive instance genericIssueModalType :: Generic IssueModalType _
+instance eqIssueModalType :: Eq IssueModalType where eq = genericEq

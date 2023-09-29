@@ -23,11 +23,11 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import ModifyScreenState (modifyScreenState)
-import Prelude (bind, ($), (<$>), discard, pure)
+import Prelude (bind, ($), (<$>), discard, pure, (<<<))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.List as PrestoList
-import Screens.MyRidesScreen.Controller (ScreenOutput(..))
+import Screens.MyRidesScreen.Controller (ScreenOutput(..), Action(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.MyRidesScreen.View as MyRidesScreen
 import Screens.Types (IndividualRideCardState, AnimationState(..))
@@ -38,7 +38,7 @@ myRidesScreen :: FlowBT String MY_RIDES_SCREEN_OUTPUT
 myRidesScreen = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "MyRidesScreen"
-  listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push (listItem1 { isSrcServiceable = state.myRidesScreen.data.isSrcServiceable})
+  listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view (push <<< IndividualRideCardActionController) (listItem1 { isSrcServiceable = state.myRidesScreen.data.isSrcServiceable})
   logField_ <- lift $ lift $ getLogFields
   act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn , data{logField = logField_}} listItemm
   case act of 

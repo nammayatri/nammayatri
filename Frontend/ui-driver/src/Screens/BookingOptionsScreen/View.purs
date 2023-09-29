@@ -9,7 +9,7 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (capitalizeFirstChar, getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage)
+import Helpers.Utils ( getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
@@ -20,6 +20,8 @@ import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
+import Prelude ((<>))
+import Engineering.Helpers.Utils (capitalizeFirstChar)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =

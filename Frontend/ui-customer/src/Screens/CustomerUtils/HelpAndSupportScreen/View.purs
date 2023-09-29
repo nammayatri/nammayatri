@@ -16,47 +16,49 @@
 module Screens.HelpAndSupportScreen.View where
 
 import Common.Types.App
+import Common.Types.App
+import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 
 import Animation as Anim
-import Engineering.Helpers.Utils as EHU
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
+import Components.IssueList as IssueList
 import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad (void)
 import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Helpers.Utils as HU
-import JBridge as JB
+import Helpers.Utils (toStringJSON, strLenWithSpecificCharacters, fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
+import Prelude (when, Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval, topicsList, reportsList)
 import Screens.Types as ST
-import Services.API (RideBookingListRes(..))
+import Services.API (RideBookingListRes(..), FetchIssueListResp(..), FetchIssueListReq(..))
 import Services.Backend as Remote
+import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Common.Types.App
-import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
-import Components.PrimaryEditText as PrimaryEditText
-import Components.PrimaryButton as PrimaryButton
-import Data.String as DS
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -71,6 +73,14 @@ screen initialState =
               else
                 pure unit
               pure $ pure unit
+      ),
+      ( \push -> do
+        _ <- launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+          when (initialState.data.config.showIssueOption) do
+            let language = EHU.fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+            (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
+            lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
+        pure $ pure unit
       )
   ]
   , eval : \state  action -> do
@@ -85,7 +95,7 @@ view push state =
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
- ]$[ linearLayout
+ ]$[linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -94,40 +104,56 @@ view push state =
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
+    , visibility (if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then GONE else VISIBLE) 
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
-        , background Color.catskillWhite
-        ][  textView $
-            [ text (getString YOUR_RECENT_RIDE)
-            , color Color.darkCharcoal
-            , width WRAP_CONTENT
-            , margin (Margin 16 12 0 12)
-            ] <> FontStyle.subHeading2 LanguageStyle
-          , textView $
-            [ text (getString VIEW_ALL_RIDES)
-            , alignParentRight "true,-1"
-            , margin (Margin 0 14 16 14)
-            , accessibilityHint "View All Rides : Button"
-            , accessibility ENABLE
+      , scrollView
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ][
+            linearLayout[
+              height WRAP_CONTENT
             , width MATCH_PARENT
-            , gravity RIGHT
-            , color Color.blue900
-            , onClick push $ const ViewRides
-            ] <> FontStyle.body1 LanguageStyle
-          ]
-      , recentRideView state push
-      , headingView state (getString ALL_TOPICS)
-      , allTopicsView state push
-      , apiFailureView state push
-      ]
-     , deleteAccountView state push
+            , orientation VERTICAL
+            ]([
+                linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation HORIZONTAL
+                , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
+                , background Color.catskillWhite
+                ][  textView $
+                    [ text (getString YOUR_RECENT_RIDE)
+                    , color Color.charcoalGrey
+                    , width WRAP_CONTENT
+                    , margin (Margin 16 12 0 12)
+                    ] <> FontStyle.subHeading2 LanguageStyle
+                  , textView $
+                    [ text (getString VIEW_ALL_RIDES)
+                    , alignParentRight "true,-1"
+                    , margin (Margin 0 14 16 14)
+                    , accessibilityHint "View All Rides : Button"
+                    , accessibility ENABLE
+                    , width MATCH_PARENT
+                    , gravity RIGHT
+                    , color Color.blue900
+                    , onClick push $ const ViewRides
+                    ] <> FontStyle.body1 LanguageStyle
+                  ]
+              , recentRideView state push
+              , headingView state (getString ALL_TOPICS)
+              , allTopicsView state push (topicsList state)
+                ] <> ( if state.data.config.showIssueOption then [
+                    headingView state (getString YOUR_REPORTS)
+                  , allTopicsView state push (reportsList state)
+                  ] else []))
+            ]
+      , apiFailureView state push  
+      ] 
+    , deleteAccountView state push
   ] <> (if state.props.isCallConfirmation then [PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)] else [])
     <> (if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )] else [])
     <> (if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)] else [])
+    <> (if state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL then [issueListModal push state] else [])
 
 ------------------------------- recentRide --------------------------
 recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -262,8 +288,8 @@ driverRatingView state =
     ]
 
 ------------------------------- allTopics --------------------------
-allTopicsView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-allTopicsView state push =
+allTopicsView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array ST.CategoryListType -> forall w . PrestoDOM (Effect Unit) w
+allTopicsView state push topicList =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -275,7 +301,18 @@ allTopicsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
-        , onClick push (const item.action)
+        , onClick push (case item.categoryLabel of
+                    "LOST_AND_FOUND" -> (const $ SelectRide item)
+                    "RIDE_RELATED"   -> (const $ SelectRide item)
+                    "DRIVER_RELATED" -> (const $ SelectRide item)
+                    "APP_RELATED"    -> (const $ OpenChat item)
+                    "RESOLVED"       -> (const $ ResolvedIssue)
+                    "REPORTED"       -> (const $ ReportedIssue)
+                    "CONTACT_US"     -> (const $ ContactUs)
+                    "CALL_SUPPORT"   -> (const $ CallSupport)
+                    "DELETE_ACCOUNT" -> (const $ DeleteAccount)
+                    _                -> (const $ OpenChat item)
+                  )
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -283,14 +320,14 @@ allTopicsView state push =
             , orientation HORIZONTAL
             , padding (Padding 0 20 0 20)
             ][  imageView
-                [ imageWithFallback item.image
+                [ imageWithFallback item.categoryImageUrl
                 , height $ V 17
                 , width $ V 17
                 ]
               , textView $
-                [ accessibilityHint $ item.title <> " : Button"
+                [ accessibilityHint $ item.categoryName <> " : Button"
                 , accessibility ENABLE
-                , text item.title
+                , text item.categoryName
                 , color Color.darkCharcoal
                 , margin (MarginLeft 13)
                 ] <> FontStyle.paragraphText LanguageStyle
@@ -310,9 +347,9 @@ allTopicsView state push =
               [ height $ V 1
               , width MATCH_PARENT
               , background Color.greyLight
-              , visibility if index == (DA.length (topicsList state)) - 1 then GONE else VISIBLE
+              , visibility if index == (DA.length (topicList)) - 1 then GONE else VISIBLE
               ][]
-          ]) (topicsList state))
+          ]) (topicList))
 
 deleteAccountView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 deleteAccountView state push=
@@ -385,7 +422,7 @@ editTextView state push =
               , gravity CENTER_VERTICAL
               , padding $ PaddingLeft 10
               , margin $ MarginTop 5
-              , visibility if ((HU.strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10) then VISIBLE else GONE
+              , visibility if ((strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10) then VISIBLE else GONE
               ][  imageView $
                   [ width $ V 24
                   , height $ V 24
@@ -446,22 +483,53 @@ apiFailureView state push=
   , visibility if state.props.apiFailure then VISIBLE else GONE
   ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig state)]
 
-topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
-  , title :: String
-  , image :: String
-}
-topicsList state = [
-    { action : ContactUs
-    , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
-    , image : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
-    }
-  ] <> if state.data.config.enableContactSupport then 
-        [ { action : CallSupport
-          , title : (getString CONTACT_SUPPORT)
-          , image : fetchImage FF_ASSET "ny_ic_help"
-          } ] else []
-    <> if state.data.config.showDeleteAccount then 
-        [ { action : DeleteAccount
-          , title : (getString REQUEST_TO_DELETE_ACCOUNT)
-          , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png" --update here
-          } ] else []
+-- topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
+--   , title :: String
+--   , image :: String
+-- }
+-- topicsList state = [
+--     { action : ContactUs
+--     , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
+--     , image : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+--     }
+--   ] <> if state.data.config.enableContactSupport then 
+--         [ { action : CallSupport
+--           , title : (getString CONTACT_SUPPORT)
+--           , image : fetchImage FF_ASSET "ny_ic_help"
+--           } ] else []
+--     <> if state.data.config.showDeleteAccount then 
+--         [ { action : DeleteAccount
+--           , title : (getString REQUEST_TO_DELETE_ACCOUNT)
+--           , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png" --update here
+--           } ] else []
+-------------------------------------------- issueListModal ------------------------------------------
+issueListModal :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
+issueListModal push state =
+  IssueList.view (push <<< IssueScreenModal) (issueListState state)
+
+issueListState :: ST.HelpAndSupportScreenState -> IssueList.IssueListFlowState
+issueListState state = let
+      config' = IssueList.config
+      inAppModalConfig' = config'{
+        issues = if state.data.issueListType == ST.REPORTED_ISSUES_MODAL then state.data.ongoingIssueList else state.data.resolvedIssueList,
+        issueListTypeModal = state.data.issueListType ,
+        headerConfig {
+          headTextConfig {
+            text = if (state.data.issueListType == ST.REPORTED_ISSUES_MODAL) 
+              then (getString REPORTED_ISSUES) <> (" : ") <> (toStringJSON (DA.length state.data.ongoingIssueList)) 
+              else (getString RESOLVED_ISSUES) <> (" : ") <> (toStringJSON (DA.length state.data.resolvedIssueList))
+          }
+        },
+        issueViewConfig {
+          thirdTextConfig {
+            text = getString ISSUE_NO
+          },
+          fourthTextConfig {
+            visibility = GONE
+          },
+          fifthTextConfig {
+            visibility = GONE
+          }
+        }
+      }
+      in inAppModalConfig'

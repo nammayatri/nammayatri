@@ -191,3 +191,9 @@ purple100 = "#1A9747FF"
 
 blue100 :: Color
 blue100 = "#1A2194FF"
+
+green200 :: Color
+green200 = "#2053BB6F"
+
+transparentGrey :: Color
+transparentGrey = "#66888888"

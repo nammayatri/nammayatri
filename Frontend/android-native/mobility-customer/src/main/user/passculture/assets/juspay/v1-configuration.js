@@ -179,5 +179,6 @@ window.getMerchantConfig = function () {
       }
     }
   , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
+  , "showIssueOption": false
   })
 }

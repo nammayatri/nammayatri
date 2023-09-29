@@ -1,8 +1,11 @@
 import { callbackMapper } from "presto-ui";
 
 const JBridge = window.JBridge;
-let zoneOtpExpiryTimerId = null;
-let tracking_id = 0;
+var timerIdDebounce = null;
+var driverWaitingTimerId = null;
+var zoneOtpExpiryTimerId = null;
+var inputForDebounce;
+var tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
   return JSON.stringify(tracking_id);

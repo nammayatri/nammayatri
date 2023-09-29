@@ -596,6 +596,24 @@ function getStringFromCommon(key) {
       return frenchStrings.getStringValue(key);
     default:
       return englishStrings.getStringValue(key);
+export const getVideoID = function (url) {
+  try {
+    var ID = '';
+    var updatedURL = url.replace(/(>|<)/gi, '').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
+    if (updatedURL[2] !== undefined) {
+      ID = updatedURL[2].split(/[^0-9a-z_\-]/i);
+      ID = ID[0];
+    }
+    else {
+      if (updatedURL[1] == /shorts/) {
+        ID = updatedURL[2];
+      }else {
+        ID = updatedURL;
+      }
+    }
+    return ID;
+  }catch (e) {
+    console.log("error in getVideoID " + e);
   }
 }
 

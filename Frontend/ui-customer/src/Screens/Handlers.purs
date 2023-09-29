@@ -36,3 +36,5 @@ import Screens.TripDetailsScreen.Handler (tripDetailsScreen) as UI
 import Screens.SuccessScreen.Handler (successScreen) as UI
 import Screens.EmergencyContactsScreen.Handler (emergencyContactsScreen) as UI
 import Screens.OnBoardingFlow.WelcomeScreen.Handler (welcomeScreen) as UI
+import Screens.RideSelectionScreen.Handler (rideSelection) as UI
+import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI

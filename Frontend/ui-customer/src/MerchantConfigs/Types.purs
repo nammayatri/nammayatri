@@ -61,6 +61,7 @@ type AppConfig =
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , purpleRideConfig :: PurpleRideConfig
+  , showIssueOption :: Boolean
   } 
 
 type NotifyRideConfirmationConfig = {

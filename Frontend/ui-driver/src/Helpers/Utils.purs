@@ -89,7 +89,6 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
-foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
 foreign import clearPopUpTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
@@ -114,6 +113,8 @@ foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
 foreign import renderBase64ImageFile :: String -> String -> Boolean -> String ->  Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
+foreign import getVideoID :: String -> String
+foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit

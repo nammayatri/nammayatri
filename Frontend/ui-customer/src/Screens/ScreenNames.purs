@@ -39,9 +39,13 @@ data ScreenName = SPLASH_SCREEN
                 | APP_UPDATE_POPUP_SCREEN
                 | ENTER_OTP_NUMBER_SCREEN
                 | WELCOME_SCREEN
+                | RIDE_SELECTION_SCREEN
+                | REPORT_ISSUE_CHAT_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
+        REPORT_ISSUE_CHAT_SCREEN      -> "report_issue_chat_screen"
+        RIDE_SELECTION_SCREEN         -> "ride_selection_screen"
         SPLASH_SCREEN                 -> "splash_screen"
         CHOOSE_LANGUAGE_SCREEN        -> "choose_language_screen"
         ENTER_MOBILE_NUMBER_SCREEN    -> "enter_mobile_number_screen"

@@ -133,7 +133,7 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
-                                let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore WAITING_TIME_VAL))
+                                let startingTime = (JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore WAITING_TIME_VAL))
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback

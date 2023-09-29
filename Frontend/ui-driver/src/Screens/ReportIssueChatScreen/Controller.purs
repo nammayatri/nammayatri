@@ -34,12 +34,12 @@ import Data.Foldable (find)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
-import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig)
+import JBridge (clearWaitingTimer, addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig, clearFocus, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, stopAudioRecording, uploadMultiPartData, waitingCountdownTimer)
 import Data.String.CodeUnits (stripSuffix)
 import Data.String.Common (joinWith)
 import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Language.Strings (getString)
@@ -71,13 +71,13 @@ instance loggableAction :: Loggable Action where
     CancelCall _ -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_screen" "cancel_call"
     ConfirmCall _ -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_screen" "confirm_call"
     AddAudioModelAction (AddAudioModel.OnClickDone _) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "on_click_done"
-    AddAudioModelAction (AddAudioModel.OnClickCancel _)-> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "on_click_cancel"
+    AddAudioModelAction (AddAudioModel.OnClickCross)-> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "on_click_cancel"
     AddAudioModelAction AddAudioModel.OnClickDelete -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "on_click_delete"
     AddAudioModelAction AddAudioModel.AddAudio -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "add_audio"
     AddAudioModelAction AddAudioModel.BackPressed -> trackAppBackPress appId (getScreen REPORT_ISSUE_CHAT_SCREEN)
     AddAudioModelAction AddAudioModel.NoAction -> trackAppScreenEvent appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_audio_model" "no_action"
     AddImagesModelAction (AddImagesModel.OnClickDone _) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "on_click_done"
-    AddImagesModelAction (AddImagesModel.OnClickCancel _) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "on_click_cancel"
+    AddImagesModelAction (AddImagesModel.OnClickCancel) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "on_click_cancel"
     AddImagesModelAction (AddImagesModel.OnClickDelete _) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "on_click_delete"
     AddImagesModelAction (AddImagesModel.OnClickView _ _) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "on_click_view"
     AddImagesModelAction (AddImagesModel.AddImage) -> trackAppActionClick appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_images_model" "add_image"
@@ -121,6 +121,7 @@ data Action = Exit (ScreenOutput)
             | AddAudioModelAction  AddAudioModel.Action
             | AddImagesModelAction AddImagesModel.Action
             | ImageUploadCallback  String String String
+            | UploadMultiPartDataCallback  String String
             | ViewImageModelAction ViewImageModel.Action
             | RecordAudioModelAction   RecordAudioModel.Action
             | UpdateRecordModelPlayer  String
@@ -157,7 +158,7 @@ eval ShowOptions state = do
   let message = (getString SELECT_OPTION) <> "\n"
                 <> joinWith "\n" options'
   let messages' = snoc state.data.chatConfig.messages
-                    (makeChatComponent' message "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500)
+                    (makeChatComponent' message "Bot" (getCurrentUTC "") "Text" 500)
   continue state { data { chatConfig { enableSuggestionClick = false, messages = messages', suggestionsList = options' } } }
 
 ---------------------------------------------------- Add Media ----------------------------------------------------
@@ -208,11 +209,11 @@ eval (AddAudioModelAction AudioModel.AddAudio) state =
 eval (AddAudioModelAction AudioModel.BackPressed) state = do
   continueWithCmd state [do
     if state.props.isPopupModelOpen
-    then pure $ (AddAudioModelAction (AudioModel.OnClickCancel PrimaryButton.OnClick))
+    then pure $ (AddAudioModelAction (AudioModel.OnClickCross))
     else pure $ BackPressed
   ]
 
-eval (AddAudioModelAction (AudioModel.OnClickCancel PrimaryButton.OnClick)) state =
+eval (AddAudioModelAction (AudioModel.OnClickCross)) state =
   continueWithCmd state { props { showAudioModel = false, isPopupModelOpen = false }
                         , data  { recordAudioState { recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00:00" } } } [do
     _ <- removeMediaPlayer ""
@@ -247,7 +248,7 @@ eval (AddImagesModelAction (ImageModel.OnClickDone PrimaryButton.OnClick)) state
   continue state { data  { uploadedImagesIds = state.data.addImagesState.imageMediaIds, addedImages = state.data.addImagesState.images }
                  , props { showImageModel = false, isPopupModelOpen = false } }
 
-eval (AddImagesModelAction (ImageModel.OnClickCancel PrimaryButton.OnClick)) state =
+eval (AddImagesModelAction (ImageModel.OnClickCancel)) state =
   continue state { props { showImageModel = false, isPopupModelOpen = false }
                  , data  { addImagesState { imageMediaIds = state.data.uploadedImagesIds, images = state.data.addedImages } } }
 
@@ -264,18 +265,13 @@ eval (AddImagesModelAction (ImageModel.OnClickDelete index)) state = do
 eval (AddImagesModelAction ImageModel.BackPressed) state = do
   continueWithCmd state [do
     if state.props.isPopupModelOpen
-    then pure (AddImagesModelAction (ImageModel.OnClickCancel PrimaryButton.OnClick))
+    then pure (AddImagesModelAction (ImageModel.OnClickCancel))
     else pure BackPressed
   ]
 
 ---------------------------------------------------- Timer Callback ----------------------------------------------------
-eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timer)) state = do
-  case fromString (fromMaybe "" (stripSuffix (Pattern "s ") timer)) of
-    Just time -> do
-      let minutes' = if time `div` 60 > 9 then (show (time `div` 60)) else ("0" <> (show (time `div` 60)))
-      let seconds' = if time `mod` 60 > 9 then (show (time `mod` 60)) else ("0" <> (show (time `mod` 60)))
-      continue state { data { recordAudioState { timer = minutes' <> ":" <> seconds' } } }
-    Nothing   -> continue state { data { recordAudioState { timer = "00:00" } } }
+eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timerID timeInMinutes seconds)) state = 
+  continue state { data { recordAudioState { timer = timeInMinutes } }, props {timerId = timerID} }
 
 ---------------------------------------------------- Add Image Callback ----------------------------------------------------
 eval (ImageUploadCallback image imageName imagePath) state = do
@@ -285,15 +281,25 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                   state.data.addImagesState.images
                 else
                   snoc state.data.addImagesState.images { image, imageName }
-  continueWithCmd state { data { addImagesState { isLoading = true } } } [do
-    res <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
-    let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3
-                             then do
-                               state.data.addImagesState.imageMediaIds
-                             else
-                               snoc state.data.addImagesState.imageMediaIds res
-    pure $ UpdateState state { data { addImagesState { images = images', isLoading = false, stateChanged = true, imageMediaIds = uploadedImagesIds' } } }
+  continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
+    _ <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    pure NoAction
   ]
+
+eval (UploadMultiPartDataCallback fileType fileId) state = do
+  if (fileType == "Image") 
+    then do
+      let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3
+                                then do
+                                  state.data.addImagesState.imageMediaIds
+                                else
+                                  snoc state.data.addImagesState.imageMediaIds fileId
+      continue state { data { addImagesState {isLoading = false, stateChanged = true, imageMediaIds = uploadedImagesIds' } } }
+    else
+      continueWithCmd state { data  { uploadedAudioId = Just fileId }, props { isPopupModelOpen = false, showRecordModel = false } } [do
+        _ <- removeMediaPlayer ""
+        pure $ NoAction
+      ]
 
 ---------------------------------------------------- View Image Model ----------------------------------------------------
 eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
@@ -313,9 +319,9 @@ eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
     cond <- startAudioRecording ""
     if cond
     then do
-      _ <- pure $ clearTimer ""
+      _ <- pure $ clearWaitingTimer state.props.timerId
       _ <- removeMediaPlayer ""
-      _ <- startTimer 0 false push RecordAudioModel.TimerCallback
+      _ <- waitingCountdownTimer 0 push RecordAudioModel.TimerCallback
       pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
     else
       pure $ NoAction
@@ -323,7 +329,7 @@ eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
   continueWithCmd state { data { recordAudioState { isRecording = false, recordingDone = true, timer = "00:00" } } } [do
-    _   <- pure $ clearTimer ""
+    _   <- pure $ clearWaitingTimer state.props.timerId
     res <- stopAudioRecording ""
     pure $ UpdateRecordModelPlayer res
   ]
@@ -331,14 +337,12 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
 eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
   continueWithCmd state { data { recordAudioState { isUploading = true } } } [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
-    void $ pure $ clearTimer ""
+    void $ pure $ clearWaitingTimer state.props.timerId
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- saveAudioFile url
-                  audioId <- uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
-                  _ <- removeMediaPlayer ""
-                  pure $ UpdateState state { data  { recordedAudioUrl = Just res, uploadedAudioId = Just audioId }
-                                           , props { isPopupModelOpen = false, showRecordModel = false } }
+                  _ <- uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  pure $  UpdateState state { data  { recordedAudioUrl = Just res}}
       Nothing  -> do
                   if state.data.recordAudioState.openAddAudioModel
                   then do
@@ -361,7 +365,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickClose) state =
     continueWithCmd state { props { showRecordModel = false }, data { recordAudioState { recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00:00" } } } [do
       _ <- removeMediaPlayer ""
       _ <- stopAudioRecording ""
-      _ <- pure $ clearTimer ""
+      _ <- pure $ clearWaitingTimer state.props.timerId
       pure $ UpdateState state { props { showRecordModel = false, showAudioModel = true, isPopupModelOpen = true }
                    , data { recordAudioState { recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00:00" }, addAudioState { audioFile = Nothing, stateChanged = true } } }
     ]
@@ -390,14 +394,14 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
       then
         continue state { props { showCallCustomerModel = true, isPopupModelOpen = true } }
       else do
-        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A"))
+        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName "Driver" (getCurrentUTC ""))
         continueWithCmd state { data { chatConfig { messages = messages', suggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId } } [do
           if state.props.isReversedFlow
           then
-            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500
+            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" 500
             in pure $ SendMessage message false
           else
-            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) "Bot" ((convertUTCtoISC (getCurrentUTC "") "hh:mm A")) "Text" 500) (not state.props.isReversedFlow)
+            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) "Bot" ((getCurrentUTC "")) "Text" 500) (not state.props.isReversedFlow)
       ]
     Nothing -> do
       _ <- pure $ toast "Can't find option"
@@ -434,7 +438,7 @@ eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id text)) sta
 eval (ConfirmCall (PrimaryButton.OnClick)) state =
   case find (\x -> x.label == "CALL_THE_CUSTOMER") state.data.options of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A"))
+      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option "Driver" (getCurrentUTC ""))
       exit $ CallCustomer state { data { chatConfig { messages = messages', suggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId }, props { isPopupModelOpen = false, showCallCustomerModel = false } }
     Nothing -> do
       _ <- pure $ toast "Can't find option"

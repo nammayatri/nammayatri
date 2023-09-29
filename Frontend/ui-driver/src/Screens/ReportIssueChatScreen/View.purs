@@ -32,7 +32,7 @@ import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, text
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
-import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig)
+import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
 import Components.AddAudioModel (view) as AddAudioModel
@@ -41,7 +41,7 @@ import Components.ChatView as ChatView
 import Styles.Colors (black800, black900, black9000, blue900, blueBtn, blueTextColor, grey900, greyLight, lightGreyBlue, white900) as Color
 import Font.Size (a_16, a_20, a_14, a_17, a_18) as FontSize
 import Font.Style (h3, semiBold) as FontStyle
-import JBridge (storeCallBackImageUpload) as JB
+import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData) as JB
 import Components.PrimaryButton.View (view) as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.RecordAudioModel.View (view) as RecordAudioModel
@@ -55,6 +55,7 @@ screen initialState =
     , name : "ReportIssueChatScreen"
     , globalEvents : [(\push -> do
         _ <- JB.storeCallBackImageUpload push ImageUploadCallback
+        _ <- JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
         pure $ pure unit)
     ]
     , eval
@@ -185,7 +186,7 @@ chatView push state =
   , afterRender push (do
       if state.props.isReversedFlow
       then
-        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) "Bot" ((convertUTCtoISC (getCurrentUTC "") "hh:mm A")) "Text" 500) true
+        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) "Bot" (getCurrentUTC "") "Text" 500) true
       else
         pure ShowOptions
     )
@@ -341,17 +342,16 @@ helperView push state =
    ]
 
 addAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (state.data.addAudioState)
---  "https://file-examples.com/storage/fe0b804ac5640668798b8d0/2017/11/file_example_MP3_5MG.mp3"]})
+addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (addAudioModelConfig state)
 
 addImageModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-addImageModel state push = AddImagesModel.view (push <<< AddImagesModelAction) (state.data.addImagesState)
+addImageModel state push = AddImagesModel.view (push <<< AddImagesModelAction) (addImageModelConfig state)
 
 recordAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-recordAudioModel state push = RecordAudioModel.view (push <<< RecordAudioModelAction) state.data.recordAudioState
+recordAudioModel state push = RecordAudioModel.view (push <<< RecordAudioModelAction) (recordAudioModelConfig state)
 
 viewImageModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-viewImageModel state push = ViewImageModel.view (push <<< ViewImageModelAction) state.data.viewImageState
+viewImageModel state push = ViewImageModel.view (push <<< ViewImageModelAction) (viewImageModelConfig state)
 
 callCustomerModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 callCustomerModel state push = 
