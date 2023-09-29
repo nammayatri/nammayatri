@@ -885,5 +885,6 @@ const tamilStrings = {
   CLEARANCE_AND_REGISTERATION : "அனுமதி + பதிவு",
   UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு",
   WATCH_VIDEO_FOR_HELP : "உதவிக்கு வீடியோவைப் பாருங்கள்",
-  PAYMENT_PENDING_SOFT_NUDGE : "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை"
+  PAYMENT_PENDING_SOFT_NUDGE : "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை",
+  CLEAR_YOUR_DUES_EARLY : "உங்கள் நிலுவைத் தொகையை சீக்கிரம் முடிக்கவும்"
 }

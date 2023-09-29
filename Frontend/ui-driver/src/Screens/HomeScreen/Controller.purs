@@ -418,6 +418,12 @@ eval (DuePaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
   exit $ SubscriptionScreen state {props { showPaymentPendingBlocker = false }} false
 
+eval (DuePaymentPendingAC PopUpModal.OnSecondaryTextClick) state = do
+  continueWithCmd state [do
+    _ <- openUrlInApp $ "https://www.youtube.com/shorts/x9cJN78j9V8"
+    pure NoAction
+  ]
+
 eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = continue state {props { showPaymentPendingBlocker = false }}
 
 eval (GetCurrenDuesAction (GetCurrentPlanResp resp)) state =
