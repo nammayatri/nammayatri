@@ -70,7 +70,7 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag, findingQuotesSearchExpired, getZoneType)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag, findingQuotesSearchExpired, getZoneType, tipEnabledState)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
@@ -485,10 +485,19 @@ currentFlowStatus = do
                        , sourceAddress = flowStatusData.sourceAddress
                        , destinationAddress = flowStatusData.destinationAddress }
                 })
-            Nothing -> do
-              updateFlowStatus SEARCH_CANCELLED
-        else do
-          updateFlowStatus SEARCH_CANCELLED
+            Nothing -> cancelFindingQuotes
+        else cancelFindingQuotes
+
+    cancelFindingQuotes :: FlowBT String Unit
+    cancelFindingQuotes = do
+      (GlobalState globalState) <- getState
+      let homeScreenState = globalState.homeScreen
+          updatedHomeScreenState = if homeScreenState.props.customerTip.enableTips then 
+                            tipEnabledState homeScreenState{props{isPopUp = TipsPopUp}} 
+                         else homeScreenState{props{isPopUp = ConfirmBack}}
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedHomeScreenState)
+      setValueToLocalStore LOCAL_STAGE (show QuoteList)
+      updateFlowStatus SEARCH_CANCELLED
 
 
 chooseLanguageScreenFlow :: FlowBT String Unit
@@ -883,6 +892,7 @@ homeScreenFlow = do
       homeScreenFlow
     GET_QUOTES state -> do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
+          _ <- pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
