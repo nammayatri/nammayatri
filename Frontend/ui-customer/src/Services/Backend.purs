@@ -205,10 +205,10 @@ triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
-resendOTPBT :: String -> String -> FlowBT String ResendOTPResp
-resendOTPBT token otpChannel= do
+resendOTPBT :: String -> FlowBT String ResendOTPResp
+resendOTPBT token = do
      headers <- getHeaders' "" false
-     withAPIResultBT (EP.resendOTP token) (\x → x) errorHandler $ lift $ lift $ callAPI headers $ ResendOTPRequest token $ ResendOTPReqBody { otpChannel : otpChannel}
+     withAPIResultBT (EP.resendOTP token) (\x → x) errorHandler (lift $ lift $ callAPI headers (ResendOTPRequest token))
     where
     errorHandler  errorPayload  = do
         let errResp = errorPayload.response

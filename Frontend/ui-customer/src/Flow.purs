@@ -596,7 +596,7 @@ enterMobileNumberScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
             enterMobileNumberScreenFlow
     ResendOTP state -> do
-            (ResendOTPResp resendResp) <-  Remote.resendOTPBT state.data.tokenId (show state.data.otpChannel)
+            (ResendOTPResp resendResp) <-  Remote.resendOTPBT state.data.tokenId
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = resendResp.authId, attempts = resendResp.attempts}})
             enterMobileNumberScreenFlow
     GoBack state  ->  do
