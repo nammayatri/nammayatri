@@ -122,7 +122,7 @@ groupDriverFeeByInvoices driverFees_ = do
       Id INV.Invoice ->
       m DriverFeeByInvoice
     buildDriverFeeByInvoice driverFees mStatus invoiceId = do
-      invoices <- runInReplica $ QINV.findById invoiceId
+      invoices <- QINV.findById invoiceId
       now <- getCurrentTime
       let driverFeeIds = invoices <&> (.driverFeeId)
           invoiceDriverFees = filter (\x -> x.id `elem` driverFeeIds) driverFees
