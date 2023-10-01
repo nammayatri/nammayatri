@@ -21,7 +21,6 @@ import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -67,7 +66,7 @@ groupDriverFeeByInvoices driverFees_ = do
 
     getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
-      invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
+      invoices <- (QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
       let sortedInvoices = mergeSortAndRemoveDuplicate invoices
       let createNewInvoice = or (null <$> invoices)
       if createNewInvoice
@@ -122,7 +121,7 @@ groupDriverFeeByInvoices driverFees_ = do
       Id INV.Invoice ->
       m DriverFeeByInvoice
     buildDriverFeeByInvoice driverFees mStatus invoiceId = do
-      invoices <- runInReplica $ QINV.findById invoiceId
+      invoices <- QINV.findById invoiceId
       now <- getCurrentTime
       let driverFeeIds = invoices <&> (.driverFeeId)
           invoiceDriverFees = filter (\x -> x.id `elem` driverFeeIds) driverFees
