@@ -30,7 +30,10 @@ type SubscriptionConfig =  {
   onBoardingSubscription :: Boolean,
   showDUOfferBanner :: Boolean,
   offerBannerValidTill :: String,
-  offerBannerDeadline :: String
+  offerBannerDeadline :: String,
+  currentPlanCacheExpTime :: Int,
+  lowDuesLimit :: Number,
+  getSubscriptionInfoInHomeScreen :: Boolean
  }
 
 type RideActionModelConfig = {

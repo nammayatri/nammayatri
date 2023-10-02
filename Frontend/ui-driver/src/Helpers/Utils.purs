@@ -75,7 +75,7 @@ import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (UpiApps(..))
+import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 
@@ -428,3 +428,10 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
+
+getSubsInfo :: KeyStore -> Maybe LocalStoreSubscriptionInfo
+getSubsInfo name = do
+  let result = decodeJSON $ getValueToLocalNativeStore name
+  case (runExcept $ result) of
+    Left err -> Nothing
+    Right person -> Just person

@@ -716,5 +716,6 @@ const frenchStrings = {
   UPI_AUTOPAY_SETUP : "Configuration du paiement automatique UPI",
   WATCH_VIDEO_FOR_HELP : "Regarder la vidéo pour obtenir de l'aide",
   PAYMENT_PENDING_SOFT_NUDGE : "La limite des cotisations sera bientôt atteinte.Cotisation claire pour profiter des manèges sans escale",
-  CLEAR_YOUR_DUES_EARLY : "Effacez vos cotisations tôt"
+  CLEAR_YOUR_DUES_EARLY : "Effacez vos cotisations tôt",
+  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
 }

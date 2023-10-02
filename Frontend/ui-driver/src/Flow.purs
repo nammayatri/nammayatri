@@ -64,7 +64,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
+import Helpers.Utils (LatLon(..), checkPPInitiateStatus, consumeBP, decodeErrorCode, decodeErrorMessage, getAvailableUpiApps, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getSubsInfo, getTime, getcurrentdate, hideSplash, initiatePP, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, paymentPageUI, secondsLeft, toString)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Language.Strings (getString)
@@ -304,13 +304,6 @@ getDriverInfoFlow = do
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
-      let autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
-          autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, getDriverInfoResp.paymentPending of
-                                  true, true, _ -> FREE_TRIAL_BANNER
-                                  true, false, true -> CLEAR_DUES_BANNER
-                                  true, _, _ -> SETUP_AUTOPAY_BANNER
-                                  _, _, _ -> NO_SUBSCRIPTION_BANNER
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{autoPayBanner = autopayBannerType}})
       case getDriverInfoResp.mobileNumber of
           Just value -> do 
             _ <- pure $ setCleverTapUserData "Phone" ("+91" <> value)
@@ -1791,12 +1784,18 @@ homeScreenFlow = do
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
   let autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
-      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, getDriverInfoResp.paymentPending of
-                                  true, true, _ -> FREE_TRIAL_BANNER
-                                  true, false, true -> CLEAR_DUES_BANNER
-                                  true, _, false -> SETUP_AUTOPAY_BANNER
-                                  _, _, _ -> NO_SUBSCRIPTION_BANNER
+      subsInfo = fromMaybe {projectedInvoice : 0.0, maxDueLimit : 1000.0, expiry : ""} (getSubsInfo CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE)
       pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
+      lowDuesLimit = appConfig.subscriptionConfig.lowDuesLimit
+      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, getDriverInfoResp.paymentPending of
+                              true, true, _ -> FREE_TRIAL_BANNER
+                              _, false, true -> do
+                                if pendingTotalManualDues < lowDuesLimit then LOW_DUES_BANNER
+                                else if pendingTotalManualDues >= lowDuesLimit && pendingTotalManualDues < (subsInfo.maxDueLimit - 2.0 * subsInfo.projectedInvoice) then CLEAR_DUES_BANNER
+                                else if pendingTotalManualDues >= (subsInfo.maxDueLimit - 2.0 * subsInfo.projectedInvoice) then DUE_LIMIT_WARNING_BANNER
+                                else NO_SUBSCRIPTION_BANNER
+                              true, _, _ -> SETUP_AUTOPAY_BANNER
+                              _, _, _ -> NO_SUBSCRIPTION_BANNER
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning, totalPendingManualDues = pendingTotalManualDues}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit

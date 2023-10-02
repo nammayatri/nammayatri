@@ -19,8 +19,10 @@ import Data.Maybe as Mb
 import Data.Number (fromString) as Number
 import Data.Number.Format (fixed, toStringWith)
 import Data.String (toLower)
+import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
+import Engineering.Helpers.Utils (saveObject)
 import Foreign.Generic (decodeJSON)
 import Helpers.Utils (getDistanceBwCordinates, getFixedTwoDecimals)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
@@ -292,6 +294,7 @@ eval (LoadMyPlans plans) state = do
                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                       lowAccountBalance = requiredBalance,
                       dueItems = constructDues planEntity.dues}}}
+      _ <- pure $ cacheSubscriptionInfo planEntity'
       _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
       _ <- pure $ setCleverTapUserProp "Search Request Eligibility" if isOverdue then "FALSE" else "TRUE"
       _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
@@ -408,3 +411,15 @@ getItem ec lat lon = {  longitude : ec.longitude,
           latitude : ec.latitude,
           landmark : ec.landmark,
           distance : getDistanceBetweenPoints ec.latitude ec.longitude lat lon }
+
+cacheSubscriptionInfo :: PlanEntity -> Effect Unit
+cacheSubscriptionInfo (PlanEntity planEntity) = 
+  let feeComponentType = if planEntity.frequency == "PER_RIDE" then "MAX_FEE_LIMIT" else "FINAL_FEE"
+      projInvoiceArray = (DA.filter(\(PaymentBreakUp item) -> item.component == feeComponentType) planEntity.planFareBreakup)
+      projInvoice = case projInvoiceArray DA.!! 0 of
+                      Mb.Just (PaymentBreakUp item) -> item.amount
+                      Mb.Nothing -> 0.0
+      subscriptionInfo = {projectedInvoice : projInvoice, maxDueLimit : planEntity.totalPlanCreditLimit, expiry : getCurrentUTC ""}
+      _ = saveObject "CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE" subscriptionInfo
+  in
+  pure unit
