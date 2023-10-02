@@ -768,37 +768,45 @@ autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
 autopayBannerConfig state configureImage =
   let
     config = Banner.config
+    bannerType = state.props.autoPayBanner
+    dues = show state.data.totalPendingManualDues
     config' = config
       {
-        backgroundColor = case state.props.autoPayBanner of
+        backgroundColor = case bannerType of
                         CLEAR_DUES_BANNER -> Color.yellow900
+                        DUE_LIMIT_WARNING_BANNER -> "#FFECED"
+                        LOW_DUES_BANNER -> Color.yellow800
                         _ -> "#269574",
-        title = case state.props.autoPayBanner of
+        title = case bannerType of
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
                   SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
-                  CLEAR_DUES_BANNER -> getString CLEAR_DUES_BANNER_TITLE
+                  _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE ["100"]
                   _ -> "",
-        titleColor = case state.props.autoPayBanner of
-                        CLEAR_DUES_BANNER -> Color.black900
+        titleColor = case bannerType of
+                        DUE_LIMIT_WARNING_BANNER -> Color.red
+                        _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
                         _ -> Color.white900,
-        actionText = case state.props.autoPayBanner of
-                        CLEAR_DUES_BANNER -> getString PAY_NOW
+        actionText = case bannerType of
+                        _ | bannerType == DUE_LIMIT_WARNING_BANNER || bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getString PAY_NOW
                         _ -> (getString SETUP_NOW),
-        actionTextColor = case state.props.autoPayBanner of
-                            CLEAR_DUES_BANNER -> Color.black900
+        actionTextColor = case bannerType of
+                            _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
+                            DUE_LIMIT_WARNING_BANNER -> Color.red
                             _ -> Color.white900,
-        imageUrl = case state.props.autoPayBanner of
+        imageUrl = case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" 
                       SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png"
-                      CLEAR_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
+                      DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_due_limit_warning.png"
                       _ -> "",
-        isBanner = state.props.autoPayBanner /= NO_SUBSCRIPTION_BANNER,
+        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER,
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
         titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7,
-        imagePadding = case state.props.autoPayBanner of
-                            CLEAR_DUES_BANNER -> PaddingTop 0
+        imagePadding = case bannerType of
+                            _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> PaddingTop 0
                             _ -> PaddingVertical 5 5
       }
   in config'
@@ -1019,7 +1027,8 @@ getRideCompletedConfig state = let
     payerVpa = state.data.endRideData.payerVpa,
     noVpaVisibility = not state.data.endRideData.hasActiveAutoPay,
     theme = LIGHT,
-    isPrimaryButtonSticky = true
+    isPrimaryButtonSticky = true,
+    bannerConfig = autopayBannerConfig state false
   }
   in config'
 

@@ -2,6 +2,8 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..))
 
+import Components.Banner.View as Banner
+import Components.Banner as BannerConfig
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint,afterRender, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import Effect (Effect)
@@ -185,6 +187,7 @@ bottomCardView config push =
     -- , if config.qrVisibility then collectCashView config.driverUpiQrCard.collectCashText else dummyTextView 
     -- , if config.noVpaVisibility then collectCashView config.noVpaCard.collectCashText else dummyTextView 
     , if config.noVpaVisibility then noVpaView config  else dummyTextView
+    , rideEndBannerView config.bannerConfig push
     , if config.badgeCard.visible then badgeCardView config push  else dummyTextView
     , if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView
     , if not config.isPrimaryButtonSticky then 
@@ -599,3 +602,17 @@ topPillView config push =
     , color config.topCard.topPill.textColor 
     ] <> FontStyle.body1 TypoGraphy
   ]
+
+rideEndBannerView :: forall w. BannerConfig.Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideEndBannerView config push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width  MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , visibility if config.isBanner then VISIBLE else GONE
+    , gravity BOTTOM
+    , weight 1.0
+    ][
+        Banner.view (push <<< BannerAction) (config)
+    ]

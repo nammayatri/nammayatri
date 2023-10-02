@@ -15,6 +15,9 @@
 
 module Screens.HomeScreen.Controller where
 
+import Helpers.Utils
+import Screens.SubscriptionScreen.Controller
+
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
 import Components.Banner as Banner
@@ -48,6 +51,7 @@ import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPos
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
+import Engineering.Helpers.Utils (saveObject)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
@@ -57,7 +61,7 @@ import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Screens.Types (AutoPayStatus(..))
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -279,7 +283,7 @@ data Action = NoAction
             | OfferPopupAC PopUpModal.Action
             | DuePaymentPendingAC PopUpModal.Action
             | SoftPaymentPendingAC PopUpModal.Action
-            | GetCurrenDuesAction GetCurrentPlanResp
+            | GetCurrentDuesAction GetCurrentPlanResp
             | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
@@ -426,13 +430,13 @@ eval (DuePaymentPendingAC PopUpModal.OnSecondaryTextClick) state = do
 
 eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = continue state {props { showPaymentPendingBlocker = false }}
 
-eval (GetCurrenDuesAction (GetCurrentPlanResp resp)) state =
-  let currentDues = case resp.currentPlanDetails of
-                      Just (PlanEntity planEntity) -> planEntity.currentDues - planEntity.autopayDues
-                      Nothing -> 0.0
-      updatedDues = if currentDues /= 0.0 then "( ₹" <> show currentDues <> ") " else ""
-  in 
-    continue state { props{showShimmer = false, duesAmount = updatedDues}}
+eval (GetCurrentDuesAction (GetCurrentPlanResp resp)) state =
+  case resp.currentPlanDetails of
+    Just (PlanEntity planEntity) -> do 
+      _ <- pure $ cacheSubscriptionInfo (PlanEntity planEntity)
+      let currentDues = planEntity.currentDues - planEntity.autopayDues
+      continue state { props{showShimmer = false, duesAmount = "( ₹" <> show currentDues <> ") "}, data {totalPendingManualDues = currentDues}}
+    Nothing -> continue state { props{showShimmer = false, duesAmount = ""}}
 
 eval (GetCurrentDuesFailed ) state = do
   continue state { props{showShimmer = false, duesAmount = ""}}
@@ -812,6 +816,8 @@ eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.Dismis
 
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ GoToRideDetailsScreen state
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = continue state {props {showRideRating = true}}
+eval (RideCompletedAC (RideCompletedCard.BannerAction (Banner.OnClick))) state = continueWithCmd state [pure $ AutoPayBanner (Banner.OnClick)]
+
 
 eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
 eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}

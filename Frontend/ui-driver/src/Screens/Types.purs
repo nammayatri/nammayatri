@@ -926,7 +926,7 @@ type HomeScreenProps =  {
   showBlockingPopup :: Boolean
  }
 
-data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER
+data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 
 derive instance genericSubscriptionBannerType :: Generic SubscriptionBannerType _
 instance eqSubscriptionBannerType :: Eq SubscriptionBannerType where eq = genericEq
@@ -1738,6 +1738,12 @@ data OptionsMenuState = ALL_COLLAPSED | PLAN_MENU  -- SUPPORT_MENU  | CALL_MENU 
 derive instance genericOptionsMenuState :: Generic OptionsMenuState _
 instance showOptionsMenuState :: Show OptionsMenuState where show = genericShow
 instance eqOptionsMenuState :: Eq OptionsMenuState where eq = genericEq
+
+type LocalStoreSubscriptionInfo = {
+  projectedInvoice :: Number,
+  maxDueLimit :: Number,
+  expiry :: String
+}
 
 ---------------------------------------------------- PaymentHistoryScreen ----------------------------------
 

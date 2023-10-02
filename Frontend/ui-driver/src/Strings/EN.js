@@ -901,7 +901,7 @@ const englishStrings = {
   EXECUTION_FAILED : "Execution Failed", 
   NOTIFICATION_FAILED : "Notification Failed",
   PAY_NOW : "Pay Now",
-  CLEAR_DUES_BANNER_TITLE : "Clear your Dues to enjoy  non-stop rides",
+  CLEAR_DUES_BANNER_TITLE : "Clear your Dues (₹{}) to enjoy non-stop rides",
   COLLECT_VIA_UPI_QR_OR_CASH : "Collect via UPI QR or Cash",
   TRANSACTION_DEBITED_ON : "Transaction Debited On",
   TRANSACTION_ATTEMPTED_ON : "Transaction Attempted On",
@@ -916,5 +916,6 @@ const englishStrings = {
   UPI_AUTOPAY_SETUP : "UPI Autopay Setup",
   WATCH_VIDEO_FOR_HELP : "Watch video for help",
   PAYMENT_PENDING_SOFT_NUDGE : "Dues limit will be reached soon. Clear dues to enjoy non-stop rides",
-  CLEAR_YOUR_DUES_EARLY : "Clear your Dues Early"
+  CLEAR_YOUR_DUES_EARLY : "Clear your Dues Early",
+  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
 } 
