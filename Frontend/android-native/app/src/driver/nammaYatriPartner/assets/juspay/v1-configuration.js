@@ -86,7 +86,10 @@ window.getMerchantConfig = function () {
       "onBoardingSubscription" : true,
       "showDUOfferBanner" : true,
       "offerBannerValidTill" : "2023-11-02T00:00:00",
-      "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1"
+      "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1",
+      "currentPlanCacheExpTime" : 3600,
+      "lowDuesLimit" : 25.0,
+      "getSubscriptionInfoInHomeScreen" : true
     }
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false

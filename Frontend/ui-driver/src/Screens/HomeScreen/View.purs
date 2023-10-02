@@ -51,13 +51,12 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getEN)
@@ -76,7 +75,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..))
+import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..), LocalStoreSubscriptionInfo)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..))
 import Services.API (Status(..))
@@ -104,15 +103,20 @@ screen initialState =
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp "Driver On-ride" "No"
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
-
-          if (initialState.props.driverBlocked && not initialState.props.subscribed) then do
-              void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "primaryButtonOption1"}
-              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-                currentPlan <- Remote.getCurrentPlan ""
-                case currentPlan of
-                  Right resp -> doAff do liftEffect $ push $ GetCurrenDuesAction resp
-                  Left err -> doAff do liftEffect $ push $ GetCurrentDuesFailed
-            else pure unit
+              dummySubsInfo = {projectedInvoice : 0.0,
+                              maxDueLimit : 1000.0,
+                              expiry : ""}
+              subscriptionInfo = fromMaybe dummySubsInfo (HU.getSubsInfo CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE)
+              valuesExpired = if subscriptionInfo.expiry == "" then true else (HU.differenceBetweenTwoUTC (getCurrentUTC "") (subscriptionInfo.expiry)) > initialState.data.config.subscriptionConfig.currentPlanCacheExpTime
+              shouldCallCurrentPlan = initialState.data.config.subscriptionConfig.getSubscriptionInfoInHomeScreen
+          if (((initialState.props.driverBlocked && not initialState.props.subscribed) || valuesExpired) && shouldCallCurrentPlan) then do
+            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "primaryButtonOption1"}
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+              currentPlan <- Remote.getCurrentPlan ""
+              case currentPlan of
+                Right resp -> doAff do liftEffect $ push $ GetCurrentDuesAction resp
+                Left err -> doAff do liftEffect $ push $ GetCurrentDuesFailed
+          else pure unit
 
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
@@ -422,16 +426,9 @@ autoPayBannerView state push configureImage =
     , gravity BOTTOM
     , weight 1.0
     ][
-    linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity RIGHT
-      ][
         Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
-      ]
     ]
-
+  
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
   linearLayout
@@ -446,7 +443,7 @@ otpButtonView state push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
     ][ imageView
-        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
+        [ imageWithFallback $ "ic_mode_standby," <> (HU.getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
@@ -521,7 +518,7 @@ recenterBtnView state push =
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
-    , imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+    , imageWithFallback $ "ny_ic_recenter_btn," <> (HU.getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
     , onClick (\action -> do
             _ <- JB.getCurrentPosition push CurrentLocation
             pure unit
@@ -638,7 +635,7 @@ driverDetail push state =
         ][ imageView
            [ width $ V 42
            , height $ V 42
-           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+           , imageWithFallback $ "ny_ic_user," <> HU.getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
            ]
          ]
       ]
@@ -840,7 +837,7 @@ viewRecenterAndSupport state push =
     -- [ width ( V 40 )
     -- , height ( V 40 )
     -- , margin $ MarginBottom 10
-    -- , imageWithFallback "ny_ic_homepage_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
+    -- , imageWithFallback "ny_ic_homepage_support," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
     -- -- , onClick (\action -> do
     -- --         _ <- JB.getCurrentPosition push CurrentLocation
     -- --         pure unit
@@ -866,7 +863,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
+        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -915,7 +912,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
+             , imageWithFallback $ "ny_ic_offline_status," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
              ]
           ]
         , linearLayout
@@ -982,18 +979,18 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
+             , imageWithFallback $ "ic_vehicle_side_active," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
+             , imageWithFallback $ "ny_ic_chevrons_right," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ "ic_vehicle_side_inactive," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
@@ -1072,7 +1069,7 @@ addAlternateNumber push state =
       , imageWithFallback if state.props.showlinkAadhaarPopup then
                             "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
                           else
-                            "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
+                            "ic_call_plus," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
       ]
     , textView $
@@ -1126,7 +1123,7 @@ updateButtonIconAndText push state =
     [ width $ V 20
     , height $ V 20
     , margin $ MarginRight 5
-    , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
+    , imageWithFallback $ "ny_ic_refresh," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     , gravity RIGHT
     ],
     textView $

@@ -46,7 +46,10 @@ commonConfig =
             completePaymentPopup : false,
             showDUOfferBanner : false,
             offerBannerValidTill : "",
-            offerBannerDeadline : ""
+            offerBannerDeadline : "",
+            currentPlanCacheExpTime : 3600,
+            lowDuesLimit : 25.0,
+            getSubscriptionInfoInHomeScreen : false
         }
         , navigationAppConfig : {
             android : {  

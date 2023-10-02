@@ -20,12 +20,14 @@ import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
 import Presto.Core.Types.Language.Flow (delay)
 import Effect.Aff (launchAff)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
 import LoaderOverlay.Handler as UI
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState)
 import PrestoDOM.Core (terminateUI)
 import Types.App (GlobalState(..))
+import Data.Either (hush)
 import Debug (spy)
 import Engineering.Helpers.Commons (os)
 import Effect (Effect (..))
@@ -34,6 +36,9 @@ import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Foreign.Generic (decode, encode)
+import Foreign.Class (class Decode, class Encode, encode)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Foreign.Generic (decode)
 import MerchantConfig.Types (AppConfig)
 import MerchantConfig.DefaultConfig as DefaultConfig
 import Types.App (FlowBT)
@@ -50,6 +55,13 @@ foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 foreign import loaderTextIOS :: EffectFn2 String String Unit
 
 foreign import getFromWindow :: EffectFn1 String Foreign
+
+foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+
+foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+
+saveToLocalStore' :: String -> String -> EffectFnAff Unit
+saveToLocalStore' = saveToLocalStoreImpl
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader = 
@@ -122,3 +134,16 @@ getAppConfigImpl =
       Left err -> do
         _ <- pure $ printLog ("Not able to decode config" <> show err) config
         pure $ DefaultConfig.config
+
+class Serializable a where
+  serialize :: a -> String
+  deserialize :: String -> Maybe a
+
+instance genericSerializable :: (Encode a, Decode a) => Serializable a where
+  serialize = encodeJSON
+  deserialize = decodeJSON >>> runExcept >>> hush
+
+saveObject :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
+saveObject objName obj =
+  doAff do
+    (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))

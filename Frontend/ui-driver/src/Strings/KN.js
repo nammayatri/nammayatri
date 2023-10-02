@@ -888,5 +888,6 @@ const kannadaStrings = {
   UPI_AUTOPAY_SETUP : "UPI ಸ್ವಯಂ ಪಾವತಿ ಸೆಟಪ್",
   WATCH_VIDEO_FOR_HELP : "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ",
   PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ",
-  CLEAR_YOUR_DUES_EARLY : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ"
+  CLEAR_YOUR_DUES_EARLY : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ",
+  DUE_LIMIT_WARNING_BANNER_TITLE : "ನಿಮ್ಮ ಸರಿಯಾದ ಮಿತಿಯನ್ನು ₹{} ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು"
 }

@@ -2,6 +2,7 @@ module Components.RideCompletedCard.Controller where
 
 import Prelude
 
+import Components.Banner as Banner
 import Components.PrimaryButton.Controller as PB
 import Components.SelectListModal.Controller as SL
 import Data.Int (toNumber)
@@ -25,6 +26,7 @@ data Action = Support
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
+            | BannerAction Banner.Action
             
 type Config = {
   topCard :: TopCard,
@@ -42,7 +44,8 @@ type Config = {
   payerVpa :: String,
   noVpaVisibility :: Boolean,
   theme :: Theme,
-  isPrimaryButtonSticky :: Boolean
+  isPrimaryButtonSticky :: Boolean,
+  bannerConfig :: Banner.Config
 }
 
 data Theme = DARK | LIGHT
@@ -136,7 +139,8 @@ config = {
   payerVpa : "",
   noVpaVisibility : false,
   theme : DARK,
-  isPrimaryButtonSticky : false
+  isPrimaryButtonSticky : false,
+  bannerConfig : Banner.config
 }
 
 type CustomerIssueCard = {
