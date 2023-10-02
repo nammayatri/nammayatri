@@ -80,6 +80,7 @@ view push state =
                       "Profile"       -> getString PROFILE
                       "Alert"         -> getString MESSAGES
                       "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
+                      "Earnings"      -> getString EARNINGS
                       _               -> ""
              ] <> FontStyle.tags TypoGraphy)
                 ]

@@ -216,6 +216,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
+                    | GoToEarningsScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -343,6 +344,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" ->  exit $ GoToEarningsScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"

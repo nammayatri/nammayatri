@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, DriverEarningsScreenState, HomeScreenStage(..), GlobalProps)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -31,6 +31,7 @@ import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
+import Screens.DriverEarningsScreen.ScreenData as DriverEarningsScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
@@ -99,6 +100,7 @@ newtype GlobalState = GlobalState {
   , subscriptionScreen :: SubscriptionScreenState
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
+  , driverEarningsScreen :: DriverEarningsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -142,6 +144,7 @@ defaultGlobalState = GlobalState{
 , subscriptionScreen : SubscriptionScreenData.initData
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
+, driverEarningsScreen : DriverEarningsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -189,6 +192,7 @@ data ScreenType =
   | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
   | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
+  | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -204,6 +208,8 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
                             | RIDE_HISTORY_NAV NAVIGATION_ACTIONS
+
+data DRIVER_EARNINGS_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_EARNINGS_SCREEN
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -305,6 +311,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
+                          | GO_TO_EARNINGS_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

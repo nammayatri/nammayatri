@@ -65,6 +65,7 @@ modifyScreenState st =
     SubscriptionScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { subscriptionScreen = a state.subscriptionScreen })
     OnBoardingSubscriptionScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state { onBoardingSubscriptionScreen = a state.onBoardingSubscriptionScreen })
     PaymentHistoryScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { paymentHistoryScreen = a state.paymentHistoryScreen })
+    DriverEarningsScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { driverEarningsScreen = a state.driverEarningsScreen })
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

@@ -848,5 +848,7 @@ const hindiStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
   JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
-  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें"
+  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
+	EARNINGS : "आय",
+  YATRI_COINS : "यात्री सिक्के"
 }

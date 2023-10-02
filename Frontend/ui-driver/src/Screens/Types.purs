@@ -1737,3 +1737,40 @@ type UpiApps
     , packageName :: String
     , appName :: String
     }
+
+---------------------------------------------------- DriverEarningsScreen ----------------------------------
+
+type DriverEarningsScreenState = {
+  data :: DriverEarningsScreenData,
+  props :: DriverEarningsScreenProps
+}
+
+type DriverEarningsScreenData = {
+  coinHistoryItems :: Array CoinHistoryItem,
+  usageHistoryItems :: Array CoinHistoryItem,
+  planItems :: Array CoinPlanItem
+}
+type DriverEarningsScreenProps = {
+  subView :: DriverEarningsSubView,
+  selectedPlanIndex :: Int,
+  selectedPlanQuantity :: Int
+}
+
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
+
+derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
+instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow
+instance eqDriverEarningsSubView :: Eq DriverEarningsSubView where eq = genericEq
+instance decodeDriverEarningsSubView :: Decode DriverEarningsSubView where decode = defaultEnumDecode
+instance encodeDriverEarningsSubView :: Encode DriverEarningsSubView where encode = defaultEnumEncode
+
+type CoinHistoryItem = {
+  event :: String,
+  timestamp :: String,
+  coins :: Int
+}
+
+type CoinPlanItem = {
+  name :: String,
+  coins :: Int
+}

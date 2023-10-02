@@ -2055,7 +2055,8 @@ homeScreenFlow = do
       resp <- lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       _ <- updateStage $ HomeScreenStage HomeScreen 
       homeScreenFlow
-      
+    GO_TO_EARNINGS_SCREEN -> do
+      driverEarningsFlow
   pure unit
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
@@ -2472,3 +2473,8 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
         void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
         homeScreenFlow
   else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = false }})
+
+driverEarningsFlow :: FlowBT String Unit
+driverEarningsFlow = do 
+  exitAction <- UI.driverEarningsScreen
+  pure unit 

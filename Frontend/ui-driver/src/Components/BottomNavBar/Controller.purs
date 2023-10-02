@@ -36,10 +36,15 @@ navData screenName = {
       defaultIcon: "ny_ic_home_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_home_inactive.png",
       text: "Home"
     },
+    -- {
+    --   activeIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_active.png" else "ny_ic_cab_active,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_active.png",
+    --   defaultIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_inactive.png" else "ny_ic_cab_inactive,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_inactive.png",
+    --   text: "Rides"
+    -- }, -- TODO ADD MERCHANT CHECKS
     {
-      activeIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_active.png" else "ny_ic_cab_active,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_active.png",
-      defaultIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_inactive.png" else "ny_ic_cab_inactive,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_inactive.png",
-      text: "Rides"
+      activeIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_earnings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_earnings.png" else "ny_ic_earnings,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_earnings.png",
+      defaultIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_earnings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_earnings.png" else "ny_ic_cab_inactive,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_earnings.png",
+      text: "Earnings"
     }] <>
     (if (getMerchant FunctionCall == NAMMAYATRI) then [
     {
@@ -64,6 +69,7 @@ getActiveIndex :: ScreenNames.ScreenName -> Int
 getActiveIndex screenName = case screenName of
   ScreenNames.HOME_SCREEN -> 0
   ScreenNames.RIDE_HISTORY_SCREEN -> 1
+  ScreenNames.DRIVER_EARNINGS_SCREEN -> 1
   ScreenNames.SUBSCRIPTION_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else -1
   ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 else -1
   ScreenNames.ALERTS_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 4 else 3

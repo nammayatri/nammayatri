@@ -655,5 +655,7 @@ const frenchStrings = {
   PURPLE_RIDE_CHAMPION : "Champion du Purple Ride",
   PURPLE_RIDE : "Tour violet",
   PROCEED_TO_CHAT : "Passer au chat",
-  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler"
+  PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler",
+  EARNINGS : "Gains",
+  YATRI_COINS : "Coins yatri"
 }
