@@ -69,6 +69,15 @@ fetchAllByIds merchantId driversIds = do
         Just _person -> dInfo' : acc
         Nothing -> acc
 
+fetchAllDriversWithPaymentPending :: MonadFlow m => Id Merchant -> m [DriverInformation]
+fetchAllDriversWithPaymentPending merchantId = do
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamDI.paymentPending $ Se.Eq True,
+          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+        ]
+    ]
+
 fetchAllAvailableByIds :: MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
