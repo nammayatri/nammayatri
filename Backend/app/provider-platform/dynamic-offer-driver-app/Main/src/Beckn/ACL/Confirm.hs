@@ -58,3 +58,4 @@ buildConfirmReq req = do
       Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       Confirm.TAXI -> VehVar.TAXI
       Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+      Confirm.BUS -> VehVar.BUS

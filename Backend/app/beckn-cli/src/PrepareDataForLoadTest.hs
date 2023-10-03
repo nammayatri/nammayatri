@@ -96,6 +96,7 @@ generateSearchRequest = do
                             { location =
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                    descriptor = Nothing,
                                     address = Nothing
                                   }
                             },
@@ -104,6 +105,7 @@ generateSearchRequest = do
                             { location =
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                    descriptor = Nothing,
                                     address = Nothing
                                   }
                             },

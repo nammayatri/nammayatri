@@ -41,7 +41,8 @@ buildStatusReq DStatusReq {..} = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <-
-    buildTaxiContext
+    buildContext
+      Context.MOBILITY
       Context.STATUS
       messageId
       (Just booking.transactionId)

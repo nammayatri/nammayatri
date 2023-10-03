@@ -27,7 +27,7 @@ import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
+data Category = CAR | MOTORCYCLE | TRAIN | PUBLIC_TRANSPORT_BUS | FLIGHT | AUTO_CATEGORY
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable Category
@@ -90,3 +90,4 @@ getCategory HATCHBACK = CAR
 getCategory AUTO_RICKSHAW = AUTO_CATEGORY
 getCategory TAXI = CAR
 getCategory TAXI_PLUS = CAR
+getCategory BUS = PUBLIC_TRANSPORT_BUS

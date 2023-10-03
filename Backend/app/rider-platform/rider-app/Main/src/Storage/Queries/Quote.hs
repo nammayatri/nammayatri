@@ -30,6 +30,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
+import qualified Storage.Queries.PublicTransportQuote as QueryPTQ
 import Storage.Queries.RentalSlab as QueryRS
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
@@ -40,6 +41,7 @@ createDetails = \case
   RentalDetails rentalSlab -> QueryRS.createRentalSlab rentalSlab
   DriverOfferDetails driverOffer -> QueryDO.createDriverOffer driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
+  PublicTransportQuoteDetails publicTransportQuote -> QueryPTQ.createPublicTransportQuote publicTransportQuote
 
 createQuote :: MonadFlow m => Quote -> m ()
 createQuote = createWithKV
@@ -109,6 +111,9 @@ instance FromTType' BeamQ.Quote Quote where
       DFFP.ONE_WAY_SPECIAL_ZONE -> do
         qd <- getSpecialZoneQuote specialZoneQuoteId
         maybe (throwError (InternalError "No special zone details")) return qd
+      DFFP.PUBLIC_TRANSPORT -> do
+        qd <- getPublicTransportDetails publicTransportQuoteId
+        maybe (throwError (InternalError "No public transport details")) return qd
     pure $
       Just
         Quote
@@ -143,13 +148,18 @@ instance FromTType' BeamQ.Quote Quote where
         res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
         maybe (pure Nothing) (pure . Just . DQ.OneWaySpecialZoneDetails) res
 
+      getPublicTransportDetails publicTransportQuoteId' = do
+        res <- maybe (pure Nothing) (QueryPTQ.findById . Id) publicTransportQuoteId'
+        maybe (pure Nothing) (pure . Just . DQ.PublicTransportQuoteDetails) res
+
 instance ToTType' BeamQ.Quote Quote where
   toTType' Quote {..} =
-    let (fareProductType, distanceToNearestDriver, rentalSlabId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
-          DQ.OneWayDetails details -> (DFFP.ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
-          DQ.RentalDetails rentalSlab -> (DFFP.RENTAL, Nothing, Just $ getId rentalSlab.id, Nothing, Nothing)
-          DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
-          DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
+    let (fareProductType, distanceToNearestDriver, rentalSlabId, driverOfferId, specialZoneQuoteId, publicTransportQuoteId) = case quoteDetails of
+          DQ.OneWayDetails details -> (DFFP.ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing, Nothing)
+          DQ.RentalDetails rentalSlab -> (DFFP.RENTAL, Nothing, Just $ getId rentalSlab.id, Nothing, Nothing, Nothing)
+          DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing, Nothing)
+          DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id, Nothing)
+          DQ.PublicTransportQuoteDetails publicTransportQuote -> (DFFP.PUBLIC_TRANSPORT, Nothing, Nothing, Nothing, Nothing, Just $ getId publicTransportQuote.id)
      in BeamQ.QuoteT
           { BeamQ.id = getId id,
             BeamQ.fareProductType = fareProductType,
@@ -170,6 +180,7 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.driverOfferId = driverOfferId,
             BeamQ.merchantId = getId merchantId,
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
+            BeamQ.publicTransportQuoteId = publicTransportQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
             BeamQ.createdAt = createdAt
           }

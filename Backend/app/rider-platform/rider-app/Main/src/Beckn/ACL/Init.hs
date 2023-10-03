@@ -40,7 +40,7 @@ buildInitReq ::
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
+  context <- buildContext Context.MOBILITY Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
@@ -51,6 +51,7 @@ buildInitMessage res = do
         SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
+        SConfirm.ConfirmPublicTransportDetails details -> (Init.RIDE, Just $ details.quoteId, Nothing)
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   pure
     Init.InitMessage
@@ -81,6 +82,7 @@ buildInitMessage res = do
       VehVar.AUTO_RICKSHAW -> Init.AUTO_RICKSHAW
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
+      VehVar.BUS -> Init.BUS
 
 mkBilling :: Maybe Text -> Maybe Text -> Init.Billing
 mkBilling phone name = Init.Billing {..}
@@ -119,7 +121,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                             { display = (\_ -> Just True) =<< mbMaxDistance,
                               code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
                               name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                              value = (\distance -> Just $ show $ distance) =<< mbMaxDistance
+                              value = Just . show =<< mbMaxDistance
                             }
                         ]
                     }

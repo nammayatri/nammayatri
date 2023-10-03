@@ -86,6 +86,8 @@ library
       API.UI.Whatsapp
       App
       App.Server
+      Beckn.ACL.Bus.OnSearch
+      Beckn.ACL.Bus.Search
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
@@ -191,6 +193,9 @@ library
       Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
+      Domain.Types.PublicTransportQuote
+      Domain.Types.PublicTransportQuote.RouteInfo
+      Domain.Types.PublicTransportQuote.Stop
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -199,6 +204,7 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SearchRequest.SearchType
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
@@ -257,6 +263,9 @@ library
       Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
+      Storage.Beam.PublicTransportQuote
+      Storage.Beam.PublicTransportQuote.RouteInfo
+      Storage.Beam.PublicTransportQuote.Stop
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -318,6 +327,9 @@ library
       Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats
+      Storage.Queries.PublicTransportQuote
+      Storage.Queries.PublicTransportQuote.RouteInfo
+      Storage.Queries.PublicTransportQuote.Stop
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken

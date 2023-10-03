@@ -30,7 +30,7 @@ import Beckn.Types.Core.Taxi.OnSelect.Order as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Quote as Reexport
-import Beckn.Types.Core.Taxi.Search.Location as Reexport
+import Beckn.Types.Core.Taxi.Search.Location as Reexport hiding (Descriptor (..))
 import Beckn.Types.Core.Taxi.Search.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
 import Kernel.Prelude

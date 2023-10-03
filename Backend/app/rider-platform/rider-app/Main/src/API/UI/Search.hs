@@ -15,6 +15,7 @@
 module API.UI.Search
   ( SearchReq (..),
     SearchRes (..),
+    SearchType (..),
     DOneWaySearch.OneWaySearchReq (..),
     DRentalSearch.RentalSearchReq (..),
     DSearchCommon.SearchReqLocation (..),
@@ -25,6 +26,7 @@ module API.UI.Search
 where
 
 -- import qualified Beckn.ACL.Metro.Search as MetroACL
+import qualified Beckn.ACL.Bus.Search as BusACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi hiding (Header)
@@ -35,7 +37,7 @@ import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Types.SearchRequest (SearchRequest, SearchType (..))
 import Environment
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
@@ -144,14 +146,48 @@ oneWaySearch ::
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 oneWaySearch personId bundleVersion clientVersion device req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
-  fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
-    void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
+  mkSearchOnType req.searchTypes dSearchRes
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
   --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, dSearchRes.shortestRouteInfo)
+
+mkSearchOnType ::
+  ( CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl]
+  ) =>
+  [SearchType] ->
+  DOneWaySearch.OneWaySearchRes ->
+  m ()
+mkSearchOnType searchTypes dSearchRes = do
+  let hasOnDemandSearchType = ON_DEMAND `elem` searchTypes
+      hasPublicTransportSearchType = PUBLIC_TRANSPORT `elem` searchTypes
+  when hasOnDemandSearchType $ taxiSearch dSearchRes
+  when hasPublicTransportSearchType $ busSearch dSearchRes
+
+taxiSearch ::
+  ( CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl]
+  ) =>
+  DOneWaySearch.OneWaySearchRes ->
+  m ()
+taxiSearch dSearchRes = fork "search cabs" . withShortRetry $ do
+  becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
+  void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
+
+busSearch ::
+  ( CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl]
+  ) =>
+  DOneWaySearch.OneWaySearchRes ->
+  m ()
+busSearch dSearchRes = fork "search buses" . withShortRetry $ do
+  becknTaxiReq <- BusACL.buildBusSearchReq dSearchRes
+  void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
 
 rentalSearch ::
   ( CacheFlow m r,

@@ -61,7 +61,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
         OS.Provider
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
-            locations = maybe [] mkProviderLocations estimateList,
+            locations = Just $ maybe [] mkProviderLocations estimateList,
             items,
             fulfillments
           }
@@ -81,6 +81,7 @@ mkStartInfo dReq =
     { location =
         OS.Location
           { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
+            descriptor = Nothing,
             address = Nothing
           }
     }
@@ -91,6 +92,7 @@ mkStopInfo res =
     { location =
         OS.Location
           { gps = OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon},
+            descriptor = Nothing,
             address = Nothing
           }
     }
@@ -115,8 +117,10 @@ mkQuoteEntities start end provider estInfo = do
           { start,
             end = end,
             id = estimate.id.getId,
-            _type = OS.RIDE,
-            vehicle = OS.Vehicle {category = variant}
+            _type = Just OS.RIDE,
+            vehicle = OS.Vehicle {category = variant},
+            tags = Nothing,
+            tracking = Nothing
           }
       item =
         OS.Item
@@ -126,9 +130,9 @@ mkQuoteEntities start end provider estInfo = do
               OS.ItemPrice
                 { currency = currency',
                   value = minPriceDecimalValue,
-                  offered_value = minPriceDecimalValue,
-                  minimum_value = minPriceDecimalValue,
-                  maximum_value = maxPriceDecimalValue
+                  offered_value = Just minPriceDecimalValue,
+                  minimum_value = Just minPriceDecimalValue,
+                  maximum_value = Just maxPriceDecimalValue
                 },
             tags =
               Just $
@@ -224,8 +228,10 @@ mkQuoteEntitiesSpecialZone start end provider it = do
           { start,
             end = end,
             id = it.quoteId.getId,
-            _type = OS.RIDE_OTP,
-            vehicle = OS.Vehicle {category = variant}
+            _type = Just OS.RIDE_OTP,
+            vehicle = OS.Vehicle {category = variant},
+            tags = Nothing,
+            tracking = Nothing
           }
       item =
         OS.Item
@@ -235,9 +241,9 @@ mkQuoteEntitiesSpecialZone start end provider it = do
               OS.ItemPrice
                 { currency = currency',
                   value = estimatedFare,
-                  offered_value = estimatedFare,
-                  minimum_value = estimatedFare,
-                  maximum_value = estimatedFare
+                  offered_value = Just estimatedFare,
+                  minimum_value = Just estimatedFare,
+                  maximum_value = Just estimatedFare
                 },
             tags =
               if isJust it.specialLocationTag

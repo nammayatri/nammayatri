@@ -32,7 +32,7 @@ buildRatingReq ::
 buildRatingReq DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.city merchant.country False
+  context <- buildContext Context.MOBILITY Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.city merchant.country False
   let message =
         Rating.RatingMessage
           { id = bppBookingId.getId,

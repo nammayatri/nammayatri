@@ -63,6 +63,7 @@ bookingInfo merchantShortId otpCode = do
     convertVehicleVariant Domain.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
     convertVehicleVariant Domain.TAXI = Common.TAXI
     convertVehicleVariant Domain.TAXI_PLUS = Common.TAXI_PLUS
+    convertVehicleVariant Domain.BUS = Common.BUS
 
     buildBookingLocation Domain.BookingLocation {..} =
       Common.BookingLocation

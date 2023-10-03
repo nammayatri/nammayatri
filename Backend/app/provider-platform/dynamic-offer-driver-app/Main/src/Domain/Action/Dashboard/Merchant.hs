@@ -366,6 +366,7 @@ castDVehicleVariant = \case
   DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+  DVeh.BUS -> Common.BUS
 
 castDVehicleClassCheckType :: DODC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
@@ -422,6 +423,7 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+  Common.BUS -> DVeh.BUS
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DODC.VehicleClassCheckType
 castVehicleClassCheckType = \case

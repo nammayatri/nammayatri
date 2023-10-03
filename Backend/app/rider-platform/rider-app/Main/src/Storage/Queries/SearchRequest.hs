@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequest where
 
+import qualified Data.Text as T
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
@@ -80,6 +81,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
     clientVersion' <- forM clientVersion readVersion
     fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequest for fromLocationId:" <> show fromLocationId)
     tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
+    searchTypes' <- readMaybe (T.unpack searchTypes) & fromMaybeM (InternalError "Unable to parse \'search_types\' field of \'search_request\' table")
     pure $
       Just
         SearchRequest
@@ -89,6 +91,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             riderId = Id riderId,
             fromLocation = fl,
             toLocation = tl,
+            searchTypes = searchTypes',
             distance = HighPrecMeters <$> distance,
             maxDistance = HighPrecMeters <$> maxDistance,
             estimatedRideDuration = estimatedRideDuration,
@@ -115,6 +118,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.riderId = getId riderId,
         BeamSR.fromLocationId = getId fromLocation.id,
         BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
+        BeamSR.searchTypes = T.pack $ show searchTypes,
         BeamSR.distance = getHighPrecMeters <$> distance,
         BeamSR.maxDistance = getHighPrecMeters <$> maxDistance,
         BeamSR.estimatedRideDuration = estimatedRideDuration,
