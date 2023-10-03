@@ -172,12 +172,13 @@ calculateFareParameters params = do
         {- without platformFee -}
         fullRideCostN
           + fromMaybe 0 govtCharges
+      pickupWaitingCharge = waitingChargeInfo >>= countPickupWaitingCharge
       fareParams =
         FareParameters
           { id,
             driverSelectedFare = params.driverSelectedFare,
             customerExtraFee = params.customerExtraFee,
-            serviceCharge = fp.serviceCharge,
+            serviceCharge = Just $ (fromMaybe 0 fp.serviceCharge) + fromMaybe 0 pickupWaitingCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
@@ -271,6 +272,11 @@ calculateFareParameters params = do
               cgst = Just . realToFrac $ baseFee * platformFeeInfo'.cgst,
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
+    countPickupWaitingCharge :: WaitingChargeInfo -> Maybe Money
+    countPickupWaitingCharge waitingChargeInfo = do
+      case waitingChargeInfo.pickupWaitingCharge of
+        Just (ConstantWaitingCharge value) -> Just value
+        _ -> Nothing
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
 countFullFareOfParamsDetails = \case

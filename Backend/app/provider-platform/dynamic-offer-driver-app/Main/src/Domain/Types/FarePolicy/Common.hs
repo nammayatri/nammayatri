@@ -20,7 +20,8 @@ import Kernel.Types.Common
 
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
-    waitingCharge :: WaitingCharge
+    waitingCharge :: WaitingCharge,
+    pickupWaitingCharge :: Maybe WaitingCharge
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 

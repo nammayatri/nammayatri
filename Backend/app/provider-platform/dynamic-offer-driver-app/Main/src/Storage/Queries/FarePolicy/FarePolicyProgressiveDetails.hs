@@ -46,7 +46,8 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
                   Domain.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
-                      freeWaitingTime = freeWaitingTime'
+                      freeWaitingTime = freeWaitingTime',
+                      pickupWaitingCharge = Nothing
                     },
               nightShiftCharge = nightShiftCharge
             }

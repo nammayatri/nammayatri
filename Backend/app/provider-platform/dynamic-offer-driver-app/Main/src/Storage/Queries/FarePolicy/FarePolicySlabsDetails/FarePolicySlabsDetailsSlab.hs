@@ -48,10 +48,11 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
             { startDistance = startDistance,
               baseFare = baseFare,
               waitingChargeInfo =
-                ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+                ((,,) <$> waitingCharge <*> freeWatingTime) <*> pickupWaitingCharge <&> \(waitingCharge', freeWaitingTime', pickupWaitingCharge') ->
                   DFP.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
-                      freeWaitingTime = freeWaitingTime'
+                      freeWaitingTime = freeWaitingTime',
+                      pickupWaitingCharge = Just pickupWaitingCharge'
                     },
               nightShiftCharge = nightShiftCharge,
               platformFeeInfo =
@@ -76,5 +77,6 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         platformFeeSgst = DFP.sgst <$> platformFeeInfo,
         waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
-        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
+        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo,
+        pickupWaitingCharge = DFP.pickupWaitingCharge =<< waitingChargeInfo
       }
