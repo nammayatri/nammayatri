@@ -26,6 +26,7 @@ defaultSearchReq =
     OneWaySearchReq
       { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
         destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
+        searchTypes = [ON_DEMAND],
         isSourceManuallyMoved = Nothing,
         isSpecialLocation = Nothing
       }
@@ -81,6 +82,7 @@ searchReqFromUpdatesList updList =
           OneWaySearchReq
             { origin = SearchReqLocation (NE.head $ NE.head updList) defaultSearchReqAddress,
               destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
+              searchTypes = [ON_DEMAND],
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing
             }
@@ -93,6 +95,7 @@ mkSearchReqFromLocations origin destination =
           OneWaySearchReq
             { origin = SearchReqLocation origin defaultSearchReqAddress,
               destination = SearchReqLocation destination defaultSearchReqAddress,
+              searchTypes = [ON_DEMAND],
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing
             }

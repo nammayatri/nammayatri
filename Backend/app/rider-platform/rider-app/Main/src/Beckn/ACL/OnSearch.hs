@@ -102,23 +102,24 @@ buildEstimateOrQuoteInfo provider item = do
   let itemId = item.id
   let vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       estimatedFare = roundToIntegral item.price.value
-      estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimatedTotalFare = roundToIntegral (fromMaybe item.price.value item.price.offered_value)
       descriptions = []
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
-      driversLocation = provider.locations
+      driversLocation = fromMaybe [] provider.locations
       specialLocationTag = buildSpecialLocationTag =<< item.tags
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
         DEstimate.FareRange
-          { minFare = roundToIntegral item.price.minimum_value,
-            maxFare = roundToIntegral item.price.maximum_value
+          { minFare = roundToIntegral (fromMaybe item.price.value item.price.minimum_value),
+            maxFare = roundToIntegral (fromMaybe item.price.value item.price.maximum_value)
           }
   validateFareRange estimatedTotalFare totalFareRange
 
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
-  case fulfillment._type of
+  fulfillmentType <- fromMaybeM (InvalidRequest "Missing fulfillment type") fulfillment._type
+  case fulfillmentType of
     OnSearch.RIDE -> do
       estimateBreakupList <- buildEstimateBreakUpList item
       pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
@@ -133,6 +134,7 @@ buildEstimateOrQuoteInfo provider item = do
       OnSearch.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       OnSearch.TAXI -> VehVar.TAXI
       OnSearch.TAXI_PLUS -> VehVar.TAXI_PLUS
+      OnSearch.BUS -> VehVar.BUS
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>

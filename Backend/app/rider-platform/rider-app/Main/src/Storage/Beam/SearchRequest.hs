@@ -29,6 +29,7 @@ data SearchRequestT f = SearchRequestT
     riderId :: B.C f Text,
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
+    searchTypes :: B.C f Text,
     distance :: B.C f (Maybe Centesimal),
     maxDistance :: B.C f (Maybe Centesimal),
     estimatedRideDuration :: B.C f (Maybe Seconds),
