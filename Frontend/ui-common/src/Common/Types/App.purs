@@ -300,3 +300,9 @@ type FeedbackAnswer =  {
     questionId :: String,
     answer :: Array String
   }
+
+type ShareImageConfig = {
+    viewId :: String
+  , code :: String
+  , logoId :: String
+}

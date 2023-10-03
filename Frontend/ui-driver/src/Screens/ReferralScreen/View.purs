@@ -40,7 +40,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.Types as ST
-import Services.API (LeaderBoardReq(..))
+import Services.API (LeaderBoardReq(..), GetPerformanceReq(..), GetPerformanceRes(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -54,10 +54,13 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, getAssetStoreLink)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
+import Debug (spy)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -67,34 +70,50 @@ screen initialState =
   , globalEvents : [
               (\push -> do
                 void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                  case initialState.props.leaderBoardType of
-                    ST.Daily  -> do
-                      let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
-                                            case last (getPastDays 1) of
-                                              Just day -> day
-                                              Nothing -> initialState.props.selectedDay
-                                          else initialState.props.selectedDay
+                  case initialState.props.stage of 
+                    ST.LeaderBoard -> do
+                        case initialState.props.leaderBoardType of
+                          ST.Daily  -> do
+                            let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
+                                                  case last (getPastDays 1) of
+                                                    Just day -> day
+                                                    Nothing -> initialState.props.selectedDay
+                                                else initialState.props.selectedDay
 
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
-                      case leaderBoardRes of
-                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                      pure unit
-                    ST.Weekly -> do
-                      let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
-                                            case last (getPastWeeks 1) of
-                                              Just week -> week
-                                              Nothing -> initialState.props.selectedWeek
-                                          else initialState.props.selectedWeek
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
-                      case leaderBoardRes of
-                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                      pure unit
+                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
+                            case leaderBoardRes of
+                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                            pure unit
+                          ST.Weekly -> do
+                            let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
+                                                  case last (getPastWeeks 1) of
+                                                    Just week -> week
+                                                    Nothing -> initialState.props.selectedWeek
+                                                else initialState.props.selectedWeek
+                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
+                            case leaderBoardRes of
+                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                            pure unit
+                    ST.QRScreen -> do 
+                      let refCode = getValueToLocalStore REFERRAL_CODE
+                      (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
+                      lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes getPerformanceres)
+                      if (any (_ == refCode) ["__failed", "", "(null)"]) then do
+                          response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
+                          case response of
+                            Right (GenerateReferralCodeRes generateReferralCodeRes) -> lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes generateReferralCodeRes))
+                            Left error -> pure unit
+                      else pure unit 
+                    _ -> pure unit
                 pure (pure unit)
               )
   ]
-  , eval
+  , eval : (\action state -> do
+      let _ = spy "Referral state -----" state
+      let _ = spy "Referral--------action" action
+      eval action state)
   }
 
 
@@ -168,7 +187,7 @@ view push state =
         ] <> if state.props.stage == ST.SuccessScreen then [commonView push "ny_ic_green_tick" (getString  YOUR_REFERRAL_CODE_IS_LINKED) (getString YOU_CAN_NOW_EARN_REWARDS) state] else []
           <> if state.props.stage == ST.ComingSoonScreen then [commonView push "ny_ic_comming_soon_poster" (getString COMING_SOON) (getString COMING_SOON_DESCRIPTION) state] else []
           <> if state.props.stage == ST.ReferralFlow then  [referralEnrolmentFlow push state, continueButtonView push state] else []
-          <> if state.props.stage == ST.QRScreen then [qrScreen push state] else []
+          <> if state.props.stage == ST.QRScreen then [qrScreenView push state] else []
           <> if state.props.stage == ST.LeaderBoard then [leaderBoard push state] else [])
         , bottomNavBarView push state
         ]
@@ -871,7 +890,7 @@ referralEnrolmentFlow push state =
           , height WRAP_CONTENT
           , margin (MarginTop 10)
           ][  PrimaryEditText.view(push <<< PrimaryEditTextAction1) ({
-              title: (getString REFERRAL_CODE)
+              title: (getString REFERRAL_CODE_NUMBER)
               , hint: (getString REFERRAL_CODE_HINT)
               , valueId: ""
               , isinValid: false
@@ -914,199 +933,250 @@ continueButtonView push state =
     , padding $ Padding 16 0 16 16
     ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
 
+qrScreenView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+qrScreenView push state =
+  scrollView
+  [ width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  ][linearLayout
+    [ weight 1.0
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][ qrShimmerView push state
+     , qrScreen push state
+     ]  
+   ]
+
+qrShimmerView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+qrShimmerView push state = 
+  let referallCodeViewTopMargin = 24
+      referallCodeViewHeight = 516
+      alertViewHeight = 80
+      alertViewTopMargin = referallCodeViewTopMargin + referallCodeViewHeight + 16
+      referredViewHeight = 84
+      referredViewTopMargin = alertViewTopMargin + alertViewHeight + 16
+  in
+  shimmerFrameLayout
+  [ width $ MATCH_PARENT
+  , height $ MATCH_PARENT
+  , orientation VERTICAL
+  , visibility $ if state.props.showShimmer then VISIBLE else GONE
+  , margin $ Margin 20 0 20 16
+  ][ linearLayout
+     [ width MATCH_PARENT
+     , height $ V referallCodeViewHeight
+     , background Color.greyDark
+     , cornerRadius 12.0
+     , margin $ MarginTop referallCodeViewTopMargin
+     ][]
+   , linearLayout
+     [ width MATCH_PARENT
+     , height $ V alertViewHeight
+     , background Color.greyDark
+     , cornerRadius 12.0
+     , margin $ MarginTop alertViewTopMargin
+     ][]
+   , linearLayout
+     [ width MATCH_PARENT
+     , height $ V referredViewHeight
+     , background Color.greyDark
+     , cornerRadius 12.0
+     , margin $ MarginTop referredViewTopMargin
+     ][]
+  ]
+
 qrScreen :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 qrScreen push state =
-  scrollView
+  linearLayout
+  [ weight 1.0
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding (Padding 20 0 20 16)
+  , visibility if not state.props.showShimmer then VISIBLE else GONE
+  ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      ][ linearLayout
-        [ weight 1.0
+      , orientation VERTICAL
+      , background Color.yellow900
+      , cornerRadius 12.0
+      , margin $ MarginTop 24
+      , padding (PaddingBottom 5)
+      ]
+      [
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , margin $ MarginTop 20
+          ]
+          [
+            imageView
+              [ height $ V 49
+              , width $ V 120
+              , imageWithFallback $ getReferralScreenIcon (getMerchant FunctionCall) 
+              , id $ getNewIDWithTag "ReferralScreenLogo"
+              ]
+          ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , margin $ MarginTop 16
+          ]
+          [
+            imageView
+              [ height $ V 288
+              , width $ V 288
+              , id $ getNewIDWithTag "ReferralQRScreen"
+              , afterRender push (const (ReferralQrRendered $ getNewIDWithTag "ReferralQRScreen"))
+              ]
+          ]
+      , textView
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , orientation VERTICAL
-        , padding (Padding 20 0 20 16)
-        ][  linearLayout
+        , gravity CENTER
+        , text (getString YOUR_REFERRAL_CODE)
+        , color Color.black900
+        , textSize $ FontSize.a_16
+        , margin $ MarginTop 8
+        , visibility $ if isJust state.data.driverInfo.referralCode then VISIBLE else GONE
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , text (fromMaybe "" state.data.driverInfo.referralCode)
+        , color Color.black900
+        , margin $ MarginTop 4
+        ] <> FontStyle.h4 TypoGraphy 
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , visibility VISIBLE
+        , onClick push (const ShareOptions)
+        , padding (Padding 4 12 4 12)
+        ][ linearLayout
             [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , background Color.yellow900
-            , cornerRadius 12.0
-            , margin $ MarginTop 24
-            , padding (PaddingBottom 5)
+            , width WRAP_CONTENT
+            , cornerRadius 24.0
+            , background Color.white900
+            , orientation HORIZONTAL
             ]
-            [
-              linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , margin $ MarginTop 20
-                ]
-                [
-                  imageView
-                    [ height $ V 49
-                    , width $ V 120
-                    , imageUrl "ny_namma_yatri"
-                    ]
-                ]
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , margin $ MarginTop 16
-                ]
-                [
-                  imageView
-                    [ height $ V 288
-                    , width $ V 288
-                    , imageUrl "ny_ic_qr_code"
-                    ]
-                ]
-            , textView
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity CENTER
-              , text (getString YOUR_REFERRAL_CODE)
-              , color Color.black900
-              , textSize $ FontSize.a_16
-              , margin $ MarginTop 8
+            [ imageView
+              [ height $ V 30
+              , width $ V 30
+              , padding (PaddingLeft 10)
+              , imageWithFallback $ "ny_ic_share_grey," <> getAssetStoreLink FunctionCall <> "ny_ic_share_grey.png"
               ]
             , textView
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity CENTER
-              , text (fromMaybe "" state.data.driverInfo.referralCode)
-              , color Color.black900
-              , textSize $ FontSize.a_24
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
-            , linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
-              , gravity CENTER
-              , visibility GONE
-              , padding (Padding 4 12 4 12)
-              ][ linearLayout
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , cornerRadius 24.0
-                  , background Color.white900
-                  , orientation HORIZONTAL
-                  ]
-                  [ imageView
-                    [ height $ V 30
-                    , width $ V 30
-                    , padding (PaddingLeft 10)
-                    , imageUrl "ic_share"
-                    ]
-                  , textView
-                    [ height MATCH_PARENT
-                    , width MATCH_PARENT
-                    , textSize $ FontSize.a_12
-                    , color Color.black900
-                    , padding (Padding 0 6 10 0)
-                    , text  (" " <> getString SHARE_OPTIONS <> " ")
-                    ]
-                  ]
+              , textSize $ FontSize.a_12
+              , color Color.black900
+              , padding (Padding 0 6 10 0)
+              , text  (" " <> getString SHARE_OPTIONS <> " ")
               ]
+            ]
+        ]
 
-            ]
-        ,   linearLayout
-            [  height $ V 80
-            , width MATCH_PARENT
-            , margin $ MarginTop 16
-            , cornerRadius 12.0
-            , background if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then Color.greenGrey else Color.black800
-            ]
-            [  linearLayout
-                [ width WRAP_CONTENT
-                , height MATCH_PARENT
-                , weight 1.0
-                , padding $ Padding 20 13 0 0
-                , orientation VERTICAL
-                ]
-                [ textView $
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , gravity LEFT
-                  , text if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then (getString FIRST_REFERRAL_SUCCESSFUL) else (getString AWAITING_REFERRAL_RIDE)
-                  , color Color.white900
-                  ] <> FontStyle.body6 TypoGraphy
-                , textView
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , gravity LEFT
-                  , text (getString CHECK_THIS_SPACE_WHEN_YOU_GET_REFERRAL_ALERT)
-                  , color Color.white900
-                  , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then GONE else VISIBLE
-                  , textSize $ FontSize.a_12
-                  , fontStyle  $ FontStyle.regular LanguageStyle
-                  ]
-                , contactUsTextView  push state
-                ]
-            ,   imageView
-                [
-                  height $ V 80
-                ,  width $ V 118
-                ,  margin $ MarginRight 5
-                , imageUrl if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then "ny_ic_auto2" else "ny_ic_auto1"
-                ]
-            ]
-        ,   linearLayout
+      ]
+  ,   linearLayout
+      [  height $ V 80
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      , cornerRadius 12.0
+      , background if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then Color.greenGrey else Color.black800
+      ]
+      [  linearLayout
+          [ width WRAP_CONTENT
+          , height MATCH_PARENT
+          , weight 1.0
+          , padding $ Padding 20 13 0 0
+          , orientation VERTICAL
+          ]
+          [ textView $
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , margin $ MarginTop 16
-            , background Color.grey700
-            , cornerRadius 12.0
-            , padding $ Padding 16 17 16 17
-            , orientation VERTICAL
+            , gravity LEFT
+            , text if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then (getString FIRST_REFERRAL_SUCCESSFUL) else (getString AWAITING_REFERRAL_RIDE)
+            , color Color.white900
+            ] <> FontStyle.body6 TypoGraphy
+          , textView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity LEFT
+            , text (getString CHECK_THIS_SPACE_WHEN_YOU_GET_REFERRAL_ALERT)
+            , color Color.white900
+            , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then GONE else VISIBLE
+            , textSize $ FontSize.a_12
+            , fontStyle  $ FontStyle.regular LanguageStyle
             ]
-            [ linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              ]
-              [
-                textView
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , weight 1.0
-                , gravity LEFT
-                , text (getString REFERRED_CUSTOMERS)
-                , color Color.black800
-                , textSize $ FontSize.a_14
-                ]
-              , textView $
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , alignParentRight "true,-1"
-                , gravity CENTER
-                , text (show state.data.driverPerformance.referrals.totalReferredCustomers)
-                , color Color.black800
-                ] <> FontStyle.h2 LanguageStyle
-              ]
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                ]
-                [
-                  textView $
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , gravity LEFT
-                  , weight 1.0
-                  , text (getString ACTIVATED_CUSTOMERS)
-                  , color Color.black800
-                  ] <> FontStyle.paragraphText TypoGraphy
-                , textView $
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , alignParentRight "true,-1"
-                  , gravity CENTER
-                  , text (show state.data.driverPerformance.referrals.totalActivatedCustomers)
-                  , color Color.black800
-                  ] <> FontStyle.h2 LanguageStyle
-                ]
-            ]
+          , contactUsTextView  push state
+          ]
+      ,   imageView
+          [
+            height $ V 80
+          ,  width $ V 118
+          , imageWithFallback $ if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then getActiveReferralBannerIcon (getMerchant FunctionCall)  else getReferralBannerIcon (getMerchant FunctionCall) 
+          ]
+      ]
+  ,   linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      , background Color.grey700
+      , cornerRadius 12.0
+      , padding $ Padding 16 17 16 17
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
         ]
+        [
+          textView
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , weight 1.0
+          , gravity LEFT
+          , text (getString REFERRED_CUSTOMERS)
+          , color Color.black800
+          , textSize $ FontSize.a_14
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , alignParentRight "true,-1"
+          , gravity CENTER
+          , text (show state.data.driverPerformance.referrals.totalReferredCustomers)
+          , color Color.black800
+          ] <> FontStyle.h2 LanguageStyle
         ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity LEFT
+            , weight 1.0
+            , text (getString ACTIVATED_CUSTOMERS)
+            , color Color.black800
+            ] <> FontStyle.paragraphText TypoGraphy
+          , textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , alignParentRight "true,-1"
+            , gravity CENTER
+            , text (show state.data.driverPerformance.referrals.totalActivatedCustomers)
+            , color Color.black800
+            ] <> FontStyle.h2 LanguageStyle
+          ]
+      ]
+  ]
 
 passwordPopUpView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 passwordPopUpView push state =
@@ -1167,3 +1237,27 @@ checkDriverWithZeroRides item aboveThreshold state =
 checkDate :: ST.ReferralScreenState -> Boolean
 checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdate "") == (convertUTCtoISC state.props.selectedDay.utcDate "YYYY-MM-DD") 
                   else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 
+
+getReferralScreenIcon :: Merchant -> String
+getReferralScreenIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+    YATRI -> "ny_ic_yatri_logo_dark," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_logo_dark.png"
+    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_sathi_logo_black_icon.png"
+    _ -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+
+getActiveReferralBannerIcon :: Merchant -> String
+getActiveReferralBannerIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    _ -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+
+getReferralBannerIcon :: Merchant -> String
+getReferralBannerIcon merchant =
+  case merchant of
+    NAMMAYATRI -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    _ -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"

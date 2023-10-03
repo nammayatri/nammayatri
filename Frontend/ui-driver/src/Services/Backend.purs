@@ -759,6 +759,14 @@ getPerformanceBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+---------------------------------------- generateReferralCode ---------------------------------------------
+generateReferralCode :: GenerateReferralCodeReq -> Flow GlobalState (Either ErrorResponse GenerateReferralCodeRes)
+generateReferralCode payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.generateReferralCode "") unwrapResponse (callAPI headers payload)
+    where
+        unwrapResponse x = x
+
 ----------------------------------- validateAlternateNumber --------------------------
 
 validateAlternateNumber payload = do

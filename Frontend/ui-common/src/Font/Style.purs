@@ -157,6 +157,9 @@ extraBoldItalic = do
   let fontKn = getValueFromConfig "fontKannada"
   fontByOS (font <> "-ExtraBoldItalic") (font <> "-ExtraBoldItalic") "Arial"
 
+feFont :: LazyCheck -> FontStyle
+feFont style = fontByOS "FEFont" "FEFont" "Arial"
+
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [
   textSize FontSize.a_22
@@ -308,11 +311,15 @@ body16 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body16 typography = [
   textSize FontSize.a_10
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
+
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
   textSize FontSize.a_24
 , lineHeight "28"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
+
+h4 :: LazyCheck ->  forall properties. (Array (Prop properties))
+h4 typography = [fontStyle $ feFont LanguageStyle, textSize $ FontSize.a_44]
 
 title0 :: LazyCheck -> forall properties. (Array (Prop properties))
 title0 typography = [
@@ -345,6 +352,7 @@ data Style = Body1
   | Heading1
   | Heading2
   | Heading3
+  | Heading4
   | SubHeading1
   | SubHeading2
   | Tags
@@ -377,6 +385,7 @@ getFontStyle style styleType = case style of
   Heading1 -> h1 styleType
   Heading2 -> h2 styleType
   Heading3 -> h3 styleType
+  Heading4 -> h4 styleType
   SubHeading1 -> subHeading1 styleType
   SubHeading2 -> subHeading2 styleType
   Tags -> tags styleType

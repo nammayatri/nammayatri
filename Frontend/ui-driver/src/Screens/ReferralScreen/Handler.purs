@@ -22,18 +22,20 @@ import Data.Maybe (isJust)
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.ReferralScreen.Controller (ScreenOutput(..))
+import Screens.ReferralScreen.Controller (ScreenOutput(..), getReferralStage)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.View as ReferralScreen
 import Screens.Types (ReferralType(..))
 import Types.App (FlowBT, GlobalState(..), NAVIGATION_ACTIONS(..), REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
 
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = LeaderBoard } }
+  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage (getMerchant FunctionCall) } }
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)

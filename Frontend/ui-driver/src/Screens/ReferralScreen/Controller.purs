@@ -30,19 +30,23 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent)
+import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.ReferralScreen.ScreenData as RSD
-import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
-import Services.API (LeaderBoardRes(..), DriversInfo(..))
+import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData, ShareImageConfig)
+import Services.API (LeaderBoardRes(..), DriversInfo(..), GetPerformanceRes(..), GenerateReferralCodeRes(..))
 import Services.Config (getSupportNumber)
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Effect.Aff (launchAff_)
+import Common.Types.App
+import Effect.Uncurried(runEffectFn4)
+import Storage(KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -116,6 +120,13 @@ instance loggableAction :: Loggable Action where
         WeekSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "week_changed"
     UpdateLeaderBoard _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard"
     UpdateLeaderBoardFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard_failed"
+    ReferralQrRendered _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "referral_qr_rendered"
+    NoAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "no_action"
+    ShareOptions -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "share_options"
+    UpdateDriverPerformance _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_driver_performance"
+    UpdateReferralCode _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_referral_code"
+    UpdateDriverPerformanceFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_driver_performance_failed"
+    UpdateReferralCodeFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_referral_code_failed"
 
 data Action = BottomNavBarAction BottomNavBar.Action
             | GenericHeaderActionController GenericHeader.Action
@@ -137,6 +148,14 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | UpdateLeaderBoard LeaderBoardRes
             | AfterRender
             | UpdateLeaderBoardFailed
+            | ReferralQrRendered String
+            | NoAction
+            | ShareOptions
+            | UpdateDriverPerformance GetPerformanceRes
+            | UpdateReferralCode GenerateReferralCodeRes
+            | UpdateDriverPerformanceFailed
+            | UpdateReferralCodeFailed
+
 
 data ScreenOutput = GoToHomeScreen
                   | GoBack
@@ -174,6 +193,14 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
 eval UpdateLeaderBoardFailed state = do 
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   continue state{ props{ showShimmer = false, noData = true } }
+
+eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals = performanceRes.referrals}} , props{showShimmer = false}}
+
+eval (UpdateDriverPerformanceFailed) state = continue state {props{showShimmer= false}}
+
+eval (UpdateReferralCode (GenerateReferralCodeRes referralCode)) state = continue state{data{driverInfo {referralCode = Just referralCode.referralCode}}, props{showShimmer = false}}
+
+eval (UpdateReferralCodeFailed) state = continue state {props{showShimmer = false}}
 
 eval (ChangeDate (DaySelector item)) state = do
   if state.props.selectedDay == item then
@@ -240,6 +267,9 @@ eval (PasswordModalAction (PopUpModal.OnButton2Click)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     exit $ LinkReferralApi state
 
+eval ShareOptions state = do
+  _ <- pure $ shareImageMessage (getMessage (getMerchant FunctionCall) state.data.driverInfo.referralCode) (shareImageMessageConfig state)
+  continue state
 
 eval (PasswordModalAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- if length newVal >= 5 then do
@@ -274,6 +304,11 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ SubscriptionScreen state
     _ -> continue state
 
+eval (ReferralQrRendered id) state = 
+  continueWithCmd state [ do
+    runEffectFn4 generateQR (getValueFromConfig "USER_APP_LINK") id 200 0
+    pure $ NoAction
+  ]
 eval _ state = continue state
 
 
@@ -287,3 +322,25 @@ transformLeaderBoard (DriversInfo driversInfo) isMaskedName = {
   , rank : driversInfo.rank
   , rides : driversInfo.totalRides
 }
+
+getReferralStage :: Merchant -> ReferralType
+getReferralStage merchant =
+  case getValueFromConfig "referralType" of
+    "LeaderBoard" -> LeaderBoard
+    "QRScreen" -> QRScreen
+    _ -> LeaderBoard
+
+getMessage :: Merchant -> Maybe String -> String
+getMessage merchant referralCode=
+  case merchant of
+    NAMMAYATRI -> "👋 Hey,\n\nMy Namma Yatri Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Namma Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    YATRI -> "👋 Hey,\n\nMy Yatri Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    YATRISATHI -> "👋 Hey,\n\nMy Yatri Sathi Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Yatri Sathi app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    _ -> ""
+
+shareImageMessageConfig :: ReferralScreenState -> ShareImageConfig
+shareImageMessageConfig state = {
+  code : fromMaybe "" state.data.driverInfo.referralCode,
+  viewId : getNewIDWithTag "ReferralQRScreen",
+  logoId : getNewIDWithTag "ReferralScreenLogo"
+  }
