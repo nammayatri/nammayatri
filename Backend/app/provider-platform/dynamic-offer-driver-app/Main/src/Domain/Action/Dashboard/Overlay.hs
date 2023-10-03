@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Overlay where
 
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import Data.Ord
+import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.Overlay as DTMO
 import Environment
@@ -28,6 +29,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.Merchant.Overlay as SQMO
@@ -175,7 +178,7 @@ overlayInfo merchantShortId req = do
 
 data ScheduleOverlay = ScheduleOverlay
   { scheduleTime :: TimeOfDay,
-    reScheduleInterval :: Seconds,
+    rescheduleInterval :: Maybe Seconds,
     condition :: DTMO.OverlayCondition,
     overlayKey :: Text,
     udf1 :: Maybe Text
@@ -187,7 +190,15 @@ instance HideSecrets ScheduleOverlay where
   hideSecrets = identity
 
 scheduleOverlay :: ShortId DM.Merchant -> ScheduleOverlay -> Flow APISuccess
-scheduleOverlay merchantShortId _req = do
-  _merchant <- findMerchantByShortId merchantShortId
-  -- todo : add scheduler
+scheduleOverlay merchantShortId req@ScheduleOverlay {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  maxShards <- asks (.maxShards)
+  now <- getCurrentTime
+  let jobScheduledTime = diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
+  createJobIn @_ @'SendOverlay jobScheduledTime maxShards $
+    SendOverlayJobData
+      { merchantId = merchant.id,
+        rescheduleInterval = req.rescheduleInterval,
+        ..
+      }
   pure Success
