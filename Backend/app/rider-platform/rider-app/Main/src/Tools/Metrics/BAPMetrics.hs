@@ -18,8 +18,11 @@ module Tools.Metrics.BAPMetrics
   )
 where
 
+import qualified Data.Text.Encoding as TE
 import Data.Time (diffUTCTime)
+import qualified EulerHS.Language as L
 import GHC.Records.Extra
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
@@ -86,7 +89,7 @@ startSearchMetrics' bmContainer merchantName version txnId = do
           liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion) P.incCounter
         Nothing -> return ()
 
-finishSearchMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> Text -> DeploymentVersion -> Text -> m ()
+finishSearchMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> Text -> DeploymentVersion -> Text -> m ()
 finishSearchMetrics' bmContainer merchantName version txnId = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
       searchRedisExTime = getSeconds bmContainer.searchDurationTimeout
@@ -96,4 +99,7 @@ finishSearchMetrics' bmContainer merchantName version txnId = do
       Just startTime -> do
         void $ Redis.del (searchDurationKey txnId)
         putSearchDuration searchDurationHistogram merchantName version . realToFrac . diffUTCTime endTime $ startTime
+        void $
+          L.runKVDB meshConfig.kvRedis $
+            L.sadd (TE.encodeUtf8 "SEARCH_ROUND_TRIP") [show (realToFrac (diffUTCTime endTime startTime) :: Double)]
       Nothing -> return ()

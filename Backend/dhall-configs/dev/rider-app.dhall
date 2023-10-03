@@ -149,8 +149,8 @@ let hccfg =
 
 let tables =
       { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
+          [ "ride" ] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [ "ride" ] : List Text
       }
 
 let dontEnableForDb = [] : List Text
