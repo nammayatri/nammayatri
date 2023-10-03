@@ -21,8 +21,11 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Storage.Queries.Ticket as QRT
 
 type API = OnConfirm.OnConfirmAPI
 
@@ -34,17 +37,42 @@ onConfirm ::
   OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
 onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnConfirmReq <- ACL.buildOnConfirmReq req
+  mbDOnConfirmReq <- case req.context.domain of
+    Context.MOBILITY -> ACL.buildOnConfirmRideReq req
+    Context.PUBLIC_TRANSPORT -> ACL.buildOnConfirmBusReq req
+    _ -> throwError (InvalidRequest $ "Unsupported Domain: " <> show req.context.domain)
+
   whenJust mbDOnConfirmReq $ \onConfirmReq ->
-    Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $ do
-      validatedReq <- DOnConfirm.validateRequest onConfirmReq
-      fork "onConfirm request processing" $
-        Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppBookingId.getId) 60 $
-          DOnConfirm.onConfirm validatedReq
+    case onConfirmReq.bppBookingId of
+      Just bppBookingId ->
+        Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
+          validatedReq <- DOnConfirm.validateRequest onConfirmReq
+          fork "onConfirm request processing" $
+            Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
+              DOnConfirm.onConfirm validatedReq
+      Nothing -> do
+        transactionId <- maybe (throwError $ InternalError "transaction_id is Nothing") return req.context.transaction_id
+        ticket <- QRT.findByTransactionId transactionId >>= fromMaybeM (TicketNotFound transactionId)
+        void $ QRT.updateBPPTicketId ticket.id (fromJust onConfirmReq.bppTicketId)
+        void $ maybe (throwError $ InternalError "bppTicketId is Nothing") (\bppTicketId -> QRT.updateBPPTicketId ticket.id bppTicketId) onConfirmReq.bppTicketId
+        case onConfirmReq.bppTicketId of
+          Just bppTicketId ->
+            Redis.whenWithLockRedis (onConfirmBusLockKey bppTicketId.getId) 60 $ do
+              validatedReq <- DOnConfirm.validateRequest onConfirmReq
+              fork "onConfirm request processing" $
+                Redis.whenWithLockRedis (onConfirmBusProcessingLockKey bppTicketId.getId) 60 $ do
+                  DOnConfirm.onConfirm validatedReq
+          Nothing -> pure ()
   pure Ack
 
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id
 
+onConfirmBusLockKey :: Text -> Text
+onConfirmBusLockKey id = "Customer:OnConfirm:BppTicketId-" <> id
+
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "Customer:OnConfirm:Processing:BppBookingId-" <> id
+
+onConfirmBusProcessingLockKey :: Text -> Text
+onConfirmBusProcessingLockKey id = "Customer:OnConfirm:Processing:BppTicketId-" <> id

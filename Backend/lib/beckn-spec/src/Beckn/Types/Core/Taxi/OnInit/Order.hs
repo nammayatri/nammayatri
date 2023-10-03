@@ -14,6 +14,7 @@
 
 module Beckn.Types.Core.Taxi.OnInit.Order where
 
+import Beckn.Types.Core.Taxi.Common.Billing
 import Beckn.Types.Core.Taxi.Common.Descriptor
 import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.Common.Price
@@ -34,7 +35,8 @@ data Order = Order
     state :: OrderState,
     quote :: Quote,
     payment :: Payment,
-    provider :: Maybe Provider
+    provider :: Maybe Provider,
+    billing :: Maybe Billing
   }
   deriving (Generic, Show)
 

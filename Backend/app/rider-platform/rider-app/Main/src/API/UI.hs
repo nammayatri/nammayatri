@@ -25,6 +25,7 @@ import qualified API.UI.Call as Call
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
+import qualified API.UI.ConfirmBus as ConfirmBus
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
@@ -47,6 +48,7 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
+import qualified API.UI.Ticket as Ticket
 import qualified API.UI.Tickets as Tickets
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
@@ -65,6 +67,7 @@ type API =
            :<|> Select.API
            :<|> Quote.API
            :<|> Confirm.API
+           :<|> ConfirmBus.API
            :<|> Booking.API
            :<|> Cancel.API
            :<|> Ride.API
@@ -89,6 +92,7 @@ type API =
            :<|> HotSpot.API
            :<|> Disability.API
            :<|> AadhaarVerification.API
+           :<|> Ticket.API
            :<|> Issue.API
            :<|> Tickets.API
        )
@@ -103,6 +107,7 @@ handler =
     :<|> Select.handler
     :<|> Quote.handler
     :<|> Confirm.handler
+    :<|> ConfirmBus.handler
     :<|> Booking.handler
     :<|> Cancel.handler
     :<|> Ride.handler
@@ -127,5 +132,6 @@ handler =
     :<|> HotSpot.handler
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
+    :<|> Ticket.handler
     :<|> Issue.handler
     :<|> Tickets.handler

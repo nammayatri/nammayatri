@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnInit (buildOnInitReq) where
+module Beckn.ACL.OnInit (buildOnInitRideReq) where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
@@ -24,18 +24,18 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-buildOnInitReq ::
+buildOnInitRideReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   OnInit.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
-buildOnInitReq req = do
+buildOnInitRideReq req = do
   validateContext Context.ON_INIT $ req.context
   handleError req.contents $ \message -> do
-    let bookingId = Id req.context.message_id
-        bppBookingId = Id message.order.id
+    let bookingId = Just $ Id req.context.message_id
+        bppBookingId = Just $ Id message.order.id
         estimatedFare = message.order.quote.price.value
-        estimatedTotalFare = message.order.quote.price.offered_value
+        estimatedTotalFare = fromMaybe estimatedFare message.order.quote.price.offered_value
     validatePrices estimatedFare estimatedTotalFare
     -- if we get here, the discount >= 0
     let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
@@ -45,6 +45,8 @@ buildOnInitReq req = do
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
           discount = roundToIntegral <$> discount,
           paymentUrl = message.order.payment.uri,
+          ticketId = Nothing,
+          fareBreakup = Nothing,
           ..
         }
 

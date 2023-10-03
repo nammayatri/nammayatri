@@ -361,6 +361,8 @@ onUpdate ValidatedRideCompletedReq {..} = do
       pure
         DFareBreakup.FareBreakup
           { id = guid,
+            entityType = DFareBreakup.BOOKING,
+            entityId = Nothing,
             ..
           }
 onUpdate ValidatedBookingCancelledReq {..} = do

@@ -137,6 +137,7 @@ instance FromTType' BeamQ.Quote Quote where
             tripTerms = trip,
             specialLocationTag = specialLocationTag,
             createdAt = createdAt
+            -- publicTransportQuoteId = publicTransportQuoteId
           }
     where
       getRentalDetails rentalSlabId' = do
@@ -191,4 +192,5 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.publicTransportQuoteId = publicTransportQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
             BeamQ.createdAt = createdAt
+            -- BeamQ.publicTransportQuoteId = publicTransportQuoteId
           }
