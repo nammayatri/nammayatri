@@ -222,3 +222,6 @@ suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
 
 postRideFeedback :: String -> String 
 postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
+
+generateReferralCode :: String -> String
+generateReferralCode dummyString = (getBaseUrl "") <> "/driver/generateReferralCode"

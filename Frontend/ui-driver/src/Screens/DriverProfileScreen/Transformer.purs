@@ -9,8 +9,9 @@ import Helpers.Utils (getPeriod, parseFloat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import Screens.Types (AnalyticsData, ChipRailData)
+import Screens.Types (AnalyticsData, ChipRailData, VehicleP)
 import Services.API (DriverMissedOpp(..), DriverProfileSummaryRes(..), DriverSummary(..))
+import Components.ChooseVehicle (Config) as ChooseVehicle
 
 getAnalyticsData :: DriverProfileSummaryRes -> AnalyticsData
 getAnalyticsData (DriverProfileSummaryRes response) =
@@ -33,3 +34,12 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , totalRidesAssigned: response.totalRidesAssigned
     , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> "km"
     }
+
+transformSelectedVehicles :: Array ChooseVehicle.Config -> Array VehicleP
+transformSelectedVehicles vehicleDetails = map (\vehicleDetail -> transformSelectedVehicle vehicleDetail) vehicleDetails
+
+transformSelectedVehicle :: ChooseVehicle.Config -> VehicleP
+transformSelectedVehicle vehicleDetail = 
+  { vehicleName : vehicleDetail.vehicleVariant,
+    isSelected : vehicleDetail.isSelected
+  }

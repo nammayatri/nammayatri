@@ -3,6 +3,7 @@ window.getMerchantConfig = function () {
     "RC_VALIDATION_TEXT": "KA",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
+    "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP"],
@@ -88,5 +89,6 @@ window.getMerchantConfig = function () {
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false
       }
+    , "referralType" : "LeaderBoard"
   })
 }

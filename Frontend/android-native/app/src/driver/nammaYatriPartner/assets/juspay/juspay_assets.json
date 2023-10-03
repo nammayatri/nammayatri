@@ -1,5 +1,6 @@
 {
    "fonts" : {
+      "FEFont" : true,
       "NotoSansKannada-Black" : true,
       "NotoSansKannada-Bold" : true,
       "NotoSansKannada-ExtraBold" : true,
@@ -189,6 +190,7 @@
       "ny_ic_cancel_unfilled" : true,
       "ny_ic_car_blue" : true,
       "ny_ic_car_profile" : true,
+      "ny_ic_car_referral_banner" : true,
       "ny_ic_chat_white" : true,
       "ny_ic_check_box" : true,
       "ny_ic_check_green" : true,
@@ -353,6 +355,7 @@
       "ny_ic_settings" : true,
       "ny_ic_settings_filled_blue" : true,
       "ny_ic_settings_unfilled" : true,
+      "ny_ic_share_grey" : true,
       "ny_ic_shimmer_img" : true,
       "ny_ic_silhouette" : true,
       "ny_ic_source_dot" : true,
@@ -388,6 +391,8 @@
       "ny_ic_welcome" : true,
       "ny_ic_whatsapp_logo" : true,
       "ny_ic_wheelchair" : true,
+      "ny_ic_yatri_logo_dark" : true,
+      "ny_ic_yatri_sathi_logo_black_icon" : true,
       "ny_ic_youtube" : true,
       "ny_ic_zone_pickup_marker" : true,
       "ny_ic_zone_pickup_marker_yellow" : true,
