@@ -28,8 +28,8 @@ data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
     billing :: Billing,
-    payment :: Payment,
-    quote :: Quote,
+    payment :: Maybe Payment,
+    quote :: Maybe Quote,
     provider :: Maybe Provider
   }
   deriving (Generic, Show)
@@ -60,7 +60,8 @@ instance ToJSON OrderItem where
 
 data Billing = Billing
   { name :: Maybe Text,
-    phone :: Maybe Text
+    phone :: Maybe Text,
+    email :: Maybe Text
   }
   deriving (Generic, Show)
 

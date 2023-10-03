@@ -60,6 +60,7 @@ library
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
+      API.UI.ConfirmBus
       API.UI.CustomerSupport
       API.UI.Disability
       API.UI.FeedbackForm
@@ -86,6 +87,7 @@ library
       API.UI.Whatsapp
       App
       App.Server
+      Beckn.ACL.Bus.OnInit
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
@@ -128,6 +130,7 @@ library
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
+      Domain.Action.UI.ConfirmBus
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
@@ -201,6 +204,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
+      Domain.Types.Ticket
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
@@ -267,6 +271,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.Ticket
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
@@ -328,6 +333,7 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Ticket
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Tools.AadhaarVerification

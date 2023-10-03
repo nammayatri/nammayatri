@@ -112,7 +112,7 @@ onSelect OnSelectValidatedReq {..} = do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
+          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, quantity = Nothing, paymentMethodId = searchRequest.selectedPaymentMethodId}
           dConfirmRes <- SConfirm.confirm dConfirmReq
           becknInitReq <- ACL.buildInitReq dConfirmRes
           handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
@@ -167,6 +167,8 @@ buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
             merchantId,
             ..
           }
+  -- publicTransportQuoteId = Nothing,
+
   pure quote
 
 buildDriverOffer ::

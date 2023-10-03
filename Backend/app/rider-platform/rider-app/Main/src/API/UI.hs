@@ -25,6 +25,7 @@ import qualified API.UI.Call as Call
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
+import qualified API.UI.ConfirmBus as ConfirmBus
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
@@ -63,6 +64,7 @@ type API =
            :<|> Select.API
            :<|> Quote.API
            :<|> Confirm.API
+           :<|> ConfirmBus.API
            :<|> Booking.API
            :<|> Cancel.API
            :<|> Ride.API
@@ -99,6 +101,7 @@ handler =
     :<|> Select.handler
     :<|> Quote.handler
     :<|> Confirm.handler
+    :<|> ConfirmBus.handler
     :<|> Booking.handler
     :<|> Cancel.handler
     :<|> Ride.handler

@@ -13,10 +13,11 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Init (buildInitReq) where
+module Beckn.ACL.Init (buildInitReq, buildInitBusReq) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
+-- import qualified Beckn.Types.Core.Bus.Init as BInit
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking.BookingLocation as DBL
@@ -44,6 +45,34 @@ buildInitReq res = do
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
+buildInitBusReq ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  SConfirm.DConfirmBusRes ->
+  m (BecknReq Init.InitMessage)
+buildInitBusReq res = do
+  let transactionId = res.searchRequestId.getId
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  context <- buildContext Context.PUBLIC_TRANSPORT Context.INIT res.ticket.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
+  initMessage <- buildInitBusMessage res
+  pure $ BecknReq context initMessage
+
+buildInitBusMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmBusRes -> m Init.InitMessage
+buildInitBusMessage res = do
+  let fulfillmentType = Init.RIDE
+  let vehicleVariant = Init.BUS
+  pure
+    Init.InitMessage
+      { order =
+          Init.Order
+            { items = [mkOrderItem res.itemId Nothing],
+              quote = Nothing,
+              billing = mkBilling res.riderPhone res.riderName res.riderEmail,
+              fulfillment = mkFulfillmentInfo fulfillmentType Nothing res.fromLoc res.toLoc Nothing vehicleVariant,
+              payment = Nothing,
+              provider = Nothing
+            }
+      }
+
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
@@ -58,16 +87,17 @@ buildInitMessage res = do
           Init.Order
             { items = [mkOrderItem res.itemId mbBppFullfillmentId],
               quote =
-                Init.Quote
-                  { price =
-                      Init.QuotePrice
-                        { value = fromIntegral res.booking.estimatedFare,
-                          offered_value = fromIntegral res.booking.estimatedTotalFare,
-                          currency = "INR"
-                        },
-                    breakup = Nothing
-                  },
-              billing = mkBilling res.riderPhone res.riderName,
+                Just
+                  Init.Quote
+                    { price =
+                        Init.QuotePrice
+                          { value = fromIntegral res.booking.estimatedFare,
+                            offered_value = Just $ fromIntegral res.booking.estimatedTotalFare,
+                            currency = "INR"
+                          },
+                      breakup = Nothing
+                    },
+              billing = mkBilling res.riderPhone res.riderName res.riderEmail,
               fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
@@ -82,15 +112,16 @@ buildInitMessage res = do
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
 
-mkBilling :: Maybe Text -> Maybe Text -> Init.Billing
-mkBilling phone name = Init.Billing {..}
+mkBilling :: Maybe Text -> Maybe Text -> Maybe Text -> Init.Billing
+mkBilling phone name email = Init.Billing {..}
 
 mkProvider :: Maybe Text -> Maybe Init.Provider
 mkProvider driverId =
   driverId >>= \dId ->
     Just
       Init.Provider
-        { id = dId
+        { id = dId,
+          descriptor = Nothing
         }
 
 mkOrderItem :: Text -> Maybe Text -> Init.OrderItem
@@ -134,7 +165,8 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                       { lat = fromLoc.lat,
                         lon = fromLoc.lon
                       },
-                  address = mkAddress fromLoc.address
+                  address = Just $ mkAddress fromLoc.address,
+                  descriptor = Nothing
                 },
             authorization = Nothing
           },
@@ -149,7 +181,8 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                           { lat = toLoc.lat,
                             lon = toLoc.lon
                           },
-                      address = mkAddress toLoc.address
+                      address = Just $ mkAddress toLoc.address,
+                      descriptor = Nothing
                     }
               },
       vehicle =
@@ -168,29 +201,39 @@ mkAddress DLA.LocationAddress {..} =
       ..
     }
 
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Init.Payment
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =
-  Init.Payment
-    { _type = Common.castDPaymentType paymentType,
-      params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
-            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = "INR",
-            amount = Nothing
-          },
-      uri = Nothing
-    }
+  Just
+    Init.Payment
+      { _type = Common.castDPaymentType paymentType,
+        params =
+          Just
+            Init.PaymentParams
+              { collected_by = Init.BPP,
+                instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+                currency = "INR",
+                amount = Nothing,
+                transaction_id = Nothing
+              },
+        uri = Nothing,
+        tl_method = Nothing,
+        status = Nothing
+      }
 -- for backward compatibility
 mkPayment Nothing =
-  Init.Payment
-    { _type = Init.ON_FULFILLMENT,
-      params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
-            instrument = Nothing,
-            currency = "INR",
-            amount = Nothing
-          },
-      uri = Nothing
-    }
+  Just
+    Init.Payment
+      { _type = Init.ON_FULFILLMENT,
+        params =
+          Just
+            Init.PaymentParams
+              { collected_by = Init.BPP,
+                instrument = Nothing,
+                currency = "INR",
+                amount = Nothing,
+                transaction_id = Nothing
+              },
+        uri = Nothing,
+        tl_method = Nothing,
+        status = Nothing
+      }

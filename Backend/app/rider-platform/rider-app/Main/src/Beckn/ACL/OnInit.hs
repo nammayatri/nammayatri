@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnInit (buildOnInitReq) where
+module Beckn.ACL.OnInit (buildOnInitRideReq) where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
@@ -24,18 +24,18 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-buildOnInitReq ::
+buildOnInitRideReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   OnInit.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
-buildOnInitReq req = do
+buildOnInitRideReq req = do
   validateContext Context.ON_INIT $ req.context
   handleError req.contents $ \message -> do
-    let bookingId = Id req.context.message_id
-        bppBookingId = Id message.order.id
+    let bookingId = Just $ Id req.context.message_id
+        bppBookingId = Just $ Id message.order.id
         estimatedFare = message.order.quote.price.value
-        estimatedTotalFare = message.order.quote.price.offered_value
+        estimatedTotalFare = fromMaybe estimatedFare message.order.quote.price.offered_value
     validatePrices estimatedFare estimatedTotalFare
     -- if we get here, the discount >= 0
     let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
@@ -45,8 +45,35 @@ buildOnInitReq req = do
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
           discount = roundToIntegral <$> discount,
           paymentUrl = message.order.payment.uri,
+          ticketId = Nothing,
+          fareBreakup = Nothing,
           ..
         }
+
+-- buildOnInitBusReq ::
+--   ( HasFlowEnv m r '["coreVersion" ::: Text]
+--   ) =>
+--   OnInit.OnInitReq ->
+--   m (Maybe DOnInit.OnInitReq)
+-- buildOnInitBusReq req = do
+--   validateBusContext Context.ON_INIT $ req.context
+--   handleErrorFRFS req.contents $ \message -> do
+--     let ticketId = Just $ Id req.context.message_id
+--         -- bppTicketId = Id message.order.id
+--         estimatedFare = message.order.quote.price.value
+--     -- estimatedTotalFare = message.order.quote.price.offered_value
+--     -- validatePrices estimatedFare estimatedTotalFare
+--         bppBookingId = Nothing
+--         bookingId = Nothing
+--     let discount = Money 0
+--     return $
+--       DOnInit.OnInitReq
+--         { estimatedFare = roundToIntegral estimatedFare,
+--           estimatedTotalFare = roundToIntegral estimatedFare,
+--           discount = Just discount,
+--           paymentUrl = message.order.payment.uri,
+--           ..
+--         }
 
 handleError ::
   (MonadFlow m) =>
@@ -60,3 +87,16 @@ handleError etr action =
     Left err -> do
       logTagError "on_init req" $ "on_init error: " <> show err
       pure Nothing
+
+-- handleErrorFRFS ::
+--   (MonadFlow m) =>
+--   Either Error OnInit.OnInitMessage ->
+--   (OnInit.OnInitMessage -> m DOnInit.OnInitReq) ->
+--   m (Maybe DOnInit.OnInitReq)
+-- handleErrorFRFS etr action =
+--   case etr of
+--     Right msg -> do
+--       Just <$> action msg
+--     Left err -> do
+--       logTagError "on_init req" $ "on_init error: " <> show err
+--       pure Nothing

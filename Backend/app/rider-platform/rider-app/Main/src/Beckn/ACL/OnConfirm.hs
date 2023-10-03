@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnConfirm (buildOnConfirmReq) where
+module Beckn.ACL.OnConfirm (buildOnConfirmRideReq, buildOnConfirmBusReq) where
 
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
@@ -23,20 +23,36 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-buildOnConfirmReq ::
+buildOnConfirmRideReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   OnConfirm.OnConfirmReq ->
   m (Maybe DOnConfirm.OnConfirmReq)
-buildOnConfirmReq req = do
+buildOnConfirmRideReq req = do
   validateContext Context.ON_CONFIRM req.context
   handleError req.contents $ \message -> do
     return $
       DOnConfirm.OnConfirmReq
-        { bppBookingId = Id message.order.id,
+        { bppBookingId = Just $ Id message.order.id,
+          bppTicketId = Nothing,
           specialZoneOtp = case message.order.fulfillment.start.authorization of
             Nothing -> Nothing
             Just auth -> Just $ auth.token
+        }
+
+buildOnConfirmBusReq ::
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ) =>
+  OnConfirm.OnConfirmReq ->
+  m (Maybe DOnConfirm.OnConfirmReq)
+buildOnConfirmBusReq req = do
+  validateBusContext Context.ON_CONFIRM req.context
+  handleError req.contents $ \message -> do
+    return $
+      DOnConfirm.OnConfirmReq
+        { bppTicketId = Just $ Id message.order.id,
+          bppBookingId = Nothing,
+          specialZoneOtp = Nothing
         }
 
 handleError ::

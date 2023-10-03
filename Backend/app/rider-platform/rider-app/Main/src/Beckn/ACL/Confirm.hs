@@ -13,9 +13,10 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Confirm (buildConfirmReq) where
+module Beckn.ACL.Confirm (buildConfirmReq, buildConfirmBusReq) where
 
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import Data.Maybe (fromJust)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.Booking as DRB
@@ -40,6 +41,17 @@ buildConfirmReq res = do
   message <- mkConfirmMessage res
   pure $ BecknReq context message
 
+buildConfirmBusReq ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DOnInit.OnInitRes ->
+  m (BecknReq Confirm.ConfirmMessage)
+buildConfirmBusReq res = do
+  messageId <- generateGUID
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  context <- buildContext Context.PUBLIC_TRANSPORT Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  message <- mkConfirmBusMessage res
+  pure $ BecknReq context message
+
 mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
 mkConfirmMessage res = do
   let vehicleVariant = castVehicleVariant res.vehicleVariant
@@ -47,7 +59,7 @@ mkConfirmMessage res = do
     Confirm.ConfirmMessage
       { order =
           Confirm.Order
-            { id = getId res.bppBookingId,
+            { id = getId $ fromJust res.bppBookingId,
               items =
                 [ Confirm.OrderItem
                     { id = res.itemId,
@@ -61,7 +73,7 @@ mkConfirmMessage res = do
                   { price =
                       Confirm.QuotePrice
                         { value = fromIntegral res.estimatedFare,
-                          offered_value = fromIntegral res.estimatedTotalFare,
+                          offered_value = Just $ fromIntegral res.estimatedTotalFare,
                           currency = "INR"
                         },
                     breakup = Nothing
@@ -70,8 +82,16 @@ mkConfirmMessage res = do
                 res.driverId >>= \dId ->
                   Just
                     Confirm.Provider
-                      { id = dId
-                      }
+                      { id = dId,
+                        descriptor = Nothing
+                      },
+              billing =
+                Just
+                  Confirm.Billing
+                    { name = Nothing,
+                      email = Nothing,
+                      phone = Nothing
+                    }
             }
       }
   where
@@ -83,10 +103,54 @@ mkConfirmMessage res = do
       VehVar.TAXI -> Confirm.TAXI
       VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
     fulfillmentType = case res.bookingDetails of
-      DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
-      _ -> Confirm.RIDE
+      Just bookingDetails ->
+        case bookingDetails of
+          DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
+          _ -> Confirm.RIDE
+      Nothing -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
+mkConfirmBusMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
+mkConfirmBusMessage res =
+  pure
+    Confirm.ConfirmMessage
+      { order =
+          Confirm.Order
+            { id = getId $ fromJust res.ticketId,
+              items =
+                [ Confirm.OrderItem
+                    { id = res.itemId,
+                      price = Nothing
+                    }
+                ],
+              fulfillment = mkFulfillment res.fulfillmentId Confirm.RIDE res.fromLocation res.mbToLocation Nothing Nothing Nothing Confirm.BUS,
+              payment = mkPayment res.estimatedTotalFare Nothing,
+              quote =
+                Confirm.Quote
+                  { price =
+                      Confirm.QuotePrice
+                        { value = fromIntegral res.estimatedFare,
+                          offered_value = Nothing,
+                          currency = "INR"
+                        },
+                    breakup = Nothing
+                  },
+              provider =
+                Just
+                  Confirm.Provider
+                    { id = res.bppId,
+                      descriptor = Nothing
+                    },
+              billing =
+                Just
+                  Confirm.Billing
+                    { name = Nothing, -- TODO : Add billing to ticket
+                      email = Nothing,
+                      phone = Nothing
+                    }
+            }
+      }
+
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Maybe Text -> Maybe Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
 mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
@@ -100,7 +164,8 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                       { lat = startLoc.lat,
                         lon = startLoc.lon
                       },
-                  address = mkAddress startLoc.address
+                  address = Just $ mkAddress startLoc.address,
+                  descriptor = Nothing
                 },
             authorization = Nothing
           },
@@ -114,7 +179,8 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                         { lat = stopLoc.lat,
                           lon = stopLoc.lon
                         },
-                    address = mkAddress stopLoc.address
+                    address = Just $ mkAddress stopLoc.address,
+                    descriptor = Nothing
                   }
             },
       customer =
@@ -123,8 +189,8 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
               Confirm.Contact
                 { phone =
                     Confirm.Phone
-                      { phoneNumber = riderPhoneNumber,
-                        phoneCountryCode = riderPhoneCountryCode
+                      { phoneNumber = fromJust riderPhoneNumber,
+                        phoneCountryCode = fromJust riderPhoneCountryCode
                       }
                 },
             person =
@@ -154,11 +220,15 @@ mkPayment estimatedTotalFare uri =
   Confirm.Payment
     { _type = Confirm.ON_FULFILLMENT,
       params =
-        Confirm.PaymentParams
-          { collected_by = Confirm.BPP,
-            instrument = Nothing,
-            currency = "INR",
-            amount = Just $ realToFrac estimatedTotalFare
-          },
-      uri
+        Just
+          Confirm.PaymentParams
+            { collected_by = Confirm.BPP,
+              instrument = Nothing,
+              currency = "INR",
+              amount = Just $ realToFrac estimatedTotalFare,
+              transaction_id = Nothing
+            },
+      uri,
+      tl_method = Nothing,
+      status = Nothing
     }

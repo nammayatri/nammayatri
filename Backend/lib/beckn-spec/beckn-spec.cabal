@@ -76,6 +76,7 @@ library
       Beckn.Types.Core.Taxi.Common.Address
       Beckn.Types.Core.Taxi.Common.Agent
       Beckn.Types.Core.Taxi.Common.Authorization
+      Beckn.Types.Core.Taxi.Common.Billing
       Beckn.Types.Core.Taxi.Common.BreakupItem
       Beckn.Types.Core.Taxi.Common.CancellationSource
       Beckn.Types.Core.Taxi.Common.Customer

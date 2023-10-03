@@ -20,6 +20,7 @@ module Domain.Action.Beckn.OnConfirm
 where
 
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Ticket as DTT
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -33,46 +34,78 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ticket as QRT
 import Tools.Error
 import qualified Tools.SMS as Sms
 
 data OnConfirmReq = OnConfirmReq
-  { bppBookingId :: Id DRB.BPPBooking,
+  { bppBookingId :: Maybe (Id DRB.BPPBooking),
+    bppTicketId :: Maybe (Id DTT.BPPTicket),
     specialZoneOtp :: Maybe Text
   }
 
 data ValidatedOnConfirmReq = ValidatedOnConfirmReq
-  { bppBookingId :: Id DRB.BPPBooking,
+  { bppBookingId :: Maybe (Id DRB.BPPBooking),
+    bppTicketId :: Maybe (Id DTT.BPPTicket),
     specialZoneOtp :: Maybe Text,
-    booking :: DRB.Booking
+    mbBooking :: Maybe DRB.Booking,
+    mbTicket :: Maybe DTT.Ticket
   }
 
 onConfirm :: (EncFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
 onConfirm ValidatedOnConfirmReq {..} = do
-  whenJust specialZoneOtp $ \otp -> do
-    void $ QRB.updateOtpCodeBookingId booking.id otp
-    fork "sending Booking confirmed dasboard sms" $ do
-      merchantConfig <- QMSUC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound booking.merchantId.getId)
-      if merchantConfig.enableDashboardSms
-        then do
-          customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-          mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-          smsCfg <- asks (.smsCfg)
-          let countryCode = fromMaybe "+91" customer.mobileCountryCode
-          let phoneNumber = countryCode <> mobileNumber
-              sender = smsCfg.sender
-          message <-
-            MessageBuilder.buildSendBookingOTPMessage booking.merchantId $
-              MessageBuilder.BuildSendBookingOTPMessageReq
-                { otp = show otp,
-                  amount = show booking.estimatedTotalFare
-                }
-          Sms.sendSMS booking.merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
-        else do
-          logInfo "Merchant not configured to send dashboard sms"
-  void $ QRB.updateStatus booking.id DRB.CONFIRMED
+  whenJust mbBooking $ \booking -> do
+    whenJust specialZoneOtp $ \otp -> do
+      void $ QRB.updateOtpCodeBookingId booking.id otp
+      fork "sending Booking confirmed dasboard sms" $ do
+        merchantConfig <- QMSUC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound booking.merchantId.getId)
+        if merchantConfig.enableDashboardSms
+          then do
+            customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+            mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            smsCfg <- asks (.smsCfg)
+            let countryCode = fromMaybe "+91" customer.mobileCountryCode
+            let phoneNumber = countryCode <> mobileNumber
+                sender = smsCfg.sender
+            message <-
+              MessageBuilder.buildSendBookingOTPMessage booking.merchantId $
+                MessageBuilder.BuildSendBookingOTPMessageReq
+                  { otp = show otp,
+                    amount = show booking.estimatedTotalFare
+                  }
+            Sms.sendSMS booking.merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          else do
+            logInfo "Merchant not configured to send dashboard sms"
+    void $ QRB.updateStatus booking.id DRB.CONFIRMED
+  whenJust mbTicket $ \ticket -> do
+    void $ QRT.updateStatus ticket.id DTT.CONFIRMED
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
-  return $ ValidatedOnConfirmReq {..}
+  case bppBookingId of
+    Just bppBId -> do
+      booking <- runInReplica $ QRB.findByBPPBookingId bppBId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBId.getId)
+      let mbTicket = Nothing
+      return $
+        ValidatedOnConfirmReq
+          { mbBooking = Just booking,
+            ..
+          }
+    Nothing -> case bppTicketId of
+      Just bppTId -> do
+        ticket <- runInReplica $ QRT.findByBPPTicketId bppTId >>= fromMaybeM (TicketDoesNotExist $ "BppTicketId" <> bppTId.getId)
+        let mbBooking = Nothing
+        return $
+          ValidatedOnConfirmReq
+            { mbTicket = Just ticket,
+              ..
+            }
+      Nothing ->
+        return $
+          ValidatedOnConfirmReq
+            { bppBookingId = Nothing,
+              bppTicketId = Nothing,
+              specialZoneOtp = Nothing,
+              mbBooking = Nothing,
+              mbTicket = Nothing
+            }

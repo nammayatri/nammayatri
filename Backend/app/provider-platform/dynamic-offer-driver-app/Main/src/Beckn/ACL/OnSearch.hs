@@ -288,16 +288,21 @@ buildEstimateBreakUpListTags DEst.EstimateBreakup {..} = do
       value = Just $ show price.value.getMoney
     }
 
-mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
+mkPayment :: DMPM.PaymentMethodInfo -> Maybe OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =
-  OS.Payment
-    { params =
-        OS.PaymentParams
-          { collected_by = Common.castDPaymentCollector collectedBy,
-            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = currency',
-            amount = Nothing
-          },
-      _type = Common.castDPaymentType paymentType,
-      uri = Nothing
-    }
+  Just
+    OS.Payment
+      { params =
+          Just
+            OS.PaymentParams
+              { collected_by = Common.castDPaymentCollector collectedBy,
+                instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+                currency = currency',
+                amount = Nothing,
+                transaction_id = Nothing
+              },
+        _type = Common.castDPaymentType paymentType,
+        uri = Nothing,
+        tl_method = Nothing,
+        status = Nothing
+      }

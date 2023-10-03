@@ -40,6 +40,8 @@ instance FromTType' BeamFB.FareBreakup FareBreakup where
         FareBreakup
           { id = Id id,
             bookingId = Id bookingId,
+            entityType = entityType,
+            entityId = Id <$> entityId,
             description = description,
             amount = amount
           }
@@ -49,6 +51,8 @@ instance ToTType' BeamFB.FareBreakup FareBreakup where
     BeamFB.FareBreakupT
       { BeamFB.id = getId id,
         BeamFB.bookingId = getId bookingId,
+        BeamFB.entityType = entityType,
+        BeamFB.entityId = getId <$> entityId,
         BeamFB.description = description,
         BeamFB.amount = amount
       }

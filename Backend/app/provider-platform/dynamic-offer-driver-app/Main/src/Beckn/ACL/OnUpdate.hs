@@ -240,13 +240,17 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                     OnUpdate.Payment
                       { _type = maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) req.paymentMethodInfo,
                         params =
-                          OnUpdate.PaymentParams
-                            { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
-                              instrument = Nothing,
-                              currency = "INR",
-                              amount = Nothing
-                            },
-                        uri = req.paymentUrl
+                          Just
+                            OnUpdate.PaymentParams
+                              { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
+                                instrument = Nothing,
+                                currency = "INR",
+                                amount = Nothing,
+                                transaction_id = Nothing
+                              },
+                        uri = req.paymentUrl,
+                        tl_method = Nothing,
+                        status = Nothing
                       },
                 fulfillment = fulfillment
               },

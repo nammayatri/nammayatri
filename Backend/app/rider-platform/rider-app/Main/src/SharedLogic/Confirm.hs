@@ -14,6 +14,8 @@
 
 module SharedLogic.Confirm where
 
+-- import qualified Beckn.Types.Core.Taxi.Common.Provider as BTP
+-- import qualified Beckn.Types.Core.Taxi.Init.Order as BTI
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Estimate as DEstimate
@@ -26,6 +28,7 @@ import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
+import qualified Domain.Types.Ticket as DTT
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -45,12 +48,14 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.Ticket as QRideT
 import Tools.Error
 import Tools.Event
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quoteId :: Id DQuote.Quote,
+    quantity :: Maybe Integer,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
   }
 
@@ -63,8 +68,30 @@ data DConfirmRes = DConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     booking :: DRB.Booking,
+    -- ticket :: Maybe DTT.Ticket,
     riderPhone :: Maybe Text,
     riderName :: Maybe Text,
+    riderEmail :: Maybe Text,
+    searchRequestId :: Id DSReq.SearchRequest,
+    merchant :: DM.Merchant,
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+  }
+  deriving (Show, Generic)
+
+data DConfirmBusRes = DConfirmBusRes
+  { providerId :: Text,
+    providerUrl :: BaseUrl,
+    itemId :: Text,
+    fromLoc :: DBL.BookingLocation,
+    toLoc :: Maybe DBL.BookingLocation,
+    vehicleVariant :: VehicleVariant,
+    quoteDetails :: ConfirmQuoteDetails,
+    -- booking :: Maybe DRB.Booking,
+    ticket :: DTT.Ticket,
+    riderPhone :: Maybe Text,
+    riderName :: Maybe Text,
+    riderEmail :: Maybe Text,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
     maxEstimatedDistance :: Maybe HighPrecMeters,
@@ -78,6 +105,81 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
+
+confirmBus ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EventStreamFlow m r,
+    EncFlow m r
+  ) =>
+  DConfirmReq ->
+  m DConfirmBusRes
+confirmBus DConfirmReq {..} = do
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  now <- getCurrentTime
+  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  when (searchRequest.validTill < now) $
+    throwError SearchRequestExpired
+  unless (searchRequest.riderId == personId) $ throwError AccessDenied
+  let fromLocation = searchRequest.fromLocation
+      mbToLocation = searchRequest.toLocation
+      fulfillmentId =
+        case quote.quoteDetails of
+          DQuote.PublicTransportQuoteDetails details -> pure (Just details.quoteId)
+          _ -> (InternalError "Only Public Transport quote is supported.")
+  tFromLocation <- buildBookingLocation now fromLocation
+  mbTToLocation <- traverse (buildBookingLocation now) mbToLocation
+  ticket <- buildTicket searchRequest fulfillmentId quote tFromLocation mbTToLocation now quantity
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  details <- mkConfirmQuoteDetails quote.quoteDetails Nothing
+  riderPhone <- mapM decrypt person.mobileNumber
+  riderEmail <- mapM decrypt person.email
+  let riderName = person.firstName
+  merchant <- CQM.findById ticket.merchantId >>= fromMaybeM (MerchantNotFound ticket.merchantId.getId)
+  paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
+    paymentMethod <-
+      CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
+        >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
+    unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
+      throwError (InvalidRequest "Payment method not allowed")
+    pure paymentMethod
+
+  -- DB.runTransaction $ do
+  _ <- QRideT.create ticket
+  return $
+    DConfirmBusRes
+      { ticket = ticket,
+        -- booking = Nothing,
+        providerId = quote.providerId,
+        -- BTP.Provider
+        --   { id = quote.providerId,
+        --     descriptor = Nothing
+        --   },
+        providerUrl = quote.providerUrl,
+        itemId = quote.itemId,
+        -- BTI.OrderItem
+        --   { id = quote.itemId,
+        --     fulfillment_id = Nothing
+        --   },
+        fromLoc = tFromLocation,
+        toLoc = mbTToLocation,
+        quoteDetails = details,
+        vehicleVariant = quote.vehicleVariant,
+        searchRequestId = searchRequest.id,
+        paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
+        maxEstimatedDistance = Nothing,
+        ..
+      }
+  where
+    mkConfirmQuoteDetails quoteDetails fulfillmentId = do
+      case quoteDetails of
+        DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
+        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {..}
+        DQuote.DriverOfferDetails driverOffer -> do
+          bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
+          pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
+        DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
+        DQuote.PublicTransportQuoteDetails details -> pure $ ConfirmPublicTransportDetails $ PublicTransportQuoteAPIEntity {quoteId = details.quoteId} -- Only this case should happen
 
 confirm ::
   ( EsqDBFlow m r,
@@ -116,6 +218,7 @@ confirm DConfirmReq {..} = do
   booking <- buildBooking searchRequest fulfillmentId quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
+  riderEmail <- mapM decrypt person.email
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -135,7 +238,8 @@ confirm DConfirmReq {..} = do
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
-      { booking,
+      { booking = booking,
+        -- ticket = Nothing,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         itemId = quote.itemId,
@@ -161,6 +265,42 @@ confirm DConfirmReq {..} = do
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
+
+buildTicket ::
+  MonadFlow m =>
+  DSReq.SearchRequest ->
+  Maybe Text ->
+  DQuote.Quote ->
+  DBL.BookingLocation ->
+  Maybe DBL.BookingLocation ->
+  UTCTime ->
+  Maybe Integer ->
+  m DTT.Ticket
+buildTicket searchRequest mbFulfillmentId quote fromLoc _ now mbQuantity = do
+  id <- generateGUID
+  let quantity = fromMaybe 1 mbQuantity
+  let pricePerAdult = quote.estimatedFare
+  let totalPrice = pricePerAdult * fromIntegral quantity
+  return $
+    DTT.Ticket
+      { id = Id id,
+        status = DTT.INIT,
+        quoteId = Just quote.id,
+        bppTicketId = Nothing,
+        searchRequestId = searchRequest.id.getId,
+        fulfillmentId = mbFulfillmentId,
+        providerId = quote.providerId,
+        bppOrderId = Nothing,
+        paymentUrl = Nothing,
+        itemId = quote.itemId,
+        providerUrl = quote.providerUrl,
+        qrData = Nothing,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = searchRequest.merchantId,
+        fromLocation = fromLoc,
+        ..
+      }
 
 buildBooking ::
   MonadFlow m =>

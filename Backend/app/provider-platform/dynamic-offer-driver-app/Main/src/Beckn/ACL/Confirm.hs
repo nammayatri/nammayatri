@@ -39,11 +39,11 @@ buildConfirmReq req = do
       phone = fulfillment.customer.contact.phone
       customerMobileCountryCode = phone.phoneCountryCode
       customerPhoneNumber = phone.phoneNumber
-      fromAddress = castAddress fulfillment.start.location.address
+      fromAddress = castAddress $ fromJust fulfillment.start.location.address
       mbRiderName = fulfillment.customer.person <&> (.name)
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
-  toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
+  toAddress <- maybe (throwError $ InvalidRequest "end location address missing") (return . castAddress) (fulfillment.end >>= (.location.address))
 
   return $
     DConfirm.DConfirmReq

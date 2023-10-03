@@ -42,6 +42,7 @@ data QuoteT f = QuoteT
     rentalSlabId :: B.C f (Maybe Text),
     driverOfferId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
+    -- publicTransportQuoteId :: B.C f (Maybe Text),
     specialZoneQuoteId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime

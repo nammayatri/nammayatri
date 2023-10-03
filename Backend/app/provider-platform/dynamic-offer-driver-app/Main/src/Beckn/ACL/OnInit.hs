@@ -50,7 +50,9 @@ mkOnInitMessage res = do
                     descriptor =
                       OnInit.Descriptor
                         { short_desc = Just itemId,
-                          code = Nothing
+                          code = Nothing,
+                          name = Nothing,
+                          images = Nothing
                         }
                   }
               ],
@@ -67,7 +69,8 @@ mkOnInitMessage res = do
                                   { lat = res.booking.fromLocation.lat,
                                     lon = res.booking.fromLocation.lon
                                   },
-                              address = castAddress res.booking.fromLocation.address
+                              address = Just $ castAddress res.booking.fromLocation.address,
+                              descriptor = Nothing
                             },
                         authorization = Nothing
                       },
@@ -81,7 +84,8 @@ mkOnInitMessage res = do
                                     { lat = res.booking.toLocation.lat,
                                       lon = res.booking.toLocation.lon
                                     },
-                                address = castAddress res.booking.toLocation.address
+                                address = Just $ castAddress res.booking.toLocation.address,
+                                descriptor = Nothing
                               }
                         },
                   vehicle =
@@ -97,7 +101,9 @@ mkOnInitMessage res = do
                             tags = Nothing,
                             phone = Nothing,
                             image = Nothing
-                          }
+                          },
+                  tracking = Nothing,
+                  tags = Nothing
                 },
             state = OnInit.NEW,
             quote =
@@ -106,7 +112,7 @@ mkOnInitMessage res = do
                     OnInit.QuotePrice
                       { currency,
                         value = fareDecimalValue,
-                        offered_value = fareDecimalValue
+                        offered_value = Just fareDecimalValue
                       },
                   breakup = Just breakup_
                 },
@@ -114,20 +120,26 @@ mkOnInitMessage res = do
               res.driverId >>= \dId ->
                 Just
                   OnInit.Provider
-                    { id = dId
+                    { id = dId,
+                      descriptor = Nothing
                     },
             payment =
               OnInit.Payment
                 { params =
-                    OnInit.PaymentParams
-                      { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
-                        instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
-                        currency = currency,
-                        amount = Just fareDecimalValue
-                      },
+                    Just
+                      OnInit.PaymentParams
+                        { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
+                          instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
+                          currency = currency,
+                          amount = Just fareDecimalValue,
+                          transaction_id = Nothing
+                        },
                   _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
-                  uri = res.booking.paymentUrl
-                }
+                  uri = res.booking.paymentUrl,
+                  tl_method = Nothing,
+                  status = Nothing
+                },
+            billing = Nothing
           }
     }
   where
