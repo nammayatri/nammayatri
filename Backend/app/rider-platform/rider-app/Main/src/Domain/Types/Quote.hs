@@ -19,6 +19,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PublicTransportQuote as DPublicTransportQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
@@ -58,6 +59,7 @@ data QuoteDetails
   | RentalDetails DRentalSlab.RentalSlab
   | DriverOfferDetails DDriverOffer.DriverOffer
   | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
+  | PublicTransportQuoteDetails DPublicTransportQuote.PublicTransportQuote
   deriving (Generic, Show)
   deriving (PrettyShow) via Showable QuoteDetails
 
@@ -88,6 +90,7 @@ data QuoteAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
+  | PublicTransportAPIDetails DPublicTransportQuote.PublicTransportQuoteAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
@@ -115,6 +118,7 @@ mkQuoteAPIDetails = \case
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
+  PublicTransportQuoteDetails DPublicTransportQuote.PublicTransportQuote {..} -> PublicTransportAPIDetails DPublicTransportQuote.PublicTransportQuoteAPIEntity {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do

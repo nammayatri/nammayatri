@@ -38,7 +38,7 @@ buildConfirmReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
+  context <- buildContext Context.MOBILITY Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
   message <- mkConfirmMessage res
   pure $ BecknReq context message
 
@@ -84,6 +84,7 @@ mkConfirmMessage res = do
       VehVar.AUTO_RICKSHAW -> Confirm.AUTO_RICKSHAW
       VehVar.TAXI -> Confirm.TAXI
       VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
+      VehVar.BUS -> Confirm.BUS
     fulfillmentType = case res.bookingDetails of
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE

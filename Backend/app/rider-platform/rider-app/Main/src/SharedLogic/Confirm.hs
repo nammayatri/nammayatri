@@ -23,6 +23,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import Domain.Types.PublicTransportQuote
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
@@ -79,6 +80,7 @@ data ConfirmQuoteDetails
   | ConfirmRentalDetails RentalSlabAPIEntity
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
+  | ConfirmPublicTransportDetails PublicTransportQuoteAPIEntity
   deriving (Show, Generic)
 
 confirm ::
@@ -103,6 +105,7 @@ confirm DConfirmReq {..} = do
           throwError $ QuoteExpired quote.id.getId
         pure (Just estimate.bppEstimateId.getId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
+      DQuote.PublicTransportQuoteDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
@@ -159,6 +162,7 @@ confirm DConfirmReq {..} = do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
         DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
+        DQuote.PublicTransportQuoteDetails details -> pure $ ConfirmPublicTransportDetails $ PublicTransportQuoteAPIEntity {quoteId = details.quoteId}
     getDriverId :: DQuote.QuoteDetails -> Maybe Text
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
@@ -218,6 +222,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
+      DQuote.PublicTransportQuoteDetails _ -> throwError (InvalidRequest "Unable to build Booking details from Public Transport Quote Details. This error should never occur")
     buildOneWayDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")

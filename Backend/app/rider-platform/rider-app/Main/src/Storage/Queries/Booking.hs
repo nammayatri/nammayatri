@@ -253,6 +253,7 @@ instance FromTType' BeamB.Booking Booking where
             DFF.ONE_WAY_SPECIAL_ZONE -> do
               upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
               DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            DFF.PUBLIC_TRANSPORT -> throwError (InternalError "No Public Transport details present")
           return (pickupLoc, bookingDetails)
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
@@ -271,6 +272,7 @@ instance FromTType' BeamB.Booking Booking where
                 Just a -> pure a
             DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            DFF.PUBLIC_TRANSPORT -> throwError (InternalError "No Public Transport details present")
           return (fl, bookingDetails)
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl

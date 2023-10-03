@@ -37,7 +37,7 @@ buildSelectReq dSelectRes = do
   let transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
+  context <- buildContext Context.MOBILITY Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
   order <- buildOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 
@@ -72,7 +72,9 @@ buildOrder res = do
                   },
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
-              _type = Select.RIDE
+              _type = Just Select.RIDE,
+              tags = Nothing,
+              tracking = Nothing
             }
       }
   where
