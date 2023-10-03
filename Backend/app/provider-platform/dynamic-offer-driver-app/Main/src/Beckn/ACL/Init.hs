@@ -78,14 +78,21 @@ buildInitReq subscriber req = do
       Init.TAXI_PLUS -> VehVar.TAXI_PLUS
       Init.BUS -> VehVar.BUS
 
-mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
-mkPaymentMethodInfo Init.Payment {..} =
-  params.instrument <&> \instrument' -> do
-    DMPM.PaymentMethodInfo
-      { collectedBy = Common.castPaymentCollector params.collected_by,
-        paymentType = Common.castPaymentType _type,
-        paymentInstrument = Common.castPaymentInstrument instrument'
-      }
+mkPaymentMethodInfo :: Maybe Init.Payment -> Maybe DMPM.PaymentMethodInfo
+mkPaymentMethodInfo Nothing = Nothing
+mkPaymentMethodInfo (Just Init.Payment {..}) =
+  case params of
+    Nothing -> Nothing
+    Just param ->
+      case param.instrument of
+        Nothing -> Nothing
+        Just instrument' ->
+          Just $
+            DMPM.PaymentMethodInfo
+              { collectedBy = Common.castPaymentCollector param.collected_by,
+                paymentType = Common.castPaymentType _type,
+                paymentInstrument = Common.castPaymentInstrument instrument'
+              }
 
 getMaxEstimateDistance :: Init.TagGroups -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do

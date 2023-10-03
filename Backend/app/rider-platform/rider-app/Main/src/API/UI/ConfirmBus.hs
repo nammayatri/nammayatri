@@ -12,21 +12,22 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.Confirm
+module API.UI.ConfirmBus
   ( API,
     handler,
-    confirm,
-    ConfirmRes (..),
+    confirmBus,
+    ConfirmBusRes (..),
   )
 where
 
 import qualified Beckn.ACL.Init as ACL
-import qualified Domain.Action.UI.Confirm as DConfirm
-import qualified Domain.Types.Booking as DRB
+import qualified Domain.Action.UI.ConfirmBus as DConfirmBus
+-- import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
+import qualified Domain.Types.Ticket as DTT
 import Environment
 import Kernel.Prelude hiding (init)
 import Kernel.Types.Error
@@ -42,12 +43,13 @@ type API =
     :> TokenAuth
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
-    :> "confirm"
+    :> QueryParam "quantity" Integer
+    :> "confirmbus"
     :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
-    :> Post '[JSON] ConfirmRes
+    :> Post '[JSON] ConfirmBusRes
 
-newtype ConfirmRes = ConfirmRes
-  { bookingId :: Id DRB.Booking
+newtype ConfirmBusRes = ConfirmBusRes
+  { ticketId :: Id DTT.Ticket
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
@@ -55,26 +57,27 @@ newtype ConfirmRes = ConfirmRes
 
 handler :: FlowServer API
 handler =
-  confirm
+  confirmBus
 
 -- It is confirm UI EP, but we call init beckn EP inside it. confirm beckn EP will be called in on_init
-confirm ::
+confirmBus ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
+  Maybe Integer ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
-  FlowHandler ConfirmRes
-confirm (personId, _) quoteId mbPaymentMethodId =
+  FlowHandler ConfirmBusRes
+confirmBus (personId, _) quoteId quantity mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId Nothing mbPaymentMethodId
-    becknInitReq <- ACL.buildInitReq dConfirmRes
-    handle (errHandler dConfirmRes.booking) $
-      void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+    dConfirmBusRes <- DConfirmBus.confirmBus personId quoteId quantity mbPaymentMethodId
+    becknInitReq <- ACL.buildInitBusReq dConfirmBusRes
+    handle (errHandler dConfirmBusRes.ticket) $
+      void $ withShortRetry $ CallBPP.init dConfirmBusRes.providerUrl becknInitReq
     return $
-      ConfirmRes
-        { bookingId = dConfirmRes.booking.id
+      ConfirmBusRes
+        { ticketId = dConfirmBusRes.ticket.id
         }
   where
-    errHandler booking exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
+    errHandler ticket exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirmBus.cancelTicket ticket
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirmBus.cancelTicket ticket
       | otherwise = throwM exc

@@ -11,17 +11,29 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FarePolicy.FareBreakup where
 
 import Domain.Types.Booking.Type
+import Domain.Types.Ticket
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+
+data EntityType
+  = BOOKING
+  | TICKET
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnum ''EntityType)
 
 data FareBreakup = FareBreakup
   { id :: Id FareBreakup,
+    entityType :: EntityType,
     bookingId :: Id Booking,
+    entityId :: Maybe (Id Ticket),
     description :: Text,
     amount :: HighPrecMoney
   }

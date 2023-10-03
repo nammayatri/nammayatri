@@ -50,6 +50,7 @@ data Quote = Quote
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
+    -- publicTransportQuoteId :: Maybe Text, -- used from here
     createdAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)

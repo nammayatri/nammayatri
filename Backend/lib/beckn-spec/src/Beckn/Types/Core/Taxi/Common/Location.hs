@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.Common.Location
 where
 
 import Beckn.Types.Core.Taxi.Common.Address as Reexport
+import Beckn.Types.Core.Taxi.Common.Descriptor
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
@@ -26,7 +27,8 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Location = Location
   { gps :: Gps,
-    address :: Address
+    address :: Maybe Address,
+    descriptor :: Maybe Descriptor
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
