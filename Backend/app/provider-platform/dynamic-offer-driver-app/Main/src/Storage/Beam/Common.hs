@@ -22,7 +22,6 @@ import Storage.Beam.CallStatus
 import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverInformation
-import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
 import Storage.Beam.DriverOnboarding.IdfyVerification
@@ -49,8 +48,7 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { driverLocation = driverLocationTable,
-        exophone = exophoneTable,
+      { exophone = exophoneTable,
         geometry = geometryTable,
         vehicle = vehicleTable,
         operatingCity = operatingCityTable,
@@ -80,8 +78,7 @@ atlasDB =
       }
 
 data AtlasDB f = AtlasDB
-  { driverLocation :: f (B.TableEntity DriverLocationT),
-    exophone :: f (B.TableEntity ExophoneT),
+  { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
     vehicle :: f (B.TableEntity VehicleT),
     operatingCity :: f (B.TableEntity OperatingCityT),

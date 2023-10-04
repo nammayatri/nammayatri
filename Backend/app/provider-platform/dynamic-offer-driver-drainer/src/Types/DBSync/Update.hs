@@ -19,7 +19,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.Dr
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLocation as DriverLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpReq as AadhaarOtpReq
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpVerify as AadhaarOtpVerify
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarVerification as AadhaarVerification
@@ -103,7 +102,6 @@ data UpdateModel
   | DriverBlockReasonUpdate
   | DriverFeeUpdate
   | DriverInformationUpdate
-  | DriverLocationUpdate
   | AadhaarOtpReqUpdate
   | AadhaarOtpVerifyUpdate
   | AadhaarVerificationUpdate
@@ -188,7 +186,6 @@ getTagUpdate DriverFlowStatusUpdate = "DriverFlowStatusOptions"
 getTagUpdate DriverBlockReasonUpdate = "DriverBlockReasonOptions"
 getTagUpdate DriverFeeUpdate = "DriverFeeOptions"
 getTagUpdate DriverInformationUpdate = "DriverInformationOptions"
-getTagUpdate DriverLocationUpdate = "DriverLocationOptions"
 getTagUpdate AadhaarOtpReqUpdate = "AadhaarOtpReqOptions"
 getTagUpdate AadhaarOtpVerifyUpdate = "AadhaarOtpVerifyOptions"
 getTagUpdate AadhaarVerificationUpdate = "AadhaarVerificationOptions"
@@ -272,7 +269,6 @@ parseTagUpdate "DriverFlowStatusOptions" = return DriverFlowStatusUpdate
 parseTagUpdate "DriverBlockReasonOptions" = return DriverBlockReasonUpdate
 parseTagUpdate "DriverFeeOptions" = return DriverFeeUpdate
 parseTagUpdate "DriverInformationOptions" = return DriverInformationUpdate
-parseTagUpdate "DriverLocationOptions" = return DriverLocationUpdate
 parseTagUpdate "AadhaarOtpReqOptions" = return AadhaarOtpReqUpdate
 parseTagUpdate "AadhaarOtpVerifyOptions" = return AadhaarOtpVerifyUpdate
 parseTagUpdate "AadhaarVerificationOptions" = return AadhaarVerificationUpdate
@@ -357,7 +353,6 @@ data DBUpdateObject
   | DriverBlockReasonOptions UpdateModel [Set Postgres DriverBlockReason.DriverBlockReasonT] (Where Postgres DriverBlockReason.DriverBlockReasonT)
   | DriverFeeOptions UpdateModel [Set Postgres DriverFee.DriverFeeT] (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationOptions UpdateModel [Set Postgres DriverInformation.DriverInformationT] (Where Postgres DriverInformation.DriverInformationT)
-  | DriverLocationOptions UpdateModel [Set Postgres DriverLocation.DriverLocationT] (Where Postgres DriverLocation.DriverLocationT)
   | AadhaarOtpReqOptions UpdateModel [Set Postgres AadhaarOtpReq.AadhaarOtpReqT] (Where Postgres AadhaarOtpReq.AadhaarOtpReqT)
   | AadhaarOtpVerifyOptions UpdateModel [Set Postgres AadhaarOtpVerify.AadhaarOtpVerifyT] (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationOptions UpdateModel [Set Postgres AadhaarVerification.AadhaarVerificationT] (Where Postgres AadhaarVerification.AadhaarVerificationT)
@@ -470,9 +465,6 @@ instance FromJSON DBUpdateObject where
       DriverInformationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverInformationOptions updateModel updVals whereClause
-      DriverLocationUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ DriverLocationOptions updateModel updVals whereClause
       AadhaarOtpReqUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ AadhaarOtpReqOptions updateModel updVals whereClause

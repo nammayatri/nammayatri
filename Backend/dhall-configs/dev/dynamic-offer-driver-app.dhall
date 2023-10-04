@@ -24,26 +24,6 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
-let esqLocationDBCfg =
-      { connectHost = esqDBCfg.connectHost
-      , connectPort = 5454
-      , connectUser = sec.locDBUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_dev_loc"
-      , connectSchemaName = "atlas_person_location"
-      , connectionPoolCount = +25
-      }
-
-let esqLocationDBRepCfg =
-      { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5454
-      , connectUser = esqLocationDBCfg.connectUser
-      , connectPassword = esqLocationDBCfg.connectPassword
-      , connectDatabase = esqLocationDBCfg.connectDatabase
-      , connectSchemaName = esqLocationDBCfg.connectSchemaName
-      , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
-      }
-
 let clickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
@@ -220,8 +200,6 @@ let modelNamesMap =
 
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , esqLocationDBCfg
-    , esqLocationDBRepCfg
     , clickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
