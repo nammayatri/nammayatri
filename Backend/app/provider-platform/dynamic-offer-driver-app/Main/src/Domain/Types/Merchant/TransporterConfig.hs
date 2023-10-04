@@ -69,6 +69,7 @@ data TransporterConfigD u = TransporterConfig
     driverFeeCalculatorBatchGap :: Maybe NominalDiffTime,
     driverFeeRetryThresholdConfig :: Int,
     orderAndNotificationStatusCheckTime :: NominalDiffTime,
+    orderAndNotificationStatusCheckTimeLimit :: NominalDiffTime,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,

@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN order_and_notification_status_check_time_limit bigint DEFAULT 345600;

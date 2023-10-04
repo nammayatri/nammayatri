@@ -19,6 +19,17 @@ create = createWithKV
 findById :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findById (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
+checkIfAutoPayInvoiceById :: MonadFlow m => Id Domain.Invoice -> m Bool
+checkIfAutoPayInvoiceById (Id invoiceId) = do
+  invoices <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamI.id $ Se.Eq invoiceId,
+            Se.Is BeamI.paymentMode $ Se.Eq AUTOPAY_INVOICE
+          ]
+      ]
+  return $ not (null invoices)
+
 createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
@@ -124,6 +135,18 @@ findAllByStatusWithLimit status limit = do
     (Just limit)
     Nothing
 
+findAllAutoPayInvoicesActiveOlderThanProvidedDuration :: MonadFlow m => NominalDiffTime -> m [Domain.Invoice]
+findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeDiff = do
+  endTime <- getCurrentTime
+  let startTime = addUTCTime (-1 * timeDiff) endTime
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.createdAt $ Se.LessThan startTime
+        ]
+    ]
+
 findLatestAutopayActiveByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
 findLatestAutopayActiveByDriverFeeId driverFeeId = do
   findAllWithOptionsKV
@@ -131,6 +154,19 @@ findLatestAutopayActiveByDriverFeeId driverFeeId = do
         [ Se.Is BeamI.driverFeeId $ Se.Eq (getId driverFeeId),
           Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
           Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
+        ]
+    ]
+    (Se.Desc BeamI.createdAt)
+    (Just 1)
+    Nothing
+
+findLatestNonAutopayActiveByDriverId :: MonadFlow m => Id Person -> m [Domain.Invoice]
+findLatestNonAutopayActiveByDriverId driverId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE
         ]
     ]
     (Se.Desc BeamI.createdAt)
@@ -155,10 +191,10 @@ updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
     ]
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
-updatePendingToFailed :: MonadFlow m => m ()
-updatePendingToFailed = do
+updatePendingToFailed :: MonadFlow m => NominalDiffTime -> m ()
+updatePendingToFailed seconds = do
   endTime <- getCurrentTime
-  let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
+  let startTime = addUTCTime (-1 * seconds) endTime
   updateWithKV
     [Se.Set BeamI.invoiceStatus Domain.INACTIVE]
     [ Se.And

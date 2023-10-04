@@ -86,6 +86,7 @@ data TransporterConfigT f = TransporterConfigT
     useOfferListCache :: B.C f Bool,
     updateNotificationStatusBatchSize :: B.C f Int,
     updateOrderStatusBatchSize :: B.C f Int,
+    orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

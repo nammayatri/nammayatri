@@ -116,6 +116,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             updateNotificationStatusBatchSize,
             updateOrderStatusBatchSize,
             orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
+            orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
             ..
           }
     where
@@ -167,6 +168,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverFeeCalculatorBatchSize = driverFeeCalculatorBatchSize,
         BeamTC.driverFeeCalculatorBatchGap = nominalDiffTimeToSeconds <$> driverFeeCalculatorBatchGap,
         BeamTC.orderAndNotificationStatusCheckTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckTime,
+        BeamTC.orderAndNotificationStatusCheckTimeLimit = nominalDiffTimeToSeconds orderAndNotificationStatusCheckTimeLimit,
         BeamTC.subscription = subscription,
         BeamTC.minLocationAccuracy = minLocationAccuracy,
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,

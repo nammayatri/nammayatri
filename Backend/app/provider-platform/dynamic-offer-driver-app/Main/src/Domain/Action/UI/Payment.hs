@@ -54,6 +54,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
+import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -101,7 +102,9 @@ getStatus (personId, merchantId) orderId = do
       orderStatusCall = Payment.orderStatus merchantId -- api call
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
-    then return $ DPayment.PaymentStatus {status = order.status}
+    then do
+      invoice <- listToMaybe <$> QIN.findById (cast orderId)
+      return $ DPayment.PaymentStatus {status = order.status, bankErrorCode = invoice >>= (.bankErrorCode), bankErrorMessage = invoice >>= (.bankErrorMessage)}
     else do
       paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
       case paymentStatus of
@@ -110,11 +113,12 @@ getStatus (personId, merchantId) orderId = do
             processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
           processMandate (cast order.personId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
-          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False
         DPayment.PaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId (cast order.personId) order.id True
-          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing
+          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
+          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False
         DPayment.PDNNotificationStatusResp {..} ->
           processNotification notificationId notificationStatus
       return paymentStatus
@@ -144,7 +148,7 @@ juspayWebhookHandler merchantShortId authData value = do
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
                 unless (transactionStatus /= Payment.CHARGED) $ do
                   processPayment merchantId (cast order.personId) order.id True
-                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             Payment.MandateOrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
@@ -152,7 +156,7 @@ juspayWebhookHandler merchantShortId authData value = do
                 unless (transactionStatus /= Payment.CHARGED) $ do
                   processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
                 processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
-                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode
+                notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
             ---- to do add FCM for insufficient funds  -----
             Payment.MandateStatusResp {..} -> do
@@ -185,7 +189,7 @@ processPayment merchantId driverId orderId sendNotification = do
 updatePaymentStatus :: (MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DM.Merchant -> m ()
 updatePaymentStatus driverId merchantId = do
   dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
-  let totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
+  let totalDue = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf $ fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
@@ -202,12 +206,12 @@ notifyPaymentSuccessIfNotNotified driver orderId = do
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
-notifyAndUpdateInvoiceStatusIfPaymentFailed :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> Maybe Text -> m ()
-notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode = do
+notifyAndUpdateInvoiceStatusIfPaymentFailed :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Maybe Juspay.PaymentStatus -> Maybe Text -> Bool -> m ()
+notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode fromWebhook = do
   activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
   let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
   let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
-  when updateFailure $ do
+  when (updateFailure || (not fromWebhook && notifyFailure)) $ do
     QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     case activeExecutionInvoice of
       Just invoice' -> do
@@ -267,6 +271,7 @@ processNotification notificationId notificationStatus = do
   notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
   let driverFeeId = notification.driverFeeId
   unless (notification.status == Juspay.SUCCESS) $ do
+    driverFee <- QDF.findById driverFeeId
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
@@ -274,8 +279,9 @@ processNotification notificationId notificationStatus = do
         QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
       Juspay.SUCCESS -> do
         --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
-        QIN.updateInvoiceStatusByDriverFeeIds INV.ACTIVE_INVOICE [driverFeeId]
-        QDF.updateManualToAutoPay driverFeeId
+        unless ((driverFee <&> (.status)) == Just CLEARED) $ do
+          QIN.updateInvoiceStatusByDriverFeeIds INV.ACTIVE_INVOICE [driverFeeId]
+          QDF.updateManualToAutoPay driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
       _ -> pure ()
     QNTF.updateNotificationStatusById notification.id notificationStatus

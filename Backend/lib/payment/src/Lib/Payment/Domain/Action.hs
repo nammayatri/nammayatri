@@ -41,7 +41,9 @@ import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 
 data PaymentStatusResp
   = PaymentStatus
-      { status :: Payment.TransactionStatus
+      { status :: Payment.TransactionStatus,
+        bankErrorMessage :: Maybe Text,
+        bankErrorCode :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -255,7 +257,7 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ PaymentStatus {status = transactionStatus, ..}
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
