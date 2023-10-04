@@ -44,6 +44,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     whatsappProvidersPriorityList :: [WhatsappService],
     issueTicketService :: IssueTicketService,
     useFraudDetection :: Bool,
+    considerOtherAsDisability :: Bool,
     enableDashboardSms :: Bool,
     getExophone :: CallService,
     updatedAt :: UTCTime,

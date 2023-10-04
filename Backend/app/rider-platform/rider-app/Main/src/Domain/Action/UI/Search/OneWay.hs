@@ -47,6 +47,7 @@ import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
@@ -134,10 +135,14 @@ oneWaySearch ::
   m OneWaySearchRes
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  tag <- case person.hasDisability of
-    Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
-    _ -> return Nothing
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  tag <- case person.hasDisability of
+    Just True -> do
+      merchantConfig <- QMSUC.findByMerchantId merchant.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+      if not merchantConfig.considerOtherAsDisability && customerDisability <&> (.tag) == Just "OTHER"
+        then return Nothing
+        else do customerDisability <&> (.tag)
   mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId req.origin.gps
   HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
 
