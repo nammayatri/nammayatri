@@ -107,16 +107,14 @@ scrollableView state push =
           , gravity CENTER_HORIZONTAL
           ][ PrestoAnim.animationSet 
             [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-            ] $ textView (
+            ] $ textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , textSize FontSize.a_20
                 , text $ getString WELCOME_TEXT
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
                 , margin $ Margin 70 32 74 32
                 ] <> FontStyle.h1 TypoGraphy
-                )
           ]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig 

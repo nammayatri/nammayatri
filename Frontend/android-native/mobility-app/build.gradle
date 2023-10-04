@@ -60,7 +60,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'androidx.browser:browser:1.2.0'
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.33'
+    implementation 'in.juspay:hypersdk:2.1.19-rc.01'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'

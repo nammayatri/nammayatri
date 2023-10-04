@@ -206,7 +206,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.13-nammayatri.33'
+    jpSDKversion = '2.1.19-rc.01'
 }
 
 dependencies {
