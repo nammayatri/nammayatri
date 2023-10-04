@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module SharedLogic.Allocator.Jobs.Overlay.SendOverlay where
 
 import qualified Domain.Types.DriverFee as DDF
@@ -44,12 +46,14 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   case jobData.condition of
     DOverlay.PaymentPendingGreaterThan limit -> do
       driverIds <- getBatchedDriverIds merchantId
+      logInfo $ show driverIds
       driverIdsLength <- getPaymentPendingDriverIdsLength merchantId
       if driverIdsLength > 0
         then do
           mapM_ (sendPaymentPendingOverlay (fromIntegral limit) overlayKey udf1) driverIds
           ReSchedule . addUTCTime 180 <$> getCurrentTime -- 3 minutes
         else do
+          unless (null driverIds) $ mapM_ (sendPaymentPendingOverlay (fromIntegral limit) overlayKey udf1) driverIds
           case rescheduleInterval of
             Just interval -> do
               ReSchedule . addUTCTime (fromIntegral interval) <$> getCurrentTime

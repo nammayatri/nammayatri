@@ -26,14 +26,15 @@ import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
-import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Merchant.Overlay as SQMO
+import Tools.Error
 
 -- =============================================
 ------------- create overlay -------------------
@@ -67,6 +68,8 @@ instance HideSecrets CreateOverlayReq where
 createOverlay :: ShortId DM.Merchant -> CreateOverlayReq -> Flow APISuccess
 createOverlay merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
+  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchant.id req.overlayKey req.udf1
+  unless (null overlayPresent) $ throwError $ OverlayKeyAndUdfAlreadyPresent ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
   overlays <- mapM (buildOverlay merchant.id req) req.contents
   SQMO.createMany overlays
   pure Success
@@ -100,6 +103,8 @@ availableLanguages = [ENGLISH, HINDI, KANNADA, TAMIL, MALAYALAM, BENGALI, FRENCH
 deleteOverlay :: ShortId DM.Merchant -> DeleteOverlayReq -> Flow APISuccess
 deleteOverlay merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
+  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchant.id req.overlayKey req.udf1
+  when (null overlayPresent) $ throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
   SQMO.deleteByOverlayKeyMerchantIdUdf merchant.id req.overlayKey req.udf1
   mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchant.id req.overlayKey language req.udf1) availableLanguages
   pure Success
@@ -160,7 +165,7 @@ overlayInfo merchantShortId req = do
   where
     buildOverlayInfoResp overlays = do
       if null overlays
-        then do throwError $ InternalError $ "Overlay Key " <> req.overlayKey <> " not found"
+        then do throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
         else do
           let _res@DTMO.Overlay {..} = minimumBy (comparing (.language)) overlays
           groupedContents <- mapM buildGroupedContents overlays
@@ -193,7 +198,8 @@ scheduleOverlay :: ShortId DM.Merchant -> ScheduleOverlay -> Flow APISuccess
 scheduleOverlay merchantShortId req@ScheduleOverlay {..} = do
   merchant <- findMerchantByShortId merchantShortId
   maxShards <- asks (.maxShards)
-  now <- getCurrentTime
+  transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let jobScheduledTime = diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
   createJobIn @_ @'SendOverlay jobScheduledTime maxShards $
     SendOverlayJobData
