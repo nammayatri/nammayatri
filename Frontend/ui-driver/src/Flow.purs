@@ -113,6 +113,7 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Constants.Configs
 import Engineering.Helpers.Commons as EHC
 import PrestoDOM (initUI)
+import Common.Resources.Constants (zoomLevel)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -1222,7 +1223,7 @@ goToLocationFlow = do
           case placeNameResp!!0 of 
             Just (API.PlaceName placeName) -> do
               let (API.LatLong latLong) = placeName.location
-              liftFlowBT $ runEffectFn5 JB.locateOnMap false latLong.lat latLong.lon "" []
+              liftFlowBT $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = false, lat = latLong.lat, lon = latLong.lon, geoJson = "", points = [], zoomLevel = zoomLevel}
               modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState { data { saveLocationObject { address = placeName.formattedAddress, position { lat = latLong.lat , lon = latLong.lon } } },  props { viewType = ST.LOCATE_ON_MAP}} )
             Nothing -> pure unit
         Left _ -> pure unit

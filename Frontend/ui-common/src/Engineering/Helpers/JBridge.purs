@@ -27,7 +27,6 @@ import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBoun
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
-import Effect.Uncurried (EffectFn3)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
@@ -36,21 +35,20 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
-import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn5)
+import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1)
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
 -- import Effect.Aff (launchAff)
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Effect.Uncurried (EffectFn3, EffectFn2)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1)
 import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
@@ -77,7 +75,7 @@ import Foreign.Class (encode)
 foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import readFile'      :: String -> Effect String
 -- foreign import showLoader'      :: String -> Effect Unit
-foreign import locateOnMap :: EffectFn5 Boolean Number Number String (Array Location) Unit
+foreign import locateOnMap :: EffectFn1 LocateOnMapConfig Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
@@ -116,7 +114,7 @@ foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
-foreign import updateRoute :: Locations -> String -> String -> String -> MapRouteConfig -> Effect Unit
+foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
 -- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
 -- foreign import addMarkers :: Markers -> Effect Unit
@@ -141,7 +139,7 @@ foreign import getCurrentPositionWithTimeout  :: forall action. (action -> Effec
 foreign import translateStringWithTimeout :: forall action. (action -> Effect Unit) -> (String -> action) -> Int -> String -> Effect Unit
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import animateCamera :: Number -> Number -> Int -> String -> Effect Unit
+foreign import animateCamera :: Number -> Number -> Number -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
@@ -375,6 +373,26 @@ type Locations = {
     points :: Coordinates
 }
 
+type LocateOnMapConfig = {
+    goToCurrentLocation :: Boolean
+  , lat :: Number
+  , lon :: Number
+  , geoJson :: String
+  , points :: (Array Location)
+  , zoomLevel :: Number
+}
+
+locateOnMapConfig :: LocateOnMapConfig
+locateOnMapConfig = {
+    goToCurrentLocation : false
+  , lat : 0.0
+  , lon : 0.0
+  , geoJson : ""
+  , points : []
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+}
+
+
 type MapRouteConfig = {
     sourceSpecialTagIcon :: String
   , destSpecialTagIcon :: String
@@ -424,6 +442,36 @@ type SuggestionDefinitions = Array
     key :: String,
     value :: {en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String}
   }
+
+type UpdateRouteConfig = {
+    json :: Locations
+  , destMarker :: String
+  , eta :: String
+  , srcMarker :: String
+  , specialLocation :: MapRouteConfig
+  , zoomLevel :: Number
+}
+
+updateRouteConfig :: UpdateRouteConfig
+updateRouteConfig = {
+    json : {points: []}
+  , destMarker : ""
+  , eta : ""
+  , srcMarker : ""
+  , specialLocation : {
+      sourceSpecialTagIcon: "", 
+      destSpecialTagIcon: "", 
+      vehicleSizeTagIcon: 0, 
+      isAnimation: false, 
+      polylineAnimationConfig: {
+        color: "", 
+        draw: 0, 
+        fade: 0, 
+        delay: 0
+      } 
+  }
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+}
 
 -- type Point = Array Number
 

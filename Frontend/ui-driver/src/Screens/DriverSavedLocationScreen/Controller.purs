@@ -24,11 +24,11 @@ import Data.Number as Num
 import Data.String (length, toLower, trim)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn5)
+import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.Commons as EHC
-import JBridge (addMarker, animateCamera, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader)
+import JBridge (addMarker, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader, locateOnMapConfig)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -41,6 +41,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray, tagAlreadySaved)
 import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..))
 import Services.API (GetHomeLocationsRes(..))
+import Common.Resources.Constants (zoomLevel)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -113,7 +114,7 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   _, _ -> continue state
 
 eval LocateOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 "" []
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =
