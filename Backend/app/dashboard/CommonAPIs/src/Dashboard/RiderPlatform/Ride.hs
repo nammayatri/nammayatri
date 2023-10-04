@@ -33,6 +33,7 @@ import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import Kernel.Utils.JSON (constructorsWithLowerCase)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Servant hiding (Summary)
@@ -236,7 +237,7 @@ newtype TicketRideListRes = TicketRideListRes
   { rides :: [RideInfo]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance HideSecrets TicketRideListRes where
   hideSecrets = identity
@@ -250,11 +251,33 @@ data RideInfo = RideInfo
     vehicleNo :: Text,
     status :: BookingStatus,
     rideCreatedAt :: UTCTime,
-    pickupLocation :: Location,
-    dropLocation :: Maybe Location,
+    pickupLocationLat :: Maybe Double,
+    pickupLocationLon :: Maybe Double,
+    pickupLocationStreet :: Maybe Text,
+    pickupLocationCity :: Maybe Text,
+    pickupLocationState :: Maybe Text,
+    pickupLocationCountry :: Maybe Text,
+    pickupLocationBuilding :: Maybe Text,
+    pickupLocationAreaCode :: Maybe Text,
+    pickupLocationArea :: Maybe Text,
+    dropLocationLat :: Maybe Double,
+    dropLocationLon :: Maybe Double,
+    dropLocationStreet :: Maybe Text,
+    dropLocationCity :: Maybe Text,
+    dropLocationState :: Maybe Text,
+    dropLocationCountry :: Maybe Text,
+    dropLocationBuilding :: Maybe Text,
+    dropLocationAreaCode :: Maybe Text,
+    dropLocationArea :: Maybe Text,
     fare :: Maybe Money,
     personId :: Id Customer,
     classification :: Ticket.Classification
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON RideInfo where
+  parseJSON = genericParseJSON constructorsWithLowerCase
+
+instance ToJSON RideInfo where
+  toJSON = genericToJSON constructorsWithLowerCase

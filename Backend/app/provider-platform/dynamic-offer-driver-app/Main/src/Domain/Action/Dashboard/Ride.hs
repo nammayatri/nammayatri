@@ -144,6 +144,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
       return Common.TicketRideListRes {rides = rdList}
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
   where
+    makeRequiredRideDetail :: Id DP.Person -> (DRide.Ride, Common.RideInfoRes) -> Common.RideInfo
     makeRequiredRideDetail personId (ride, detail) =
       Common.RideInfo
         { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
@@ -154,8 +155,24 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           vehicleNo = detail.vehicleNo,
           status = detail.bookingStatus,
           rideCreatedAt = ride.createdAt,
-          pickupLocation = detail.customerPickupLocation,
-          dropLocation = detail.customerDropLocation,
+          pickupLocationLat = Just detail.customerPickupLocation.lat,
+          pickupLocationLon = Just detail.customerPickupLocation.lon,
+          pickupLocationStreet = detail.customerPickupLocation.street,
+          pickupLocationCity = detail.customerPickupLocation.city,
+          pickupLocationState = detail.customerPickupLocation.state,
+          pickupLocationCountry = detail.customerPickupLocation.country,
+          pickupLocationBuilding = detail.customerPickupLocation.building,
+          pickupLocationAreaCode = detail.customerPickupLocation.areaCode,
+          pickupLocationArea = detail.customerPickupLocation.area,
+          dropLocationLat = (.lat) <$> detail.customerDropLocation,
+          dropLocationLon = (.lon) <$> detail.customerDropLocation,
+          dropLocationStreet = (.street) =<< detail.customerDropLocation,
+          dropLocationCity = (.city) =<< detail.customerDropLocation,
+          dropLocationState = (.state) =<< detail.customerDropLocation,
+          dropLocationCountry = (.country) =<< detail.customerDropLocation,
+          dropLocationBuilding = (.building) =<< detail.customerDropLocation,
+          dropLocationAreaCode = (.areaCode) =<< detail.customerDropLocation,
+          dropLocationArea = (.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
           personId = cast personId,
           classification = Ticket.DRIVER
