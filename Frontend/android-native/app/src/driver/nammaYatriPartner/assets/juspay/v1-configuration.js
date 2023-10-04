@@ -90,5 +90,8 @@ window.getMerchantConfig = function () {
         "showVehicleVariant" : false
       }
     , "referralType" : "LeaderBoard"
+    , "appUpdateConfig" :
+        { "version" : 85
+        }
   })
 }

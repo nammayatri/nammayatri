@@ -55,6 +55,7 @@ import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
+import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens (ScreenName(..)) as ScreenNames
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -131,7 +132,7 @@ defaultGlobalState = GlobalState{
 , noInternetScreen : {}
 , popUpScreen : PopUpScreenData.initData
 , driverRideRatingScreen : DriverRideRatingScreenData.initData
-, appUpdatePopUpScreen : {version : 1, updatePopup : NoUpdatePopup}
+, appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData

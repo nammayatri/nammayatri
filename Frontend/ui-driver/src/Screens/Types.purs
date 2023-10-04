@@ -34,7 +34,7 @@ import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBre
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
-import MerchantConfig.Types (AppConfig)
+import MerchantConfig.Types (AppConfig, AppUpdateConfig)
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
@@ -1296,8 +1296,8 @@ type DriverRideRatingScreenProps = {
 }
 
 type AppUpdatePopUpScreenState = {
-  version :: Int
-  , updatePopup :: UpdatePopupType
+    updatePopup :: UpdatePopupType
+  , appUpdateConfig :: AppUpdateConfig
 }
 
 data UpdatePopupType =  AppVersion

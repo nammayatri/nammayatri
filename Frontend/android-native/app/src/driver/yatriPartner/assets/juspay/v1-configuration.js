@@ -80,5 +80,8 @@ window.getMerchantConfig = function () {
     }
     , "autoPayBanner" : false
     , "referralType" : "QRScreen"
+    , "appUpdateConfig" :
+        { "version" : 48
+        }
   })
 }

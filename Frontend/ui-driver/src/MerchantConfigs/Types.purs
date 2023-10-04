@@ -11,7 +11,8 @@ type AppConfig =
     imageUploadOptional :: Boolean,
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
-    rideActionModelConfig :: RideActionModelConfig 
+    rideActionModelConfig :: RideActionModelConfig,
+    appUpdateConfig :: AppUpdateConfig
   } 
 
 type Language =  {
@@ -32,4 +33,9 @@ type SubscriptionConfig =  {
 
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
+}
+
+type AppUpdateConfig = {
+    version :: Int
+  , canDismissPopup :: Boolean
 }

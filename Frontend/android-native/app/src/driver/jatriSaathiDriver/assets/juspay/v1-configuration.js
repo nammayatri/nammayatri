@@ -98,5 +98,8 @@ window.getMerchantConfig = function () {
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
     , "referralType" : "QRScreen"
+    , "appUpdateConfig" :
+        { "version" : 19 
+        }
   })
 }

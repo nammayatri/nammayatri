@@ -59,4 +59,8 @@ commonConfig =
         , mapConfig : 
             { animationDuration : 400
             }
+        , appUpdateConfig :
+            { version : 1
+            , canDismissPopup : true
+            }
         }

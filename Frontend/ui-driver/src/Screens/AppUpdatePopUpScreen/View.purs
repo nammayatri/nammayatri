@@ -201,17 +201,15 @@ updateRequiredView push state =
                 , padding (Padding 20 11 20 11)
                 , stroke ("1," <> Color.textSecondary)
                 , cornerRadius 10.0
-                , alpha 0.6
-                -- , visibility GONE
+                , alpha if state.appUpdateConfig.canDismissPopup then 1.0 else 0.6
+                , clickable state.appUpdateConfig.canDismissPopup
+                , onClick push $ const OnCloseClick
                 ][
                     textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text (getString NOT_NOW)
                     , color Color.textSecondary
-                    , alpha 0.6
-                    , clickable true
-                    , onClick push $ const OnCloseClick
                     ] <> FontStyle.body4 LanguageStyle
                 ]
             , linearLayout
@@ -221,16 +219,16 @@ updateRequiredView push state =
               , margin (MarginLeft 12)
               , background Color.charcoalGrey
               , cornerRadius 10.0
+              , onClick (\action -> do
+                            _<- push action
+                            _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
+                            pure unit
+                            ) (const OnAccept)
               ][ textView $
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , text (getString UPDATE)
                   , color Color.yellowText
-                  , onClick (\action -> do
-                              _<- push action
-                              _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
-                              pure unit
-                              ) (const OnAccept)
               ] <> FontStyle.body4 LanguageStyle
             ]
           ]

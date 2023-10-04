@@ -165,13 +165,16 @@ baseAppFlow baseFlow event = do
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
-  when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
+  config <- getAppConfig Constants.appConfig
+  when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < config.appUpdateConfig.version) $ do
     lift $ lift $ doAff do liftEffect hideSplash
-    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
+    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion, appUpdateConfig = config.appUpdateConfig})
     fl <- UI.handleAppUpdatePopUp
     case fl of
       UpdateNow -> checkVersion versioncode
-      Later -> pure unit
+      Later -> do
+        void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+        void $ lift $ lift $ toggleLoader true
 
 checkDateAndTime :: FlowBT String Unit
 checkDateAndTime = do
@@ -198,15 +201,6 @@ checkDateAndTime = do
         _ <- UI.handleAppUpdatePopUp
         checkDateAndTime
 
-getLatestAndroidVersion :: Merchant -> Int
-getLatestAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 85
-    YATRI -> 48
-    YATRISATHI -> 16
-    MOBILITY_PM -> 1
-    MOBILITY_RS -> 1
-    PASSCULTURE -> 1
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"

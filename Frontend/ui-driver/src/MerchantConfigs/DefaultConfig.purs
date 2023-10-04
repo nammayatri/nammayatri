@@ -26,5 +26,9 @@ config =
   },
   rideActionModelConfig : {
     showVehicleVariant : true
-  }
+  },
+  appUpdateConfig :
+    { version : 1
+    , canDismissPopup : true
+    }
   }
