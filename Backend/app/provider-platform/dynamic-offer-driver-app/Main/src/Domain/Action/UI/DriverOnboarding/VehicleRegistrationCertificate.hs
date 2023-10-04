@@ -352,6 +352,7 @@ activateRC driverId merchantId now rc = do
       rcNumber <- decrypt rc.certificateNumber
       fleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
       Redis.del $ makeFleetOwnerKey rcNumber
+      transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
           DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi

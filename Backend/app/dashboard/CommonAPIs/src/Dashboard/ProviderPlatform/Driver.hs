@@ -25,7 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney, MandatoryQueryParam, Money)
+import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
@@ -742,7 +742,6 @@ data DriverMode
   | OFFLINE
   | SILENT
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-  deriving (PrettyShow) via Showable DriverMode
 
 data FleetVehicleStatsListItem = FleetVehicleStatsListItem
   { vehicleRegNo :: Text,
