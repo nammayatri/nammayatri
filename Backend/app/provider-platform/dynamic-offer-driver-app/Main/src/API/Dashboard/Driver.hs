@@ -143,17 +143,20 @@ type FleetUnlinkVehicleAPI =
     :> QueryParam "mobileCountryCode" Text
     :> Capture "driverMobileNo" Text
     :> "unlink"
+    :> "fleet"
     :> Post '[JSON] APISuccess
 
 type FleetRemoveVehicleAPI =
   Capture "fleetOwnerId" Text
     :> Capture "vehicleNo" Text
     :> "remove"
+    :> "fleet"
     :> Post '[JSON] APISuccess
 
 type FleetStatsAPI =
   Capture "fleetOwnerId" Text
     :> "stats"
+    :> "fleet"
     :> Get '[JSON] Common.FleetStatsRes
 
 handler :: ShortId DM.Merchant -> FlowServer API

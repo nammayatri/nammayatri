@@ -706,6 +706,7 @@ type FleetUnlinkVehicleAPI =
     :> QueryParam "countryCode" Text
     :> Capture "driverMobileNo" Text
     :> "unlink"
+    :> "fleet"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
@@ -714,6 +715,7 @@ type FleetUnlinkVehicleAPI =
 type FleetRemoveVehicleAPI =
   Capture "vehicleNo" Text
     :> "remove"
+    :> "fleet"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
@@ -721,6 +723,7 @@ type FleetRemoveVehicleAPI =
 
 type FleetStatsAPI =
   "stats"
+    :> "fleet"
     :> Get '[JSON] FleetStatsRes
 
 data FleetStatsRes = FleetStatsRes

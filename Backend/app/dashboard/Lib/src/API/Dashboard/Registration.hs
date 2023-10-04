@@ -41,10 +41,10 @@ type API =
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
              :> Post '[JSON] DReg.LoginRes
        )
-    :<|> "fleet"
-      :> "register"
-      :> ReqBody '[JSON] DReg.FleetRegisterReq
-      :> Post '[JSON] APISuccess
+    :> "fleet"
+    :> "register"
+    :> ReqBody '[JSON] DReg.FleetRegisterReq
+    :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
