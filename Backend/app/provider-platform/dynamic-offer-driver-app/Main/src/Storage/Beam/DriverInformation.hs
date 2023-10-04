@@ -54,7 +54,8 @@ data DriverInformationT f = DriverInformationT
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
     compAadhaarImagePath :: B.C f (Maybe Text),
-    availableUpiApps :: B.C f (Maybe Text)
+    availableUpiApps :: B.C f (Maybe Text),
+    optForRental :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

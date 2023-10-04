@@ -82,6 +82,16 @@ updateActivity (Id driverId) isActive mode = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
+updateOptForRental :: MonadFlow m => Id Person.Driver -> Bool -> m ()
+updateOptForRental (Id driverId) optForRental = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [
+      Se.Set BeamDI.optForRental optForRental,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
 updateEnabledState :: MonadFlow m => Id Driver -> Bool -> m ()
 updateEnabledState (Id driverId) isEnabled = do
   now <- getCurrentTime

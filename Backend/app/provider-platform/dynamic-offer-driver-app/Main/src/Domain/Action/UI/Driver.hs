@@ -71,6 +71,7 @@ module Domain.Action.UI.Driver
     getDriverPaymentsHistoryV2,
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
+    updateOptForRentalFeature,
   )
 where
 
@@ -91,7 +92,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverFee as DDF
-import Domain.Types.DriverInformation (DriverInformation)
+import Domain.Types.DriverInformation (DriverInformation, DriverInformationE (optForRental))
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
@@ -217,6 +218,7 @@ data DriverInformationRes = DriverInformationRes
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
+    optForRental :: Bool,
     onRide :: Bool,
     verified :: Bool,
     enabled :: Bool,
@@ -260,6 +262,7 @@ data DriverEntityRes = DriverEntityRes
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
+    optForRental :: Bool,
     onRide :: Bool,
     enabled :: Bool,
     blocked :: Bool,
@@ -633,7 +636,8 @@ createDriverDetails personId adminId merchantId = do
             lastEnabledOn = Just now,
             enabledAt = Just now,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            optForRental = True
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -710,6 +714,16 @@ activateGoHomeFeature (driverId, merchantId) driverHomeLocationId driverLocation
   whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
   unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   activateDriverGoHomeRequest merchantId driverId driverHomeLocation goHomeConfig dghInfo
+  pure APISuccess.Success
+
+updateOptForRentalFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> m APISuccess.APISuccess
+updateOptForRentalFeature (personId, _) isActive = do
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driverId = cast personId
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  _ <- QDriverInformation.updateOptForRental driverId isActive
   pure APISuccess.Success
 
 deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m APISuccess.APISuccess
@@ -835,6 +849,7 @@ buildDriverEntityRes (person, driverInfo) = do
         rating = round <$> person.rating,
         linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
         active = driverInfo.active,
+        optForRental = driverInfo.optForRental,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
@@ -1095,6 +1110,7 @@ makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats dghIn
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,
           isGoHomeEnabled = cfg.enableGoHome,
+          optForRental = optForRental,
           ..
         }
 
