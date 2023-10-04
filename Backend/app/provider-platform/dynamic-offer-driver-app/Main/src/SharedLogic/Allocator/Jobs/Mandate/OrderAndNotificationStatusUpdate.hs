@@ -40,7 +40,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   QNTF.updatePendingToFailed
   allPendingOrders <- QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE batchSizeOfOrderStatus
   QINV.updateLastCheckedOn ((.id) <$> allPendingOrders)
-  QINV.updatePendingToFailed
+  updateInvoicesPendingToFailedAfterRetry transporterConfig
   forM_ allPendingNotification $ \notification -> do
     fork ("notification status call for notification id : " <> notification.id.getId) $ do
       driverFee <- QDF.findById notification.driverFeeId >>= fromMaybeM (InternalError "Fee not found")
@@ -55,3 +55,10 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
 
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
+
+updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m) => TransporterConfig -> m ()
+updateInvoicesPendingToFailedAfterRetry transporterConfig = do
+  let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
+  activeExecutionInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit
+  QINV.updatePendingToFailed timeCheckLimit
+  mapM_ QDF.updateAutoPayToManual (activeExecutionInvoices <&> (.driverFeeId))

@@ -177,8 +177,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          if due + totalFee >= plan.maxCreditLimit
+              due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
+          if roundToHalf (due + totalFee) >= plan.maxCreditLimit
             then do
               mapM_ updateAutoPayToManual driverFeeIds
               updateAutoPayToManual driverFee.id

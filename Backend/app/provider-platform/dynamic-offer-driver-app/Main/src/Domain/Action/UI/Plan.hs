@@ -202,19 +202,12 @@ currentPlan (driverId, _merchantId) = do
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
   currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True >=> (pure . Just)) mPlan
-
-  mbOrder <- SOrder.findLatestByPersonId driverId.getId
+  mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId
   (orderId, lastPaymentType) <-
-    case mbOrder of
-      Just order -> do
-        if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
-          then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
-          else
-            if order.status == Payment.NEW
-              then do
-                QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE (cast order.id) -- disable older invoice if in NEW stage as can't go ahead of it
-                return (Nothing, Nothing)
-              else return (Nothing, Nothing)
+    case mbInvoice of
+      Just invoice -> do
+        mbOrder <- SOrder.findById (cast invoice.id)
+        maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       Nothing -> return (Nothing, Nothing)
 
   return $
@@ -233,6 +226,10 @@ currentPlan (driverId, _merchantId) = do
   where
     checkIFActiveStatus (Just DI.ACTIVE) = True
     checkIFActiveStatus _ = False
+    orderBasedCheck order = do
+      if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
+        then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
+        else return (Nothing, Nothing)
 
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> DI.DriverInformation -> Flow PlanSubscribeRes
