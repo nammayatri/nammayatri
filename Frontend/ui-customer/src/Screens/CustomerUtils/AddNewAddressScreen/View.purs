@@ -31,7 +31,8 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn5)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -48,6 +49,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Debug (spy)
 import Data.String as DS
 import Styles.Colors as Color
+import Common.Resources.Constants (pickupZoomLevel)
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -78,10 +80,10 @@ view push state =
   , accessibility DISABLE
   , afterRender
     (\action -> do
-          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
+          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
+          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel}
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)

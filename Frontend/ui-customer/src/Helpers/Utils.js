@@ -400,12 +400,14 @@ export const drawPolygon = function(geoJson) {
   }
 }
 
-export const removeLabelFromMarker = function(unit){
-  return function () {
+export const removeLabelFromMarker = (zoomLevel) => {
     if (JBridge.removeLabelFromMarker){
-      return JBridge.removeLabelFromMarker();
+      try{
+        return JBridge.removeLabelFromMarker(zoomLevel);
+      } catch (err){
+        return JBridge.removeLabelFromMarker();
+      }
     }
-  }
 }
 export const addCarousel = function (modelArray) {
   return function (id) {

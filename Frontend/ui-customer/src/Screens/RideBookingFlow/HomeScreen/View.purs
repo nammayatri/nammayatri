@@ -47,7 +47,8 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex, null, (!!), head)
 import Data.Either (Either(..))
-import Data.Int (toNumber, fromString, ceil, floor)
+import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
+import Data.Function.Uncurried (runFn1)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number as NUM
@@ -56,13 +57,15 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeOnResumeCallback, toString, getCommonAssetStoreLink, getAssetStoreLink, getAssetsBaseUrl, getSearchType)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, storeCallBackLocateOnMap)
+import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer, storeOnResumeCallback, toString)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, startTimerWithTime, stopChatListenerService, storeCallBackLocateOnMap, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, updateRouteConfig, waitingCountdownTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -93,6 +96,7 @@ import Data.Function.Uncurried (runFn1)
 import Effect.Uncurried (runEffectFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
+import Common.Resources.Constants (zoomLevel)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -262,7 +266,7 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
-                _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
+                _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
                 if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
@@ -1953,7 +1957,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
-      _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17 "ZOOM"
+      _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 110 0.5 0.9
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
@@ -2015,7 +2019,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                     specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                   else
                                                     specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                        liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) markers.srcMarker specialLocationTag
+                        liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance state), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
                         _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState

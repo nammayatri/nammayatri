@@ -75,6 +75,7 @@ import Constants
 import Data.Function.Uncurried (runFn1)
 import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Resources.Constants (zoomLevel)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -928,13 +929,13 @@ showDriverMarker state marker location = do
     "1789234" -> updateAutoIcon 12.522069908884921 76.89518072273476
     _ -> do
       _ <- pure $ enableMyLocation true
-      animateCamera location.lat location.lon 17 "ZOOM"
+      animateCamera location.lat location.lon zoomLevel "ZOOM"
 
 updateAutoIcon :: Number -> Number -> Effect Unit
 updateAutoIcon lat lng = do
   _ <- showMarker "ic_vehicle_side" lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
-  animateCamera lat lng 17 "ZOOM"
+  animateCamera lat lng zoomLevel "ZOOM"
 
 constructLatLong :: String -> String -> ST.Location
 constructLatLong lat lon =

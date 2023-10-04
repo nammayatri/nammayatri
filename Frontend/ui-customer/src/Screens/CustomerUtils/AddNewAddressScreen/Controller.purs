@@ -32,12 +32,12 @@ import Data.Maybe (Maybe(..), fromMaybe, fromJust)
 import Data.Number (fromString) as Number
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn5)
+import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
-import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent)
+import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent, locateOnMapConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -53,6 +53,7 @@ import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
 import Debug(spy)
+import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -159,7 +160,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel}
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
@@ -419,7 +420,7 @@ checkPermissionAndUpdatePersonMarker state = do
       else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
-showPersonMarker state marker location = animateCamera location.lat location.lng 19 "ZOOM"
+showPersonMarker state marker location = animateCamera location.lat location.lng pickupZoomLevel "ZOOM"
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =

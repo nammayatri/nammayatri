@@ -471,7 +471,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel) {
         try {
             final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
             final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
@@ -489,9 +489,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
                 if (moveToCurrentPosition) {
                     LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
                 } else {
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
 
@@ -513,10 +513,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     if (googleMap != null)
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoomLevel));
                 } else {
                     if (googleMap != null) {
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
                         googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                     }
                 }

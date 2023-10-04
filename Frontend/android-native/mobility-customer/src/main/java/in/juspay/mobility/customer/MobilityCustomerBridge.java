@@ -254,10 +254,17 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void updateRoute(String json, String dest, String eta, String src, String specialLocation) {
+    public void updateRoute(String _payload) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 try {
+                    JSONObject payload = new JSONObject(_payload);
+                    String json = payload.optString("json", "");
+                    String dest = payload.optString("destMarker", "");
+                    String eta = payload.optString("eta", "");
+                    String src = payload.optString("srcMarker", "");
+                    String specialLocation = payload.optString("specialLocation", "");
+                    float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
                     ArrayList<LatLng> path = new ArrayList<>();
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
@@ -289,7 +296,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             }
                             polyline = null;
                             currMarker.setAnchor(0.5f, 0);
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, 17.0f, ZoomType.ZOOM);
+                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                         } else {
                             double destinationLat = path.get(0).latitude;
                             double destinationLon = path.get(0).longitude;
@@ -435,10 +442,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void removeLabelFromMarker() {
+    public void removeLabelFromMarker(float zoomLevel) {
         ExecutorManager.runOnMainThread(() -> {
             try {
-                zoom = 17.0f;
+                zoom = zoomLevel;
                 if (layer != null) {
                     layer.removeLayerFromMap();
                 }
@@ -453,13 +460,20 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon, String geoJson, String points){
-        if (geoJson.equals("") || points.equals("[]")){
-            locateOnMap(goToCurrentLocation,lat,lon);
-            return;
-        }
+    public void locateOnMap (String _payload){
         try {
-            ExecutorManager.runOnMainThread(new Runnable() {
+              JSONObject payload = new JSONObject(_payload);
+              boolean goToCurrentLocation = payload.optBoolean("goToCurrentLocation", false) ;
+              String lat = payload.optString("lat", "0.0");
+              String lon = payload.optString("lon", "0.0");
+              String geoJson = payload.optString("geoJson", "");
+              String points = payload.optString("points", "[]");
+              float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
+              if (geoJson.equals("") || points.equals("[]")){
+                locateOnMap(goToCurrentLocation,lat,lon,zoomLevel);
+                return;
+              }
+              ExecutorManager.runOnMainThread(new Runnable() {
                 double x = 0.0;
                 double y = 0.0;
                 final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
@@ -658,6 +672,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             return false;
         }
     }
+
     //endregion
 
     private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
