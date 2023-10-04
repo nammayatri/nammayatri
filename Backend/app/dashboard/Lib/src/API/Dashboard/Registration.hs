@@ -40,11 +40,11 @@ type API =
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
              :> Post '[JSON] DReg.LoginRes
+           :<|> "fleet"
+             :> "register"
+             :> ReqBody '[JSON] DReg.FleetRegisterReq
+             :> Post '[JSON] APISuccess
        )
-    :> "fleet"
-    :> "register"
-    :> ReqBody '[JSON] DReg.FleetRegisterReq
-    :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
@@ -53,8 +53,8 @@ handler =
       :<|> logoutAllMerchants
       :<|> enable2fa
       :<|> switchMerchant
+      :<|> registerFleetOwner
   )
-    :<|> registerFleetOwner
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login
