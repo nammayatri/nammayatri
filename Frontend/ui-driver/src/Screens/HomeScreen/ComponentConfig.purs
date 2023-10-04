@@ -17,7 +17,7 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
 
-import Common.Types.App (LazyCheck(..), YoutubeData)
+import Common.Types.App (LazyCheck(..), YoutubeData, PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
@@ -57,6 +57,7 @@ import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
+import Font.Style (Style (..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -645,11 +646,13 @@ getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
 
-mapRouteConfig :: String -> String -> JB.MapRouteConfig
-mapRouteConfig srcIcon destIcon = {
+mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
+mapRouteConfig srcIcon destIcon isAnim animConfig= {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
+  , isAnimation : isAnim 
+  , polylineAnimationConfig : animConfig
 }
 
 requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config

@@ -93,6 +93,7 @@ import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
+import Constants.Configs
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) refreshFlow = do
@@ -741,7 +742,7 @@ homeScreenFlow = do
       void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                           {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
-      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
+      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
@@ -931,7 +932,7 @@ homeScreenFlow = do
             srcMarker = (Remote.normalRoute "").srcMarker
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
-          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
           Nothing -> pure unit
         homeScreenFlow
     GET_SELECT_LIST state -> do
@@ -971,7 +972,7 @@ homeScreenFlow = do
           let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
               destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
           _ <- pure $ spy "INSIDE IF OF ONGOING" state.props.currentStage
-          _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+          _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig) 
           homeScreenFlow
         else if state.props.currentStage == HomeScreen then
           do
@@ -1038,7 +1039,7 @@ homeScreenFlow = do
                                       let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
                                           destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
                                       _ <- pure $ metaLogEvent "ny_user_ride_completed"
-                                      _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+                                      _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
                                       _ <- updateLocalStage HomeScreen
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
@@ -1490,7 +1491,7 @@ rideSearchFlow flowType = do
             _        -> do
               let sourceSpecialTagIcon = specialLocationIcons finalState.props.zoneType.sourceTag
                   destSpecialTagIcon = specialLocationIcons finalState.props.zoneType.destinationTag
-              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress finalState.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress finalState.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
               case rideSearchRes.routeInfo of
                 Just (Route response) -> do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
@@ -2119,7 +2120,7 @@ drawDottedRoute state = do
       srcLng = state.data.driverInfoCardState.driverLng
       destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
       destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "")
+  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true

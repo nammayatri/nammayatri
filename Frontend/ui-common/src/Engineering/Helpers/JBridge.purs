@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData)
+import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, PolylineAnimationConfig)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -376,6 +376,8 @@ type MapRouteConfig = {
     sourceSpecialTagIcon :: String
   , destSpecialTagIcon :: String
   , vehicleSizeTagIcon :: Int
+  , isAnimation :: Boolean
+  , polylineAnimationConfig :: PolylineAnimationConfig
 }
 
 type Coordinates = Array Paths
