@@ -459,9 +459,29 @@ findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driver
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
+createMapping :: MonadFlow m => Text -> Text -> m ()
+createMapping bookingId rideId = do
+  mappings <- QLM.findByEntityId bookingId
+  let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+      toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+  fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+
+  when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+  let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
+  toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+
+  void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMapping
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
+    when (null mappings) $ do
+      void $ findById (Id bookingId)
+      createMapping bookingId id
+
     let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
         toLocationMappings = filter (\loc -> loc.order /= 0) mappings
 
