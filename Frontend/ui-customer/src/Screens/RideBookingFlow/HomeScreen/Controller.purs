@@ -1875,6 +1875,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
     updateAndExit (updatedState) (GetQuotes updatedState)
 
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.NoAction)) state =
+  continue state{ props{ defaultPickUpPoint = "" } }
+
 eval MapReadyAction state = continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
