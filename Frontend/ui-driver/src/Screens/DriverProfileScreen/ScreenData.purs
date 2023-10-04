@@ -191,6 +191,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , mediaUrl              : Nothing
     , aadhaarCardPhoto      : Nothing 
     , freeTrialDaysLeft     : Nothing
+    , maskedDeviceToken     : Nothing
 }
 
 organizationInfo :: OrganizationInfo

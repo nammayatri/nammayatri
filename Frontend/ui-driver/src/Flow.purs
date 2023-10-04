@@ -59,7 +59,7 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams, setFCMTokenWithTimeOut)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -354,6 +354,9 @@ getDriverInfoFlow = do
 
       let dbClientVersion = getDriverInfoResp.clientVersion
       let dbBundleVersion = getDriverInfoResp.bundleVersion
+      let maskedDeviceToken = getDriverInfoResp.maskedDeviceToken
+      when (any (_ == maskedDeviceToken) [Just "__f...led", Just "..."]) do
+        void $ liftFlowBT $ launchAff $ flowRunner defaultGlobalState $ do void $ runExceptT $ runBackT $ checkAndUpdateToken 5
       updateDriverVersion dbClientVersion dbBundleVersion
       if getDriverInfoResp.enabled then do
         if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
@@ -414,7 +417,6 @@ getDriverInfoFlow = do
                 else do
                 onBoardingFlow
 
-
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -450,6 +452,19 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
       pure unit
     else pure unit
   else pure unit
+
+data FCMToken = FCMToken String
+checkAndUpdateToken :: Int -> FlowBT String Unit
+checkAndUpdateToken count = do
+    if count > 0 then do
+      (FCMToken newToken) <- lift $ lift $ doAff $ makeAff \cb -> setFCMTokenWithTimeOut 5000 (cb <<< Right) FCMToken $> nonCanceler
+      if newToken == "NOT_FOUND" then checkAndUpdateToken (count - 1)
+          else do 
+              let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+                  requiredData = initialData{deviceToken = Just newToken}
+              void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
+    else pure unit
+
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do

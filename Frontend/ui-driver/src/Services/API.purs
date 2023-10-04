@@ -404,6 +404,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , autoPayStatus         :: Maybe String  
     , aadhaarCardPhoto      :: Maybe String
     , freeTrialDaysLeft     :: Maybe Int
+    , maskedDeviceToken     :: Maybe String
     }
 
 
