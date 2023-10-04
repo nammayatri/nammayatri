@@ -58,6 +58,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
+import Tools.Error (AadhaarError (AadhaarNotVerified))
 import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import Tools.Metrics
@@ -169,6 +170,8 @@ rentalSearch ::
   DRentalSearch.RentalSearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 rentalSearch personId bundleVersion clientVersion device req = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  unless person.aadhaarVerified $ throwError AadhaarNotVerified
   dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion device req
   fork "search rental" . withShortRetry $ do
     -- do we need fork here?
