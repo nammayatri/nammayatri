@@ -75,6 +75,8 @@ import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipV
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1016,11 +1018,15 @@ specialLocationIcons tag =
     METRO -> "ny_ic_metro_black"
     _     -> ""
 
-specialLocationConfig :: String -> String -> JB.MapRouteConfig
-specialLocationConfig srcIcon destIcon = {
+
+
+specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
+specialLocationConfig srcIcon destIcon isAnim animConfig = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (HU.getVehicleSize unit)
+  , isAnimation : isAnim
+  , polylineAnimationConfig : animConfig
 }
 
 updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker

@@ -92,7 +92,7 @@ import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Effect.Uncurried (runEffectFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
-
+import Constants.Configs 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1971,9 +1971,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
               destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
-                                      specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon
+                                      specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon true getPolylineAnimationConfig
                                     else
-                                      specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon
+                                      specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
             if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
               _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
               _ <- pure $ removeAllPolylines ""
@@ -2012,9 +2012,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                       if locationResp.isInPath then do
                         let newPoints = { points : locationResp.points}
                         let specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
-                                                    specialLocationConfig "" sourceSpecialTagIcon
+                                                    specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                   else
-                                                    specialLocationConfig "" destSpecialTagIcon
+                                                    specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                         liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) markers.srcMarker specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                         void $ delay $ Milliseconds duration

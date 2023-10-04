@@ -345,3 +345,10 @@ type ModifiedCalendarObject = {
   startDate :: Maybe CalendarModalDateObject,
   endDate :: Maybe CalendarModalDateObject
 }
+
+type PolylineAnimationConfig = {
+    color :: String 
+  , draw :: Int
+  , fade :: Int
+  , delay ::Int
+}

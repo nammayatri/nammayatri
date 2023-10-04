@@ -8,6 +8,9 @@ import static android.content.Context.MODE_PRIVATE;
 
 import android.Manifest;
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -68,6 +71,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AccelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
@@ -218,6 +223,12 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
+    protected Polyline overlayPolylines = null;
+    protected AnimatorSet polylineAnimatorSet = null;
+    protected ValueAnimator polylineColorFadingAnimator = null;
+    protected ValueAnimator polylineDrawingAnimator = null;
+    protected boolean isAnimationNeeded = false;
+
     protected  Receivers receivers;
     private ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener;
     protected int animationDuration = 400;
@@ -856,6 +867,88 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject){
+        try{
+            isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
+            if(!isAnimationNeeded){
+                if (polylineAnimatorSet != null) {
+                    polylineAnimatorSet.cancel();
+                }
+                polyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth);
+                return ;
+            }
+            JSONObject polylineAnimationConfigObject = mapRouteConfigObject.optJSONObject("polylineAnimationConfig");
+            if(polylineAnimationConfigObject == null){
+                polylineAnimationConfigObject = new JSONObject();
+            }
+            int animateColor = Color.parseColor(polylineAnimationConfigObject.optString("color", "#D1D5DB"));
+            polyline = setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth);
+            PolylineOptions overlayPolylineOptions = new PolylineOptions();
+            overlayPolylines = setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth);
+            int drawDuration = polylineAnimationConfigObject.optInt("draw", 700);
+            int fadeDuration = polylineAnimationConfigObject.optInt("fade", 1000);
+            int delayDuration = polylineAnimationConfigObject.optInt("delay", 200);
+
+            polylineAnimatorSet =  new AnimatorSet();
+
+            polylineDrawingAnimator = ValueAnimator.ofInt(0, 100);
+            polylineDrawingAnimator.setDuration(drawDuration);
+            polylineDrawingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+
+            try{
+                polylineDrawingAnimator.addUpdateListener(animation -> {
+                    if(polyline != null){
+                        List<LatLng> foregroundPoints = polyline.getPoints();
+                        Collections.reverse(foregroundPoints);
+                        int percentageValue = (int) animation.getAnimatedValue();
+                        int pointCount = foregroundPoints.size();
+                        int countToBeRemoved = (int) (pointCount * (percentageValue / 100.0f));
+                        List<LatLng> subListToBeRemoved = foregroundPoints.subList(0, countToBeRemoved);
+                        subListToBeRemoved.clear();
+                        polyline.setColor(animateColor);
+                        if(overlayPolylines != null){
+                            overlayPolylines.setColor(staticColor);
+                            overlayPolylines.setPoints(foregroundPoints);
+                        }
+                    }
+                });
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
+
+            polylineColorFadingAnimator = ValueAnimator.ofObject(new ArgbEvaluator(), animateColor, staticColor);
+            polylineColorFadingAnimator.setInterpolator(new AccelerateInterpolator());
+            polylineColorFadingAnimator.setDuration(fadeDuration);
+
+            try {
+                polylineColorFadingAnimator.addUpdateListener(animator ->  {
+                    if(polyline != null)
+                        polyline.setColor((int) animator.getAnimatedValue());
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            polylineAnimatorSet.playSequentially(polylineDrawingAnimator, polylineColorFadingAnimator);
+            polylineAnimatorSet.setStartDelay(delayDuration);
+            try{
+                polylineAnimatorSet.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        if(isAnimationNeeded)
+                            polylineAnimatorSet.start();
+                    }
+                });
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            polylineAnimatorSet.start();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
     @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
@@ -863,7 +956,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 PolylineOptions polylineOptions = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
                 try {
-                    System.out.println("inside_drawRoute_try");
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
                     JSONObject mapRouteConfigObject = new JSONObject(mapRouteConfig);
@@ -901,7 +993,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     String sourceSpecialTagIcon = mapRouteConfigObject.getString("sourceSpecialTagIcon");
                     String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
 
-                    polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
+                    checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject);
+
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
@@ -1064,9 +1157,17 @@ public class MobilityCommonBridge extends HyperBridge {
             removeMarker("ny_ic_vehicle_nav_on_map");
             removeMarker("ny_ic_src_marker");
             removeMarker("ny_ic_dest_marker");
+            isAnimationNeeded = false;
+            if (polylineAnimatorSet != null) {
+                polylineAnimatorSet.cancel();
+            }
             if (polyline != null) {
                 polyline.remove();
                 polyline = null;
+            }
+            if (overlayPolylines != null) {
+                overlayPolylines.remove();
+                overlayPolylines = null;
             }
         });
     }

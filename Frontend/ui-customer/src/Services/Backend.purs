@@ -732,7 +732,7 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
                       pure route
                     else do
                       lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
-                      pure route
+                      pure route 
                 Nothing -> pure route
 
 type Markers = {

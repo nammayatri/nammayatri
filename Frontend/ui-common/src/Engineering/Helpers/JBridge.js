@@ -569,19 +569,23 @@ export const drawRoute = function (data) {
               return function (type) {
                 return function (sourceName) {
                   return function (destinationName) {
-                    return function (specialLocation) {
+                    return function (mapRouteConfig) {
                       return function () {
                         console.log("I AM HERE ------------------ IN DRAW ROUTE");
-                        try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(specialLocation));
-                        } catch (err) {
-                          console.log("Catch error" + err);
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
+                          
+                        try{
+                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
+                        }catch(err){
+                          /*
+                          * This Function is deprecated on 10 Jul- 2023
+                          * Remove this function once it is not begin used.
+                          */
+                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);   
                         }
-                      };
-                    }
-                  }
-                }
+                      }
+                    };
+                  };
+                };
               };
             };
           };

@@ -7,6 +7,8 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
@@ -360,6 +362,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             LatLng destination = destMarker.getPosition();
                             animateMarkerNew(src, destination, currMarker);
                             polyline.remove();
+                            if(overlayPolylines != null)
+                                overlayPolylines.remove();
+                            if(polylineAnimatorSet != null){
+                                polylineAnimatorSet.cancel();
+                            }
                             polyline = null;
                             currMarker.setAnchor(0.5f, 0);
                             animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, 17.0f, ZoomType.ZOOM);
