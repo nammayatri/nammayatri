@@ -243,6 +243,7 @@ onVerifyRC verificationReq output = do
     && compareRegistrationDates output.registration_date verificationReq.issueDateOnDoc
     then IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
     else do
+      when (isNothing output.registration_number) $ throwError (InvalidRequest "Can't verify invalid RC!")
       now <- getCurrentTime
       id <- generateGUID
       rCConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))

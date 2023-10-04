@@ -686,7 +686,7 @@ addVehicle merchantShortId reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
-  void $ try @_ @SomeException (runVerifyRCFlow personId merchant req) -- ignore if throws error
+  runVerifyRCFlow personId merchant req
   checkIfVehicleCreatedInRC <- QVehicle.findById personId
   unless (isJust checkIfVehicleCreatedInRC) $ do
     vehicle <- buildVehicle merchantId personId req
