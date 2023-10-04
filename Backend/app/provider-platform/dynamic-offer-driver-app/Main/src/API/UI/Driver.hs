@@ -81,6 +81,10 @@ type API =
              :> MandatoryQueryParam "active" Bool
              :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
+             :<|> "optForRental"
+               :> TokenAuth
+               :> MandatoryQueryParam "active" Bool
+               :> Post '[JSON] APISuccess
              :<|> "goHome"
                :> ( "activate" :> TokenAuth
                       :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
@@ -195,6 +199,7 @@ handler =
       :<|> deleteDriver
   )
     :<|> ( setActivity
+             :<|> optForRentalFeature
              :<|> ( activateGoHomeFeature
                       :<|> deactivateGoHomeFeature
                       :<|> addHomeLocation
@@ -221,6 +226,9 @@ handler =
              :<|> getDriverPaymentsHistoryV2
              :<|> getDriverPaymentsHistoryEntityDetailsV2
          )
+
+optForRentalFeature :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> FlowHandler APISuccess
+optForRentalFeature (personId, driverId) isActive = withFlowHandlerAPI $ DDriver.updateOptForRentalFeature (personId, driverId) isActive
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
 createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
