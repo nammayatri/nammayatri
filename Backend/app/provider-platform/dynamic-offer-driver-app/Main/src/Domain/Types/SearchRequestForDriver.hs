@@ -22,6 +22,7 @@ import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -92,8 +93,10 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
-    fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location, -- we need to show all requests or last one ?
+    fromLocation :: DSSL.SearchReqLocation,
+    toLocation :: DSSL.SearchReqLocation,
+    newFromLocation :: DLoc.Location,
+    newToLocation :: DLoc.Location, -- we need to show all requests or last one ?
     distance :: Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
@@ -120,8 +123,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       durationToPickup = nearbyReq.durationToPickup,
       baseFare = searchTry.baseFare,
       customerExtraFee = searchTry.customerExtraFee,
-      fromLocation = searchRequest.fromLocation,
-      toLocation = searchRequest.toLocation,
+      fromLocation = convertDomainType searchRequest.fromLocation,
+      toLocation = convertDomainType searchRequest.toLocation,
+      newFromLocation = searchRequest.fromLocation,
+      newToLocation = searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,
       driverLatLong =
         LatLong
@@ -135,5 +140,21 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
+      ..
+    }
+
+convertDomainType :: DLoc.Location -> DSSL.SearchReqLocation
+convertDomainType DLoc.Location {..} =
+  DSSL.SearchReqLocation
+    { id = cast id,
+      street = address.street,
+      door = address.door,
+      city = address.city,
+      state = address.state,
+      country = address.country,
+      building = address.building,
+      areaCode = address.areaCode,
+      area = address.area,
+      full_address = address.fullAddress,
       ..
     }

@@ -321,13 +321,34 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
+createMapping :: MonadFlow m => Text -> Text -> m ()
+createMapping bookingId rideId = do
+  mappings <- QLM.findByEntityId bookingId
+  let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+      toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+  fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
+  QLM.create fromLocationRideMapping
+
+  unless (null toLocationMappings) $ do
+    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+    toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+    QLM.create toLocationRideMapping
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
+    when (null mappings) $ do
+      void $ findById (Id bookingId)
+      createMapping bookingId id
+
     let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
         toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-    when (null fromLocationMapping) $ throwError (InternalError "Entity Mappings Not Found")
-    let fromLocMap = head fromLocationMapping
+
+    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+
     fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
     toLocation <-
       if null toLocationMappings
