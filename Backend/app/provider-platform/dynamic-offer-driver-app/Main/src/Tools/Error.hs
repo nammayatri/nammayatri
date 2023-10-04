@@ -762,3 +762,25 @@ instance IsHTTPError FleetErrors where
     FleetOwnerVehicleMismatchError _ -> E400
 
 instance IsAPIError FleetErrors
+
+data OverlayError
+  = OverlayKeyAndUdfNotFound Text
+  | OverlayKeyAndUdfAlreadyPresent Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OverlayError
+
+instance IsBaseError OverlayError where
+  toMessage = \case
+    OverlayKeyAndUdfNotFound overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" not found. "
+    OverlayKeyAndUdfAlreadyPresent overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" already present."
+
+instance IsHTTPError OverlayError where
+  toErrorCode = \case
+    OverlayKeyAndUdfNotFound _ -> "OVERLAY_KEY_AND_UDF_NOT_FOUND"
+    OverlayKeyAndUdfAlreadyPresent _ -> "OVERLAY_KEY_AND_UDF_ALREADY_PRESENT"
+  toHttpCode = \case
+    OverlayKeyAndUdfNotFound _ -> E400
+    OverlayKeyAndUdfAlreadyPresent _ -> E400
+
+instance IsAPIError OverlayError
