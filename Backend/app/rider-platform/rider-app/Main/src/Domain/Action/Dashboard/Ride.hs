@@ -37,6 +37,7 @@ import Domain.Types.CancellationReason
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -212,6 +213,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
   let rdList = map (makeRequiredRideDetail personId) (zip3 lastNRides ridesDetail lastNBookingStatus)
   return Common.TicketRideListRes {rides = rdList}
   where
+    makeRequiredRideDetail :: Id DP.Person -> (DRide.Ride, Common.RideInfoRes, Common.BookingStatus) -> Common.RideInfo
     makeRequiredRideDetail personId (ride, detail, bookingStatus) =
       Common.RideInfo
         { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
@@ -222,8 +224,24 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           vehicleNo = detail.vehicleNo,
           status = bookingStatus,
           rideCreatedAt = ride.createdAt,
-          pickupLocation = detail.customerPickupLocation,
-          dropLocation = detail.customerDropLocation,
+          pickupLocationLat = Just detail.customerPickupLocation.lat,
+          pickupLocationLon = Just detail.customerPickupLocation.lon,
+          pickupLocationStreet = detail.customerPickupLocation.address.street,
+          pickupLocationCity = detail.customerPickupLocation.address.city,
+          pickupLocationState = detail.customerPickupLocation.address.state,
+          pickupLocationCountry = detail.customerPickupLocation.address.country,
+          pickupLocationBuilding = detail.customerPickupLocation.address.building,
+          pickupLocationAreaCode = detail.customerPickupLocation.address.areaCode,
+          pickupLocationArea = detail.customerPickupLocation.address.area,
+          dropLocationLat = (.lat) <$> detail.customerDropLocation,
+          dropLocationLon = (.lon) <$> detail.customerDropLocation,
+          dropLocationStreet = (.address.street) =<< detail.customerDropLocation,
+          dropLocationCity = (.address.city) =<< detail.customerDropLocation,
+          dropLocationState = (.address.state) =<< detail.customerDropLocation,
+          dropLocationCountry = (.address.country) =<< detail.customerDropLocation,
+          dropLocationBuilding = (.address.building) =<< detail.customerDropLocation,
+          dropLocationAreaCode = (.address.areaCode) =<< detail.customerDropLocation,
+          dropLocationArea = (.address.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
           personId = cast personId,
           classification = Ticket.CUSTOMER
