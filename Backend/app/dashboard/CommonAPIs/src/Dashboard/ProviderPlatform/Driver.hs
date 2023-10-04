@@ -697,6 +697,67 @@ data VehicleAPIEntity = VehicleAPIEntity
 
 ---------------------------------------------------------
 
+-- unlink vehicle ---------------------------------------
+
+type FleetUnlinkVehicleAPI =
+  Capture "vehicleNo" Text
+    :> QueryParam "countryCode" Text
+    :> Capture "driverMobileNo" Text
+    :> "unlink"
+    :> "fleet"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- remove fleet vehicle ---------------------------------------
+
+type FleetRemoveVehicleAPI =
+  Capture "vehicleNo" Text
+    :> "remove"
+    :> "fleet"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- fleet driver stats ---------------------------------------
+
+type FleetStatsAPI =
+  "stats"
+    :> "fleet"
+    :> Get '[JSON] FleetStatsRes
+
+data FleetStatsRes = FleetStatsRes
+  { vehiclesInFleet :: Int,
+    totalRidesCompleted :: Int,
+    totalEarnings :: HighPrecMoney,
+    totalConversionPer :: Double,
+    totalAcceptancePer :: Double,
+    totalCancellationPer :: Double,
+    vehicleStats :: [FleetVehicleStatsListItem]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data Vehicle
+
+data DriverMode
+  = ONLINE
+  | OFFLINE
+  | SILENT
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable DriverMode
+
+data FleetVehicleStatsListItem = FleetVehicleStatsListItem
+  { vehicleRegNo :: Text,
+    driverName :: Text,
+    status :: Maybe DriverMode,
+    vehicleType :: Variant,
+    totalRides :: Maybe Int,
+    earnings :: Maybe Money,
+    rating :: Maybe Centesimal,
+    ridesAssigned :: Maybe Int,
+    ridesCancelled :: Maybe Int
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+---------------------------------------------------------
 -- update driver name -----------------------------------
 
 type UpdateDriverNameAPI =

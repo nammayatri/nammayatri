@@ -57,6 +57,6 @@ instance B.Table VehicleT where
 
 type Vehicle = VehicleT Identity
 
-$(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
+$(enableKVPG ''VehicleT ['driverId] [['registrationNo], ['fleetOwnerId]])
 
 $(mkTableInstances ''VehicleT "vehicle")
