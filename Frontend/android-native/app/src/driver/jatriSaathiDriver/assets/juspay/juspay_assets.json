@@ -282,6 +282,7 @@
       "ny_ic_location_access" : true,
       "ny_ic_location_track" : true,
       "ny_ic_location_unserviceable" : true,
+      "ny_ic_locomotor_arrival" : true,
       "ny_ic_locomotor_pickup" : true,
       "ny_ic_logout_grey" : true,
       "ny_ic_media" : true,
