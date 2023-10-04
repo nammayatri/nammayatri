@@ -26,7 +26,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -66,8 +65,6 @@ import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
   ( EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     TranslateFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasSendSearchRequestToDriverMetrics m r,
@@ -143,9 +140,7 @@ cancelRideImpl rideId bookingCReason = do
 cancelRideTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r
+    Esq.EsqDBReplicaFlow m r
   ) =>
   Id SRB.Booking ->
   DRide.Ride ->
@@ -163,8 +158,6 @@ cancelRideTransaction bookingId ride bookingCReason _merchantId = do
 
 repeatSearch ::
   ( EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     TranslateFlow m r,
     Esq.EsqDBReplicaFlow m r,

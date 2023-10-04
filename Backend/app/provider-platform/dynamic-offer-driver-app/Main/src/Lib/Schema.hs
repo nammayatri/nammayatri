@@ -11,6 +11,3 @@ import System.IO.Unsafe (unsafePerformIO)
 
 appCfg :: AppCfg
 appCfg = unsafePerformIO $ readDhallConfigDefault "dynamic-offer-driver-app"
-
-getLocationSchemaName :: Text
-getLocationSchemaName = appCfg.esqLocationDBCfg.connectSchemaName

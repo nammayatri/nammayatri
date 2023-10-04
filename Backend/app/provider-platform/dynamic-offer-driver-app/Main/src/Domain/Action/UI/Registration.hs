@@ -38,7 +38,7 @@ import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -115,7 +115,6 @@ auth ::
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
     EncFlow m r
   ) =>
   Bool ->
@@ -279,7 +278,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   _ <- QP.create person

@@ -19,7 +19,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.Dr
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLocation as DriverLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpReq as AadhaarOtpReq
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpVerify as AadhaarOtpVerify
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarVerification as AadhaarVerification
@@ -100,7 +99,6 @@ data DeleteModel
   | DriverBlockReasonDelete
   | DriverFeeDelete
   | DriverInformationDelete
-  | DriverLocationDelete
   | AadhaarOtpReqDelete
   | AadhaarOtpVerifyDelete
   | AadhaarVerificationDelete
@@ -183,7 +181,6 @@ getTagDelete DriverFlowStatusDelete = "DriverFlowStatusOptions"
 getTagDelete DriverBlockReasonDelete = "DriverBlockReasonOptions"
 getTagDelete DriverFeeDelete = "DriverFeeOptions"
 getTagDelete DriverInformationDelete = "DriverInformationOptions"
-getTagDelete DriverLocationDelete = "DriverLocationOptions"
 getTagDelete AadhaarOtpReqDelete = "AadhaarOtpReqOptions"
 getTagDelete AadhaarOtpVerifyDelete = "AadhaarOtpVerifyOptions"
 getTagDelete AadhaarVerificationDelete = "AadhaarVerificationOptions"
@@ -263,7 +260,6 @@ parseTagDelete "CancellationReasonOptions" = return CancellationReasonDelete
 parseTagDelete "DriverFlowStatusOptions" = return DriverFlowStatusDelete
 parseTagDelete "DriverFeeOptions" = return DriverFeeDelete
 parseTagDelete "DriverInformationOptions" = return DriverInformationDelete
-parseTagDelete "DriverLocationOptions" = return DriverLocationDelete
 parseTagDelete "AadhaarOtpReqOptions" = return AadhaarOtpReqDelete
 parseTagDelete "AadhaarOtpVerifyOptions" = return AadhaarOtpVerifyDelete
 parseTagDelete "AadhaarVerificationOptions" = return AadhaarVerificationDelete
@@ -345,7 +341,6 @@ data DBDeleteObject
   | DriverBlockReasonDeleteOptions DeleteModel (Where Postgres DriverBlockReason.DriverBlockReasonT)
   | DriverFeeDeleteOptions DeleteModel (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationDeleteOptions DeleteModel (Where Postgres DriverInformation.DriverInformationT)
-  | DriverLocationDeleteOptions DeleteModel (Where Postgres DriverLocation.DriverLocationT)
   | AadhaarOtpReqDeleteOptions DeleteModel (Where Postgres AadhaarOtpReq.AadhaarOtpReqT)
   | AadhaarOtpVerifyDeleteOptions DeleteModel (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationDeleteOptions DeleteModel (Where Postgres AadhaarVerification.AadhaarVerificationT)
@@ -456,9 +451,6 @@ instance FromJSON DBDeleteObject where
       DriverInformationDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverInformationDeleteOptions deleteModel whereClause
-      DriverLocationDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ DriverLocationDeleteOptions deleteModel whereClause
       AadhaarOtpReqDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ AadhaarOtpReqDeleteOptions deleteModel whereClause

@@ -24,18 +24,6 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
-let esqLocationDBCfg = esqDBCfg
-
-let esqLocationDBRepCfg =
-      { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5454
-      , connectUser = esqLocationDBCfg.connectUser
-      , connectPassword = esqLocationDBCfg.connectPassword
-      , connectDatabase = esqLocationDBCfg.connectDatabase
-      , connectSchemaName = esqLocationDBCfg.connectSchemaName
-      , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
-      }
-
 let clickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
@@ -198,8 +186,6 @@ let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , esqLocationDBCfg
-    , esqLocationDBRepCfg
     , clickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
