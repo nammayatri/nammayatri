@@ -2,9 +2,7 @@ let globalCommon = ../generic/common.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
-in  { esqLocationDBCfg = appCfg.esqLocationDBCfg
-    , esqLocationDBRepCfg = appCfg.esqLocationDBRepCfg
-    , driverAllowedDelayForLocationUpdateInSec = +60
+in  { driverAllowedDelayForLocationUpdateInSec = +60
     , driverLocationHealthCheckIntervalInSec = +120
     , driverAppName = "dynamic-offer-driver-app"
     , notificationMinDelay = +50000

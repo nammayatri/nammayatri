@@ -16,7 +16,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.Dr
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLocation as DriverLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpReq as AadhaarOtpReq
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpVerify as AadhaarOtpVerify
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarVerification as AadhaarVerification
@@ -97,7 +96,6 @@ data DBCreateObject
   | DriverBlockReasonObject DriverBlockReason.DriverBlockReason
   | DriverFeeObject DriverFee.DriverFee
   | DriverInformationObject DriverInformation.DriverInformation
-  | DriverLocationObject DriverLocation.DriverLocation
   | AadhaarOtpReqObject AadhaarOtpReq.AadhaarOtpReq
   | AadhaarOtpVerifyObject AadhaarOtpVerify.AadhaarOtpVerify
   | AadhaarVerificationObject AadhaarVerification.AadhaarVerification
@@ -185,7 +183,6 @@ modelName (DriverFlowStatusObject _) = "DriverFlowStatus"
 modelName (DriverBlockReasonObject _) = "DriverBlockReason"
 modelName (DriverFeeObject _) = "DriverFee"
 modelName (DriverInformationObject _) = "DriverInformation"
-modelName (DriverLocationObject _) = "DriverLocation"
 modelName (AadhaarOtpReqObject _) = "AadhaarOtpReq"
 modelName (AadhaarOtpVerifyObject _) = "AadhaarOtpVerify"
 modelName (AadhaarVerificationObject _) = "AadhaarVerification"

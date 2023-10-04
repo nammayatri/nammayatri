@@ -76,9 +76,7 @@ runDynamicOfferDriverApp' appCfg = do
             ConnectionConfigDriver
               { esqDBCfg = appCfg.esqDBCfg,
                 esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = appCfg.hedisClusterCfg,
-                locationDbCfg = appCfg.esqLocationDBCfg,
-                locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
+                hedisClusterCfg = appCfg.hedisClusterCfg
               }
             appCfg.tables
         )

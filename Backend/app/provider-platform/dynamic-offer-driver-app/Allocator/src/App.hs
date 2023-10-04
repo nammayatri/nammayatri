@@ -81,9 +81,7 @@ runDriverOfferAllocator configModifier = do
           ConnectionConfigDriver
             { esqDBCfg = handlerCfg.appCfg.esqDBCfg,
               esqDBReplicaCfg = handlerCfg.appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg,
-              locationDbCfg = handlerCfg.appCfg.esqLocationDBCfg,
-              locationDbReplicaCfg = handlerCfg.appCfg.esqLocationDBRepCfg
+              hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg
             }
           handlerCfg.appCfg.tables
       )

@@ -35,7 +35,6 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -69,7 +68,6 @@ data DashboardMessageType = BOOKING | ENDRIDE | ONBOARDING | CASH_COLLECTED deri
 sendDashboardSms ::
   ( EsqDBReplicaFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqLocDBFlow m r,
     ServiceFlow m r
   ) =>
   Id Merchant ->

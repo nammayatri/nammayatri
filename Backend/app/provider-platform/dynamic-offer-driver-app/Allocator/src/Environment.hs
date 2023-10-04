@@ -59,8 +59,6 @@ data HandlerEnv = HandlerEnv
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    esqLocationDBEnv :: EsqDBEnv,
-    esqLocationDBRepEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
@@ -93,8 +91,6 @@ buildHandlerEnv HandlerCfg {..} = do
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
-  esqLocationDBEnv <- prepareEsqDBEnv appCfg.esqLocationDBCfg loggerEnv
-  esqLocationDBRepEnv <- prepareEsqDBEnv appCfg.esqLocationDBRepCfg loggerEnv
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   hedisClusterEnv <-

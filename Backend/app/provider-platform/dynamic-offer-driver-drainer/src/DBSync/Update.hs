@@ -96,7 +96,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (DriverBlockReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverBlockReason" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverFeeOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverFee" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverInformationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverInformation" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (DriverLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverLocation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarOtpReqOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarOtpReq" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarOtpVerifyOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarOtpVerify" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarVerificationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarVerification" :: Text) =<< dbConf

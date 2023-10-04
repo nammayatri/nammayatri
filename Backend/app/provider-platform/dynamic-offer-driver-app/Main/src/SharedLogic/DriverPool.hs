@@ -65,7 +65,6 @@ import Kernel.Prelude (head)
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -564,7 +563,6 @@ calculateDriverPool ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
@@ -620,7 +618,6 @@ calculateDriverPoolWithActualDist ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     CoreMetrics m,
     HasCoordinates a,
     LT.HasLocationService m r
@@ -651,7 +648,6 @@ calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     HasCoordinates a,
@@ -705,7 +701,6 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m

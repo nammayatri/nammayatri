@@ -29,7 +29,6 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -67,8 +66,6 @@ newtype CancelSearchReq = CancelSearchReq
 cancel ::
   ( EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,
     EncFlow m r,
