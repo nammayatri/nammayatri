@@ -212,7 +212,8 @@ startDBSync = do
   readinessFlag <- EL.runIO newEmptyMVar
   void $ EL.runIO $ installHandler sigINT (Catch $ onSigINT readinessFlag) Nothing
   void $ EL.runIO $ installHandler sigTERM (Catch $ onSigTERM readinessFlag) Nothing
-
+  threadPerPodCount <- EL.runIO Env.getThreadPerPodCount
+  EL.logInfo ("Number for threads running per pod: " <> show threadPerPodCount :: Text) (show threadPerPodCount)
   eitherConfig <- getDBSyncConfig
   syncConfig <- case eitherConfig of
     Right c -> pure c
@@ -254,7 +255,7 @@ startDBSync = do
           case dbStreamKey of
             Nothing -> pure history
             Just streamName -> do
-              EL.logDebug ("Stream name is: " :: Text) streamName
+              EL.logDebug ("Stream name is: " <> show streamName :: Text) streamName
               history' <-
                 try (process streamName (_streamReadCount config)) >>= \case
                   Left (ex :: SomeException) -> do
