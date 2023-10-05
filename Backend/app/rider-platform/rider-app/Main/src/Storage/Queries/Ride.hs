@@ -104,9 +104,6 @@ findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 findByBPPRideId :: MonadFlow m => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
-findAllCompletedRides :: MonadFlow m => m [Ride]
-findAllCompletedRides = findAllWithKV [Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]
-
 updateMultiple :: MonadFlow m => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
