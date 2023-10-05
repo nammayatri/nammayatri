@@ -153,13 +153,6 @@ getDriverInformations driverLocations =
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
 
-getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive _before = do
-  -- driverLocations <- QueriesDL.getDriverLocations before
-  -- driverInfos <- getDriverInformations driverLocations
-  -- getDriversList driverInfos
-  pure []
-
 data FullDriver = FullDriver
   { person :: Person,
     location :: DriverLocation,
