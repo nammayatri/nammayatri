@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
+import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
@@ -221,7 +222,8 @@ startDBSync = do
   readinessFlag <- EL.runIO newEmptyMVar
   void $ EL.runIO $ installHandler sigINT (Catch $ onSigINT readinessFlag) Nothing
   void $ EL.runIO $ installHandler sigTERM (Catch $ onSigTERM readinessFlag) Nothing
-
+  threadPerPodCount <- runIO Env.getThreadPerPodCount
+  EL.logInfo ("Number for threads running per pod: " <> show threadPerPodCount :: Text) (show threadPerPodCount)
   eitherConfig <- getDBSyncConfig
   syncConfig <- case eitherConfig of
     Right c -> pure c
@@ -263,7 +265,7 @@ startDBSync = do
           case dbStreamKey of
             Nothing -> pure history
             Just streamName -> do
-              EL.logDebug ("Stream name is: " :: Text) streamName
+              EL.logDebug ("Stream name is: " <> show streamName :: Text) streamName
               history' <-
                 try (process streamName (_streamReadCount config)) >>= \case
                   Left (ex :: SomeException) -> do
