@@ -767,9 +767,8 @@ type HomeScreenData =  {
   paymentState :: PaymentState,
   profileImg :: Maybe String, 
   endRideData :: EndRideData,
-  config :: AppConfig,
-  totalPendingManualDues :: Number
- }
+  config :: AppConfig
+}
 
 type EndRideData = {
     rideId :: String,
@@ -780,7 +779,6 @@ type EndRideData = {
     rating :: Int,
     feedback :: String,
     disability :: Maybe String,
-    hasActiveAutoPay :: Boolean,
     payerVpa :: String
   }
 type PaymentState = {
@@ -805,7 +803,13 @@ type PaymentState = {
   blockedDueToPayment :: Boolean,
   dateObj :: String,
   laterButtonVisibility :: Boolean,
-  orderId :: String
+  orderId :: String,
+  subscribed :: Boolean,
+  showShimmer :: Boolean,
+  driverBlocked :: Boolean,
+  showBlockingPopup :: Boolean,
+  totalPendingManualDues :: Number,
+  autoPayStatus :: AutoPayStatus
 }
 
 type CancelRidePopUpData = {
@@ -910,20 +914,14 @@ type HomeScreenProps =  {
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,
   autoPayBanner :: SubscriptionBannerType,
+  subscriptionPopupType :: SubscriptionPopupType,
   rcActive :: Boolean, 
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
   showRideCompleted :: Boolean,
   showRideRating :: Boolean,
   showContackSupportPopUp :: Boolean,
-  showChatBlockerPopUp :: Boolean,
-  duesAmount :: String,
-  showPaymentPendingBlocker :: Boolean,
-  softPaymentPendingNudge :: Boolean,
-  subscribed :: Boolean,
-  showShimmer :: Boolean,
-  driverBlocked :: Boolean,
-  showBlockingPopup :: Boolean
+  showChatBlockerPopUp :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -933,6 +931,14 @@ instance eqSubscriptionBannerType :: Eq SubscriptionBannerType where eq = generi
 instance showSubscriptionBannerType :: Show SubscriptionBannerType where show = genericShow
 instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where encode = defaultEnumEncode
 instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where decode = defaultEnumDecode
+
+data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP
+
+derive instance genericSubscriptionPopupType :: Generic SubscriptionPopupType _
+instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericEq
+instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = genericShow
+instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
+instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY
 

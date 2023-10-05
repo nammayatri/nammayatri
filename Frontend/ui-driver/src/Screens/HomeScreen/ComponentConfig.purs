@@ -34,6 +34,7 @@ import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Debug (spy)
@@ -51,10 +52,10 @@ import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
-import Screens.Types (SubscriptionBannerType(..))
+import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..))
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
-import Storage (KeyStore(..), getValueToLocalStore, isOnFreeTrial)
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -255,46 +256,37 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     , color = Color.black650
     } 
     , height = V 24
-    , margin = MarginVertical 0 20
+    , margin = MarginBottom 20
     , visibility = true
     , background = Color.white900
     , strokeColor = Color.white900
   }
 }
 
-
-paymentPendingBlockerConfig :: ST.HomeScreenState -> PopUpModal.Config
-paymentPendingBlockerConfig state =
+freeTrialEndingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+freeTrialEndingPopupConfig state = 
+  let autoPayStatus = state.data.paymentState.autoPayStatus
+      noOfDaysLeft = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) 
+  in
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 0 16 5 ,
-    dismissPopup = true,
-    topTitle = Just $ "⚠️  " <> getString PAYMENT_PENDING <>  "  ⚠️",
     primaryText {
-      text = getString PAYMENT_PENDING_ALERT_DESC
-    , margin = Margin 16 16 16 4
-    , textStyle = SubHeading2
-    , color = Color.black700
-    , visibility = VISIBLE },
+      text = case noOfDaysLeft of
+        3 -> getString FREE_TRIAL_ENDING_IN_2_DAYS
+        2 -> getString FREE_TRIAL_ENDING_TOMORROW
+        1 -> getString FREE_TRIAL_ENDS_TONIGHT
+        _ -> ""
+    , margin = Margin 16 16 16 4 },
     secondaryText {
-      text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
-    , textStyle = SubHeading2
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES else getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
     , margin = MarginBottom 24
-    , suffixImage = {
-        visibility : VISIBLE
-        , imageUrl : "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
-        , height : (V 24)
-        , width : (V 24)
-        , margin : MarginLeft 4 
-        , padding : Padding 0 0 0 0
-      }
     },
     option1 {
-      text = getString CLEAR_DUES <> state.props.duesAmount
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
     , background = Color.black900
     , color = Color.yellow900
-    , showShimmer = state.props.showShimmer
     },
     option2 {
       visibility = false
@@ -302,15 +294,20 @@ paymentPendingBlockerConfig state =
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+      imageUrl = case noOfDaysLeft of
+        3 -> "ny_ic_2_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_2_days_left.png"
+        2 -> "ny_ic_1_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_1_days_left.png"
+        1 -> "ny_ic_offer_ends_tonight," <> getAssetStoreLink FunctionCall <> "ny_ic_offer_ends_tonight.png"
+        _ -> ""
     , visibility = VISIBLE
     , height = V 220
     , width = V 280
+    , margin = MarginTop 20
     }
   , optionWithHtml  {
     textOpt1 {
-      text = getString VIEW_DUE_DETAILS
-    , visibility =  VISIBLE
+      text = getString NOT_NOW
+    , visibility = VISIBLE
     , textStyle = FontStyle.SubHeading2
     , color = Color.black650
     } 
@@ -322,16 +319,25 @@ paymentPendingBlockerConfig state =
     }
   }
 
-softPaymentPendingNudgeConfig :: ST.HomeScreenState -> PopUpModal.Config
-softPaymentPendingNudgeConfig state =
+paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+paymentPendingPopupConfig state =
+  let popupType = state.props.subscriptionPopupType
+      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> show state.data.paymentState.totalPendingManualDues <> ") " else ""
+  in
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 5 ,
+    buttonLayoutMargin = Margin 16 0 16 if popupType == LOW_DUES_CLEAR_POPUP then 20 else 5 ,
     dismissPopup = true,
-    topTitle = Just $ getString CLEAR_YOUR_DUES_EARLY,
+    topTitle = Just $ case popupType of
+                        GO_ONLINE_BLOCKER -> "⚠️  " <> getString PAYMENT_PENDING <>  "  ⚠️"
+                        _                 -> getString CLEAR_YOUR_DUES_EARLY,
     primaryText {
-      text = getString PAYMENT_PENDING_SOFT_NUDGE
+      text = getString case popupType of 
+                         LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
+                         SOFT_NUDGE_POPUP     -> PAYMENT_PENDING_SOFT_NUDGE
+                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC
+                         _                    -> LOW_DUES_CLEAR_POPUP_DESC
     , margin = Margin 16 16 16 4
     , textStyle = SubHeading2
     , color = Color.black700
@@ -350,9 +356,10 @@ softPaymentPendingNudgeConfig state =
       }
     },
     option1 {
-      text = getString CLEAR_DUES <> " (₹" <> show state.data.totalPendingManualDues <> ") "
+      text = getString CLEAR_DUES <> dues
     , background = Color.black900
     , color = Color.yellow900
+    , showShimmer = state.data.paymentState.showShimmer
     },
     option2 {
       visibility = false
@@ -367,14 +374,17 @@ softPaymentPendingNudgeConfig state =
     }
   , optionWithHtml  {
     textOpt1 {
-      text = getString GO_ONLINE_POPUP
+      text = getString case popupType of
+                          SOFT_NUDGE_POPUP  -> GO_ONLINE_POPUP
+                          GO_ONLINE_BLOCKER -> VIEW_DUE_DETAILS
+                          _ -> VIEW_DUE_DETAILS
     , visibility =  VISIBLE
     , textStyle = FontStyle.SubHeading2
     , color = Color.black650
     } 
     , height = V 24
-    , margin = MarginVertical 0 20
-    , visibility = true
+    , margin = MarginBottom 20
+    , visibility = popupType == SOFT_NUDGE_POPUP || popupType == GO_ONLINE_BLOCKER
     , background = Color.white900
     , strokeColor = Color.white900
     }
@@ -769,19 +779,19 @@ autopayBannerConfig state configureImage =
   let
     config = Banner.config
     bannerType = state.props.autoPayBanner
-    dues = show state.data.totalPendingManualDues
+    dues = show state.data.paymentState.totalPendingManualDues
     config' = config
       {
         backgroundColor = case bannerType of
                         CLEAR_DUES_BANNER -> Color.yellow900
                         DUE_LIMIT_WARNING_BANNER -> "#FFECED"
                         LOW_DUES_BANNER -> Color.yellow800
-                        _ -> "#269574",
+                        _ -> Color.green600,
         title = case bannerType of
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
                   SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE ["100"]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [show state.data.config.subscriptionConfig.maxDuesLimit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
@@ -1023,12 +1033,13 @@ getRideCompletedConfig state = let
     },
     showContackSupportPopUp = state.props.showContackSupportPopUp,
     accessibility = DISABLE,
-    qrVisibility = state.data.endRideData.hasActiveAutoPay && state.data.endRideData.payerVpa /= "",
+    qrVisibility = state.data.paymentState.autoPayStatus == ACTIVE_AUTOPAY && state.data.endRideData.payerVpa /= "",
     payerVpa = state.data.endRideData.payerVpa,
-    noVpaVisibility = not state.data.endRideData.hasActiveAutoPay,
+    noVpaVisibility = not $ state.data.paymentState.autoPayStatus == ACTIVE_AUTOPAY,
     theme = LIGHT,
     isPrimaryButtonSticky = true,
-    bannerConfig = autopayBannerConfig state false
+    bannerConfig = autopayBannerConfig state false,
+    showBannerBelowQR = (state.props.autoPayBanner == DUE_LIMIT_WARNING_BANNER)
   }
   in config'
 

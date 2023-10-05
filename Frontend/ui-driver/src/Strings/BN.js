@@ -719,7 +719,7 @@ const bengaliStrings = {
 	AUTOPAY_PAYMENTS : "অটোপে পেমেন্ট",
 	TRANSACTION_ON : "লেনদেন চালু",
 	SUCCESS: "সফল",
-	PAID_ON : "পেইড অন",
+	DEBITED_ON : "পেইড অন",
 	RIDES_TAKEN_ON : "রাইড নেওয়া হয়েছে",
 	JOIN_PLAN : "প্ল্যানে যোগদান করুন",
 	JOIN_NAMMAA_YATRI : "নম্মা যাত্রীতে যোগ দিন",
@@ -909,5 +909,13 @@ const bengaliStrings = {
 	WATCH_VIDEO_FOR_HELP : "সাহায্যের জন্য ভিডিও দেখুন",
 	PAYMENT_PENDING_SOFT_NUDGE : "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন",
 	CLEAR_YOUR_DUES_EARLY : "আপনার বকেয়া তাড়াতাড়ি সাফ করুন",
-	DUE_LIMIT_WARNING_BANNER_TITLE : "আপনার যথাসময়ে ₹{} ডলার সীমা শীঘ্রই পৌঁছে যাবে"
+	DUE_LIMIT_WARNING_BANNER_TITLE : "আপনার যথাসময়ে ₹{} ডলার সীমা শীঘ্রই পৌঁছে যাবে",
+	FREE_TRIAL_ENDING_IN_2_DAYS :"বিনামূল্যে ট্রায়াল 2 দিনের মধ্যে শেষ!",
+	FREE_TRIAL_ENDING_TOMORROW : "বিনামূল্যে ট্রায়াল আগামীকাল শেষ!",
+	FREE_TRIAL_ENDS_TONIGHT : "বিনামূল্যে ট্রায়াল আজ রাতে শেষ!",
+	JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "রাইডগুলি চালিয়ে যাওয়ার পরিকল্পনায় যোগ দিন",
+	SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "সহজ অর্থপ্রদানের জন্য অটোপে সেটআপ করুন",
+	SCHEDULED_ON : "ছাড়ের তারিখ",
+	ATTEMPTED_ON : "প্রচেষ্টার তারিখ",
+	LOW_DUES_CLEAR_POPUP_DESC : "অ-স্টপ রাইডগুলি উপভোগ করতে এখনই আপনার বকেয়া সাফ করুন"
 }

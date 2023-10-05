@@ -37,7 +37,7 @@ initData = {
             dueItems : [],
             planEntity : dummyPlanConfig,
             autoPayStatus : NO_AUTOPAY,
-            lowAccountBalance : Mb.Just 5.0,
+            lowAccountBalance : Mb.Nothing,
             paymentMethodWarning : false,
             switchAndSave : false,
             maxDueAmount : 0.0,

@@ -266,13 +266,13 @@ enjoyBenefitsView push state =
                 )
               [(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW), (getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS]
             ) 
-            , textView [
+            , textView $ [
                 text $ getString VALID_ONLY_IF_PAYMENT
                 , textSize if state.props.isSelectedLangTamil then FontSize.a_8 else FontSize.a_10
                 , fontStyle $ FontStyle.medium LanguageStyle
                 , color Color.black700
                 , margin $ Margin 22 3 0 0
-          ]
+              ] <> FontStyle.body16 TypoGraphy
         ]
         
     ]
@@ -288,25 +288,15 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
   , visibility if state.data.orderId /= Nothing then VISIBLE else GONE
-  ][  textView
-      [ text $ getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING
-      , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      , color Color.black800
-      ]
-    , textView
-      [ text $ getString AUTOPAY_PENDING_DESC_STR
-      , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , color Color.black800
-      ]
-    , textView
+  ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT
+    , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT
+    , textView $
       [ text $ getString OFFERS_NOT_APPLICABLE
       , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.red
       , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && state.data.myPlanData.planEntity.title == getString DAILY_UNLIMITED then VISIBLE else GONE
-      ]
+      ] <> FontStyle.body16 TypoGraphy
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -498,7 +488,7 @@ myPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
+  , gradient (Linear 180.0 [Color.darkGradientBlue, Color.lightGradientBlue])
   ][ paymentPendingView push state
    , myPlanBodyview push state
   ]
@@ -512,7 +502,7 @@ headerView push state =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , gravity CENTER_VERTICAL
-    , padding $ PaddingHorizontal 16 0
+    , padding $ PaddingLeft 16
     , background Color.white900
     , stroke $ "1," <> Color.grey900
     ][ imageView
@@ -649,8 +639,6 @@ duesView push state =
                     _ <- pure $ scrollToEnd (getNewIDWithTag "DuesView") true
                     pure unit
                   )(const NoAction)
-  -- , visibility if (state.data.myPlanData.autoPayStatus == PENDING) then GONE else VISIBLE
-  , visibility VISIBLE
   ][ 
     linearLayout[
         gravity CENTER
@@ -820,7 +808,7 @@ duesView push state =
      , cornerRadius 8.0
      , orientation VERTICAL
      , gravity CENTER_VERTICAL
-     , visibility VISIBLE --TODO
+     , visibility VISIBLE
      ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT

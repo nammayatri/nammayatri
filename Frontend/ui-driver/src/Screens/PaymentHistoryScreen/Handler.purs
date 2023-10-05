@@ -30,11 +30,7 @@ paymentHistory = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ PaymentHistoryScreen.screen state.paymentHistoryScreen
   case act of
-    -- ViewPaymentDetails updatedState -> do 
-    --   modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
-    --   App.BackT $ App.BackPoint <$> (pure $ ViewDetails updatedState)
     GoBack -> do
-      -- modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ pure App.GoBack
     SetupAutoPay updatedState -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)

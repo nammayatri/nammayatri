@@ -171,22 +171,22 @@ getPaymentCardConfig status = case status of
   Pending ->{
     textColor : Color.yellow900 
   , bgColor : Color.yellow100
-  , paymentStatusText : "Payment Pending"
+  , paymentStatusText : getString PAYMENT_PENDING
   } 
   Success -> {
     textColor : Color.darkMint
   , bgColor : Color.green100
-  , paymentStatusText : "Payment Success"
+  , paymentStatusText : getString PAYMENT_SUCCESSFUL
   }
   Failed -> {
     textColor : Color.red 
   , bgColor : Color.red100
-  , paymentStatusText : "Payment Failed"
+  , paymentStatusText : getString PAYMENT_FAILED
   }
   Scheduled -> {
     textColor : Color.yellow900 
   , bgColor : Color.yellow100
-  , paymentStatusText : "Payment Scheduled"
+  , paymentStatusText : getString PAYMENT_SCHEDULED
   } 
 
 type PaymentCardConfig =  {

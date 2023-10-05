@@ -2081,7 +2081,7 @@ public class MobilityCommonBridge extends HyperBridge {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
             fos.close();
 
-            showNotificationWithURI(path, "QR Downloaded!!!", "QR for your vpa is downloaded!!!", "image/png", "QR", "QR Download");
+            showNotificationWithURI(path, activity.getString(R.string.qr_downloaded), context.getString(R.string.qr_for_your_vpa_is_downloaded), "image/png", "QR", "QR Download");
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -103,7 +103,8 @@ data KeyStore = USER_NAME
                 | FREE_TRIAL_DAYS
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
-                | CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE
+                | APP_SESSION_TRACK_COUNT
+                | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

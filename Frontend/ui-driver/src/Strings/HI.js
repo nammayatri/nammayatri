@@ -711,7 +711,6 @@ const hindiStrings = {
   AUTOPAY_PAYMENTS : "स्वतः भुगतान",
   TRANSACTION_ON : "लेनदेन चालू",
   SUCCESS : "सफलता",
-  PAID_ON : "भुगतान किया गया",
   RIDES_TAKEN_ON : "सवारी शुरू",
   JOIN_PLAN : "योजना में शामिल हों",
   JOIN_NAMMAA_YATRI : "नम्मा यात्री से जुड़ें",
@@ -916,5 +915,14 @@ const hindiStrings = {
   WATCH_VIDEO_FOR_HELP : "मदद के लिए वीडियो देखें",
   PAYMENT_PENDING_SOFT_NUDGE : "बकाया सीमा जल्द ही पूरी हो जाएगी. नॉन-स्टॉप सवारी का आनंद लेने के लिए बकाया चुकाएँ",
   CLEAR_YOUR_DUES_EARLY : "अभी अपना बकाया भुगतान करें",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "आपकी ₹{} की देय सीमा जल्द ही पूरी हो जाएगी",
+  SCHEDULED_ON : "कटौती की तारीख",
+  ATTEMPTED_ON : "प्रयास की तिथि",
+  DEBITED_ON : "डेबिट की तारीख",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"नि:शुल्क परीक्षण 2 दिनों में समाप्त हो रहा है",
+  FREE_TRIAL_ENDING_TOMORROW : "नि:शुल्क परीक्षण कल समाप्त हो रहा है",
+  FREE_TRIAL_ENDS_TONIGHT : "नि:शुल्क परीक्षण आज रात समाप्त हो रहा है",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "सवारी लेना जारी रखने की योजना में शामिल हों",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "आसान भुगतान के लिए ऑटोपे सेटअप करें",
+  LOW_DUES_CLEAR_POPUP_DESC : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अभी अपना बकाया भुगतान करें"
 }

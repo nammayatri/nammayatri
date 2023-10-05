@@ -428,10 +428,3 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
-
-getSubsInfo :: KeyStore -> Maybe LocalStoreSubscriptionInfo
-getSubsInfo name = do
-  let result = decodeJSON $ getValueToLocalNativeStore name
-  case (runExcept $ result) of
-    Left err -> Nothing
-    Right person -> Just person

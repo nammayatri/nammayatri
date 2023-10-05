@@ -45,7 +45,8 @@ type Config = {
   noVpaVisibility :: Boolean,
   theme :: Theme,
   isPrimaryButtonSticky :: Boolean,
-  bannerConfig :: Banner.Config
+  bannerConfig :: Banner.Config,
+  showBannerBelowQR :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -121,15 +122,15 @@ config = {
     imageHeight : V 0
   },
   driverUpiQrCard : {
-    text : "Get direct payment to UPI ID",
+    text : "",
     id : "",
     vpa : "",
-    vpaIcon : "ny_ic_defaultpg,",
-    collectCashText : "or Collect cash directly "
+    vpaIcon : "",
+    collectCashText : ""
   },
   noVpaCard : {
-    title : "To accept payments directly to your bank account, setup  Autopay on your Plan",
-    collectCashText : "or Collect cash directly "
+    title : "",
+    collectCashText : ""
   },
   contactSupportPopUpConfig : PopUpModal.config,
   showContackSupportPopUp : false,
@@ -140,7 +141,8 @@ config = {
   noVpaVisibility : false,
   theme : DARK,
   isPrimaryButtonSticky : false,
-  bannerConfig : Banner.config
+  bannerConfig : Banner.config,
+  showBannerBelowQR : true
 }
 
 type CustomerIssueCard = {

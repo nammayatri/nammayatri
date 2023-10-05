@@ -1385,11 +1385,9 @@ detailsListViewComponent state push config =
                 , orientation HORIZONTAL
                 ][ textView $
                     [ text item.key
-                    , textSize FontSize.a_12
                     , color if config.isLeftKeyClickable then Color.blue900 else Color.black700
-                    , fontStyle $ FontStyle.regular LanguageStyle
-                    -- , onClick push $ const LeftKeyAction
-                    ] <> if config.isLeftKeyClickable then [onClick push $ const LeftKeyAction] else []
+                    ] <> FontStyle.body3 TypoGraphy 
+                      <> if config.isLeftKeyClickable then [onClick push $ const LeftKeyAction] else []
                   , imageView
                     [ height $ V 12
                     , width $ V 12

@@ -89,7 +89,9 @@ window.getMerchantConfig = function () {
       "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1",
       "currentPlanCacheExpTime" : 3600,
       "lowDuesLimit" : 25.0,
-      "getSubscriptionInfoInHomeScreen" : true
+      "maxDuesLimit" : 100.0,
+      "highDueWarningLimit" : 75.0,
+      "moveDriverToOfflineInHighDueDaily" : true
     }
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false

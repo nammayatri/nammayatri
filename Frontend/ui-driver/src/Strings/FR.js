@@ -540,7 +540,7 @@ const frenchStrings = {
   AUTOPAY_PAYMENTS : "Paiements automatiques",
   TRANSACTION_ON : "Transaction activée",
   SUCCESS : "Succès",
-  PAID_ON : "Payé le",
+  DEBITED_ON : "Payé le",
   RIDES_TAKEN_ON : "Voyages effectués",
   JOIN_PLAN : "Rejoindre le forfait",
   JOIN_NAMMAA_YATRI : "Rejoindre Namma Yatri",
@@ -717,5 +717,13 @@ const frenchStrings = {
   WATCH_VIDEO_FOR_HELP : "Regarder la vidéo pour obtenir de l'aide",
   PAYMENT_PENDING_SOFT_NUDGE : "La limite des cotisations sera bientôt atteinte.Cotisation claire pour profiter des manèges sans escale",
   CLEAR_YOUR_DUES_EARLY : "Effacez vos cotisations tôt",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "Votre limite due de ₹{} sera bientôt atteinte",
+  SCHEDULED_ON : "date de retenue",
+  ATTEMPTED_ON : "date de tentative",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Essai gratuit se terminant dans 2 jours !",
+  FREE_TRIAL_ENDING_TOMORROW : "Essai gratuit se terminant demain !",
+  FREE_TRIAL_ENDS_TONIGHT : "L'essai gratuit se termine ce soir !",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Rejoignez un plan pour continuer à faire des courses",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "Configurez le paiement automatique pour des paiements faciles",
+  LOW_DUES_CLEAR_POPUP_DESC : "Effacez vos cotisations maintenant pour profiter des manèges sans escale."
 }
