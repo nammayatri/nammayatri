@@ -471,7 +471,7 @@ capacityCheckFunction Nothing Nothing = True
 capacityCheckFunction _ _ = False
 
 manufacturerCheckFunction :: Maybe Text -> Maybe Text -> Bool
-manufacturerCheckFunction (Just a) (Just b) = a == b
+manufacturerCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
 manufacturerCheckFunction Nothing (Just _) = True
 manufacturerCheckFunction Nothing Nothing = True
 manufacturerCheckFunction _ _ = False
