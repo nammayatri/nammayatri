@@ -89,6 +89,7 @@ data TransporterConfigD u = TransporterConfig
     automaticRCActivationCutOff :: Seconds,
     isAvoidToll :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
+    enableFaceVerification :: Bool,
     specialZoneBookingOtpExpiry :: Int,
     isPlanMandatory :: Bool,
     freeTrialDays :: Int,

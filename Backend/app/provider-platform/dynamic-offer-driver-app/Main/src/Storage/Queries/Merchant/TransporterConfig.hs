@@ -191,6 +191,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
+        BeamTC.enableFaceVerification = enableFaceVerification,
         BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,

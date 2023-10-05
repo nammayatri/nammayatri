@@ -76,7 +76,6 @@ where
 import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
-import qualified Data.ByteString as BS
 import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, (\\))
 import qualified Data.List as DL
@@ -115,9 +114,7 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
-import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import Kernel.Beam.Functions
@@ -132,7 +129,6 @@ import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
-import Kernel.ServantMultipart
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
@@ -197,7 +193,6 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QVehicle
-import qualified Text.Read as Read
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
@@ -401,27 +396,13 @@ data DriverStatsRes = DriverStatsRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverPhotoUploadReq = DriverPhotoUploadReq
-  { image :: FilePath,
+  { image :: Text,
     fileType :: Common.FileType,
     reqContentType :: Text,
     brisqueFeatures :: [Double]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance FromMultipart Tmp DriverPhotoUploadReq where
-  fromMultipart form = do
-    DriverPhotoUploadReq
-      <$> fmap fdPayload (lookupFile "image" form)
-      <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
-      <*> fmap fdFileCType (lookupFile "image" form)
-      <*> (lookupInput "brisqueFeatures" form >>= (Read.readEither . T.unpack))
-
-instance ToMultipart Tmp DriverPhotoUploadReq where
-  toMultipart driverPhotoUploadReq =
-    MultipartData
-      [Input "fileType" (show driverPhotoUploadReq.fileType)]
-      [FileData "image" (T.pack driverPhotoUploadReq.image) "" (driverPhotoUploadReq.image)]
 
 data DriverAlternateNumberReq = DriverAlternateNumberReq
   { mobileCountryCode :: Text,
@@ -1329,17 +1310,17 @@ driverPhotoUpload :: (Id SP.Person, Id DM.Merchant) -> DriverPhotoUploadReq -> F
 driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
-  encImage <- L.runIO $ base64Encode <$> BS.readFile image
   imageExtension <- validateContentType
-  let req = IF.FaceValidationReq {file = encImage, brisqueFeatures}
-  _ <- validateFaceImage merchantId req
-  filePath <- createFilePath (getId driverId) fileType imageExtension
   transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+  when transporterConfig.enableFaceVerification
+    let req = IF.FaceValidationReq {file = image, brisqueFeatures}
+     in void $ validateFaceImage merchantId req
+  filePath <- createFilePath (getId driverId) fileType imageExtension
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "driver-profile-picture"
           & T.replace "<FILE_PATH>" filePath
-  result <- try @_ @SomeException $ S3.put (T.unpack filePath) encImage
+  result <- try @_ @SomeException $ S3.put (T.unpack filePath) image
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
