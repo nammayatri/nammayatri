@@ -509,11 +509,11 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1696936853,
-        "narHash": "sha256-Ph1Bdq7YTKHy+TxADVYYyV60dqiSMeot4KCwqshx1zk=",
+        "lastModified": 1697525861,
+        "narHash": "sha256-FDnmkTRc29RxOPbtLnCyHtKoUAKAXO5pEujkmIWjBs8=",
         "owner": "juspay",
         "repo": "euler-hs",
-        "rev": "3c35933830b4c67489c5661a5bb4b1ccabbf3061",
+        "rev": "a3ea4d2223dd10348821388219f0afdb076ee4d8",
         "type": "github"
       },
       "original": {
@@ -2359,11 +2359,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1697459102,
-        "narHash": "sha256-d0Po086iM8i6Iw3VZrBUDMdI3Tn2ardgi+u1UZaBNQg=",
+        "lastModified": 1697528888,
+        "narHash": "sha256-iEWUedDzmCB40jofsWaolPNV2sTJIXd0gUxbaYvYYnA=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "0d4c4600425bc925cc6be580364c5e7948840ba9",
+        "rev": "2bb2436f1a5e7d18c3976e1221b41530ec1f3e4a",
         "type": "github"
       },
       "original": {

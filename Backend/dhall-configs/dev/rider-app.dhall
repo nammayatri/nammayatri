@@ -156,6 +156,10 @@ let tables =
 
 let dontEnableForDb = [] : List Text
 
+let maxMessages
+    : Text
+    = "1"
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -214,4 +218,5 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , dontEnableForDb
+    , maxMessages
     }
