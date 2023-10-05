@@ -46,6 +46,7 @@ import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount)
 import Components.PrimaryButton as PrimaryButtonController
 import Screens (ScreenName(..), getScreen)
+import Screens.Types
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -72,7 +73,7 @@ instance loggableAction :: Loggable Action where
     -- Loader -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "load_more"
     -- Scroll str -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "scroll_event"
     -- ScrollStateChanged scrollState -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "scroll_state_changed"
-    -- RideHistoryAPIResponseAction resp -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "ride_history_response_action"
+    RideHistoryAPIResponseAction resp -> trackAppScreenEvent appId (getScreen DRIVER_EARNINGS_SCREEN) "in_screen" "ride_history_response_action"
     -- ErrorModalActionController action -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "error_modal_action"
     -- Dummy -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "dummy_action"
     -- NoAction -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "no_action"
@@ -99,7 +100,7 @@ data Action = Dummy
             | PlanCount Boolean
             | BottomNavBarAction BottomNavBar.Action
             -- | IndividualRideCardAction IndividualRideCardController.Action
-            -- | RideHistoryAPIResponseAction (Array RidesInfo)
+            | RideHistoryAPIResponseAction (Array RidesInfo)
             -- | Loader
             -- | Scroll String
             -- | ErrorModalActionController ErrorModalController.Action
@@ -109,6 +110,7 @@ data Action = Dummy
             -- | DatePickerAC DatePickerModel.Action
             | SelectPlan Int
             | GenericHeaderAC GenericHeader.Action
+            | BarViewSelected Int 
             -- | PaymentHistoryModelAC PaymentHistoryModel.Action
             -- | OpenPaymentHistory
 
@@ -119,6 +121,12 @@ eval BackPressed state = exit GoBack
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = continue state
 
 eval (ChangeTab subView') state = continue state{props{subView = subView'}}
+
+eval (BarViewSelected index) state = continue state{data{selectedBarIndex = index}}
+
+
+
+
 -- eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else
 --   continue state { shimmerLoader = case state.shimmerLoader of
 --                               AnimatedIn ->AnimatedOut
@@ -165,12 +173,9 @@ eval (ChangeTab subView') state = continue state{props{subView = subView'}}
 -- eval Loader state = do
 --   exit $ LoaderOutput state{loaderButtonVisibility = false}
 
--- eval (RideHistoryAPIResponseAction rideList) state = do
---   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
---   let filteredRideList = (rideListResponseTransformer rideList)
---   _ <- pure $ setRefreshing "2000030" false
---   let loadBtnDisabled = if(length rideList == 0) then true else false
---   continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
+eval (RideHistoryAPIResponseAction rideList) state = do
+  let coinHistoryItemsList = (coinHistoryItemsListTransformer rideList)
+  continue $ state {data{earningHistoryItems = coinHistoryItemsList}}
 
 -- eval (Scroll value) state = do
 --   -- TODO : LOAD MORE FUNCTIONALITY
@@ -207,6 +212,20 @@ eval (PlanCount shouldIncrease) state = do
   continue state {props{selectedPlanQuantity = quantity}}
 
 eval _ state = continue state
+
+
+coinHistoryItemsListTransformer :: Array RidesInfo -> Array CoinHistoryItem
+coinHistoryItemsListTransformer list = (map (\(RidesInfo ride) -> {
+  destination : Just (decodeAddress (ride.toLocation) false),
+  timestamp : (convertUTCtoISC (ride.createdAt) "D MMM") <> " " <> (convertUTCtoISC (ride.createdAt )"h:mm A"),
+  earnings : Just (case (ride.status) of
+                    "CANCELLED" -> 0
+                    _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
+  status : Just ride.status, 
+  coins :  Nothing,
+  event : Nothing 
+}) list) 
+
 
 -- rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 -- rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
