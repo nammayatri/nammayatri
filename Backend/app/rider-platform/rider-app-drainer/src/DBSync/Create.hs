@@ -16,7 +16,6 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import System.Timeout (timeout)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -138,15 +137,9 @@ runCreateCommands cmds streamKey = do
 streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
 streamRiderDrainerCreates producer dbObject streamKey = do
   let topicName = "rider-drainer"
-  mapM_ (KafkaProd.produceMessage producer . message topicName) dbObject
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
+  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
-
     message topicName event =
       ProducerRecord
         { prTopic = TopicName topicName,

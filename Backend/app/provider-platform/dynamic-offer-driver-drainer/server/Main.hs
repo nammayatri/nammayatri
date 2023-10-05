@@ -33,7 +33,7 @@ main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.maxMessages
   bracket (async NW.runMetricServer) cancel $ \_ -> do
     R.withFlowRuntime
       (Just loggerRt)

@@ -24,7 +24,15 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
-let esqLocationDBCfg = esqDBCfg
+let esqLocationDBCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5454
+      , connectUser = sec.locDBUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_dev_loc"
+      , connectSchemaName = "atlas_person_location"
+      , connectionPoolCount = +25
+      }
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
@@ -197,6 +205,10 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let maxMessages
+    : Text
+    = "1"
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -269,4 +281,5 @@ in  { esqDBCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , enableLocationTrackingService = False
     , dontEnableForDb
+    , maxMessages
     }
