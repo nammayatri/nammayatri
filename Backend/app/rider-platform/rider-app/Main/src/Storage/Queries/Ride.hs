@@ -40,7 +40,7 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
-import Storage.Queries.Booking ()
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
@@ -341,7 +341,7 @@ instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
     when (null mappings) $ do
-      void $ findById (Id bookingId)
+      void $ QBooking.findById (Id bookingId)
       createMapping bookingId id
 
     let fromLocationMapping = filter (\loc -> loc.order == 0) mappings

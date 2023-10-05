@@ -56,7 +56,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
-import Storage.Queries.Booking ()
+import qualified Storage.Queries.Booking as QBooking
 import Storage.Queries.Instances.DriverInformation ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -479,7 +479,7 @@ instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
     when (null mappings) $ do
-      void $ findById (Id bookingId)
+      void $ QBooking.findById (Id bookingId)
       createMapping bookingId id
 
     let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
