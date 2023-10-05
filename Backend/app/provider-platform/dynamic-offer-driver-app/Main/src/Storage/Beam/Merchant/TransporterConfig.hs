@@ -77,6 +77,7 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
+    enableFaceVerification :: B.C f Bool,
     specialZoneBookingOtpExpiry :: B.C f Int,
     driverFeeRetryThresholdConfig :: B.C f Int,
     isPlanMandatory :: B.C f Bool,

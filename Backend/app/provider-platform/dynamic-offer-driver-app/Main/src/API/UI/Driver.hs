@@ -50,7 +50,6 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
-import Kernel.ServantMultipart
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -135,7 +134,7 @@ type API =
                         :> Get '[JSON] DDriver.DriverStatsRes
                       :<|> "photo"
                         :> TokenAuth
-                        :> MultipartForm Tmp DDriver.DriverPhotoUploadReq
+                        :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
                         :> Post '[JSON] APISuccess
                   )
              :<|> "metaData"
