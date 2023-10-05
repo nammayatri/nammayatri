@@ -196,6 +196,10 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let maxMeesages
+    : Text
+    = "1"
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -268,4 +272,5 @@ in  { esqDBCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , enableLocationTrackingService = False
     , dontEnableForDb
+    , maxMeesages
     }

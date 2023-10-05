@@ -115,7 +115,8 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    maxMessages :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -177,7 +178,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    maxMessages :: Text
   }
   deriving (Generic)
 

@@ -28,7 +28,7 @@ getMaxRetries :: IO Int
 getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetries
 
 getDrainerExecutionDelay :: IO Int
-getDrainerExecutionDelay = fromMaybe 20000 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
+getDrainerExecutionDelay = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
 
 defaultDBSyncConfig :: DBSyncConfig
 defaultDBSyncConfig =
@@ -36,7 +36,7 @@ defaultDBSyncConfig =
     { _emptyRetry = 50,
       _rateLimitN = 200,
       _rateLimitWindow = 100,
-      _streamReadCount = 200 -- 1000
+      _streamReadCount = 1000 -- 1000
     }
 
 getThreadPerPodCount :: IO Int

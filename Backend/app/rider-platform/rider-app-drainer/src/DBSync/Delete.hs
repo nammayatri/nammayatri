@@ -117,15 +117,11 @@ runDeleteCommands (cmd, val) dbStreamKey = do
 streamRiderDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
 streamRiderDrainerDeletes producer dbObject dbStreamKey = do
   let topicName = "rider-drainer"
-  void $ KafkaProd.produceMessage producer (message topicName dbObject)
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+  case result' of
+    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+    _ -> pure $ Right ()
   where
-    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
-
     message topicName event =
       ProducerRecord
         { prTopic = TopicName topicName,
