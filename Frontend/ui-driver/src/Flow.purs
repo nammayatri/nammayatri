@@ -58,7 +58,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, checkPPInitiateStatus, getCurrentLocation, LatLon(..), getAvailableUpiApps, isDateGreaterThan, onBoardingSubscriptionScreenCheck, killPP)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, metaLogEventWithTwoParams, firebaseLogEventWithTwoParams)
 import JBridge as JB
 import Language.Strings (getString)
@@ -2081,6 +2081,7 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       _ <- paymentPageUI sdkPayload
+      liftFlowBT $ runEffectFn1 killPP unit
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
       setValueToLocalStore DISABLE_WIDGET "false"

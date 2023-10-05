@@ -922,8 +922,9 @@ export const checkPPInitiateStatus = function (cb,services = microapps) {
   }
 }
 
-export const  killPP = function (services) {
-    services.forEach((key) => {
+export const  killPP = function () {
+  let keys = Object.keys(top.JOSHolder);
+  keys.forEach((key) => {
       if (key != JOS.self) {
         var currJOS = top.JOSHolder[key];
         try{currJOS.finish(1)(JSON.stringify({result:"success"}))();}
