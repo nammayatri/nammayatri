@@ -64,7 +64,6 @@ library
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
-      API.UI.Location
       API.UI.Maps
       API.UI.Message
       API.UI.OnMessage
@@ -143,7 +142,6 @@ library
       Domain.Action.UI.Issue
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
-      Domain.Action.UI.Location
       Domain.Action.UI.Location.UpdateLocation
       Domain.Action.UI.Maps
       Domain.Action.UI.Message
@@ -281,7 +279,6 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
-      SharedLogic.DriverLocation
       SharedLogic.DriverMode
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool
@@ -323,7 +320,6 @@ library
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
-      Storage.Beam.DriverLocation
       Storage.Beam.DriverOnboarding.AadhaarOtpReq
       Storage.Beam.DriverOnboarding.AadhaarOtpVerify
       Storage.Beam.DriverOnboarding.AadhaarVerification
@@ -448,7 +444,6 @@ library
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverInformation.Internal
-      Storage.Queries.DriverLocation
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverOnboarding.AadhaarOtp
       Storage.Queries.DriverOnboarding.AadhaarVerification
