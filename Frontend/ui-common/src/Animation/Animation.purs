@@ -52,7 +52,7 @@ translateOutXAnim config =
 translateInYAnim :: AnimConfig -> PrestoAnim.Animation
 translateInYAnim config =
     PrestoAnim.Animation
-    [ PrestoAnim.duration animateTime
+    [ PrestoAnim.duration config.duration
     , PrestoAnim.fromY config.fromY
     , PrestoAnim.toY config.toY
     , PrestoAnim.tag "slideIn"

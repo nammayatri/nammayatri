@@ -56,6 +56,7 @@ type Config =
   , black700 :: String
   , canSendSuggestion :: Boolean
   , enableCall :: Boolean
+  , red600 :: String
   }
 
 type UserConfig =
@@ -108,6 +109,7 @@ config =
     , black700 : ""
     , canSendSuggestion : true
     , enableCall : true 
+    , red600 : ""
   }
 
 makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponent

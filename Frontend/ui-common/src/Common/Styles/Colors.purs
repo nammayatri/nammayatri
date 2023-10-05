@@ -147,3 +147,6 @@ yellow500 = "#F5C061"
 
 yellow700 :: Color
 yellow700 = "#F09A01"
+
+red600 :: Color
+red600 = "#FFDDDD"

@@ -1742,13 +1742,17 @@ type UpiApps
 
 type DriverEarningsScreenState = {
   data :: DriverEarningsScreenData,
-  props :: DriverEarningsScreenProps
+  props :: DriverEarningsScreenProps,
+  datePickerState :: DatePickerState
 }
 
 type DriverEarningsScreenData = {
   coinHistoryItems :: Array CoinHistoryItem,
+  earningHistoryItems :: Array CoinHistoryItem,
   usageHistoryItems :: Array CoinHistoryItem,
-  planItems :: Array CoinPlanItem
+  planItems :: Array CoinPlanItem,
+  weeklyEarningData :: Array Number,
+  selectedBarIndex :: Int
 }
 type DriverEarningsScreenProps = {
   subView :: DriverEarningsSubView,
@@ -1765,9 +1769,12 @@ instance decodeDriverEarningsSubView :: Decode DriverEarningsSubView where decod
 instance encodeDriverEarningsSubView :: Encode DriverEarningsSubView where encode = defaultEnumEncode
 
 type CoinHistoryItem = {
-  event :: String,
+  event :: Maybe String,
+  destination :: Maybe String,
   timestamp :: String,
-  coins :: Int
+  coins :: Maybe Int,
+  earnings ::  Maybe Int,
+  status :: Maybe String 
 }
 
 type CoinPlanItem = {

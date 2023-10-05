@@ -15,6 +15,7 @@
 
 module Screens.DriverEarningsScreen.ScreenData where
 
+import Data.Maybe
 import Foreign.Object (empty)
 import Prelude ((-), negate)
 import Resource.Constants (tripDatesCount)
@@ -24,21 +25,63 @@ initData :: DriverEarningsScreenState
 initData = {
   data : {
     coinHistoryItems : [{
-      event : "Ride COMPLETED",
+      event : Just "Ride COMPLETED",
+      destination : Just "Kempagowda Airport",
       timestamp : "31/5/2022 7:45pm",
-      coins : 1
-    },{
-      event : "Ride CANCELLED",
-      timestamp : "31/5/2022 7:45pm",
-      coins : -2
+      coins : Just 1,
+      earnings : Just 150,
+      status : Just "COMPLETED"
     }, {
-      event : "Ride COMPLETED",
+      event : Just "Ride CANCELLED",
+      destination : Just "Kempagowda Airport",
       timestamp : "31/5/2022 7:45pm",
-      coins : 1
+      coins : Just (-2),
+      earnings : Nothing,
+      status : Just "CANCELLED"
     }, {
-      event : "Ride CANCELLED",
+      event : Just "Ride COMPLETED",
+      destination : Just "Kempagowda Airport",
       timestamp : "31/5/2022 7:45pm",
-      coins : -2
+      coins : Just 1,
+      earnings : Just 85,
+      status : Just "COMPLETED"
+    }, {
+      event : Just "Ride CANCELLED",
+      destination : Just "Kempagowda Airport",
+      timestamp : "31/5/2022 7:45pm",
+      coins : Just (-2),
+      earnings : Just 200,
+      status : Just "CANCELLED"
+    }
+    ],
+    earningHistoryItems : [{
+      event : Just "Ride COMPLETED",
+      destination : Just "Kempagowda Airport",
+      timestamp : "31/5/2022 7:45pm",
+      coins : Just 1,
+      earnings : Just 150,
+      status : Just "COMPLETED"
+    }, {
+      event : Just "Ride CANCELLED",
+      destination : Just "Kempagowda Airport",
+      timestamp : "31/5/2022 7:45pm",
+      coins : Just (-2),
+      earnings : Nothing,
+      status : Just "CANCELLED"
+    }, {
+      event : Just "Ride COMPLETED",
+      destination : Just "Kempagowda Airport",
+      timestamp : "31/5/2022 7:45pm",
+      coins : Just 1,
+      earnings : Just 85,
+      status : Just "COMPLETED"
+    }, {
+      event : Just "Ride CANCELLED",
+      destination : Just "Kempagowda Airport",
+      timestamp : "31/5/2022 7:45pm",
+      coins : Just (-2),
+      earnings : Just 200,
+      status : Just "CANCELLED"
     }
     ],
     usageHistoryItems : [],
@@ -51,11 +94,22 @@ initData = {
         name : "Weekly Unlimited Plan",
         coins : 600
       }
-    ]
+    ],
+    weeklyEarningData : [50.0,20.0,30.0,1.0,50.0,60.0,10.0],
+    selectedBarIndex : -1
   }
   , props : {
-    subView : YATRI_COINS_VIEW,
+    subView : EARNINGS_VIEW,
     selectedPlanIndex : 0,
     selectedPlanQuantity : 0
+  }
+  , datePickerState : {
+    activeIndex : tripDatesCount - 1 -- based on no of dates we are showing
+  , selectedItem : {
+      date : 0
+    , month : ""
+    , year : 0
+    , utcDate : ""
+  }
   }
 }
