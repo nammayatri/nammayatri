@@ -289,6 +289,7 @@ library
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
+      Storage.DBModel
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls

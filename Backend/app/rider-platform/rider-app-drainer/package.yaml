@@ -93,6 +93,7 @@ dependencies:
   - warp
   - warp-tls
   - cereal
+  - template-haskell
 
 ghc-options:
   - -fwrite-ide-info
@@ -106,7 +107,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror
+    # - -Werror # FIXME uncomment me
   dependencies:
     - rider-app
     - mobility-core

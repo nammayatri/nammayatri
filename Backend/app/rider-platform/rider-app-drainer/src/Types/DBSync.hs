@@ -53,7 +53,7 @@ data DBCommand
   = Create DBCommandVersion Tag Double DBName DBCreateObject
   | Update DBCommandVersion Tag Double DBName DBUpdateObject
   | Delete DBCommandVersion Tag Double DBName DBDeleteObject
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, FromJSON)
 
 data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBCreateObject
 

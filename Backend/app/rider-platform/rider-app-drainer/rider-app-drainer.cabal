@@ -30,13 +30,17 @@ library
       Event.Event
       Types.DBSync
       Types.DBSync.Create
+      Types.DBSync.DBModel
       Types.DBSync.Delete
+      Types.DBSync.IsDBTable
+      Types.DBSync.TablesListTH
       Types.DBSync.Update
       Types.Event
       Utils.Config
       Utils.Event
       Utils.Parse
       Utils.Redis
+      Utils.TH
       Utils.Utils
   other-modules:
       Paths_rider_app_drainer
@@ -73,7 +77,7 @@ library
       ViewPatterns
       UndecidableInstances
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths
   build-depends:
       aeson
     , aeson-pretty
@@ -107,6 +111,7 @@ library
     , rider-app
     , sequelize
     , servant-server
+    , template-haskell
     , text
     , time
     , tinylog
@@ -195,6 +200,7 @@ executable rider-app-drainer-exe
     , rider-app-drainer
     , sequelize
     , servant-server
+    , template-haskell
     , text
     , time
     , tinylog

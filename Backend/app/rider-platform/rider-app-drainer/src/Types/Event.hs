@@ -8,7 +8,7 @@ newtype DBSyncCounterHandler = DBSyncCounterHandler
 
 type Action = Text
 
-type ModelName = Text
+type ModelName = Text -- remove this
 
 type Latency = Double
 
