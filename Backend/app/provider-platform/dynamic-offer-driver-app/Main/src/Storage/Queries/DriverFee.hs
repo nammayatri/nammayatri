@@ -365,7 +365,7 @@ findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
           Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
           Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to)
         ]
-          <> [Se.Is BeamDF.collectedBy $ Se.In (map Just volunteerIds) | not (null volunteerIds)]
+          <> [Se.Is BeamDF.collectedBy $ Se.In (map Just volunteerIds)]
     ]
     (Se.Desc BeamDF.updatedAt)
     Nothing
