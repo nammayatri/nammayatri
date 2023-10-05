@@ -53,9 +53,8 @@ import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
-import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
@@ -64,7 +63,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
-import Helpers.Utils (LatLon(..), checkPPInitiateStatus, consumeBP, decodeErrorCode, decodeErrorMessage, getAvailableUpiApps, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getSubsInfo, getTime, getcurrentdate, hideSplash, initiatePP, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, paymentPageUI, secondsLeft, toString)
+import Helpers.Utils (LatLon(..), checkPPInitiateStatus, consumeBP, decodeErrorCode, decodeErrorMessage, getAvailableUpiApps, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, initiatePP, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, paymentPageUI, secondsLeft, toString)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Language.Strings (getString)
@@ -96,7 +95,7 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionSubview(..), UpdatePopupType(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), FeeType(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.API as API
@@ -115,7 +114,7 @@ baseAppFlow baseFlow event = do
     checkVersion versionCode
     -- checkDateAndTime -- Need To Refactor
     (GlobalState state) <- getState
-    cacheAppParameters versionCode
+    cacheAppParameters versionCode baseFlow
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
@@ -134,16 +133,17 @@ baseAppFlow baseFlow event = do
               _ -> do
                     setValueToLocalNativeStore REGISTERATION_TOKEN regToken
                     getDriverInfoFlow
-          
           Nothing -> do
               setValueToLocalNativeStore REGISTERATION_TOKEN regToken
               getDriverInfoFlow
         else loginFlow
     where
-    cacheAppParameters :: Int -> FlowBT String Unit
-    cacheAppParameters versionCode = do
+    cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
+    cacheAppParameters versionCode baseFlow = do
       let bundle = bundleVersion unit
           driverId = (getValueToLocalStore DRIVER_ID)
+          appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
+          movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
       versionName <- lift $ lift $ liftFlow $ getVersionName
       void $ pure $ setCleverTapUserProp "App Version" versionName
       void $ pure $ setCleverTapUserProp "Bundle version" bundle
@@ -161,6 +161,10 @@ baseAppFlow baseFlow event = do
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
       setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       setValueToLocalStore DISABLE_WIDGET "false"
+      when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
+      if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed") 
+        then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE "" 
+      else pure unit
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
       if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
@@ -1769,7 +1773,6 @@ homeScreenFlow = do
                 (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent] then "true" else "false") $ toUpper $ show (updateDriverStatus getDriverInfoResp.active)
                 pure unit
 
-
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = if (isJust getDriverInfoResp.mode) then
@@ -1784,19 +1787,38 @@ homeScreenFlow = do
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
   let autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
-      subsInfo = fromMaybe {projectedInvoice : 0.0, maxDueLimit : 1000.0, expiry : ""} (getSubsInfo CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE)
       pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
       lowDuesLimit = appConfig.subscriptionConfig.lowDuesLimit
+      highDueWarningLimit = appConfig.subscriptionConfig.highDueWarningLimit
+      freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
+      shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || getDriverInfoResp.paymentPending)
+      autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
       autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, getDriverInfoResp.paymentPending of
-                              true, true, _ -> FREE_TRIAL_BANNER
+                              true, true, _  -> FREE_TRIAL_BANNER
                               _, false, true -> do
-                                if pendingTotalManualDues < lowDuesLimit then LOW_DUES_BANNER
-                                else if pendingTotalManualDues >= lowDuesLimit && pendingTotalManualDues < (subsInfo.maxDueLimit - 2.0 * subsInfo.projectedInvoice) then CLEAR_DUES_BANNER
-                                else if pendingTotalManualDues >= (subsInfo.maxDueLimit - 2.0 * subsInfo.projectedInvoice) then DUE_LIMIT_WARNING_BANNER
-                                else NO_SUBSCRIPTION_BANNER
-                              true, _, _ -> SETUP_AUTOPAY_BANNER
-                              _, _, _ -> NO_SUBSCRIPTION_BANNER
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning, totalPendingManualDues = pendingTotalManualDues}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType}})
+                                          if pendingTotalManualDues < lowDuesLimit then LOW_DUES_BANNER
+                                          else if pendingTotalManualDues >= lowDuesLimit && pendingTotalManualDues < highDueWarningLimit then CLEAR_DUES_BANNER
+                                          else if pendingTotalManualDues >= highDueWarningLimit then DUE_LIMIT_WARNING_BANNER
+                                          else NO_SUBSCRIPTION_BANNER
+                              true, _, _     -> SETUP_AUTOPAY_BANNER
+                              _, _, _        -> NO_SUBSCRIPTION_BANNER
+      subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
+                                  true, _, true -> case freeTrialDays of
+                                                      _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
+                                                      _ -> NO_SUBSCRIPTION_POPUP
+                                  false, _, true -> LOW_DUES_CLEAR_POPUP
+                                  _, _, _        -> NO_SUBSCRIPTION_POPUP
+      shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss"))
+      moveDriverToOffline = (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE == "") 
+                              && shouldMoveDriverOffline 
+                                && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily  
+                                  && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
+                                    && pendingTotalManualDues >= highDueWarningLimit
+                                      && getDriverInfoResp.mode /= Just "OFFLINE"
+  when (moveDriverToOffline) do
+    _ <- pure $ setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
+    changeDriverStatus Offline
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning, paymentState{totalPendingManualDues = pendingTotalManualDues, autoPayStatus = autoPayStatus, showShimmer = false}}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType, subscriptionPopupType = subscriptionPopupType}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit
@@ -1957,10 +1979,9 @@ homeScreenFlow = do
               status = response.status,
               rider = (fromMaybe "" response.riderName)
             }})
-          let autoPayStatus =  getAutopayStatus response.autoPayStatus
-              payerVpa = fromMaybe "" response.payerVpa
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag,
-          hasActiveAutoPay = autoPayStatus == ACTIVE_AUTOPAY, payerVpa = payerVpa }}})
+          let payerVpa = fromMaybe "" response.payerVpa
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { 
+            endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }}})
         
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted
@@ -2187,7 +2208,7 @@ paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
   action <- UI.paymentHistory
   case action of 
-    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData true -- to discuss
+    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData false
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       case paymentEntityDetails of
@@ -2547,9 +2568,9 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
     && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall)
     || not getDriverInfoResp.subscribed)
            then do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ paymentState {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }}})
       when (not getDriverInfoResp.onRide && any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]) do
         void $ Remote.driverActiveInactiveBT "false" "OFFLINE"
         homeScreenFlow
   else do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverBlocked = false }})
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {paymentState {driverBlocked = false }}})

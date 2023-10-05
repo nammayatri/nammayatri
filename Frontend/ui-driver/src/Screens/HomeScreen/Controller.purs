@@ -60,7 +60,6 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Screens.Types (AutoPayStatus(..))
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
@@ -199,6 +198,7 @@ instance loggableAction :: Loggable Action where
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
+    FreeTrialEndingAC _ -> pure unit
     _ -> pure unit
 
 
@@ -281,8 +281,7 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
-            | DuePaymentPendingAC PopUpModal.Action
-            | SoftPaymentPendingAC PopUpModal.Action
+            | FreeTrialEndingAC PopUpModal.Action 
             | GetCurrentDuesAction GetCurrentPlanResp
             | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
@@ -292,6 +291,7 @@ data Action = NoAction
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
+            | PaymentPendingPopupAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -315,7 +315,7 @@ eval BackPressed state = do
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
                         else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else if state.props.showBlockingPopup then continue state {props{showBlockingPopup = false}}
+                          else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
                             else do
                               _ <- pure $ minimizeApp ""
                               continue state
@@ -386,60 +386,54 @@ eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
 
-eval (SoftPaymentPendingAC PopUpModal.OnButton1Click) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
-  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
-  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
-  exit $ SubscriptionScreen state {props { softPaymentPendingNudge = false }} false
+eval (PaymentPendingPopupAC PopUpModal.OnButton1Click) state = do
+  if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
+    _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
+    exit $ ClearPendingDues state {props{subscriptionPopupType = ST.GO_ONLINE_BLOCKER}}
+  else do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+    exit $ SubscriptionScreen state {props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} false 
 
-eval (SoftPaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
-  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
-  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
-  exit (DriverAvailabilityStatus state{props { softPaymentPendingNudge = false }} ST.Online)
+eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
+  if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_view_details"
+    _ <- pure $ metaLogEvent "ny_driver_due_payment_view_details"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
+    exit $ SubscriptionScreen state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}} false
+  else do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    exit (DriverAvailabilityStatus state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}} ST.Online)
 
-eval (SoftPaymentPendingAC PopUpModal.OnSecondaryTextClick) state = do
+eval (PaymentPendingPopupAC PopUpModal.OnSecondaryTextClick) state = do
   continueWithCmd state [do
     _ <- openUrlInApp $ "https://www.youtube.com/shorts/x9cJN78j9V8"
     pure NoAction
   ]
+  
+eval (PaymentPendingPopupAC PopUpModal.DismissPopup) state = do
+  if (state.props.subscriptionPopupType == ST.SOFT_NUDGE_POPUP) then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    pure unit
+  else if (state.props.subscriptionPopupType == ST.LOW_DUES_CLEAR_POPUP) then do
+    _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+    pure unit
+  else pure unit
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
 
-eval (SoftPaymentPendingAC PopUpModal.DismissPopup) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
-  _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
-  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
-  continue state {props { softPaymentPendingNudge = false }}
+eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
+  exit $ SubscriptionScreen state false
 
-eval (DuePaymentPendingAC PopUpModal.OnButton1Click) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
-  _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
-  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
-  exit $ ClearPendingDues state {props { showPaymentPendingBlocker = false }}
-
-eval (DuePaymentPendingAC PopUpModal.OptionWithHtmlClick) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_view_details"
-  _ <- pure $ metaLogEvent "ny_driver_due_payment_view_details"
-  let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
-  exit $ SubscriptionScreen state {props { showPaymentPendingBlocker = false }} false
-
-eval (DuePaymentPendingAC PopUpModal.OnSecondaryTextClick) state = do
-  continueWithCmd state [do
-    _ <- openUrlInApp $ "https://www.youtube.com/shorts/x9cJN78j9V8"
-    pure NoAction
-  ]
-
-eval (DuePaymentPendingAC PopUpModal.DismissPopup) state = continue state {props { showPaymentPendingBlocker = false }}
-
-eval (GetCurrentDuesAction (GetCurrentPlanResp resp)) state =
-  case resp.currentPlanDetails of
-    Just (PlanEntity planEntity) -> do 
-      _ <- pure $ cacheSubscriptionInfo (PlanEntity planEntity)
-      let currentDues = planEntity.currentDues - planEntity.autopayDues
-      continue state { props{showShimmer = false, duesAmount = "( ₹" <> show currentDues <> ") "}, data {totalPendingManualDues = currentDues}}
-    Nothing -> continue state { props{showShimmer = false, duesAmount = ""}}
-
-eval (GetCurrentDuesFailed ) state = do
-  continue state { props{showShimmer = false, duesAmount = ""}}
+eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
@@ -691,8 +685,8 @@ eval (RideActiveAction activeRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.props.driverBlocked && not state.props.subscribed then continue state { props{ showPaymentPendingBlocker = true}}
-  else if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
+  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if not state.props.rcActive then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
@@ -705,7 +699,7 @@ eval (SwitchDriverStatus status) state =
   else if state.props.driverStatusSet == status then continue state
     else
       case status of
-        ST.Online -> if state.data.totalPendingManualDues >= 25.0 then continue state { props { softPaymentPendingNudge = true }} else exit (DriverAvailabilityStatus state status)
+        ST.Online -> if state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit then continue state { props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} else exit (DriverAvailabilityStatus state status)
         ST.Silent -> exit (DriverAvailabilityStatus state status)
         ST.Offline ->
           do
@@ -774,7 +768,7 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
 
-eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { props {showBlockingPopup = false}} false
+eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}} false
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
   _ <- pure $ showDialer "08069490091" false

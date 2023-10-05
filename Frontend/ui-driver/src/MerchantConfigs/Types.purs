@@ -33,7 +33,9 @@ type SubscriptionConfig =  {
   offerBannerDeadline :: String,
   currentPlanCacheExpTime :: Int,
   lowDuesLimit :: Number,
-  getSubscriptionInfoInHomeScreen :: Boolean
+  maxDuesLimit :: Number,
+  highDueWarningLimit :: Number,
+  moveDriverToOfflineInHighDueDaily :: Boolean
  }
 
 type RideActionModelConfig = {

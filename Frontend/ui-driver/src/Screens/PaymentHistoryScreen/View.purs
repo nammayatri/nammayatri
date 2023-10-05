@@ -172,7 +172,7 @@ paymentList push state =
                 , gravity CENTER_VERTICAL
                 , orientation HORIZONTAL
                 , margin $ MarginVertical 0 6
-                ][ commonTV push (getString PAID_ON <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
+                ][ commonTV push (itemConfig.description <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
                 , commonTV push (convertUTCtoISC item.transactionDate "Do MMM, YYYY") Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
                 , linearLayout
                     [ height WRAP_CONTENT
@@ -218,7 +218,7 @@ paymentList push state =
                         ]
                 ]
             ]
-        ) transactionItems) -- if state.props.autoPayHistory then autoPayArray else upiArray
+        ) transactionItems)
     ]
 
 noPaymentsView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -232,18 +232,16 @@ noPaymentsView state push =
     [ width $ V 200
     , height $ V 200
     , gravity CENTER
-    , imageWithFallback case state.props.autoPayHistory of
-                          true -> case state.props.autoPaySetup of 
-                                    true -> "ny_no_automatic_payments," 
-                                    false -> "ny_ic_enable_autopay," <> (getAssetStoreLink FunctionCall) <> "ny_ic_enable_autopay.png"
-                          false -> "ny_no_manual_payments,"
+    , imageWithFallback case state.props.autoPayHistory, state.props.autoPaySetup of
+                            true, true -> "ny_no_automatic_payments,"
+                            true, false -> "ny_ic_enable_autopay," <> (getAssetStoreLink FunctionCall) <> "ny_ic_enable_autopay.png"
+                            false, _ -> "ny_no_manual_payments,"
     ]
   , textView
-    [ text $ getString $ case state.props.autoPayHistory of
-                           true -> case state.props.autoPaySetup of 
-                                     true -> AUTOMATIC_PAYMENTS_WILL_APPEAR_HERE 
-                                     false -> AUTOPAY_IS_NOT_ENABLED_YET
-                           false -> MANUAL_PAYMENTS_WILL_APPEAR_HERE
+    [ text $ getString $ case state.props.autoPayHistory, state.props.autoPaySetup of
+                           true, true -> AUTOMATIC_PAYMENTS_WILL_APPEAR_HERE
+                           true, false -> AUTOPAY_IS_NOT_ENABLED_YET
+                           false, _ -> MANUAL_PAYMENTS_WILL_APPEAR_HERE
     , padding $ PaddingHorizontal 48 48
     , textSize FontSize.a_18
     , fontStyle $ FontStyle.bold LanguageStyle
@@ -252,11 +250,10 @@ noPaymentsView state push =
     , gravity CENTER
     ]
   , textView
-    [ text $ getString $ case state.props.autoPayHistory of
-                           true -> case state.props.autoPaySetup of 
-                                     true -> NO_AUTOMATIC_PAYMENTS_DESC 
-                                     false -> ENABLE_AUTOPAY_DESC
-                           false -> NO_MANUAL_PAYMENTS_DESC
+    [ text $ getString $ case state.props.autoPayHistory, state.props.autoPaySetup of
+                           true, true -> NO_AUTOMATIC_PAYMENTS_DESC
+                           true, false -> ENABLE_AUTOPAY_DESC
+                           false, _ -> NO_MANUAL_PAYMENTS_DESC
     , padding $ PaddingHorizontal 48 48
     , textSize FontSize.a_14
     , fontStyle $ FontStyle.regular LanguageStyle

@@ -915,7 +915,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     pdfDocument.writeTo(fos);
                     JuspayLogger.d(OTHERS, "PDF Document written to path " + file.getPath());
                     Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-                    showNotificationWithURI(path, "Invoice Downloaded!!!", "Invoice for your ride is downloaded!!!", "application/pdf", "Invoice", "Invoice Download");
+                    showNotificationWithURI(path, context.getString(R.string.invoice_downloaded), context.getString(R.string.invoice_for_your_ride_is_downloaded), "application/pdf", "Invoice", "Invoice Download");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

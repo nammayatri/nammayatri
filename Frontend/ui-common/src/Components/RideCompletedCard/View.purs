@@ -95,8 +95,6 @@ topCardView config push =
           , onClick push $ const Support
           ]
       ]
-    -- Removed temporarily till endride screen redesigned
-    -- , if config.topCard.topPill.visib3le then topPillView config push else dummyTextView --
     , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -180,14 +178,10 @@ bottomCardView config push =
   ][  if config.customerIssueCard.issueFaced then customerIssueView config push
         else if config.customerBottomCard.visible then customerBottomCardView config push
           else dummyTextView
-          -- else if config.badgeCard.visible then badgeCardView config push -- Removed temporarily till endride screen redesigned
-            -- else if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView  -- Removed temporarily till endride screen redesigned
+    , if not config.showBannerBelowQR then rideEndBannerView config.bannerConfig push else dummyTextView
     , if config.qrVisibility then driverUpiQrCodeView config push else dummyTextView 
-    -- Removed temporarily till endride screen redesigned
-    -- , if config.qrVisibility then collectCashView config.driverUpiQrCard.collectCashText else dummyTextView 
-    -- , if config.noVpaVisibility then collectCashView config.noVpaCard.collectCashText else dummyTextView 
     , if config.noVpaVisibility then noVpaView config  else dummyTextView
-    , rideEndBannerView config.bannerConfig push
+    , if config.showBannerBelowQR then rideEndBannerView config.bannerConfig push else dummyTextView
     , if config.badgeCard.visible then badgeCardView config push  else dummyTextView
     , if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView
     , if not config.isPrimaryButtonSticky then 
@@ -522,7 +516,7 @@ driverUpiQrCodeView config push =
         , background Color.white900
         , orientation HORIZONTAL
         , cornerRadius 28.0
-        , stroke $ "1,"<> "#E5E7EB"
+        , stroke $ "1,#E5E7EB"
         , gravity CENTER
       ][
         imageView [

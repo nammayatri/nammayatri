@@ -27,7 +27,6 @@ initData :: HomeScreenState
 initData = {
     data: {
         config : DC.config,
-        totalPendingManualDues : 0.0,
         driverName : "",
         vehicleType : "",
         driverAlternateMobile : Nothing,
@@ -98,12 +97,18 @@ initData = {
           bannerTitleColor : "",
           banneActionText : "",
           actionTextColor : "",
+          totalPendingManualDues : 0.0,
           bannerImage : "",
           showBannerImage : false,
           chargesBreakup : [],
           blockedDueToPayment : false,
           laterButtonVisibility : false,
-          orderId : ""
+          orderId : "",   
+          subscribed : true,
+          showShimmer : false,
+          driverBlocked : false,
+          showBlockingPopup : false,
+          autoPayStatus : NO_AUTOPAY
         },
         profileImg : Nothing,
         endRideData : {
@@ -115,7 +120,6 @@ initData = {
           rating : 0,
           feedback : "",
           disability : Nothing,
-          hasActiveAutoPay : false,
           payerVpa : ""
         }
     },
@@ -164,12 +168,6 @@ initData = {
         showRideRating : false,
         showContackSupportPopUp : false,
         showChatBlockerPopUp : false,
-        duesAmount : "",
-        showPaymentPendingBlocker : false,
-        softPaymentPendingNudge : false,
-        subscribed : true,
-        showShimmer : false,
-        driverBlocked : false,
-        showBlockingPopup : false
+        subscriptionPopupType : NO_SUBSCRIPTION_POPUP
     }
 }

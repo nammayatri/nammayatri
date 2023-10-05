@@ -26,7 +26,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , height = V 25
       , width = V 25
       , margin = Margin 16 16 16 16
@@ -59,12 +59,12 @@ primaryButtonViewConfig state = let
       }
   in primaryButtonConfig'
 
-getStatusConfig :: Common.PaymentStatus -> {color :: String, backgroundColor :: String, name :: String}
+getStatusConfig :: Common.PaymentStatus -> {color :: String, backgroundColor :: String, name :: String, description :: String}
 getStatusConfig status = case status of
-                              Common.Success -> {color : Color.green900, backgroundColor : "#2953BB6F", name : getString SUCCESS}
-                              Common.Pending -> {color : Color.yellow900, backgroundColor : "#29FCC32C", name : getString PENDING_CAPS}
-                              Common.Failed  -> {color : Color.red, backgroundColor : "#29E55454", name : getString FAILURE}
-                              Common.Scheduled  -> {color : Color.yellow900, backgroundColor : "#29FCC32C", name : getString SCHEDULED}
+                              Common.Success -> {color : Color.green900, backgroundColor : Color.greenOpacity16, name : getString SUCCESS, description : getString DEBITED_ON}
+                              Common.Pending -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString PENDING_CAPS, description : getString ATTEMPTED_ON}
+                              Common.Failed  -> {color : Color.red, backgroundColor : Color.redOpacity16, name : getString FAILURE, description : getString ATTEMPTED_ON}
+                              Common.Scheduled  -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString SCHEDULED, description : getString SCHEDULED_ON}
 
 getTransactionConfig :: ST.TransactionInfo -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig transactionInfo = do

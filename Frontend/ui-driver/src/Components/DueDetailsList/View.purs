@@ -136,12 +136,10 @@ view push state =
                   ] <> FontStyle.body3 TypoGraphy
                   , case item.offerApplied of
                       Just offerConfig -> case fromMaybe "" offerConfig.title of 
-                                            "" -> textView
+                                            "" -> textView $
                                                   [ text "N/A"
-                                                  , textSize FontSize.a_14
                                                   , color Color.black900
-                                                  , fontStyle $ FontStyle.semiBold LanguageStyle
-                                                  ]
+                                                  ] <> FontStyle.body6 TypoGraphy
                                             _ -> promoCodeView push offerConfig
                       Nothing -> linearLayout[visibility GONE][]
                 ]

@@ -713,7 +713,7 @@ const englishStrings = {
   AUTOPAY_PAYMENTS : "Autopay Payments",
   TRANSACTION_ON : "Transaction On",
   SUCCESS : "SUCCESS",
-  PAID_ON : "Debited on",
+  DEBITED_ON : "Debited on",
   RIDES_TAKEN_ON : "Rides taken on",
   JOIN_PLAN : "Join Plan",
   JOIN_NAMMAA_YATRI : "Join Namma Yatri",
@@ -917,5 +917,13 @@ const englishStrings = {
   WATCH_VIDEO_FOR_HELP : "Watch video for help",
   PAYMENT_PENDING_SOFT_NUDGE : "Dues limit will be reached soon. Clear dues to enjoy non-stop rides",
   CLEAR_YOUR_DUES_EARLY : "Clear your Dues Early",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon",
+  SCHEDULED_ON : "Scheduled On",
+  ATTEMPTED_ON : "Attempted On",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"Free trial ending in 2 days!",
+  FREE_TRIAL_ENDING_TOMORROW : "Free trial ending tomorrow!",
+  FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "Setup Autopay for easy payments",
+  LOW_DUES_CLEAR_POPUP_DESC : "Clear your dues now to enjoy non-stop rides."
 } 

@@ -683,7 +683,6 @@ const tamilStrings = {
   AUTOPAY_PAYMENTS : "ஆட்டோ டெபிட் விவரங்கள்‌",
   TRANSACTION_ON : "பரிவர்த்தனை  தேதி",
   SUCCESS : "வெற்றி",
-  PAID_ON : "பணம் செலுத்தப்பட்ட தேதி",
   RIDES_TAKEN_ON : "சவாரி தேதி",
   JOIN_PLAN : "திட்டத்தில் சேரவும்",
   JOIN_NAMMAA_YATRI : "நம்ம யாத்ரியில் சேரவும்",
@@ -887,5 +886,14 @@ const tamilStrings = {
   WATCH_VIDEO_FOR_HELP : "உதவிக்கு வீடியோவைப் பாருங்கள்",
   PAYMENT_PENDING_SOFT_NUDGE : "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை",
   CLEAR_YOUR_DUES_EARLY : "உங்கள் நிலுவைத் தொகையை சீக்கிரம் முடிக்கவும்",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "Your due limit of ₹{} will be reached soon"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "உங்கள் நிலுவைத் தொகையான ₹{} விரைவில் எட்டப்படும்",
+  SCHEDULED_ON : "துப்பறியும் தேதி",
+  ATTEMPTED_ON : "முயற்சி தேதி",
+  DEBITED_ON : "பற்று தேதி",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"இலவச சோதனை 2 நாட்களில் முடிவடைகிறது",
+  FREE_TRIAL_ENDING_TOMORROW : "இலவச சோதனை நாளை முடிவடைகிறது",
+  FREE_TRIAL_ENDS_TONIGHT : "இலவச சோதனை இன்று இரவு முடிவடைகிறது",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "தொடர்ந்து சவாரி செய்வதற்கான திட்டத்தில் சேரவும்",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "எளிதாகப் பணம் செலுத்துவதற்குத் தானாகப் பணம் செலுத்துதலை அமைக்கவும்",
+  LOW_DUES_CLEAR_POPUP_DESC : "இடைவிடாத சவாரிகளை அனுபவிக்க இப்போது உங்கள் நிலுவைத் தொகையை அழிக்கவும்"
 }

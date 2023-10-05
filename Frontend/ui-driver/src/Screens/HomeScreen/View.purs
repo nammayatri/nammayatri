@@ -41,7 +41,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
-import Data.Int (ceil, toNumber)
+import Data.Int (ceil, toNumber, fromString)
 import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
@@ -103,21 +103,6 @@ screen initialState =
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp "Driver On-ride" "No"
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
-              dummySubsInfo = {projectedInvoice : 0.0,
-                              maxDueLimit : 1000.0,
-                              expiry : ""}
-              subscriptionInfo = fromMaybe dummySubsInfo (HU.getSubsInfo CURRENT_DUE_LIMIT_AND_PROJECTED_INVOICE)
-              valuesExpired = if subscriptionInfo.expiry == "" then true else (HU.differenceBetweenTwoUTC (getCurrentUTC "") (subscriptionInfo.expiry)) > initialState.data.config.subscriptionConfig.currentPlanCacheExpTime
-              shouldCallCurrentPlan = initialState.data.config.subscriptionConfig.getSubscriptionInfoInHomeScreen
-          if (((initialState.props.driverBlocked && not initialState.props.subscribed) || valuesExpired) && shouldCallCurrentPlan) then do
-            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "primaryButtonOption1"}
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-              currentPlan <- Remote.getCurrentPlan ""
-              case currentPlan of
-                Right resp -> doAff do liftEffect $ push $ GetCurrentDuesAction resp
-                Left err -> doAff do liftEffect $ push $ GetCurrentDuesFailed
-          else pure unit
-
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
             _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback
@@ -240,13 +225,17 @@ view push state =
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI
+           then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
+           else linearLayout[visibility GONE][]
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if state.props.showPaymentPendingBlocker && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< DuePaymentPendingAC) (paymentPendingBlockerConfig state) else linearLayout[visibility GONE][]
-      , if state.props.softPaymentPendingNudge && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< SoftPaymentPendingAC) (softPaymentPendingNudgeConfig state) else linearLayout[visibility GONE][]
-  ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])
+      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
+          then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
+        else linearLayout[visibility GONE][]
+  ] <> if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -255,8 +244,8 @@ blockerPopUpView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view 
-    (push <<< if state.props.showBlockingPopup then StartEarningPopupAC else PopUpModalChatBlockerAction ) 
-    (if state.props.showBlockingPopup then subsBlockerPopUpConfig state else chatBlockerPopUpConfig state)]
+    (push <<< if state.data.paymentState.showBlockingPopup then StartEarningPopupAC else PopUpModalChatBlockerAction ) 
+    (if state.data.paymentState.showBlockingPopup then subsBlockerPopUpConfig state else chatBlockerPopUpConfig state)]
   
 accessibilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 accessibilityPopUpView push state =
@@ -566,8 +555,8 @@ offlineView push state =
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
-              , text $ getString if state.props.driverBlocked && not state.props.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
-                                 else if state.props.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
+              , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
+                                 else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
             ]
@@ -587,7 +576,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background if state.props.driverBlocked then Color.yellowText else Color.darkMint
+                    , background if state.data.paymentState.driverBlocked then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

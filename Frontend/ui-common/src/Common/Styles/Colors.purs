@@ -153,3 +153,12 @@ yellow700 = "#F09A01"
 
 yellow800 :: Color
 yellow800 = "#FEEBB9"
+
+yellowOpacity16 :: Color
+yellowOpacity16 = "#29FCC32C"
+
+greenOpacity16 :: Color
+greenOpacity16 = "#2953BB6F"
+
+redOpacity16 :: Color
+redOpacity16 = "#29E55454"

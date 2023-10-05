@@ -47,44 +47,6 @@ initData = {
     }
 }
 
-dummyTransactionListItem :: Array TransactionListItem
-dummyTransactionListItem = [
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "OFFER",
-    title : "String",
-    val : "String"},
-    {key : "PAYMENT_METHOD",
-    title : "String",
-    val : "String"},
-    {key : "TXN_ID",
-    title : "String",
-    val : "String"}
-]
-
-dManualPaymentRidesListItem :: Array TransactionListItem
-dManualPaymentRidesListItem = [
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "OFFER",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "DAILY UNLIMITED",
-    val : "String"},
-    {key : "TXN_ID",
-    title : "String",
-    val : "String"}
-]
-
 
 dummyPlanConfig :: PlanCardConfig
 dummyPlanConfig = 
@@ -111,11 +73,11 @@ dummyPlanConfig =
 
 dummyPromoConfig :: PromoConfig
 dummyPromoConfig = {
-                        title : Mb.Just "Freedom Offer: 76% off APPLIED",
+                        title : Mb.Nothing,
                         offerDescription : Mb.Nothing,
-                        isGradient : true,
-                        gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
-                        hasImage : true,
-                        imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png",
-                        addedFromUI : true
+                        isGradient : false,
+                        gradient : [],
+                        hasImage : false,
+                        imageURL : "",
+                        addedFromUI : false
                     }

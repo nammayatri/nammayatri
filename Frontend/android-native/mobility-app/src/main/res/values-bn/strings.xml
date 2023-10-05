@@ -40,4 +40,8 @@
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
     <string name="assistance_required">সহায়তা প্রয়োজন</string>
     <string name="tip">টিপ</string>
+    <string name="qr_for_your_vpa_is_downloaded">আপনার ভিপিএর জন্য QR ডাউনলোড করা হয়েছে!!!</string>
+    <string name="invoice_downloaded">চালান ডাউনলোড হয়েছে!!!</string>
+    <string name="invoice_for_your_ride_is_downloaded">আপনার যাত্রার চালান ডাউনলোড করা হয়!!!</string>
+    <string name="qr_downloaded">QR ডাউনলোড !!!</string>
 </resources>

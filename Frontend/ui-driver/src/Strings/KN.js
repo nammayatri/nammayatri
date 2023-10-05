@@ -681,7 +681,6 @@ const kannadaStrings = {
   AUTOPAY_PAYMENTS : "ಸ್ವಯಂ ಪಾವತಿಗಳು",
   TRANSACTION_ON : "ವಹಿವಾಟು ಆನ್",
   SUCCESS : "ಯಶಸ್ಸು",
-  PAID_ON : "ಪಾವತಿಸಲಾಗಿದೆ",
   RIDES_TAKEN_ON : "ಸವಾರಿಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ",
   JOIN_PLAN : "ಸೇರಿ ಯೋಜನೆ",
   JOIN_NAMMAA_YATRI : "ನಮ್ಮ ಯಾತ್ರಿ ಸೇರಿ",
@@ -889,5 +888,14 @@ const kannadaStrings = {
   WATCH_VIDEO_FOR_HELP : "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ",
   PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ",
   CLEAR_YOUR_DUES_EARLY : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "ನಿಮ್ಮ ಸರಿಯಾದ ಮಿತಿಯನ್ನು ₹{} ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "ನಿಮ್ಮ ಸರಿಯಾದ ಮಿತಿಯನ್ನು ₹{} ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು",
+  SCHEDULED_ON : "ಕಡಿತ ದಿನಾಂಕ",
+  ATTEMPTED_ON : "ಪ್ರಯತ್ನದ ದಿನಾಂಕ",
+  DEBITED_ON : "ಡೆಬಿಟ್ ದಿನಾಂಕ",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"ಫ್ರೀ ಅವಧಿಯು 2 ದಿನಗಳಲ್ಲಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!",
+  FREE_TRIAL_ENDING_TOMORROW : "ಫ್ರೀ ಅವಧಿಯು ನಾಳೆ ಕೊನೆಗೊಳ್ಳಲಿದೆ!",
+  FREE_TRIAL_ENDS_TONIGHT : "ಫ್ರೀ ಅವಧಿಯು ಇಂದು ರಾತ್ರಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "ಸವಾರಿಗಳನ್ನು ಮುಂದುವರಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "ಸುಲಭ ಪಾವತಿಗಳಿಗಾಗಿ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಸೆಟಪ್ ಮಾಡಿ",
+  LOW_DUES_CLEAR_POPUP_DESC : "ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಈಗ ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
 }

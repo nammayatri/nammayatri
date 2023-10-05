@@ -677,7 +677,6 @@ const mlStrings = {
   AUTOPAY_PAYMENTS : "ഓട്ടോപേ പേയ്‌മെന്റുകൾ",
   TRANSACTION_ON : "ഇടപാട് ഓൺ",
   SUCCESS : "വിജയം",
-  PAID_ON : "പണമടച്ചത്",
   RIDES_TAKEN_ON : "റൈഡുകൾ എടുത്തു",
   JOIN_PLAN : "പദ്ധതിയിൽ ചേരുക",
   JOIN_NAMMAA_YATRI : "നമ്മ യാത്രിയിൽ ചേരൂ",
@@ -856,5 +855,14 @@ const mlStrings = {
   WATCH_VIDEO_FOR_HELP : "സഹായത്തിനായി വീഡിയോ കാണുക",
   PAYMENT_PENDING_SOFT_NUDGE : "കുടിശ്ശിക പരിധി ഉടൻ എത്തും.നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ കുടിശ്ശിക മായ്ക്കുക",
   CLEAR_YOUR_DUES_EARLY : "നിങ്ങളുടെ കുടിശ്ശിക നേരത്തെ മായ്ക്കുക",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "നിങ്ങളുടെ അവസാനത്തെ {} നിങ്ങളുടെ പരിധി ഉടൻ എത്തും"
+  DUE_LIMIT_WARNING_BANNER_TITLE : "നിങ്ങളുടെ അവസാനത്തെ {} നിങ്ങളുടെ പരിധി ഉടൻ എത്തും",
+  SCHEDULED_ON : "ഡിഡക്ഷൻ തീയതി",
+  ATTEMPTED_ON : "ശ്രമിച്ച തീയതി",
+  DEBITED_ON : "ഡെബിറ്റ് തീയതി",
+  FREE_TRIAL_ENDING_IN_2_DAYS :"സൗജന്യ ട്രയൽ 2 ദിവസത്തിനുള്ളിൽ അവസാനിക്കും",
+  FREE_TRIAL_ENDING_TOMORROW : "സൗജന്യ ട്രയൽ നാളെ അവസാനിക്കും",
+  FREE_TRIAL_ENDS_TONIGHT : "സൗജന്യ ട്രയൽ ഇന്ന് രാത്രി അവസാനിക്കും",
+  JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "റൈഡുകൾ തുടരാനുള്ള പ്ലാനിൽ ചേരുക",
+  SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "എളുപ്പമുള്ള പേയ്‌മെന്റുകൾക്കായി ഓട്ടോപേ സജ്ജീകരിക്കുക",
+  LOW_DUES_CLEAR_POPUP_DESC : "നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ ഇപ്പോൾ നിങ്ങളുടെ കുടിശ്ശിക മായ്ക്കുക"
 }

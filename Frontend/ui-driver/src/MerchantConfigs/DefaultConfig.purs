@@ -28,7 +28,9 @@ config =
     offerBannerDeadline : "",
     currentPlanCacheExpTime : 3600,
     lowDuesLimit : 25.0,
-    getSubscriptionInfoInHomeScreen : false
+    maxDuesLimit : 100.0,
+    highDueWarningLimit : 75.0,
+    moveDriverToOfflineInHighDueDaily : false
   },
   rideActionModelConfig : {
     showVehicleVariant : true
