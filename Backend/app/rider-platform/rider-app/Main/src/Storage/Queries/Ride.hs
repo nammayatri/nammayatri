@@ -318,9 +318,10 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-createMapping :: MonadFlow m => Text -> Text -> m ()
+createMapping :: MonadFlow m => Text -> Text -> m [DLM.LocationMapping]
 createMapping bookingId rideId = do
   mappings <- QLM.findByEntityId bookingId
+  when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
   let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
       toLocationMappings = filter (\loc -> loc.order /= 0) mappings
 
@@ -329,20 +330,29 @@ createMapping bookingId rideId = do
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
   QLM.create fromLocationRideMapping
 
-  unless (null toLocationMappings) $ do
-    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-    toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
-    QLM.create toLocationRideMapping
+  toLocationRideMappings <-
+    if not (null toLocationMappings)
+      then do
+        let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+        QLM.create toLocationRideMapping
+        return [toLocationRideMapping]
+      else return []
+
+  return $ fromLocationRideMapping : toLocationRideMappings
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
-    when (null mappings) $ do
-      void $ QBooking.findById (Id bookingId)
-      createMapping bookingId id
+    rideMappings <-
+      if null mappings
+        then do
+          void $ QBooking.findById (Id bookingId)
+          createMapping bookingId id
+        else return mappings
 
-    let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-        toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+    let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
+        toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
 
     fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
 
