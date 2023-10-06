@@ -284,6 +284,15 @@ updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchbac
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
+updateDriverDowngradeTaxiForSuv :: MonadFlow m => Id Person -> Bool -> m ()
+updateDriverDowngradeTaxiForSuv (Id driverId) canDowngradeToTaxi = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
 updateAutoPayStatusAndPayerVpa :: MonadFlow m => Maybe DriverAutoPayStatus -> Maybe Text -> Id Person.Driver -> m ()
 updateAutoPayStatusAndPayerVpa autoPayStatus payerVpa (Id driverId) = do
   now <- getCurrentTime

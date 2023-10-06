@@ -82,6 +82,7 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    canSuvDowngradeToTaxi :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rcLimit :: Int,

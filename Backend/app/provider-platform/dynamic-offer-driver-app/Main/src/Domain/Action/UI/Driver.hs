@@ -960,6 +960,8 @@ updateDriver (personId, _) req = do
                 && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
             )
             $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+          when (vehicle.variant == SV.SUV && req.canDowngradeToTaxi == Just True) $
+            throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
           when
             ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI)
                 && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
