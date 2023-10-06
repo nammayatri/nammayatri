@@ -19,7 +19,7 @@ import Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,
@@ -36,6 +36,6 @@ instance B.Table DriverFlowStatusT where
 
 type DriverFlowStatus = DriverFlowStatusT Identity
 
-$(enableKVPG ''DriverFlowStatusT ['personId] [])
+$(TH.enableKVPG ''DriverFlowStatusT ['personId] [])
 
-$(mkTableInstances ''DriverFlowStatusT "driver_flow_status")
+$(TH.mkTableInstances ''DriverFlowStatusT "driver_flow_status")

@@ -21,7 +21,7 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Kernel.Prelude
 import Kernel.Types.Common
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
+import qualified Tools.Beam.UtilsTH as TH
 
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
@@ -43,10 +43,10 @@ data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharg
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForJSON ''WaitingCharge)
+$(TH.mkBeamInstancesForJSON ''WaitingCharge)
 
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForJSON ''NightShiftCharge)
+$(TH.mkBeamInstancesForJSON ''NightShiftCharge)

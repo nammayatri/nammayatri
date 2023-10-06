@@ -28,7 +28,7 @@ import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 type MessageDynamicFieldsType = M.Map Text Text
 
@@ -56,7 +56,7 @@ data DeliveryStatus = Success | Failed | Queued | Sending
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''DeliveryStatus)
+$(TH.mkBeamInstancesForEnum ''DeliveryStatus)
 
 data MessageReport = MessageReport
   { messageId :: Id Msg.Message,

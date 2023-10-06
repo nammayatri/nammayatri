@@ -22,7 +22,7 @@ import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
@@ -66,6 +66,6 @@ instance B.Table EstimateT where
 
 type Estimate = EstimateT Identity
 
-$(enableKVPG ''EstimateT ['id] [['requestId], ['bppEstimateId]])
+$(TH.enableKVPG ''EstimateT ['id] [['requestId], ['bppEstimateId]])
 
-$(mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])
+$(TH.mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])

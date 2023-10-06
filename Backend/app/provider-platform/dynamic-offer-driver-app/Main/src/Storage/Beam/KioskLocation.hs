@@ -17,7 +17,7 @@ module Storage.Beam.KioskLocation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data KioskLocationT f = KioskLocationT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table KioskLocationT where
 
 type KioskLocation = KioskLocationT Identity
 
-$(enableKVPG ''KioskLocationT ['id] [['merchantId]])
+$(TH.enableKVPG ''KioskLocationT ['id] [['merchantId]])
 
-$(mkTableInstances ''KioskLocationT "kiosk_location")
+$(TH.mkTableInstances ''KioskLocationT "kiosk_location")

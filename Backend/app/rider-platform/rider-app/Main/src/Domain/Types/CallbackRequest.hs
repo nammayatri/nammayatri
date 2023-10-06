@@ -20,7 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data CallbackRequestE e = CallbackRequest
   { id :: Id CallbackRequest,
@@ -40,4 +40,4 @@ data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''CallbackRequestStatus)
+$(TH.mkBeamInstancesForEnum ''CallbackRequestStatus)

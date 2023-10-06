@@ -19,7 +19,7 @@ module Storage.Beam.FarePolicy.FareBreakup where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareBreakupT f = FareBreakupT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table FareBreakupT where
 
 type FareBreakup = FareBreakupT Identity
 
-$(enableKVPG ''FareBreakupT ['id] [['bookingId]])
+$(TH.enableKVPG ''FareBreakupT ['id] [['bookingId]])
 
-$(mkTableInstances ''FareBreakupT "fare_breakup")
+$(TH.mkTableInstances ''FareBreakupT "fare_breakup")

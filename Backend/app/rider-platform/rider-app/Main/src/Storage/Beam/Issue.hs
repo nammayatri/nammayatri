@@ -19,7 +19,7 @@ module Storage.Beam.Issue where
 import qualified Database.Beam as B
 import qualified Domain.Types.Issue as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueT f = IssueT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table IssueT where
 
 type Issue = IssueT Identity
 
-$(enableKVPG ''IssueT ['id] [['ticketId]])
+$(TH.enableKVPG ''IssueT ['id] [['ticketId]])
 
-$(mkTableInstances ''IssueT "issue")
+$(TH.mkTableInstances ''IssueT "issue")

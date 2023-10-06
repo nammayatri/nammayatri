@@ -17,7 +17,7 @@ module Storage.Beam.DriverReferral where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverReferralT f = DriverReferralT
   { referralCode :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table DriverReferralT where
 
 type DriverReferral = DriverReferralT Identity
 
-$(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
+$(TH.enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
 
-$(mkTableInstances ''DriverReferralT "driver_referral")
+$(TH.mkTableInstances ''DriverReferralT "driver_referral")

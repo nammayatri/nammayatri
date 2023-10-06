@@ -21,7 +21,7 @@ import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),
@@ -47,6 +47,6 @@ type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
 
 type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsDetailsSlab)
 
-$(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
+$(TH.enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
 
-$(mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab")
+$(TH.mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab")

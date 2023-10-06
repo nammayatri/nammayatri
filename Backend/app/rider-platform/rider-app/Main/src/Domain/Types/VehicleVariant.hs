@@ -19,7 +19,7 @@ module Domain.Types.VehicleVariant where
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving
@@ -39,4 +39,4 @@ data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
 
 derivePersistField "VehicleVariant"
 
-$(mkBeamInstancesForEnum ''VehicleVariant)
+$(TH.mkBeamInstancesForEnum ''VehicleVariant)

@@ -20,7 +20,7 @@ import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FarePolicyProgressiveDetailsPerExtraKmRateSectionT f = FarePolicyProgressiveDetailsPerExtraKmRateSectionT
   { -- id :: B.C f Text,
@@ -40,6 +40,6 @@ type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDe
 
 type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.FarePolicy, Domain.FPProgressiveDetailsPerExtraKmRateSection)
 
-$(enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
+$(TH.enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
 
-$(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section")
+$(TH.mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section")

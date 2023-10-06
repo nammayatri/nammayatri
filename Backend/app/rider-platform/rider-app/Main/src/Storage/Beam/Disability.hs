@@ -5,7 +5,7 @@ module Storage.Beam.Disability where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DisabilityT f = DisabilityT
   { id :: B.C f Text,
@@ -22,6 +22,6 @@ instance B.Table DisabilityT where
 
 type Disability = DisabilityT Identity
 
-$(enableKVPG ''DisabilityT ['id] [])
+$(TH.enableKVPG ''DisabilityT ['id] [])
 
-$(mkTableInstances ''DisabilityT "disability")
+$(TH.mkTableInstances ''DisabilityT "disability")

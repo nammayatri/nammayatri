@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
@@ -55,6 +55,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['riderId]])
+$(TH.enableKVPG ''SearchRequestT ['id] [['riderId]])
 
-$(mkTableInstances ''SearchRequestT "search_request")
+$(TH.mkTableInstances ''SearchRequestT "search_request")

@@ -17,7 +17,7 @@ module Storage.Beam.MetaData where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MetaDataT f = MetaDataT
   { driverId :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table MetaDataT where
 
 type MetaData = MetaDataT Identity
 
-$(enableKVPG ''MetaDataT ['driverId] [])
+$(TH.enableKVPG ''MetaDataT ['driverId] [])
 
-$(mkTableInstancesWithTModifier ''MetaDataT "meta_data" [("deviceOS", "device_o_s")])
+$(TH.mkTableInstancesWithTModifier ''MetaDataT "meta_data" [("deviceOS", "device_o_s")])

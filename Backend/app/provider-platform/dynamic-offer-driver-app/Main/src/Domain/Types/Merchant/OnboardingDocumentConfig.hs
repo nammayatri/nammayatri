@@ -18,15 +18,15 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)
 
-$(mkBeamInstancesForEnum ''VehicleClassCheckType)
+$(TH.mkBeamInstancesForEnum ''VehicleClassCheckType)
 
 data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
 
-$(mkBeamInstancesForEnum ''DocumentType)
+$(TH.mkBeamInstancesForEnum ''DocumentType)
 
 data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap] deriving (Generic, ToJSON, FromJSON, Show)
 

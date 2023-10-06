@@ -18,7 +18,7 @@ module Storage.Beam.SavedReqLocation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SavedReqLocationT f = SavedReqLocationT
   { id :: B.C f Text,
@@ -50,6 +50,6 @@ instance B.Table SavedReqLocationT where
 
 type SavedReqLocation = SavedReqLocationT Identity
 
-$(enableKVPG ''SavedReqLocationT ['id] [['riderId]])
+$(TH.enableKVPG ''SavedReqLocationT ['id] [['riderId]])
 
-$(mkTableInstances ''SavedReqLocationT "saved_location")
+$(TH.mkTableInstances ''SavedReqLocationT "saved_location")

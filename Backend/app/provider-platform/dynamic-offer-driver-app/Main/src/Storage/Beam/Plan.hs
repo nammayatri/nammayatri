@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Plan as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PlanT f = PlanT
   { id :: B.C f Text,
@@ -49,6 +49,6 @@ instance B.Table PlanT where
 
 type Plan = PlanT Identity
 
-$(enableKVPG ''PlanT ['id] [['paymentMode], ['merchantId]]) -- DON'T Enable for KV
+$(TH.enableKVPG ''PlanT ['id] [['paymentMode], ['merchantId]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''PlanT "plan")
+$(TH.mkTableInstances ''PlanT "plan")

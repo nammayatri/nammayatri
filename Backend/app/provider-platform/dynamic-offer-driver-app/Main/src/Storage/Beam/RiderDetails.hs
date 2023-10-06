@@ -18,7 +18,7 @@ module Storage.Beam.RiderDetails where
 import qualified Database.Beam as B
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RiderDetailsT f = RiderDetailsT
   { id :: B.C f Text,
@@ -45,6 +45,6 @@ instance B.Table RiderDetailsT where
 
 type RiderDetails = RiderDetailsT Identity
 
-$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
+$(TH.enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
 
-$(mkTableInstances ''RiderDetailsT "rider_details")
+$(TH.mkTableInstances ''RiderDetailsT "rider_details")

@@ -19,7 +19,7 @@ module Storage.Beam.Merchant.MerchantPaymentMethod where
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table MerchantPaymentMethodT where
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
-$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])
+$(TH.enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])
 
-$(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")
+$(TH.mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")

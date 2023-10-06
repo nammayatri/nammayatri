@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table RestrictedExtraFareT where
 
 type RestrictedExtraFare = RestrictedExtraFareT Identity
 
-$(enableKVPG ''RestrictedExtraFareT ['id] [])
+$(TH.enableKVPG ''RestrictedExtraFareT ['id] [])
 
-$(mkTableInstances ''RestrictedExtraFareT "restricted_extra_fare")
+$(TH.mkTableInstances ''RestrictedExtraFareT "restricted_extra_fare")

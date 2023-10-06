@@ -24,7 +24,7 @@ import Domain.Types.Vehicle.Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
@@ -71,7 +71,7 @@ data FarePolicyType = Progressive | Slabs
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''FarePolicyType)
+$(TH.mkBeamInstancesForEnum ''FarePolicyType)
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

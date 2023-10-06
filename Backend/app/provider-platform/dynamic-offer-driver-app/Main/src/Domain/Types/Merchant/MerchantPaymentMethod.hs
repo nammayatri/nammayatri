@@ -21,7 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   { id :: Id MerchantPaymentMethod,
@@ -158,8 +158,8 @@ mkDummyPaymentUrl MerchantPaymentMethod {..} = do
     <> ";paymentType="
     <> show paymentType
 
-$(mkBeamInstancesForEnum ''PaymentType)
+$(TH.mkBeamInstancesForEnum ''PaymentType)
 
-$(mkBeamInstancesForEnum ''PaymentInstrument)
+$(TH.mkBeamInstancesForEnum ''PaymentInstrument)
 
-$(mkBeamInstancesForEnum ''PaymentCollector)
+$(TH.mkBeamInstancesForEnum ''PaymentCollector)

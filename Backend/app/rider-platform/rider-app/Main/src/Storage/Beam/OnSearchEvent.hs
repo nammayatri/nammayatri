@@ -18,7 +18,7 @@ module Storage.Beam.OnSearchEvent where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data OnSearchEventT f = OnSearchEventT
   { id :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table OnSearchEventT where
 
 type OnSearchEvent = OnSearchEventT Identity
 
-$(enableKVPG ''OnSearchEventT ['id] [])
+$(TH.enableKVPG ''OnSearchEventT ['id] [])
 
-$(mkTableInstances ''OnSearchEventT "on_search_event")
+$(TH.mkTableInstances ''OnSearchEventT "on_search_event")

@@ -18,14 +18,14 @@ module Storage.Beam.Notification where
 
 import qualified Database.Beam as B
 import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
-import Database.Beam.MySQL ()
+
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import GHC.Generics (Generic)
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.NotificationStatus where
   sqlValueSyntax = autoSqlValueSyntax
@@ -67,6 +67,6 @@ instance B.Table NotificationT where
 
 type Notification = NotificationT Identity
 
-$(enableKVPG ''NotificationT ['id] []) -- DON'T Enable for KV
+$(TH.enableKVPG ''NotificationT ['id] []) -- DON'T Enable for KV
 
-$(mkTableInstances ''NotificationT "notification")
+$(TH.mkTableInstances ''NotificationT "notification")

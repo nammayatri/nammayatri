@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.CallbackRequest as Domain
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data CallbackRequestT f = CallbackRequestT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table CallbackRequestT where
 
 type CallbackRequest = CallbackRequestT Identity
 
-$(enableKVPG ''CallbackRequestT ['id] [])
+$(TH.enableKVPG ''CallbackRequestT ['id] [])
 
-$(mkTableInstances ''CallbackRequestT "callback_request")
+$(TH.mkTableInstances ''CallbackRequestT "callback_request")

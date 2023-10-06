@@ -17,13 +17,13 @@ module Domain.Types.MediaFile where
 
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''MediaType)
+$(TH.mkBeamInstancesForEnum ''MediaType)
 
 data MediaFile = MediaFile
   { id :: Id MediaFile,

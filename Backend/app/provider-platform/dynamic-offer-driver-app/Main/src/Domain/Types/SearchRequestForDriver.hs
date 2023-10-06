@@ -30,14 +30,14 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverSearchRequestStatus = Active | Inactive
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
-$(mkBeamInstancesForEnum ''DriverSearchRequestStatus)
+$(TH.mkBeamInstancesForEnum ''DriverSearchRequestStatus)
 
 data SearchRequestForDriverResponse
   = Accept
@@ -47,7 +47,7 @@ data SearchRequestForDriverResponse
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRequestForDriverResponse
 
-$(mkBeamInstancesForEnum ''SearchRequestForDriverResponse)
+$(TH.mkBeamInstancesForEnum ''SearchRequestForDriverResponse)
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,

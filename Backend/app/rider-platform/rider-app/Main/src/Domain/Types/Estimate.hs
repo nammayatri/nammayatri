@@ -27,7 +27,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Estimate = Estimate
   { id :: Id Estimate,
@@ -159,7 +159,7 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
 data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''EstimateStatus)
+$(TH.mkBeamInstancesForEnum ''EstimateStatus)
 
 $(mkHttpInstancesForEnum ''EstimateStatus)
 

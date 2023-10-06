@@ -17,7 +17,7 @@ module Storage.Beam.DriverBlockReason where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverBlockReasonT f = DriverBlockReasonT
   { reasonCode :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table DriverBlockReasonT where
 
 type DriverBlockReason = DriverBlockReasonT Identity
 
-$(enableKVPG ''DriverBlockReasonT ['reasonCode] [])
+$(TH.enableKVPG ''DriverBlockReasonT ['reasonCode] [])
 
-$(mkTableInstances ''DriverBlockReasonT "driver_block_reason")
+$(TH.mkTableInstances ''DriverBlockReasonT "driver_block_reason")

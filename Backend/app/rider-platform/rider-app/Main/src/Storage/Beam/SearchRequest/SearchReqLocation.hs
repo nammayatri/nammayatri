@@ -18,7 +18,7 @@ module Storage.Beam.SearchRequest.SearchReqLocation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SearchReqLocationT f = SearchReqLocationT
   { id :: B.C f Text,
@@ -47,6 +47,6 @@ instance B.Table SearchReqLocationT where
 
 type SearchReqLocation = SearchReqLocationT Identity
 
-$(enableKVPG ''SearchReqLocationT ['id] [])
+$(TH.enableKVPG ''SearchReqLocationT ['id] [])
 
-$(mkTableInstances ''SearchReqLocationT "search_request_location")
+$(TH.mkTableInstances ''SearchReqLocationT "search_request_location")

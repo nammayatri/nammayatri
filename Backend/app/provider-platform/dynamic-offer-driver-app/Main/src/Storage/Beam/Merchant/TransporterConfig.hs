@@ -19,7 +19,7 @@ import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
@@ -100,6 +100,6 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantId] [])
+$(TH.enableKVPG ''TransporterConfigT ['merchantId] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(TH.mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])

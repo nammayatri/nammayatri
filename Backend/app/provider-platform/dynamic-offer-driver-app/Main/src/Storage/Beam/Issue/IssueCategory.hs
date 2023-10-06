@@ -17,7 +17,7 @@ module Storage.Beam.Issue.IssueCategory where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueCategoryT f = IssueCategoryT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table IssueCategoryT where
 
 type IssueCategory = IssueCategoryT Identity
 
-$(enableKVPG ''IssueCategoryT ['id] [['category]])
+$(TH.enableKVPG ''IssueCategoryT ['id] [['category]])
 
-$(mkTableInstances ''IssueCategoryT "issue_category")
+$(TH.mkTableInstances ''IssueCategoryT "issue_category")

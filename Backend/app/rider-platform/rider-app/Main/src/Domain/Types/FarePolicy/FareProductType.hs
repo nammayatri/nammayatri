@@ -17,10 +17,10 @@ module Domain.Types.FarePolicy.FareProductType where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 derivePersistField "FareProductType"
 
-$(mkBeamInstancesForEnum ''FareProductType)
+$(TH.mkBeamInstancesForEnum ''FareProductType)

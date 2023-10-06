@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data VehicleT f = VehicleT
   { driverId :: B.C f Text,
@@ -50,6 +50,6 @@ instance B.Table VehicleT where
 
 type Vehicle = VehicleT Identity
 
-$(enableKVPG ''VehicleT ['driverId] [['registrationNo], ['fleetOwnerId]])
+$(TH.enableKVPG ''VehicleT ['driverId] [['registrationNo], ['fleetOwnerId]])
 
-$(mkTableInstances ''VehicleT "vehicle")
+$(TH.mkTableInstances ''VehicleT "vehicle")

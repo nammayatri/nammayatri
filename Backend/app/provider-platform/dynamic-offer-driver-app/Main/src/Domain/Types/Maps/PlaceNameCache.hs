@@ -17,7 +17,7 @@ module Domain.Types.Maps.PlaceNameCache where
 
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForList)
+import qualified Tools.Beam.UtilsTH as TH
 
 data PlaceNameCache = PlaceNameCache
   { id :: Id PlaceNameCache,
@@ -41,4 +41,4 @@ data AddressResp = AddressResp
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForList ''AddressResp)
+$(TH.mkBeamInstancesForList ''AddressResp)

@@ -20,7 +20,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -50,6 +50,6 @@ instance B.Table DriverLicenseT where
 
 type DriverLicense = DriverLicenseT Identity
 
-$(enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])
+$(TH.enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])
 
-$(mkTableInstances ''DriverLicenseT "driver_license")
+$(TH.mkTableInstances ''DriverLicenseT "driver_license")

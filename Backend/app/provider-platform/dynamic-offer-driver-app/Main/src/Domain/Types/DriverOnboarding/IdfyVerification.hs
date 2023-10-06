@@ -22,19 +22,19 @@ import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''VerificationStatus)
+$(TH.mkBeamInstancesForEnum ''VerificationStatus)
 
 data ImageExtractionValidation = Success | Skipped | Failed
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''ImageExtractionValidation)
+$(TH.mkBeamInstancesForEnum ''ImageExtractionValidation)
 
 data IdfyVerificationE e = IdfyVerification
   { id :: Id IdfyVerification,

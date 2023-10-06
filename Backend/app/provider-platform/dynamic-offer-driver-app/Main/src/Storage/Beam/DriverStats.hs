@@ -18,7 +18,7 @@ module Storage.Beam.DriverStats where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table DriverStatsT where
 
 type DriverStats = DriverStatsT Identity
 
-$(enableKVPG ''DriverStatsT ['driverId] [])
+$(TH.enableKVPG ''DriverStatsT ['driverId] [])
 
-$(mkTableInstances ''DriverStatsT "driver_stats")
+$(TH.mkTableInstances ''DriverStatsT "driver_stats")

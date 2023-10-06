@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Mandate = Mandate
   { id :: Id Mandate,
@@ -41,6 +41,6 @@ data MandateStatus = ACTIVE | INACTIVE
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''MandateStatus)
+$(TH.mkBeamInstancesForEnum ''MandateStatus)
 
 $(mkHttpInstancesForEnum ''MandateStatus)

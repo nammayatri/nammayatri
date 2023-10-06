@@ -17,7 +17,7 @@ module Storage.Beam.Feedback.FeedbackBadge where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FeedbackBadgeT f = FeedbackBadgeT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table FeedbackBadgeT where
 
 type FeedbackBadge = FeedbackBadgeT Identity
 
-$(enableKVPG ''FeedbackBadgeT ['id] [['driverId]])
+$(TH.enableKVPG ''FeedbackBadgeT ['id] [['driverId]])
 
-$(mkTableInstances ''FeedbackBadgeT "feedback_badge")
+$(TH.mkTableInstances ''FeedbackBadgeT "feedback_badge")

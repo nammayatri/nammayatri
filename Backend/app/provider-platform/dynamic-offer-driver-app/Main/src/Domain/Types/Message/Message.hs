@@ -21,13 +21,13 @@ import Domain.Types.Merchant (Merchant)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageType = Action Text | Read
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''MessageType)
+$(TH.mkBeamInstancesForEnum ''MessageType)
 
 data Message = Message
   { id :: Id Message,

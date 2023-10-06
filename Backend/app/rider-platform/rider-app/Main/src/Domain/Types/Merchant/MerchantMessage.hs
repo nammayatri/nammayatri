@@ -20,7 +20,7 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageKey
   = INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER
@@ -30,7 +30,7 @@ data MessageKey
   | SEND_BOOKING_OTP
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
-$(mkBeamInstancesForEnum ''MessageKey)
+$(TH.mkBeamInstancesForEnum ''MessageKey)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,

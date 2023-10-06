@@ -19,7 +19,7 @@ module Storage.Beam.RegistrationToken where
 import qualified Database.Beam as B
 import qualified Domain.Types.RegistrationToken as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
@@ -48,6 +48,6 @@ instance B.Table RegistrationTokenT where
 
 type RegistrationToken = RegistrationTokenT Identity
 
-$(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])
+$(TH.enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])
 
-$(mkTableInstances ''RegistrationTokenT "registration_token")
+$(TH.mkTableInstances ''RegistrationTokenT "registration_token")

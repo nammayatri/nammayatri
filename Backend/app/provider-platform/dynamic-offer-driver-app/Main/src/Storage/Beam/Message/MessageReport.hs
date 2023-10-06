@@ -20,7 +20,7 @@ import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Message.MessageReport as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,
@@ -43,5 +43,5 @@ instance B.Table MessageReportT where
 
 type MessageReport = MessageReportT Identity
 
-$(enableKVPG ''MessageReportT ['driverId, 'messageId] [])
-$(mkTableInstances ''MessageReportT "message_report")
+$(TH.enableKVPG ''MessageReportT ['driverId, 'messageId] [])
+$(TH.mkTableInstances ''MessageReportT "message_report")

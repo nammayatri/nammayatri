@@ -25,7 +25,7 @@ import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField)
 import Kernel.Prelude
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
@@ -63,5 +63,5 @@ makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEn
 makeCancellationReasonAPIEntity CancellationReason {..} =
   CancellationReasonAPIEntity {..}
 
-$(mkBeamInstancesForEnum ''CancellationStage)
+$(TH.mkBeamInstancesForEnum ''CancellationStage)
 $(mkFromHttpInstanceForEnum ''CancellationStage)

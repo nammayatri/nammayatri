@@ -21,7 +21,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,
@@ -56,6 +56,6 @@ instance B.Table DriverQuoteT where
 
 type DriverQuote = DriverQuoteT Identity
 
-$(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])
+$(TH.enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])
 
-$(mkTableInstancesWithTModifier ''DriverQuoteT "driver_quote" [("requestId", "search_request_id")])
+$(TH.mkTableInstancesWithTModifier ''DriverQuoteT "driver_quote" [("requestId", "search_request_id")])

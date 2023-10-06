@@ -20,7 +20,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
@@ -53,6 +53,6 @@ instance B.Table VehicleRegistrationCertificateT where
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
-$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
+$(TH.enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
 
-$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")
+$(TH.mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")

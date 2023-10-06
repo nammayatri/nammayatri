@@ -17,7 +17,7 @@ module Storage.Beam.DriverOnboarding.AadhaarOtpVerify where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AadhaarOtpVerifyT f = AadhaarOtpVerifyT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table AadhaarOtpVerifyT where
 
 type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
 
-$(enableKVPG ''AadhaarOtpVerifyT ['id] [['driverId]])
+$(TH.enableKVPG ''AadhaarOtpVerifyT ['id] [['driverId]])
 
-$(mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")
+$(TH.mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")

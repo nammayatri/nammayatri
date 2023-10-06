@@ -19,12 +19,12 @@ module Storage.Beam.AadhaarVerification.AadhaarVerification where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AadhaarVerificationT f = AadhaarVerificationT
   { personId :: B.C f Text,
@@ -47,6 +47,6 @@ instance B.Table AadhaarVerificationT where
 
 type AadhaarVerification = AadhaarVerificationT Identity
 
-$(enableKVPG ''AadhaarVerificationT ['personId] [['aadhaarNumberHash]])
+$(TH.enableKVPG ''AadhaarVerificationT ['personId] [['aadhaarNumberHash]])
 
-$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification")
+$(TH.mkTableInstances ''AadhaarVerificationT "aadhaar_verification")

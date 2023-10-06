@@ -19,7 +19,7 @@ module Storage.Beam.Person.PersonDisability where
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonDisabilityT f = PersonDisabilityT
   { personId :: B.C f Text,
@@ -38,5 +38,5 @@ instance B.Table PersonDisabilityT where
 
 type PersonDisability = PersonDisabilityT Identity
 
-$(enableKVPG ''PersonDisabilityT ['personId] [])
-$(mkTableInstances ''PersonDisabilityT "person_disability")
+$(TH.enableKVPG ''PersonDisabilityT ['personId] [])
+$(TH.mkTableInstances ''PersonDisabilityT "person_disability")

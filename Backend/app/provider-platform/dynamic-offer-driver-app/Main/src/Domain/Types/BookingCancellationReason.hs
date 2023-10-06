@@ -24,7 +24,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingCancellationReason = BookingCancellationReason
   { driverId :: Maybe (Id DP.Person),
@@ -48,4 +48,4 @@ data CancellationSource
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''CancellationSource)
+$(TH.mkBeamInstancesForEnum ''CancellationSource)

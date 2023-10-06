@@ -17,7 +17,7 @@ module Storage.Beam.DriverOnboarding.OperatingCity where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data OperatingCityT f = OperatingCityT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table OperatingCityT where
 
 type OperatingCity = OperatingCityT Identity
 
-$(enableKVPG ''OperatingCityT ['id] [['merchantId], ['cityName]])
+$(TH.enableKVPG ''OperatingCityT ['id] [['merchantId], ['cityName]])
 
-$(mkTableInstances ''OperatingCityT "operating_city")
+$(TH.mkTableInstances ''OperatingCityT "operating_city")

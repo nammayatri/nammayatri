@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BlackListOrgType
   = PROVIDER
@@ -31,7 +31,7 @@ data BlackListOrgType
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''BlackListOrgType)
+$(TH.mkBeamInstancesForEnum ''BlackListOrgType)
 
 $(mkFromHttpInstanceForEnum ''BlackListOrgType)
 

@@ -18,7 +18,7 @@ module Storage.Beam.Person.PersonStats where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonStatsT f = PersonStatsT
   { personId :: B.C f Text,
@@ -43,5 +43,5 @@ instance B.Table PersonStatsT where
 
 type PersonStats = PersonStatsT Identity
 
-$(enableKVPG ''PersonStatsT ['personId] [])
-$(mkTableInstances ''PersonStatsT "person_stats")
+$(TH.enableKVPG ''PersonStatsT ['personId] [])
+$(TH.mkTableInstances ''PersonStatsT "person_stats")

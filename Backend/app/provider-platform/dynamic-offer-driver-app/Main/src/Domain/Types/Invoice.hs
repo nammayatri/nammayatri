@@ -7,7 +7,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Invoice = Invoice
   { id :: Id Invoice,
@@ -30,8 +30,8 @@ data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED deri
 
 data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE | MANDATE_SETUP_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-$(mkBeamInstancesForEnum ''InvoiceStatus)
-$(mkBeamInstancesForEnum ''InvoicePaymentMode)
+$(TH.mkBeamInstancesForEnum ''InvoiceStatus)
+$(TH.mkBeamInstancesForEnum ''InvoicePaymentMode)
 
 $(mkHttpInstancesForEnum ''InvoiceStatus)
 $(mkHttpInstancesForEnum ''InvoicePaymentMode)

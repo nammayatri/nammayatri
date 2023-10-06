@@ -17,7 +17,7 @@ module Storage.Beam.Issue.IssueOption where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueOptionT f = IssueOptionT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table IssueOptionT where
 
 type IssueOption = IssueOptionT Identity
 
-$(enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])
+$(TH.enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])
 
-$(mkTableInstances ''IssueOptionT "issue_option")
+$(TH.mkTableInstances ''IssueOptionT "issue_option")

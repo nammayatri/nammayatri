@@ -18,7 +18,7 @@ module Storage.Beam.HotSpotConfig where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data HotSpotConfigT f = HotSpotConfigT
   { id :: B.C f Text,
@@ -65,6 +65,6 @@ defaultHotSpotConfig =
       maxNumHotSpotsToShow = 0
     }
 
-$(enableKVPG ''HotSpotConfigT ['id] [])
+$(TH.enableKVPG ''HotSpotConfigT ['id] [])
 
-$(mkTableInstances ''HotSpotConfigT "hot_spot_config")
+$(TH.mkTableInstances ''HotSpotConfigT "hot_spot_config")

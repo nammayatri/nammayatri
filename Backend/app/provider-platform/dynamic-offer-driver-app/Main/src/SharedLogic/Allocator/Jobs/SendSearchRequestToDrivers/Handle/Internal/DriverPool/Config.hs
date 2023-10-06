@@ -24,7 +24,7 @@ where
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForList)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   { batchSplitSize :: Int,
@@ -33,7 +33,7 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForList ''BatchSplitByPickupDistance)
+$(TH.mkBeamInstancesForList ''BatchSplitByPickupDistance)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
@@ -50,4 +50,4 @@ data PoolSortingType = Intelligent | Random
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
 
-$(mkBeamInstancesForEnum ''PoolSortingType)
+$(TH.mkBeamInstancesForEnum ''PoolSortingType)

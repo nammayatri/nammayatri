@@ -28,7 +28,7 @@ import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
@@ -71,6 +71,6 @@ getServiceNameConfigJSON = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
 
-$(enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])
+$(TH.enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])
 
-$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")
+$(TH.mkTableInstances ''MerchantServiceConfigT "merchant_service_config")

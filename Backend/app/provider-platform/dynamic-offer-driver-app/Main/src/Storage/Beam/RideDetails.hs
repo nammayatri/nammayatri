@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle as SV
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table RideDetailsT where
 
 type RideDetails = RideDetailsT Identity
 
-$(enableKVPG ''RideDetailsT ['id] [])
+$(TH.enableKVPG ''RideDetailsT ['id] [])
 
-$(mkTableInstances ''RideDetailsT "ride_details")
+$(TH.mkTableInstances ''RideDetailsT "ride_details")

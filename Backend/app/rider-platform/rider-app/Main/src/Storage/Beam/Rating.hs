@@ -21,8 +21,7 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Map as M
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
-
+import qualified Tools.Beam.UtilsTH as TH
 data RatingT f = RatingT
   { id :: B.C f Text,
     rideId :: B.C f Text,
@@ -53,6 +52,6 @@ ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 ratingToPSModifiers =
   M.empty
 
-$(enableKVPG ''RatingT ['id] [['rideId]])
+$(TH.enableKVPG ''RatingT ['id] [['rideId]])
 
-$(mkTableInstances ''RatingT "rating")
+$(TH.mkTableInstances ''RatingT "rating")

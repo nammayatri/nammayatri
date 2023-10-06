@@ -18,7 +18,7 @@ module Storage.Beam.Message.MessageTranslation where
 import qualified Database.Beam as B
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageTranslationT f = MessageTranslationT
   { messageId :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table MessageTranslationT where
 
 type MessageTranslation = MessageTranslationT Identity
 
-$(enableKVPG ''MessageTranslationT ['messageId] [])
+$(TH.enableKVPG ''MessageTranslationT ['messageId] [])
 
-$(mkTableInstances ''MessageTranslationT "message_translation")
+$(TH.mkTableInstances ''MessageTranslationT "message_translation")

@@ -19,7 +19,7 @@ module Storage.Beam.MerchantConfig where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantConfigT f = MerchantConfigT
   { id :: B.C f Text,
@@ -45,6 +45,6 @@ instance B.Table MerchantConfigT where
 
 type MerchantConfig = MerchantConfigT Identity
 
-$(enableKVPG ''MerchantConfigT ['id] [['merchantId]])
+$(TH.enableKVPG ''MerchantConfigT ['id] [['merchantId]])
 
-$(mkTableInstances ''MerchantConfigT "merchant_config")
+$(TH.mkTableInstances ''MerchantConfigT "merchant_config")

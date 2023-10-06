@@ -23,12 +23,12 @@ import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
 
-$(mkBeamInstancesForEnum ''TimeOfDayText)
+$(TH.mkBeamInstancesForEnum ''TimeOfDayText)
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
@@ -56,6 +56,6 @@ instance B.Table EstimateT where
 
 type Estimate = EstimateT Identity
 
-$(enableKVPG ''EstimateT ['id] [])
+$(TH.enableKVPG ''EstimateT ['id] [])
 
-$(mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])
+$(TH.mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])

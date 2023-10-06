@@ -22,7 +22,7 @@ import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -74,6 +74,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])
+$(TH.enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])
 
-$(mkTableInstances ''PersonT "person")
+$(TH.mkTableInstances ''PersonT "person")

@@ -19,7 +19,7 @@ module Storage.Beam.Issue.IssueTranslation where
 import qualified Database.Beam as B
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueTranslationT f = IssueTranslationT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table IssueTranslationT where
 
 type IssueTranslation = IssueTranslationT Identity
 
-$(enableKVPG ''IssueTranslationT ['id] [['language]])
+$(TH.enableKVPG ''IssueTranslationT ['id] [['language]])
 
-$(mkTableInstances ''IssueTranslationT "issue_translation")
+$(TH.mkTableInstances ''IssueTranslationT "issue_translation")

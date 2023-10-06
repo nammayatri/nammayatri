@@ -28,13 +28,13 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
-$(mkBeamInstancesForEnum ''DriverQuoteStatus)
+$(TH.mkBeamInstancesForEnum ''DriverQuoteStatus)
 
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,

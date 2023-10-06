@@ -24,7 +24,7 @@ import Kernel.External.Ticket.Types
 import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
@@ -59,6 +59,6 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
+$(TH.enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
 
-$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
+$(TH.mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")

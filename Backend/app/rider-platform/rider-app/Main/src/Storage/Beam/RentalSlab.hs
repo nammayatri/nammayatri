@@ -20,7 +20,7 @@ module Storage.Beam.RentalSlab where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table RentalSlabT where
 
 type RentalSlab = RentalSlabT Identity
 
-$(enableKVPG ''RentalSlabT ['id] [])
+$(TH.enableKVPG ''RentalSlabT ['id] [])
 
-$(mkTableInstances ''RentalSlabT "rental_slab")
+$(TH.mkTableInstances ''RentalSlabT "rental_slab")

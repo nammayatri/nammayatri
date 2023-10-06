@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverPoolConfigT f = DriverPoolConfigT
   { merchantId :: B.C f Text,
@@ -54,6 +54,6 @@ instance B.Table DriverPoolConfigT where
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-$(enableKVPG ''DriverPoolConfigT ['merchantId] [])
+$(TH.enableKVPG ''DriverPoolConfigT ['merchantId] [])
 
-$(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
+$(TH.mkTableInstances ''DriverPoolConfigT "driver_pool_config")

@@ -19,12 +19,12 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema, Ord)
 
-$(mkBeamInstancesForEnum ''ImageType)
+$(TH.mkBeamInstancesForEnum ''ImageType)
 
 data Image = Image
   { id :: Id Image,

@@ -18,7 +18,7 @@ module Storage.Beam.Message.Message where
 import qualified Database.Beam as B
 import qualified Domain.Types.Message.Message as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageT f = MessageT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table MessageT where
 
 type Message = MessageT Identity
 
-$(enableKVPG ''MessageT ['id] []) -- DON'T Enable for KV
+$(TH.enableKVPG ''MessageT ['id] []) -- DON'T Enable for KV
 
-$(mkTableInstancesWithTModifier ''MessageT "message" [("messageType", "type")])
+$(TH.mkTableInstancesWithTModifier ''MessageT "message" [("messageType", "type")])

@@ -25,8 +25,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
-
+import qualified Tools.Beam.UtilsTH as TH
 toRowExpression :: Text -> Text -> Double -> Double -> Domain.DriverGoHomeRequestStatus -> Int -> Maybe Bool -> UTCTime -> UTCTime -> DriverGoHomeRequestT (B.QExpr B.Postgres s)
 toRowExpression reqId driverId lat lon status numCancellation mbReachedHome createdAt updatedAt =
   DriverGoHomeRequestT
@@ -75,6 +74,6 @@ driverGoHomeRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverGoHomeRequestToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverGoHomeRequestT ['id] [])
+$(TH.enableKVPG ''DriverGoHomeRequestT ['id] [])
 
-$(mkTableInstances ''DriverGoHomeRequestT "driver_go_home_request")
+$(TH.mkTableInstances ''DriverGoHomeRequestT "driver_go_home_request")

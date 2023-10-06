@@ -21,7 +21,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data QuoteT f = QuoteT
   { id :: B.C f Text,
@@ -56,6 +56,6 @@ instance B.Table QuoteT where
 
 type Quote = QuoteT Identity
 
-$(enableKVPG ''QuoteT ['id] [['requestId], ['driverOfferId]])
+$(TH.enableKVPG ''QuoteT ['id] [['requestId], ['driverOfferId]])
 
-$(mkTableInstances ''QuoteT "quote")
+$(TH.mkTableInstances ''QuoteT "quote")

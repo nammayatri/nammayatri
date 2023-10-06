@@ -18,14 +18,14 @@ import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data LeaderBoardType
   = WEEKLY
   | DAILY
   deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show, Ord, Eq)
 
-$(mkBeamInstancesForEnum ''LeaderBoardType)
+$(TH.mkBeamInstancesForEnum ''LeaderBoardType)
 
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,

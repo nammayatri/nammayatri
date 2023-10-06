@@ -17,7 +17,7 @@ module Storage.Beam.BapMetadata where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BapMetadataT f = BapMetadataT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table BapMetadataT where
 
 type BapMetadata = BapMetadataT Identity
 
-$(enableKVPG ''BapMetadataT ['id] [])
+$(TH.enableKVPG ''BapMetadataT ['id] [])
 
-$(mkTableInstances ''BapMetadataT "bap_metadata")
+$(TH.mkTableInstances ''BapMetadataT "bap_metadata")

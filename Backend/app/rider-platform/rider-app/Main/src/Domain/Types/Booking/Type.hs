@@ -28,7 +28,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
@@ -43,7 +43,7 @@ data BookingStatus
   | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''BookingStatus)
+$(TH.mkBeamInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 

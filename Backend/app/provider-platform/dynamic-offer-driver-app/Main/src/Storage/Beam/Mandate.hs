@@ -8,7 +8,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Mandate as Domain
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MandateT f = MandateT
   { id :: B.C f Text,
@@ -33,5 +33,5 @@ instance B.Table MandateT where
 
 type Mandate = MandateT Identity
 
-$(enableKVPG ''MandateT ['id] [])
-$(mkTableInstances ''MandateT "mandate")
+$(TH.enableKVPG ''MandateT ['id] [])
+$(TH.mkTableInstances ''MandateT "mandate")

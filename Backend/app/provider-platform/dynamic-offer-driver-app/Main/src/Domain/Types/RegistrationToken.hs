@@ -19,7 +19,7 @@ import Data.Aeson
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Medium
   = SMS
@@ -59,8 +59,8 @@ data RegistrationToken = RegistrationToken
   }
   deriving (Generic, Show, Eq)
 
-$(mkBeamInstancesForEnum ''Medium)
+$(TH.mkBeamInstancesForEnum ''Medium)
 
-$(mkBeamInstancesForEnum ''RTEntityType)
+$(TH.mkBeamInstancesForEnum ''RTEntityType)
 
-$(mkBeamInstancesForEnum ''LoginType)
+$(TH.mkBeamInstancesForEnum ''LoginType)

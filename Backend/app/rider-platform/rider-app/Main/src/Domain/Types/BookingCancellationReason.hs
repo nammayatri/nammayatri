@@ -24,7 +24,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingCancellationReason = BookingCancellationReason
   { bookingId :: Id Booking,
@@ -48,4 +48,4 @@ data CancellationSource
   deriving (Show, Eq, Ord, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''CancellationSource)
+$(TH.mkBeamInstancesForEnum ''CancellationSource)

@@ -23,7 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Id Ride,
@@ -105,6 +105,6 @@ makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
           answerType = res.answerType
         }
 
-$(mkBeamInstancesForEnum ''Category)
+$(TH.mkBeamInstancesForEnum ''Category)
 
-$(mkBeamInstancesForEnum ''AnswerType)
+$(TH.mkBeamInstancesForEnum ''AnswerType)

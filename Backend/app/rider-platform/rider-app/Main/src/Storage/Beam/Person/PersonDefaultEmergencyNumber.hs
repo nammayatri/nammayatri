@@ -19,7 +19,7 @@ module Storage.Beam.Person.PersonDefaultEmergencyNumber where
 import qualified Database.Beam as B
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
   { personId :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table PersonDefaultEmergencyNumberT where
 
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 
-$(enableKVPG ''PersonDefaultEmergencyNumberT ['personId] [])
+$(TH.enableKVPG ''PersonDefaultEmergencyNumberT ['personId] [])
 
-$(mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")
+$(TH.mkTableInstances ''PersonDefaultEmergencyNumberT "person_default_emergency_number")

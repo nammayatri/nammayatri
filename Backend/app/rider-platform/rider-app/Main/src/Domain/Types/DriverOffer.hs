@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BPPQuote
 
@@ -31,7 +31,7 @@ data DriverOfferStatus = ACTIVE | INACTIVE
   deriving anyclass (FromJSON, ToJSON)
   deriving (PrettyShow) via Showable DriverOfferStatus
 
-$(mkBeamInstancesForEnum ''DriverOfferStatus)
+$(TH.mkBeamInstancesForEnum ''DriverOfferStatus)
 
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,

@@ -24,7 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data RideStatus
   = NEW
@@ -33,7 +33,7 @@ data RideStatus
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''RideStatus)
+$(TH.mkBeamInstancesForEnum ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 

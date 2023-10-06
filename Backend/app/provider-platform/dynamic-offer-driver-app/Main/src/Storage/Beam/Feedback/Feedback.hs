@@ -18,7 +18,7 @@ module Storage.Beam.Feedback.Feedback where
 import qualified Database.Beam as B
 import qualified Domain.Types.Feedback.Feedback as Domain ()
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FeedbackT f = FeedbackT
   { id :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table FeedbackT where
 
 type Feedback = FeedbackT Identity
 
-$(enableKVPG ''FeedbackT ['id] [])
+$(TH.enableKVPG ''FeedbackT ['id] [])
 
-$(mkTableInstances ''FeedbackT "feedback")
+$(TH.mkTableInstances ''FeedbackT "feedback")

@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DriverOffer as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverOfferT f = DriverOfferT
   { id :: B.C f Text,
@@ -46,6 +46,6 @@ instance B.Table DriverOfferT where
 
 type DriverOffer = DriverOfferT Identity
 
-$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
+$(TH.enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
 
-$(mkTableInstances ''DriverOfferT "driver_offer")
+$(TH.mkTableInstances ''DriverOfferT "driver_offer")

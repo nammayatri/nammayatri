@@ -19,7 +19,7 @@ module Storage.Beam.EstimateBreakup where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data EstimateBreakupT f = EstimateBreakupT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table EstimateBreakupT where
 
 type EstimateBreakup = EstimateBreakupT Identity
 
-$(enableKVPG ''EstimateBreakupT ['id] [['estimateId]])
+$(TH.enableKVPG ''EstimateBreakupT ['id] [['estimateId]])
 
-$(mkTableInstances ''EstimateBreakupT "estimate_breakup")
+$(TH.mkTableInstances ''EstimateBreakupT "estimate_breakup")

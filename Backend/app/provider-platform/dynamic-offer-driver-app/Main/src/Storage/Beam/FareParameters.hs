@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FareParameters as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table FareParametersT where
 
 type FareParameters = FareParametersT Identity
 
-$(enableKVPG ''FareParametersT ['id] [])
+$(TH.enableKVPG ''FareParametersT ['id] [])
 
-$(mkTableInstances ''FareParametersT "fare_parameters")
+$(TH.mkTableInstances ''FareParametersT "fare_parameters")

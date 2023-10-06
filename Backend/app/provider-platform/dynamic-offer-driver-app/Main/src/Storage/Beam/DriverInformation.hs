@@ -18,7 +18,7 @@ module Storage.Beam.DriverInformation where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverInformationT f = DriverInformationT
   { driverId :: B.C f Text,
@@ -59,6 +59,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-$(enableKVPG ''DriverInformationT ['driverId] [])
+$(TH.enableKVPG ''DriverInformationT ['driverId] [])
 
-$(mkTableInstances ''DriverInformationT "driver_information")
+$(TH.mkTableInstances ''DriverInformationT "driver_information")

@@ -19,7 +19,7 @@ module Storage.Beam.Sos where
 import qualified Database.Beam as B
 import qualified Domain.Types.Sos as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SosT f = SosT
   { id :: B.C f Text,
@@ -40,6 +40,6 @@ instance B.Table SosT where
 
 type Sos = SosT Identity
 
-$(enableKVPG ''SosT ['id] [])
+$(TH.enableKVPG ''SosT ['id] [])
 
-$(mkTableInstances ''SosT "sos")
+$(TH.mkTableInstances ''SosT "sos")

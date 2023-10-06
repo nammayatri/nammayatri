@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FareProduct as FareProductD
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   { id :: B.C f Text,
@@ -48,6 +48,6 @@ instance B.Table SearchRequestSpecialZoneT where
 
 type SearchRequestSpecialZone = SearchRequestSpecialZoneT Identity
 
-$(enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])
+$(TH.enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])
 
-$(mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone")
+$(TH.mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone")

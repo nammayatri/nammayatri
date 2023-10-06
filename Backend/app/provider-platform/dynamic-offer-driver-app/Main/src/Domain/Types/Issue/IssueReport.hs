@@ -25,7 +25,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueStatus
   = OPEN
@@ -33,7 +33,7 @@ data IssueStatus
   | RESOLVED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''IssueStatus)
+$(TH.mkBeamInstancesForEnum ''IssueStatus)
 
 data IssueReport = IssueReport
   { id :: Id IssueReport,

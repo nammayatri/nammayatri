@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
@@ -40,6 +40,6 @@ instance B.Table FarePolicyProgressiveDetailsT where
 
 type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
 
-$(enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
+$(TH.enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
 
-$(mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details")
+$(TH.mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details")

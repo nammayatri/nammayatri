@@ -17,7 +17,7 @@ module Storage.Beam.Rating where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RatingT f = RatingT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table RatingT where
 
 type Rating = RatingT Identity
 
-$(enableKVPG ''RatingT ['id] [['rideId]])
+$(TH.enableKVPG ''RatingT ['id] [['rideId]])
 
-$(mkTableInstances ''RatingT "rating")
+$(TH.mkTableInstances ''RatingT "rating")

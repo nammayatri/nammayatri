@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Kernel.Prelude
 import Kernel.Types.Common (Money)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,
@@ -36,6 +36,6 @@ instance B.Table FareParametersProgressiveDetailsT where
 
 type FareParametersProgressiveDetails = FareParametersProgressiveDetailsT Identity
 
-$(enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])
+$(TH.enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])
 
-$(mkTableInstances ''FareParametersProgressiveDetailsT "fare_parameters_progressive_details")
+$(TH.mkTableInstances ''FareParametersProgressiveDetailsT "fare_parameters_progressive_details")

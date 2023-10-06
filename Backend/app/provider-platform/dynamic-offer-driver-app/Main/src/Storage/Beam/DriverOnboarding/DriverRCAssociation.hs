@@ -17,7 +17,7 @@ module Storage.Beam.DriverOnboarding.DriverRCAssociation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverRCAssociationT f = DriverRCAssociationT
   { id :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table DriverRCAssociationT where
 
 type DriverRCAssociation = DriverRCAssociationT Identity
 
-$(enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])
+$(TH.enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])
 
-$(mkTableInstances ''DriverRCAssociationT "driver_rc_association")
+$(TH.mkTableInstances ''DriverRCAssociationT "driver_rc_association")

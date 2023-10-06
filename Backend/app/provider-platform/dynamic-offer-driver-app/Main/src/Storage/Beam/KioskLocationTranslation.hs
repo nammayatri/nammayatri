@@ -18,7 +18,7 @@ module Storage.Beam.KioskLocationTranslation where
 import qualified Database.Beam as B
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data KioskLocationTranslationT f = KioskLocationTranslationT
   { kioskLocationId :: B.C f Text,
@@ -36,5 +36,5 @@ instance B.Table KioskLocationTranslationT where
 
 type KioskLocationTranslation = KioskLocationTranslationT Identity
 
-$(enableKVPG ''KioskLocationTranslationT ['kioskLocationId] [['language]])
-$(mkTableInstances ''KioskLocationTranslationT "kiosk_location_translation")
+$(TH.enableKVPG ''KioskLocationTranslationT ['kioskLocationId] [['language]])
+$(TH.mkTableInstances ''KioskLocationTranslationT "kiosk_location_translation")

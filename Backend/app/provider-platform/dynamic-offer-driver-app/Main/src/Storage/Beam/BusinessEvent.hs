@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BusinessEventT f = BusinessEventT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table BusinessEventT where
 
 type BusinessEvent = BusinessEventT Identity
 
-$(enableKVPG ''BusinessEventT ['id] [])
+$(TH.enableKVPG ''BusinessEventT ['id] [])
 
-$(mkTableInstances ''BusinessEventT "business_event")
+$(TH.mkTableInstances ''BusinessEventT "business_event")

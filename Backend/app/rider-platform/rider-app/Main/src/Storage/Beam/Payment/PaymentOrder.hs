@@ -21,7 +21,7 @@ import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PaymentOrderT f = PaymentOrderT
   { id :: B.C f Text,
@@ -52,6 +52,6 @@ instance B.Table PaymentOrderT where
 
 type PaymentOrder = PaymentOrderT Identity
 
-$(enableKVPG ''PaymentOrderT ['id] [])
+$(TH.enableKVPG ''PaymentOrderT ['id] [])
 
-$(mkTableInstances ''PaymentOrderT "payment_order")
+$(TH.mkTableInstances ''PaymentOrderT "payment_order")

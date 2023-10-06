@@ -27,14 +27,14 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum, mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data Role
   = USER
   | CUSTOMER_SUPPORT
   deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
 
-$(mkBeamInstancesForEnum ''Role)
+$(TH.mkBeamInstancesForEnum ''Role)
 
 $(mkHttpInstancesForEnum ''Role)
 
@@ -42,7 +42,7 @@ $(mkHttpInstancesForEnum ''Role)
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
   deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON)
 
-$(mkBeamInstancesForEnum ''IdentifierType)
+$(TH.mkBeamInstancesForEnum ''IdentifierType)
 
 $(mkHttpInstancesForEnum ''IdentifierType)
 
@@ -50,7 +50,7 @@ $(mkHttpInstancesForEnum ''IdentifierType)
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''Gender)
+$(TH.mkBeamInstancesForEnum ''Gender)
 
 $(mkFromHttpInstanceForEnum ''Gender)
 

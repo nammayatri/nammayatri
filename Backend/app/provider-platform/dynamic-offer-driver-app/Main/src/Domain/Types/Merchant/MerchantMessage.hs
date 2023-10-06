@@ -19,7 +19,7 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data MessageKey
   = SEND_OTP
@@ -33,7 +33,7 @@ data MessageKey
   | SEND_PAYMENT_LINK
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
-$(mkBeamInstancesForEnum ''MessageKey)
+$(TH.mkBeamInstancesForEnum ''MessageKey)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,

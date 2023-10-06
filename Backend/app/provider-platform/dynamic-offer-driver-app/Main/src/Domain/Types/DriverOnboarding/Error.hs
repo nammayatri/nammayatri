@@ -17,7 +17,7 @@ module Domain.Types.DriverOnboarding.Error where
 
 import Kernel.Prelude
 import Kernel.Types.Error.BaseError.HTTPError
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverOnboardingError
   = ImageValidationExceedLimit Text
@@ -48,7 +48,7 @@ data DriverOnboardingError
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
-$(mkBeamInstancesForEnum ''DriverOnboardingError)
+$(TH.mkBeamInstancesForEnum ''DriverOnboardingError)
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case

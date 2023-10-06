@@ -18,7 +18,7 @@ module Storage.Beam.FarePolicy.DriverExtraFeeBounds where
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
   { id :: B.C f (Maybe Int),
@@ -37,6 +37,6 @@ instance B.Table DriverExtraFeeBoundsT where
 
 type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
 
-$(enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])
+$(TH.enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])
 
-$(mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds")
+$(TH.mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds")

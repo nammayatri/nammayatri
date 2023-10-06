@@ -18,7 +18,7 @@ module Storage.Beam.Geometry where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data GeometryT f = GeometryT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table GeometryT where
 
 type Geometry = GeometryT Identity
 
-$(enableKVPG ''GeometryT ['id] [])
+$(TH.enableKVPG ''GeometryT ['id] [])
 
-$(mkTableInstances ''GeometryT "geometry")
+$(TH.mkTableInstances ''GeometryT "geometry")

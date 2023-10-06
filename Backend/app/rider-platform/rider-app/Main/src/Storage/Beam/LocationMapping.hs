@@ -18,10 +18,10 @@
 module Storage.Beam.LocationMapping where
 
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import qualified Domain.Types.LocationMapping as DLM
 import Kernel.Prelude
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
+import qualified Tools.Beam.UtilsTH as TH
 
 data LocationMappingT f = LocationMappingT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table LocationMappingT where
 
 type LocationMapping = LocationMappingT Identity
 
-$(enableKVPG ''LocationMappingT ['id] [])
+$(TH.enableKVPG ''LocationMappingT ['id] [])
 
-$(mkTableInstances ''LocationMappingT "location_mapping")
+$(TH.mkTableInstances ''LocationMappingT "location_mapping")

@@ -20,7 +20,7 @@ import Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonFlowStatusT f = PersonFlowStatusT
   { personId :: B.C f Text,
@@ -37,6 +37,6 @@ instance B.Table PersonFlowStatusT where
 
 type PersonFlowStatus = PersonFlowStatusT Identity
 
-$(enableKVPG ''PersonFlowStatusT ['personId] [])
+$(TH.enableKVPG ''PersonFlowStatusT ['personId] [])
 
-$(mkTableInstances ''PersonFlowStatusT "person_flow_status")
+$(TH.mkTableInstances ''PersonFlowStatusT "person_flow_status")

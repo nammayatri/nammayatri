@@ -29,7 +29,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Utils.Common (Seconds)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 fromFieldEnum' ::
   DPSF.Field ->
@@ -79,6 +79,6 @@ instance B.Table MerchantT where
 
 type Merchant = MerchantT Identity
 
-$(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
+$(TH.enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
 
-$(mkTableInstances ''MerchantT "merchant")
+$(TH.mkTableInstances ''MerchantT "merchant")

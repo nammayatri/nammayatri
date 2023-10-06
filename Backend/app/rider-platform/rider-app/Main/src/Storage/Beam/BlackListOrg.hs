@@ -19,7 +19,7 @@ module Storage.Beam.BlackListOrg where
 import qualified Database.Beam as B
 import qualified Domain.Types.BlackListOrg as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BlackListOrgT f = BlackListOrgT
   { id :: B.C f Text,
@@ -36,6 +36,6 @@ instance B.Table BlackListOrgT where
 
 type BlackListOrg = BlackListOrgT Identity
 
-$(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
+$(TH.enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("orgType", "type")])
+$(TH.mkTableInstancesWithTModifier ''BlackListOrgT "black_list_org" [("orgType", "type")])

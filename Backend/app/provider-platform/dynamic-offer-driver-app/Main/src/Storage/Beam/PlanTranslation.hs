@@ -18,7 +18,7 @@ module Storage.Beam.PlanTranslation where
 import qualified Database.Beam as B
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PlanTranslationT f = PlanTranslationT
   { planId :: B.C f Text,
@@ -36,5 +36,5 @@ instance B.Table PlanTranslationT where
 
 type PlanTranslation = PlanTranslationT Identity
 
-$(enableKVPG ''PlanTranslationT ['planId] [['language]])
-$(mkTableInstances ''PlanTranslationT "plan_translation")
+$(TH.enableKVPG ''PlanTranslationT ['planId] [['language]])
+$(TH.mkTableInstances ''PlanTranslationT "plan_translation")

@@ -18,7 +18,7 @@ module Storage.Beam.DriverOnboarding.AadhaarVerification where
 import qualified Database.Beam as B
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AadhaarVerificationT f = AadhaarVerificationT
   { driverId :: B.C f Text,
@@ -42,6 +42,6 @@ instance B.Table AadhaarVerificationT where
 
 type AadhaarVerification = AadhaarVerificationT Identity
 
-$(enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])
+$(TH.enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])
 
-$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification")
+$(TH.mkTableInstances ''AadhaarVerificationT "aadhaar_verification")

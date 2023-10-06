@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data FlowType
   = RIDE_OTP
@@ -74,6 +74,6 @@ data FareProduct = FareProduct
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''FlowType)
+$(TH.mkBeamInstancesForEnum ''FlowType)
 
-$(mkBeamInstancesForEnum ''Area)
+$(TH.mkBeamInstancesForEnum ''Area)

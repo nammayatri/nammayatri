@@ -18,7 +18,7 @@ module Storage.Beam.CancellationReason where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data CancellationReasonT f = CancellationReasonT
   { reasonCode :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table CancellationReasonT where
 
 type CancellationReason = CancellationReasonT Identity
 
-$(enableKVPG ''CancellationReasonT ['reasonCode] [])
+$(TH.enableKVPG ''CancellationReasonT ['reasonCode] [])
 
-$(mkTableInstances ''CancellationReasonT "cancellation_reason")
+$(TH.mkTableInstances ''CancellationReasonT "cancellation_reason")

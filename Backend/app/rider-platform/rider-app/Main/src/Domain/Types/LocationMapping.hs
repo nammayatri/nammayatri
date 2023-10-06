@@ -18,12 +18,12 @@ module Domain.Types.LocationMapping where
 import Domain.Types.Location
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data LocationMappingTags = BOOKING | SEARCH_REQUEST | RIDE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''LocationMappingTags)
+$(TH.mkBeamInstancesForEnum ''LocationMappingTags)
 
 data LocationMapping = LocationMapping
   { id :: Id LocationMapping,

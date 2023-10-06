@@ -21,7 +21,7 @@ import qualified Domain.Types.FareParameters as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KId
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,
@@ -41,6 +41,6 @@ type FareParametersSlabDetails = FareParametersSlabDetailsT Identity
 
 type FullFareParametersSlabDetails = (KId.Id Domain.FareParameters, Domain.FParamsSlabDetails)
 
-$(enableKVPG ''FareParametersSlabDetailsT ['fareParametersId] [])
+$(TH.enableKVPG ''FareParametersSlabDetailsT ['fareParametersId] [])
 
-$(mkTableInstances ''FareParametersSlabDetailsT "fare_parameters_slab_details")
+$(TH.mkTableInstances ''FareParametersSlabDetailsT "fare_parameters_slab_details")

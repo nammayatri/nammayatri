@@ -29,7 +29,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingStatus
   = NEW
@@ -38,7 +38,7 @@ data BookingStatus
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''BookingStatus)
+$(TH.mkBeamInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 
@@ -79,4 +79,4 @@ data Booking = Booking
 data BookingType = SpecialZoneBooking | NormalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''BookingType)
+$(TH.mkBeamInstancesForEnum ''BookingType)

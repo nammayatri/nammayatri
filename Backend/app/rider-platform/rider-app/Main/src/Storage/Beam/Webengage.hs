@@ -18,7 +18,7 @@ module Storage.Beam.Webengage where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data WebengageT f = WebengageT
   { id :: B.C f Text,
@@ -40,6 +40,6 @@ instance B.Table WebengageT where
 
 type Webengage = WebengageT Identity
 
-$(enableKVPG ''WebengageT ['id] [['infoMessageId]])
+$(TH.enableKVPG ''WebengageT ['id] [['infoMessageId]])
 
-$(mkTableInstances ''WebengageT "webengage")
+$(TH.mkTableInstances ''WebengageT "webengage")

@@ -19,10 +19,10 @@ module Storage.Beam.AadhaarVerification.AadhaarOtpVerify where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AadhaarOtpVerifyT f = AadhaarOtpVerifyT
   { id :: B.C f Text,
@@ -43,6 +43,6 @@ instance B.Table AadhaarOtpVerifyT where
 
 type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
 
-$(enableKVPG ''AadhaarOtpVerifyT ['id] [['personId]])
+$(TH.enableKVPG ''AadhaarOtpVerifyT ['id] [['personId]])
 
-$(mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")
+$(TH.mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify")

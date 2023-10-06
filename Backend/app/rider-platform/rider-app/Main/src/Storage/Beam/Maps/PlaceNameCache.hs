@@ -19,7 +19,7 @@ module Storage.Beam.Maps.PlaceNameCache where
 import qualified Database.Beam as B
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PlaceNameCacheT f = PlaceNameCacheT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table PlaceNameCacheT where
 
 type PlaceNameCache = PlaceNameCacheT Identity
 
-$(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])
+$(TH.enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])
 
-$(mkTableInstances ''PlaceNameCacheT "place_name_cache")
+$(TH.mkTableInstances ''PlaceNameCacheT "place_name_cache")

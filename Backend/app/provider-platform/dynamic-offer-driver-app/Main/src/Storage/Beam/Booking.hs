@@ -22,7 +22,7 @@ import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -66,6 +66,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])
+$(TH.enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])
 
-$(mkTableInstances ''BookingT "booking")
+$(TH.mkTableInstances ''BookingT "booking")

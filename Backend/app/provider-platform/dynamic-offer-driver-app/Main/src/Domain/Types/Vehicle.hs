@@ -25,14 +25,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable Category
 
-$(mkBeamInstancesForEnum ''Category)
+$(TH.mkBeamInstancesForEnum ''Category)
 
 $(mkFromHttpInstanceForEnum ''Category)
 
@@ -42,7 +42,7 @@ data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable RegistrationCategory
 
-$(mkBeamInstancesForEnum ''RegistrationCategory)
+$(TH.mkBeamInstancesForEnum ''RegistrationCategory)
 
 $(mkFromHttpInstanceForEnum ''RegistrationCategory)
 

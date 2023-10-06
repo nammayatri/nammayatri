@@ -20,7 +20,7 @@ import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
@@ -60,6 +60,6 @@ instance B.Table MerchantT where
 
 type Merchant = MerchantT Identity
 
-$(enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])
+$(TH.enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])
 
-$(mkTableInstances ''MerchantT "merchant")
+$(TH.mkTableInstances ''MerchantT "merchant")

@@ -18,7 +18,7 @@ module Storage.Beam.SpecialZoneQuote where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SpecialZoneQuoteT f = SpecialZoneQuoteT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table SpecialZoneQuoteT where
 
 type SpecialZoneQuote = SpecialZoneQuoteT Identity
 
-$(enableKVPG ''SpecialZoneQuoteT ['id] [])
+$(TH.enableKVPG ''SpecialZoneQuoteT ['id] [])
 
-$(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote")
+$(TH.mkTableInstances ''SpecialZoneQuoteT "special_zone_quote")

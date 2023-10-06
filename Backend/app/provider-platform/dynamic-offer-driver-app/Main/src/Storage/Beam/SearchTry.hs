@@ -20,7 +20,7 @@ import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data SearchTryT f = SearchTryT
   { id :: B.C f Text,
@@ -49,6 +49,6 @@ instance B.Table SearchTryT where
 
 type SearchTry = SearchTryT Identity
 
-$(enableKVPG ''SearchTryT ['id] [['requestId]])
+$(TH.enableKVPG ''SearchTryT ['id] [['requestId]])
 
-$(mkTableInstances ''SearchTryT "search_try")
+$(TH.mkTableInstances ''SearchTryT "search_try")

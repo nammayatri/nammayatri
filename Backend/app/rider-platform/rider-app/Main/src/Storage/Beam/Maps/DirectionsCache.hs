@@ -20,7 +20,7 @@ import Data.Aeson
 import qualified Database.Beam as B
 import Kernel.External.Maps (RouteInfo (..))
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DirectionsCacheT f = DirectionsCacheT
   { id :: B.C f Text,
@@ -40,6 +40,6 @@ instance B.Table DirectionsCacheT where
 
 type DirectionsCache = DirectionsCacheT Identity
 
-$(enableKVPG ''DirectionsCacheT ['id] [['originHash], ['destHash]])
+$(TH.enableKVPG ''DirectionsCacheT ['id] [['originHash], ['destHash]])
 
-$(mkTableInstances ''DirectionsCacheT "directions_cache")
+$(TH.mkTableInstances ''DirectionsCacheT "directions_cache")

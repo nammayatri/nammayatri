@@ -18,7 +18,7 @@ module Domain.Types.Feedback.FeedbackForm where
 import Domain.Types.Ride (Ride)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Id Ride,
@@ -68,6 +68,6 @@ data FeedbackFormRes = FeedbackFormRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
-$(mkBeamInstancesForEnum ''AnswerType)
+$(TH.mkBeamInstancesForEnum ''AnswerType)
 
-$(mkBeamInstancesForEnum ''Category)
+$(TH.mkBeamInstancesForEnum ''Category)

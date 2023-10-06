@@ -24,7 +24,7 @@ import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -70,6 +70,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG ''PersonT ['id] [['mobileNumberHash]]) -- DON'T Enable for KV
+$(TH.enableKVPG ''PersonT ['id] [['mobileNumberHash]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''PersonT "person")
+$(TH.mkTableInstances ''PersonT "person")

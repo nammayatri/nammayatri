@@ -22,7 +22,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data BusinessEvent = BusinessEvent
   { id :: Id BusinessEvent,
@@ -46,6 +46,6 @@ data WhenPoolWasComputed = ON_SEARCH | ON_CONFIRM | ON_REALLOCATION
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''EventType)
+$(TH.mkBeamInstancesForEnum ''EventType)
 
-$(mkBeamInstancesForEnum ''WhenPoolWasComputed)
+$(TH.mkBeamInstancesForEnum ''WhenPoolWasComputed)

@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverFee = DriverFee
   { id :: Id DriverFee,
@@ -73,11 +73,11 @@ mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
 billNumberGenerationLockKey :: Text -> Text
 billNumberGenerationLockKey merchantId = "DriverFee:BillNumber:Processing:MerchantId" <> merchantId --- make lock on merchant Id
 
-$(mkBeamInstancesForEnum ''DriverFeeStatus)
+$(TH.mkBeamInstancesForEnum ''DriverFeeStatus)
 
-$(mkBeamInstancesForEnum ''FeeType)
+$(TH.mkBeamInstancesForEnum ''FeeType)
 
-$(mkBeamInstancesForEnum ''AutopayPaymentStage)
+$(TH.mkBeamInstancesForEnum ''AutopayPaymentStage)
 
 $(mkHttpInstancesForEnum ''DriverFeeStatus)
 

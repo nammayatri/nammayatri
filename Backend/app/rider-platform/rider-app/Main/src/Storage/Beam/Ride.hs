@@ -21,7 +21,7 @@ import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -63,6 +63,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG ''RideT ['id] [['bppRideId], ['bookingId]])
+$(TH.enableKVPG ''RideT ['id] [['bppRideId], ['bookingId]])
 
-$(mkTableInstances ''RideT "ride")
+$(TH.mkTableInstances ''RideT "ride")

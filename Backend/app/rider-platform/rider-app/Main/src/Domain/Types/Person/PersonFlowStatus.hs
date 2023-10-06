@@ -30,7 +30,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
+import qualified Tools.Beam.UtilsTH as TH
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
 -- deriving stock instance Ord Maps.LatLong
@@ -87,7 +87,7 @@ data FlowStatus
       }
   deriving (Show, Eq, Ord, Generic)
 
-$(mkBeamInstancesForJSON ''FlowStatus)
+$(TH.mkBeamInstancesForJSON ''FlowStatus)
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =

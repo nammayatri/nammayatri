@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareProductT f = FareProductT
   { id :: B.C f Text,
@@ -39,6 +39,6 @@ instance B.Table FareProductT where
 
 type FareProduct = FareProductT Identity
 
-$(enableKVPG ''FareProductT ['id] [['merchantId, 'area]])
+$(TH.enableKVPG ''FareProductT ['id] [['merchantId, 'area]])
 
-$(mkTableInstances ''FareProductT "fare_product")
+$(TH.mkTableInstances ''FareProductT "fare_product")

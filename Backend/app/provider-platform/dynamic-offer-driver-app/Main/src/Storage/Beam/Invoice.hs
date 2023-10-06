@@ -7,7 +7,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Invoice as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data InvoiceT f = InvoiceT
   { id :: B.C f Text,
@@ -34,5 +34,5 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG ''InvoiceT ['id] [])
-$(mkTableInstances ''InvoiceT "invoice")
+$(TH.enableKVPG ''InvoiceT ['id] [])
+$(TH.mkTableInstances ''InvoiceT "invoice")

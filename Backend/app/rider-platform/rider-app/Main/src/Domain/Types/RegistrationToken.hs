@@ -17,7 +17,7 @@ module Domain.Types.RegistrationToken where
 
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data Medium
   = SMS
@@ -25,14 +25,14 @@ data Medium
   | SIGNATURE
   deriving (Generic, FromJSON, ToJSON, Eq, Show, Ord, Read, ToSchema)
 
-$(mkBeamInstancesForEnum ''Medium)
+$(TH.mkBeamInstancesForEnum ''Medium)
 
 data RTEntityType
   = CUSTOMER
   | USER
   deriving (Generic, FromJSON, ToJSON, Eq, Ord, Show, Read)
 
-$(mkBeamInstancesForEnum ''RTEntityType)
+$(TH.mkBeamInstancesForEnum ''RTEntityType)
 
 data LoginType
   = OTP
@@ -40,7 +40,7 @@ data LoginType
   | DIRECT
   deriving (Generic, FromJSON, ToJSON, Eq, Ord, Show, Read, ToSchema)
 
-$(mkBeamInstancesForEnum ''LoginType)
+$(TH.mkBeamInstancesForEnum ''LoginType)
 
 data RegistrationToken = RegistrationToken
   { id :: Id RegistrationToken,

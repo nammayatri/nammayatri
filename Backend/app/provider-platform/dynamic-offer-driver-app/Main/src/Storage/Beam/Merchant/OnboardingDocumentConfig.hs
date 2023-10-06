@@ -20,7 +20,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import Kernel.Prelude
 import Kernel.Utils.Common (encodeToText)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -48,6 +48,6 @@ getConfigJSON = \case
   Domain.DLValidClasses cfg -> encodeToText cfg
   Domain.RCValidClasses cfg -> encodeToText cfg
 
-$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])
+$(TH.enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])
 
-$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")
+$(TH.mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")

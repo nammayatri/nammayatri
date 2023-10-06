@@ -19,7 +19,7 @@ module Storage.Beam.Merchant.MerchantMessage where
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table MerchantMessageT where
 
 type MerchantMessage = MerchantMessageT Identity
 
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(TH.enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
 
-$(mkTableInstances ''MerchantMessageT "merchant_message")
+$(TH.mkTableInstances ''MerchantMessageT "merchant_message")

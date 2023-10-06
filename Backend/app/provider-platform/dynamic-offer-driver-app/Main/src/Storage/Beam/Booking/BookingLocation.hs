@@ -17,7 +17,7 @@ module Storage.Beam.Booking.BookingLocation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingLocationT f = BookingLocationT
   { id :: B.C f Text,
@@ -44,6 +44,6 @@ instance B.Table BookingLocationT where
 
 type BookingLocation = BookingLocationT Identity
 
-$(enableKVPG ''BookingLocationT ['id] [])
+$(TH.enableKVPG ''BookingLocationT ['id] [])
 
-$(mkTableInstances ''BookingLocationT "booking_location")
+$(TH.mkTableInstances ''BookingLocationT "booking_location")

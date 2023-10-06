@@ -18,7 +18,7 @@ module Storage.Beam.Feedback.FeedbackForm where
 import qualified Database.Beam as B
 import qualified Domain.Types.Feedback.FeedbackForm as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data FeedbackFormT f = FeedbackFormT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table FeedbackFormT where
 
 type FeedbackForm = FeedbackFormT Identity
 
-$(enableKVPG ''FeedbackFormT ['id] [['rating]]) -- DON'T Enable for KV
+$(TH.enableKVPG ''FeedbackFormT ['id] [['rating]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''FeedbackFormT "feedback_form")
+$(TH.mkTableInstances ''FeedbackFormT "feedback_form")

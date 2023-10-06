@@ -20,7 +20,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
@@ -46,6 +46,6 @@ instance B.Table QuoteSpecialZoneT where
 
 type QuoteSpecialZone = QuoteSpecialZoneT Identity
 
-$(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
+$(TH.enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
 
-$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone")
+$(TH.mkTableInstances ''QuoteSpecialZoneT "quote_special_zone")

@@ -18,7 +18,7 @@ module Storage.Beam.OnboardingDocumentConfig where
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
@@ -40,5 +40,5 @@ instance B.Table OnboardingDocumentConfigT where
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 
-$(enableKVPG ''OnboardingDocumentConfigT ['documentType, 'merchantId] [])
-$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")
+$(TH.enableKVPG ''OnboardingDocumentConfigT ['documentType, 'merchantId] [])
+$(TH.mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")

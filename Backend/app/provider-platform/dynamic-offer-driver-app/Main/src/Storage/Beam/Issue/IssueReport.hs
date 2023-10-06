@@ -18,7 +18,7 @@ module Storage.Beam.Issue.IssueReport where
 import qualified Database.Beam as B
 import qualified Domain.Types.Issue.IssueReport as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
@@ -45,6 +45,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId], ['ticketId]])
+$(TH.enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId], ['ticketId]])
 
-$(mkTableInstances ''IssueReportT "issue_report")
+$(TH.mkTableInstances ''IssueReportT "issue_report")

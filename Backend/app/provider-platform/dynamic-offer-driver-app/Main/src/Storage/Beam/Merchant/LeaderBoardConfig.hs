@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.LeaderBoardConfig as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data LeaderBoardConfigsT f = LeaderBoardConfigsT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table LeaderBoardConfigsT where
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 
-$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])
+$(TH.enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])
 
-$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")
+$(TH.mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")

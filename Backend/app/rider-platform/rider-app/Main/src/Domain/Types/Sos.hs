@@ -6,7 +6,7 @@ import Domain.Types.Person (Person)
 import Domain.Types.Ride (Ride)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Sos = Sos
   { id :: Id Sos,
@@ -31,6 +31,6 @@ data SosStatus
   | Pending
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''SosType)
+$(TH.mkBeamInstancesForEnum ''SosType)
 
-$(mkBeamInstancesForEnum ''SosStatus)
+$(TH.mkBeamInstancesForEnum ''SosStatus)

@@ -17,12 +17,12 @@ module Storage.Beam.Merchant.Overlay where
 
 import Data.Aeson
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data OverlayT f = OverlayT
   { id :: B.C f Text,
@@ -51,6 +51,6 @@ instance B.Table OverlayT where
 
 type Overlay = OverlayT Identity
 
-$(enableKVPG ''OverlayT ['id] [['merchantId, 'overlayKey]])
+$(TH.enableKVPG ''OverlayT ['id] [['merchantId, 'overlayKey]])
 
-$(mkTableInstances ''OverlayT "merchant_overlay")
+$(TH.mkTableInstances ''OverlayT "merchant_overlay")

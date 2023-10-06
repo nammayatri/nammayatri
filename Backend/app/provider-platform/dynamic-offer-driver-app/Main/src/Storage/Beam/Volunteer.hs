@@ -17,10 +17,10 @@ module Storage.Beam.Volunteer where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data VolunteerT f = VolunteerT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table VolunteerT where
 
 type Volunteer = VolunteerT Identity
 
-$(enableKVPG ''VolunteerT ['id] [[]])
+$(TH.enableKVPG ''VolunteerT ['id] [[]])
 
-$(mkTableInstances ''VolunteerT "volunteer")
+$(TH.mkTableInstances ''VolunteerT "volunteer")

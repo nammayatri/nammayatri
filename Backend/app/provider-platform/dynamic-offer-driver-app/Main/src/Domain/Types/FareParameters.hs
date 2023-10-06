@@ -19,7 +19,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow (..))
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
@@ -57,7 +57,7 @@ data FareParametersType = Progressive | Slab
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''FareParametersType)
+$(TH.mkBeamInstancesForEnum ''FareParametersType)
 
 getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of

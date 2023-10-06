@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
@@ -51,6 +51,6 @@ instance B.Table DriverIntelligentPoolConfigT where
 
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
 
-$(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
+$(TH.enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
 
-$(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")
+$(TH.mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")

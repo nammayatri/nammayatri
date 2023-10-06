@@ -22,7 +22,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Storage.Beam.DriverOnboarding.Image ()
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data IdfyVerificationT f = IdfyVerificationT
   { id :: B.C f Text,
@@ -53,6 +53,6 @@ instance B.Table IdfyVerificationT where
 
 type IdfyVerification = IdfyVerificationT Identity
 
-$(enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])
+$(TH.enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])
 
-$(mkTableInstancesWithTModifier ''IdfyVerificationT "idfy_verification" [("multipleRC", "multiple_r_c")])
+$(TH.mkTableInstancesWithTModifier ''IdfyVerificationT "idfy_verification" [("multipleRC", "multiple_r_c")])

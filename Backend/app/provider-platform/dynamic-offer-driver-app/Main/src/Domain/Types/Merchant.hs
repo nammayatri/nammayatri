@@ -25,13 +25,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''Status)
+$(TH.mkBeamInstancesForEnum ''Status)
 
 $(mkFromHttpInstanceForEnum ''Status)
 

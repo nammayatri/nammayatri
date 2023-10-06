@@ -16,9 +16,9 @@
 module Storage.Beam.Location where
 
 import qualified Database.Beam as B
-import Database.Beam.MySQL ()
+
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data LocationT f = LocationT
   { id :: B.C f Text,
@@ -46,6 +46,6 @@ instance B.Table LocationT where
 
 type Location = LocationT Identity
 
-$(enableKVPG ''LocationT ['id] [])
+$(TH.enableKVPG ''LocationT ['id] [])
 
-$(mkTableInstances ''LocationT "location")
+$(TH.mkTableInstances ''LocationT "location")

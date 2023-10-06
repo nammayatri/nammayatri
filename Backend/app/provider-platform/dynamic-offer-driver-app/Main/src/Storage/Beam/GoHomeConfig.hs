@@ -21,8 +21,7 @@ import qualified Data.Map.Strict as M
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
-import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
-
+import qualified Tools.Beam.UtilsTH as TH
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,
     enableGoHome :: B.C f Bool,
@@ -63,6 +62,6 @@ goHomeConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 goHomeConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''GoHomeConfigT ['merchantId] [])
+$(TH.enableKVPG ''GoHomeConfigT ['merchantId] [])
 
-$(mkTableInstances ''GoHomeConfigT "go_home_config")
+$(TH.mkTableInstances ''GoHomeConfigT "go_home_config")

@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data ImageT f = ImageT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table ImageT where
 
 type Image = ImageT Identity
 
-$(enableKVPG ''ImageT ['id] [['personId], ['merchantId]]) -- DON'T Enable for KV
+$(TH.enableKVPG ''ImageT ['id] [['personId], ['merchantId]]) -- DON'T Enable for KV
 
-$(mkTableInstances ''ImageT "image")
+$(TH.mkTableInstances ''ImageT "image")

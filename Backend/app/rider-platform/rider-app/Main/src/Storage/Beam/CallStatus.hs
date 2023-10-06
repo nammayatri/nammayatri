@@ -19,7 +19,7 @@ module Storage.Beam.CallStatus where
 import qualified Database.Beam as B
 import qualified Kernel.External.Call.Interface as CallTypes
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table CallStatusT where
 
 type CallStatus = CallStatusT Identity
 
-$(enableKVPG ''CallStatusT ['id] [['callId]])
+$(TH.enableKVPG ''CallStatusT ['id] [['callId]])
 
-$(mkTableInstances ''CallStatusT "call_status")
+$(TH.mkTableInstances ''CallStatusT "call_status")

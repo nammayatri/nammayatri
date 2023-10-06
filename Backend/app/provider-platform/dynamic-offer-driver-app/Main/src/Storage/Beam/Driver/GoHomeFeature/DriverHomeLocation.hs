@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverHomeLocationT f = DriverHomeLocationT
   { id :: B.C f Text,
@@ -54,6 +54,6 @@ driverHomeLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverHomeLocationToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverHomeLocationT ['id] [])
+$(TH.enableKVPG ''DriverHomeLocationT ['id] [])
 
-$(mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])
+$(TH.mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])

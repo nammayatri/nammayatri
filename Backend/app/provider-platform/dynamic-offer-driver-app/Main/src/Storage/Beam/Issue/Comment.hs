@@ -17,7 +17,7 @@ module Storage.Beam.Issue.Comment where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data CommentT f = CommentT
   { id :: B.C f Text,
@@ -36,6 +36,6 @@ instance B.Table CommentT where
 
 type Comment = CommentT Identity
 
-$(enableKVPG ''CommentT ['id] [['issueReportId]])
+$(TH.enableKVPG ''CommentT ['id] [['issueReportId]])
 
-$(mkTableInstances ''CommentT "comment")
+$(TH.mkTableInstances ''CommentT "comment")

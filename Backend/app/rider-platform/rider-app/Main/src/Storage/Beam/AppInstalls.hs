@@ -18,7 +18,7 @@ module Storage.Beam.AppInstalls where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AppInstallsT f = AppInstallsT
   { id :: B.C f Text,
@@ -41,6 +41,14 @@ instance B.Table AppInstallsT where
 
 type AppInstalls = AppInstallsT Identity
 
-$(enableKVPG ''AppInstallsT ['id] [])
+$(TH.enableKVPG ''AppInstallsT ['id] [])
 
-$(mkTableInstances ''AppInstallsT "app_installs")
+$(TH.mkTableInstances ''AppInstallsT "app_installs")
+
+-- FIXME Should be included to TH.mkTableInstances
+-- $(genIsDbTableInstance ''AppInstallsT)
+
+-- test1 :: IO ()
+-- test1 = do
+--   expr <- runQ $ genIsDbTableInstance ''AppInstallsT
+--   putStrLn $ pprint expr

@@ -17,7 +17,7 @@ module Storage.Beam.RegistryMapFallback where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data RegistryMapFallbackT f = RegistryMapFallbackT
   { subscriberId :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table RegistryMapFallbackT where
 
 type RegistryMapFallback = RegistryMapFallbackT Identity
 
-$(enableKVPG ''RegistryMapFallbackT ['subscriberId, 'uniqueId] [])
+$(TH.enableKVPG ''RegistryMapFallbackT ['subscriberId, 'uniqueId] [])
 
-$(mkTableInstances ''RegistryMapFallbackT "registry_map_fallback")
+$(TH.mkTableInstances ''RegistryMapFallbackT "registry_map_fallback")

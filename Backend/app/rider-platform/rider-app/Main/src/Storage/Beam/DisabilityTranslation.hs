@@ -5,7 +5,7 @@ module Storage.Beam.DisabilityTranslation where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DisabilityTranslationT f = DisabilityTranslationT
   { disabilityId :: B.C f Text,
@@ -23,6 +23,6 @@ instance B.Table DisabilityTranslationT where
 
 type DisabilityTranslation = DisabilityTranslationT Identity
 
-$(enableKVPG ''DisabilityTranslationT ['disabilityId, 'language] [])
+$(TH.enableKVPG ''DisabilityTranslationT ['disabilityId, 'language] [])
 
-$(mkTableInstances ''DisabilityTranslationT "disability_translation")
+$(TH.mkTableInstances ''DisabilityTranslationT "disability_translation")

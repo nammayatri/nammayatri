@@ -17,7 +17,7 @@ module Storage.Beam.DriverOnboarding.AadhaarOtpReq where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data AadhaarOtpReqT f = AadhaarOtpReqT
   { id :: B.C f Text,
@@ -38,6 +38,6 @@ instance B.Table AadhaarOtpReqT where
 
 type AadhaarOtpReq = AadhaarOtpReqT Identity
 
-$(enableKVPG ''AadhaarOtpReqT ['id] [['driverId]])
+$(TH.enableKVPG ''AadhaarOtpReqT ['id] [['driverId]])
 
-$(mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req")
+$(TH.mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req")

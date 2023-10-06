@@ -25,7 +25,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data SearchTry = SearchTry
   { id :: Id SearchTry,
@@ -54,8 +54,8 @@ data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRepeatType
 
-$(mkBeamInstancesForEnum ''SearchTryStatus)
+$(TH.mkBeamInstancesForEnum ''SearchTryStatus)
 
-$(mkBeamInstancesForEnum ''SearchRepeatType)
+$(TH.mkBeamInstancesForEnum ''SearchRepeatType)
 
 $(mkHttpInstancesForEnum ''SearchTryStatus)

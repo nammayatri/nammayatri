@@ -18,7 +18,7 @@ import qualified Domain.Types.Merchant as DM
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data Exophone = Exophone
   { id :: Id Exophone,
@@ -37,4 +37,4 @@ data Exophone = Exophone
 data ExophoneType = CALL_RIDE | END_RIDE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''ExophoneType)
+$(TH.mkBeamInstancesForEnum ''ExophoneType)

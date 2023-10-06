@@ -19,7 +19,7 @@ module Storage.Beam.Exophone where
 import qualified Database.Beam as B
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,
@@ -41,6 +41,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
+$(TH.enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
 
-$(mkTableInstances ''ExophoneT "exophone")
+$(TH.mkTableInstances ''ExophoneT "exophone")

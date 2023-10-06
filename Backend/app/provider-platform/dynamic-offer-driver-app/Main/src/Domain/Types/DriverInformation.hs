@@ -28,7 +28,7 @@ import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverMode
   = ONLINE
@@ -39,7 +39,7 @@ data DriverMode
 
 derivePersistField "DriverMode"
 
-$(mkBeamInstancesForEnum ''DriverMode)
+$(TH.mkBeamInstancesForEnum ''DriverMode)
 
 $(mkHttpInstancesForEnum ''DriverMode)
 
@@ -56,7 +56,7 @@ data DriverAutoPayStatus
 
 derivePersistField "DriverAutoPayStatus"
 
-$(mkBeamInstancesForEnum ''DriverAutoPayStatus)
+$(TH.mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 

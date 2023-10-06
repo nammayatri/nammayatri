@@ -19,7 +19,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.BookingCancellationReason as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { driverId :: B.C f (Maybe Text),
@@ -43,6 +43,6 @@ instance B.Table BookingCancellationReasonT where
 
 type BookingCancellationReason = BookingCancellationReasonT Identity
 
-$(enableKVPG ''BookingCancellationReasonT ['bookingId] [['rideId]])
+$(TH.enableKVPG ''BookingCancellationReasonT ['bookingId] [['rideId]])
 
-$(mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason")
+$(TH.mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason")

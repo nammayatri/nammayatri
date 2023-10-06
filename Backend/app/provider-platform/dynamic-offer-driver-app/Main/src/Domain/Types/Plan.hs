@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig [RideCountBasedFeePolicy] deriving (Generic, ToJSON, FromJSON, Show)
 
@@ -106,13 +106,13 @@ instance Show PlanBaseAmount where
   show (WEEKLY_BASE amount) = "WEEKLY_" <> T.unpack (show amount)
   show (MONTHLY_BASE amount) = "MONTHLY_" <> T.unpack (show amount)
 
-$(mkBeamInstancesForEnum ''PaymentMode)
+$(TH.mkBeamInstancesForEnum ''PaymentMode)
 
-$(mkBeamInstancesForEnum ''Frequency)
+$(TH.mkBeamInstancesForEnum ''Frequency)
 
-$(mkBeamInstancesForEnum ''PlanType)
+$(TH.mkBeamInstancesForEnum ''PlanType)
 
-$(mkBeamInstancesForEnum ''PlanBaseAmount)
+$(TH.mkBeamInstancesForEnum ''PlanBaseAmount)
 
 $(mkHttpInstancesForEnum ''Frequency)
 

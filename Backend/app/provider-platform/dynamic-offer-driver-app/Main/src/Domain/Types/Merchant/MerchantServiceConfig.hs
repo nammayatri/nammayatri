@@ -34,7 +34,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data ServiceName
   = MapsService Maps.MapsService
@@ -48,7 +48,7 @@ data ServiceName
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''ServiceName)
+$(TH.mkBeamInstancesForEnum ''ServiceName)
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s

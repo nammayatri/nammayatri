@@ -20,7 +20,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 import qualified Tools.Maps as Maps
 
 data SearchRequestT f = SearchRequestT
@@ -53,6 +53,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['transactionId]])
+$(TH.enableKVPG ''SearchRequestT ['id] [['transactionId]])
 
-$(mkTableInstances ''SearchRequestT "search_request")
+$(TH.mkTableInstances ''SearchRequestT "search_request")

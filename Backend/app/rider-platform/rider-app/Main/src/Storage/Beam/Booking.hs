@@ -22,7 +22,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -68,6 +68,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId], ['quoteId]])
+$(TH.enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId], ['quoteId]])
 
-$(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id")])
+$(TH.mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id")])

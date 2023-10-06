@@ -19,7 +19,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Beam.UtilsTH as TH
 
 data IssueStatus
   = OPEN
@@ -27,7 +27,7 @@ data IssueStatus
   | RESOLVED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''IssueStatus)
+$(TH.mkBeamInstancesForEnum ''IssueStatus)
 
 data Issue = Issue
   { id :: Id Issue,

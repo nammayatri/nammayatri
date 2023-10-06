@@ -29,7 +29,7 @@ import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Schema
 import Sequelize
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data DriverLocationT f = DriverLocationT
   { driverId :: B.C f Text,
@@ -110,4 +110,4 @@ instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''DriverLocationT ['driverId] [])
+$(TH.enableKVPG ''DriverLocationT ['driverId] [])

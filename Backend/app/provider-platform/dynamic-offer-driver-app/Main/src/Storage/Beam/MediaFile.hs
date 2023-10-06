@@ -18,7 +18,7 @@ module Storage.Beam.MediaFile where
 import qualified Database.Beam as B
 import qualified Domain.Types.MediaFile as Domain
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,
@@ -36,6 +36,6 @@ instance B.Table MediaFileT where
 
 type MediaFile = MediaFileT Identity
 
-$(enableKVPG ''MediaFileT ['id] [])
+$(TH.enableKVPG ''MediaFileT ['id] [])
 
-$(mkTableInstancesWithTModifier ''MediaFileT "media_file" [("fileType", "type")])
+$(TH.mkTableInstancesWithTModifier ''MediaFileT "media_file" [("fileType", "type")])

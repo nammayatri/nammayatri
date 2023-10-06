@@ -23,7 +23,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Types
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 extractValue :: KVDBAnswer [ByteString] -> [ByteString]
 extractValue (Right value) = value
@@ -73,6 +73,6 @@ instance B.Table SearchRequestForDriverT where
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
 
-$(enableKVPG ''SearchRequestForDriverT ['id] [['searchTryId], ['requestId]])
+$(TH.enableKVPG ''SearchRequestForDriverT ['id] [['searchTryId], ['requestId]])
 
-$(mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])
+$(TH.mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])

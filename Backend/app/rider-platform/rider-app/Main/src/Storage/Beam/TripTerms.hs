@@ -18,7 +18,7 @@ module Storage.Beam.TripTerms where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH as TH
 
 data TripTermsT f = TripTermsT
   { id :: B.C f Text,
@@ -34,6 +34,6 @@ instance B.Table TripTermsT where
 
 type TripTerms = TripTermsT Identity
 
-$(enableKVPG ''TripTermsT ['id] [])
+$(TH.enableKVPG ''TripTermsT ['id] [])
 
-$(mkTableInstances ''TripTermsT "trip_terms")
+$(TH.mkTableInstances ''TripTermsT "trip_terms")
