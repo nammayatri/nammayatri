@@ -9,6 +9,7 @@ type AppConfig =
     popupBackground :: String,
     defaultLanguage :: String,
     imageUploadOptional :: Boolean,
+    showSavedCommission :: Boolean,
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig
   } 

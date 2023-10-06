@@ -33,6 +33,7 @@ commonConfig =
         , primaryBackground: "#2C2F3A"
         , showCorporateAddress: false
         , imageUploadOptional: true
+        , showSavedCommission : false
         , autoPayBanner: true
         , leaderBoard: { 
             isMaskedName: false
