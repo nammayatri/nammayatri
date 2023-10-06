@@ -33,13 +33,13 @@ import Tools.Auth.Merchant
 
 type API =
   "revenue"
-    :> ( CashCollectionHistoryAPI
+    :> ( CollectionHistoryAPI
            :<|> AllDriverFeeHistoryAPI
        )
 
-type CashCollectionHistoryAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_CASH_COLLECTION_HISTORY
-    :> Common.GetCashCollectionHistory
+type CollectionHistoryAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_COLLECTION_HISTORY
+    :> Common.GetCollectionHistory
 
 type AllDriverFeeHistoryAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'ALL_FEE_HISTORY -- change
@@ -47,13 +47,13 @@ type AllDriverFeeHistoryAPI =
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  getCashCollectionHistory merchantId
+  getCollectionHistory merchantId
     :<|> getAllDriverFeeHistory merchantId
 
-getCashCollectionHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI $ do
+getCollectionHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
+getCollectionHistory merchantShortId apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.revenue.getCashCollectionHistory) volunteerId place mbFrom mbTo
+  Client.callDriverOfferBPP checkedMerchantId (.revenue.getCollectionHistory) volunteerId place mbFrom mbTo
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.AllDriverFeeRes
 getAllDriverFeeHistory merchantShortId apiTokenInfo mbFrom mbTo = withFlowHandlerAPI $ do
