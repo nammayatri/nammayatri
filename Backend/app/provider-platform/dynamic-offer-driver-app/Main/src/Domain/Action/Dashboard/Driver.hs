@@ -71,6 +71,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
@@ -1007,9 +1008,10 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo mbMobileCountryCode ne
   mobileNumberHash <- getDbHash newDriverMobileNo
   newDriver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash merchant.id >>= fromMaybeM (PersonDoesNotExist newDriverMobileNo)
   unless (oldDriverId /= newDriver.id) $ throwError (DriverAlreadyLinkedWithVehicle $ show newDriver.id)
-  DomainRC.deactivateCurrentRC oldDriverId
-  _ <- QVehicle.deleteById oldDriverId
+  _ <- DomainRC.linkRCStatus (oldDriverId, merchant.id) (DomainRC.RCStatusReq {isActivate = False, rcNo = vehicleNo})
   _ <- QDriverInfo.updateEnabledVerifiedState oldDriverId False False
+  rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
+  _ <- QRCAssociation.endAssociationForRC oldDriverId rc.id
   logTagInfo "dashboard -> unlinkVehicle : " (show oldDriverId)
   Redis.set (DomainRC.makeFleetOwnerKey vehicleNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
   void $ runVerifyRCFlow newDriver.id merchant (mkVehicleReq vehicle newDriver)
