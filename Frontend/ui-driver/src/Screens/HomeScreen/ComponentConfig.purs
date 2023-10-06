@@ -223,6 +223,7 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     buttonLayoutMargin = Margin 16 0 16 5 ,
     topTitle {
       text = ob.heading
+    , visibility = VISIBLE
     },
     primaryText {
       text = ob.title
