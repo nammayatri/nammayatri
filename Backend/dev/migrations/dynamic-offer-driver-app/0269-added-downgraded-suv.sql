@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN can_suv_downgrade_to_taxi BOOLEAN DEFAULT false;

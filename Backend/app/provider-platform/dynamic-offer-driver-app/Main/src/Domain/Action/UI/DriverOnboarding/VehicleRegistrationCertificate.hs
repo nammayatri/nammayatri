@@ -351,6 +351,10 @@ activateRC driverId merchantId now rc = do
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
       fleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
+      transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+      whenJust rc.vehicleVariant $ \variant -> do
+        when (variant == Vehicle.SUV) $
+          DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi
       Redis.del $ makeFleetOwnerKey rcNumber
       let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc fleetOwnerId
       VQuery.create vehicle
