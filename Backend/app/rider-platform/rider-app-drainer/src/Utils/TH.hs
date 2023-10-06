@@ -1,114 +1,158 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Utils.TH
-  ( mkDBCreateObjects,
-    mkDBModelObjects,
+  ( genDBModelObjects,
   )
 where
 
-import Kernel.Prelude
+import Kernel.Beam.Lib.UtilsTH (IsDBTable, TableK)
+import Kernel.Prelude as P
 import Language.Haskell.TH as TH
 
--- CREATE --
+genDBModelObjects :: Name -> Name -> TH.Q [TH.Dec]
+genDBModelObjects appName dbModelName = do
+  dbTypeConstructors <- genDBTypeConstructors dbModelName
+  dbObjectType <- genDBObjectType dbTypeConstructors
+  buildDBObjectFunc <- genBuildDBObject appName dbModelName dbTypeConstructors
+  withDBObjectContentFunc <- genWithDBObjectContent appName dbTypeConstructors
+  withFilteredDBObjectContentFunc <- genWithFilteredDBObjectContent appName dbModelName dbTypeConstructors
+  pure $ (dbObjectType : buildDBObjectFunc) <> withDBObjectContentFunc <> withFilteredDBObjectContentFunc
 
-mkDBCreateObjects :: [Name] -> Q [Dec]
-mkDBCreateObjects tables = do
-  dbCreateObjectType <- mkDBCreateObjectType tables
-  pure [dbCreateObjectType]
-
-mkDBCreateObjectType :: [Name] -> Q Dec
-mkDBCreateObjectType tables = do
-  let typeName = mkName "DBCreateObject"
+genDBObjectType :: [DBTypeConstructor] -> Q Dec
+genDBObjectType dbTypeConstructors = do
+  let fName = mkName "f"
+  let fType = VarT fName
+  let typeName = mkName "DBObject"
+  let defaultBang = Bang NoSourceUnpackedness NoSourceStrictness
   constructors <-
-    forM tables $ \table -> do
-      constructorName <- mkName . (<> "Object") <$> getModelName table -- TODO reuse getModelName
-      pure $ NormalC constructorName [(defaultBang, ConT table `AppT` ConT ''Identity)]
+    forM dbTypeConstructors $ \dbTypeConstructor -> do
+      pure $
+        NormalC dbTypeConstructor.dbObjectConstructor
+          [(defaultBang, fType `AppT` dbTypeConstructor.dbTableType)]
   let deriveClauses =
-        [ DerivClause (Just StockStrategy) [ConT ''Generic, ConT ''Show],
-          DerivClause (Just AnyclassStrategy) [ConT ''FromJSON, ConT ''ToJSON]
+        [ DerivClause (Just StockStrategy) [ConT ''Generic]
         ]
-  pure $ DataD [] typeName [] Nothing constructors deriveClauses
+  let fKind = InfixT (ConT ''TableK) (mkName "->") (ConT ''P.Type)
+  pure $ DataD [] typeName [KindedTV fName fKind] Nothing constructors deriveClauses
 
--- DELETE --
+genBuildDBObject :: Name -> Name -> [DBTypeConstructor] -> Q [TH.Dec]
+genBuildDBObject appName dbModelName dbTypeConstructors = do
+  let appNameT = pure $ TH.ConT appName
+      dbModelT = pure $ TH.ConT dbModelName
+      dbObjectT = pure . TH.ConT $ mkName "DBObject"
+      dbModelN = TH.mkName "dbModel"
+      dbModelP = pure $ TH.VarP dbModelN
+      tableActionN = TH.mkName "tableAction"
+      tableActionP = pure $ TH.VarP tableActionN
+      tableActionE = pure $ TH.VarE tableActionN
+  let tableCases = do
+        matches <- forM dbTypeConstructors $ \dbTypeConstructor -> do
+          tableCase <-
+            [e|
+              $(pure $ ConE dbTypeConstructor.dbObjectConstructor) <$> $tableActionE @($(pure dbTypeConstructor.dbTableType))
+              |]
+          pure $ TH.Match (TH.ConP dbTypeConstructor.dbModelConstructor []) (TH.NormalB tableCase) []
+        pure $ TH.CaseE (TH.VarE dbModelN) matches
 
--- mkDBDeleteObjects :: [Name] -> Q [Dec]
--- mkDBDeleteObjects tables = do
---   dbCreateObjectType <- mkDeleteModelType tables
---   -- (getTagDeleteSign, getTagDeleteBody) <- getTagDeleteFunc tables
---   pure [dbCreateObjectType]
+  [d|
+    buildDBObject ::
+      forall (f :: TableK -> P.Type) (m :: P.Type -> P.Type).
+      Functor m =>
+      $dbModelT ->
+      (forall t. IsDBTable $appNameT t => m (f t)) ->
+      m ($dbObjectT f)
+    buildDBObject $dbModelP $tableActionP = $tableCases
+    |]
 
--- deleteModelTypeName :: Name
--- deleteModelTypeName = mkName "DeleteModel"
+genWithDBObjectContent :: Name -> [DBTypeConstructor] -> TH.Q [TH.Dec]
+genWithDBObjectContent appName dbTypeConstructors = do
+  let appNameT = pure $ TH.ConT appName
+      dbObjectT = pure . TH.ConT $ TH.mkName "DBObject"
+      dbObjectN = TH.mkName "dbObject"
+      dbObjectP = pure $ TH.VarP dbObjectN
+      actionN = TH.mkName "action"
+      actionP = pure $ TH.VarP actionN
+      actionE = pure $ TH.VarE actionN
+      objN = TH.mkName "obj"
+      objE = pure . TH.VarE $ objN
+  let tableCases = do
+        matches <- forM dbTypeConstructors $ \dbTypeConstructor -> do
+          tableCase <-
+            [e|
+              $actionE @($(pure dbTypeConstructor.dbTableType)) $objE
+              |]
+          pure $ TH.Match (TH.ConP dbTypeConstructor.dbObjectConstructor [VarP objN]) (TH.NormalB tableCase) []
+        pure $ TH.CaseE (TH.VarE dbObjectN) matches
 
--- -- WARNING constructors should be the same everywhere because "incomplete-patterns" warning does not work for TH generated code
--- -- https://gitlab.haskell.org/ghc/ghc/-/issues/14838
--- -- remove this
--- mkDeleteModelConstructorName :: Name -> Q Name
--- mkDeleteModelConstructorName table = mkName . (<> "Delete") <$> getModelName table
+  [d|
+    withDBObjectContent ::
+      forall (f :: TableK -> P.Type) (res :: P.Type).
+      $dbObjectT f ->
+      (forall t. IsDBTable $appNameT t => f t -> res) ->
+      res
+    withDBObjectContent $dbObjectP $actionP = $tableCases
+    |]
 
--- mkDeleteModelType :: [Name] -> Q Dec
--- mkDeleteModelType tables = do
---   constructors <- forM tables $ \table -> do
---     constructor <- mkDeleteModelConstructorName table
---     pure $ NormalC constructor []
---   let deriveClauses =
---         [ DerivClause (Just StockStrategy) [ConT ''Generic, ConT ''Show, ConT ''Read]
---         ]
---   pure $ DataD [] deleteModelTypeName [] Nothing constructors deriveClauses
+genWithFilteredDBObjectContent :: Name -> Name -> [DBTypeConstructor] -> TH.Q [TH.Dec]
+genWithFilteredDBObjectContent appName dbModelName dbTypeConstructors = do
+  let appNameT = pure $ TH.ConT appName
+      dbObjectT = pure . TH.ConT $ TH.mkName "DBObject"
+      dbModelT = pure $ TH.ConT dbModelName
+      dbModelN = TH.mkName "dbModel"
+      dbModelP = pure $ TH.VarP dbModelN
+      dbObjectsWithPayloadN = TH.mkName "dbObjectsWithPayload"
+      dbObjectsWithPayloadP = pure $ TH.VarP dbObjectsWithPayloadN
+      dbObjectsWithPayloadE = pure $ TH.VarE dbObjectsWithPayloadN
+      actionN = TH.mkName "action"
+      actionP = pure $ TH.VarP actionN
+      actionE = pure $ TH.VarE actionN
+      objN = TH.mkName "obj"
+      objE = pure . TH.VarE $ objN
+      payloadN = TH.mkName "payload"
+      payloadE = pure . TH.VarE $ payloadN
+      payloadP = pure . TH.VarP $ payloadN
+  let tableCases = do
+        matches <- forM dbTypeConstructors $ \dbTypeConstructor -> do
+          let dbObjectP = pure (ConP dbTypeConstructor.dbObjectConstructor [VarP objN])
+          tableCase <-
+            [e|
+              $actionE @($(pure dbTypeConstructor.dbTableType)) [($objE, $payloadE) | ($dbObjectP, $payloadP) <- $dbObjectsWithPayloadE]
+              |]
+          pure $ TH.Match (TH.ConP dbTypeConstructor.dbModelConstructor []) (TH.NormalB tableCase) []
+        pure $ TH.CaseE (TH.VarE dbModelN) matches
 
--- do not used
--- getTagDeleteFunc :: [Name] -> Q (Dec, Dec)
--- getTagDeleteFunc tables = do
---   let funcName = mkName "getTagDelete"
---   let funcSign = SigD funcName (InfixT (ConT deleteModelTypeName) (mkName "->") (ConT ''Text))
---   let funcBody =
---         FunD funcName $
---           tables <&> \table -> do
---             -- TODO incomplete-patterns error does not appear, so check constructors manually!
---             let constructorName = ConP (mkDeleteModelConstructorName table) []
---             let tagName = LitE . StringL $ getModelName table <> "Options"
---             Clause [constructorName] (NormalB tagName) []
---   return (funcSign, funcBody)
+  [d|
+    withFilteredDBObjectContent ::
+      forall (f :: TableK -> P.Type) (res :: P.Type) (payload :: P.Type).
+      $dbModelT ->
+      [($dbObjectT f, payload)] ->
+      (forall t. IsDBTable $appNameT t => [(f t, payload)] -> res) ->
+      res
+    withFilteredDBObjectContent $dbModelP $dbObjectsWithPayloadP $actionP = $tableCases
+    |]
 
--- MODEL --
+data DBTypeConstructor = DBTypeConstructor
+  { dbModelConstructor :: Name, -- TableOne :: DBModel
+    dbObjectConstructor :: Name, -- TableOneObject :: DBObject
+    dbTableType :: TH.Type -- qualified type TableOne.TableOneT
+  }
 
--- WARNING constructors should be the same everywhere because "incomplete-patterns" warning does not work for TH generated code
-mkDBModelObjects :: [Name] -> Q [Dec]
-mkDBModelObjects tablesT = do
-  dbCreateObjectType <- mkDBModelType tablesT
-  isDbTableInstances <- mkIsDbTableInstances tablesT
-  -- (getTagDeleteSign, getTagDeleteBody) <- getTagDeleteFunc tables
-  pure $ dbCreateObjectType : isDbTableInstances
-
-dbModelTypeName :: Name
-dbModelTypeName = mkName "DBModel"
-
-mkDBModelConstructorName :: Name -> Q Name
-mkDBModelConstructorName table = mkName <$> getModelName table
-
-mkDBModelType :: [Name] -> Q Dec
-mkDBModelType tables = do
-  constructors <- forM tables $ \table -> do
-    constructor <- mkDBModelConstructorName table
-    pure $ NormalC constructor []
-  let deriveClauses =
-        [ DerivClause (Just StockStrategy) [ConT ''Show, ConT ''Read]
-        ]
-  pure $ DataD [] dbModelTypeName [] Nothing constructors deriveClauses
-
-mkIsDbTableInstances :: [Name] -> Q [Dec]
-mkIsDbTableInstances tablesT = forM tablesT $ \tableT -> do
-  let className = mkName "IsDbTable"
-  pure $ InstanceD Nothing [] (AppT (ConT className) (ConT tableT)) []
-
--- COMMON --
-
-getModelName :: Name -> Q String
-getModelName name = do
-  let name' = nameBase name
-  case last name' of
-    'T' -> pure $ take (length name' - 1) name'
-    _ -> fail $ "Table type should have suffix T: " <> name'
-
-defaultBang :: Bang
-defaultBang = Bang NoSourceUnpackedness NoSourceStrictness
+genDBTypeConstructors :: Name -> Q [DBTypeConstructor]
+genDBTypeConstructors dbModelName = do
+  tableTypeInfo <- reify dbModelName
+  case tableTypeInfo of
+    TyConI dec -> do
+      case dec of
+        DataD _ _ _ _ constructors _ -> do
+          forM constructors $ \constructor -> case constructor of
+            NormalC constructorName [] -> do
+              let constructorNameStr = nameBase constructorName
+              pure
+                DBTypeConstructor
+                  { dbModelConstructor = constructorName,
+                    dbObjectConstructor = mkName $ constructorNameStr <> "Object",
+                    dbTableType = ConT . mkName $ constructorNameStr <> "." <> constructorNameStr <> "T"
+                  }
+            _ -> fail $ show constructor <> " constructor should be empty"
+        _ -> fail $ show dbModelName <> " should be data declaration"
+    _ -> fail $ show dbModelName <> " should be type name1"

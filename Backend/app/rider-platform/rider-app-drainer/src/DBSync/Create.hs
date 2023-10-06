@@ -14,7 +14,7 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import qualified Sequelize
+import qualified "rider-app" Storage.DBModel as DBModel
 import System.Timeout (timeout)
 import Types.DBSync
 import Types.DBSync.DBModel
@@ -43,45 +43,41 @@ runCreateCommands cmds streamKey = do
                     entryId,
                     kafkaObject = dbCreateObject
                   }
-        runCreateInKafkaAndDb dbConf streamKey dbModel createObjects
+        runCreateInKafkaAndDb dbConf streamKey createObjects -- FIXME BecknRequest??
 
 -- | Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
 runCreateInKafkaAndDb ::
-  forall (table :: (Type -> Type) -> Type) b.
-  (Show b, Sequelize.Model Postgres table) =>
+  (Show b, IsDBTable DBModel.RiderApp table) =>
   DBConfig Pg ->
   Text ->
-  DBModel ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateInKafkaAndDb dbConf streamKey' model object = do
+runCreateInKafkaAndDb dbConf streamKey' object = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runCreate dbConf streamKey' model object
+    then runCreate dbConf streamKey' object
     else
       if null object
         then pure [Right []]
         else do
           let entryIds = object <&> (.entryId)
-          kResults <- runCreateInKafka dbConf streamKey' model object
+          kResults <- runCreateInKafka dbConf streamKey' object
           case kResults of
-            [Right _] -> runCreate dbConf streamKey' model object
+            [Right _] -> runCreate dbConf streamKey' object
             _ -> pure [Left entryIds]
 
 -- | If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
 runCreateInKafka ::
   forall (table :: (Type -> Type) -> Type) b.
-  (Show b, Sequelize.Model Postgres table) =>
-  Show b =>
+  (Show b, IsDBTable DBModel.RiderApp table) =>
   DBConfig Pg ->
   Text ->
-  DBModel ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateInKafka dbConf streamKey' model object = do
+runCreateInKafka dbConf streamKey' object = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runCreate dbConf streamKey' model object -- why both runCreateInKafkaAndDb and runCreateInKafka call runCreate?
+    then runCreate dbConf streamKey' object -- why both runCreateInKafkaAndDb and runCreateInKafka call runCreate?
     else
       if null object
         then pure [Right []]
@@ -101,27 +97,25 @@ runCreateInKafka dbConf streamKey' model object = do
 
 runCreate ::
   forall (table :: (Type -> Type) -> Type) b.
-  (Show b, Sequelize.Model Postgres table) =>
-  Show b =>
+  (Show b, IsDBTable DBModel.RiderApp table) =>
   DBConfig Pg ->
   Text ->
-  DBModel ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreate dbConf _ model object = do
+runCreate dbConf _ object = do
   let dbObjects = object <&> (.dbObject)
       byteStream = object <&> (.bts)
       entryIds = object <&> (.entryId)
       cmdsToErrorQueue = map ("command" :: String,) byteStream
+  Env {..} <- ask
   maxRetries <- EL.runIO getMaxRetries
-  if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
+  let dbModel = showDBModel (Proxy @table)
+  if null object || dbModel `elem` _dontEnableDbTables  then pure [Right []] else runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
 runCreateWithRecursion ::
   forall (table :: (Type -> Type) -> Type) b.
-  (Show b, Sequelize.Model Postgres table) =>
-  Show b =>
+  (Show b, IsDBTable DBModel.RiderApp table) =>
   DBConfig Pg ->
-  DBModel ->
   [table Identity] ->
   [(String, b)] ->
   [KVDBStreamEntryID] ->
@@ -129,25 +123,29 @@ runCreateWithRecursion ::
   Int ->
   Bool ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
-  res <- CDB.createMultiSqlWoReturning @Postgres @Pg dbConf dbObjects ignoreDuplicates -- what about multiple objects?
-  case (res, index) of
+runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
+  let dbModel = showDBModel (Proxy @table)
+  res <- CDB.createMultiSqlWoReturning @Postgres @Pg dbConf dbObjects ignoreDuplicates
+  case (res, index) of -- Ignore duplicate entry
     (Right _, _) -> do
+      -- EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "CREATE" (t2 - t1) (cpuT2 - cpuT1) dbObjects -- Logging group latencies
       pure [Right entryIds]
     (Left (ET.DBError (ET.SQLError (ET.MysqlError (ET.MysqlSqlError 1062 err))) _), _) -> do
-      EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> show model <> ", Error message: " <> err)
-      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate $ show model
-      runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True
+      EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> dbModel <> ", Error message: " <> err)
+      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate dbModel
+      -- Is retry delay needed here? :/
+      runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
     (Left (ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError ("23505" :: Text) _ errMsg _ _))) _), _) -> do
-      EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> show model <> ", Error message: " <> errMsg)
-      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate $ show model
-      runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True
+      EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> dbModel <> ", Error message: " <> errMsg)
+      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate $ dbModel
+      -- Is retry delay needed here? :/
+      runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
     (Left _, y) | y < maxRetries -> do
-      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" $ show model -- FIXME use DBModel type everywhere
+      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel -- FIXME use DBModel type everywhere
       EL.runIO $ delay =<< getRetryDelay
-      runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds (index + 1) maxRetries ignoreDuplicates
+      runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds (index + 1) maxRetries ignoreDuplicates -- Should we pass the same ignoreDuplicates or should we pass False here.
     (Left x, _) -> do
-      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" $ show model
+      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel
       EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
       pure [Left entryIds]
 

@@ -18,6 +18,6 @@ instance FromJSON DBUpdateObject where
   parseJSON = A.withObject "DBUpdateObject" $ \o -> do
     contents <- o .: "contents"
     dbModelOptions :: DBModelOptions <- o .: "tag"
-    buildDBObject dbModelOptions.getDBModel $ do
+    buildDBObject dbModelOptions.getDBModelOptions $ do
       (updVals, whereClause) <- parseUpdateCommandValues contents
       pure $ DBUpdateObjectContent updVals whereClause

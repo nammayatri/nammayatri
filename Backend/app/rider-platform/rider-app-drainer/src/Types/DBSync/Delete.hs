@@ -15,6 +15,6 @@ instance FromJSON DBDeleteObject where
   parseJSON = A.withObject "DBDeleteObject" $ \o -> do
     contents <- o .: "contents"
     dbModelOptions :: DBModelOptions <- o .: "tag"
-    buildDBObject @DBDeleteObjectContent dbModelOptions.getDBModel $ do
+    buildDBObject @DBDeleteObjectContent dbModelOptions.getDBModelOptions $ do
       whereClause <- parseDeleteCommandValues contents
       return $ DBDeleteObjectContent whereClause

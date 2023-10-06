@@ -107,7 +107,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    # - -Werror # FIXME uncomment me
+    - -Werror
   dependencies:
     - rider-app
     - mobility-core

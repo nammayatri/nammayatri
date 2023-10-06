@@ -23,6 +23,7 @@ import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
+import qualified "rider-app" Storage.DBModel as DBModel
 import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
@@ -85,60 +86,53 @@ runUpdateCommands :: (UpdateDBCommand, ByteString) -> Text -> Flow (Either (Mesh
 runUpdateCommands (cmd, val) streamKey = do
   let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
   let UpdateDBCommand id _ tag _ _ dbUpdateObject = cmd
-  withDBObjectContent dbUpdateObject $ \dbModel (DBUpdateObjectContent setClauses whereClause) -> do
-    runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause dbModel =<< dbConf
-
--- case cmd of
---   UpdateDBCommand id _ tag _ _ (AppInstallsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("AppInstalls" :: Text) =<< dbConf
---   UpdateDBCommand id _ tag _ _ (BlackListOrgOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("BlackListOrg" :: Text) =<< dbConf
---   UpdateDBCommand id _ tag _ _ (BookingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Booking" :: Text) =<< dbConf
--- TODO this case should be different!
---UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdate id val streamKey setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
+  withDBObjectContent dbUpdateObject $ \(DBUpdateObjectContent (setClauses :: [Set Postgres table]) whereClause) -> do
+    case getDBModel (Proxy @DBModel.RiderApp) (Proxy @table) of
+      DBModel.BecknRequest -> runUpdate id val streamKey setClauses whereClause =<< dbConf
+      _ -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause =<< dbConf
 
 -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
-
 runUpdateInKafkaAndDb ::
-  IsDbTable table =>
+  IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
   Text ->
   [Set Postgres table] ->
   Text ->
   Where Postgres table ->
-  DBModel ->
   DBConfig Pg ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause model dbConf = do
+runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause dbConf = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runUpdate id value dbStreamKey' setClause whereClause model dbConf
+    then runUpdate id value dbStreamKey' setClause whereClause dbConf
     else do
-      res <- runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag
-      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value dbStreamKey' setClause whereClause model dbConf) res
+      res <- runUpdateInKafka id value dbStreamKey' setClause whereClause dbConf tag
+      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value dbStreamKey' setClause whereClause dbConf) res
 
--- TODO use IsDbTable class
 -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
 runUpdateInKafka ::
-  IsDbTable table =>
+  forall (table :: TableK).
+  IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
   Text ->
   [Set Postgres table] ->
   Where Postgres table ->
-  DBModel ->
   DBConfig Pg ->
   Text ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
+runUpdateInKafka id value dbStreamKey' setClause whereClause dbConf tag = do
+  let dbModel = showDBModel (Proxy @table)
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runUpdate id value dbStreamKey' setClause whereClause model dbConf
+    then runUpdate id value dbStreamKey' setClause whereClause dbConf
     else do
       res <- getUpdatedValue tag whereClause
       case res of
         Right dataObj -> do
           Env {..} <- ask
-          let updatedJSON = getDbUpdateDataJson (show model) dataObj
+          let updatedJSON = getDbUpdateDataJson dbModel dataObj
           res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
           either
             ( \_ -> do
@@ -149,7 +143,7 @@ runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = 
             (\_ -> pure $ Right id)
             res''
         Left _ -> do
-          let updatedJSON = getDbUpdateDataJson (show model) $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+          let updatedJSON = getDbUpdateDataJson dbModel $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
           Env {..} <- ask
           res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
           either
@@ -162,42 +156,45 @@ runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = 
             res''
 
 runUpdate ::
-  IsDbTable table =>
+  forall (table :: TableK).
+  IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
   Text ->
   [Set Postgres table] ->
   Where Postgres table ->
-  DBModel ->
   DBConfig Pg ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdate id value _ setClause whereClause model dbConf = do
+runUpdate id value _ setClause whereClause dbConf = do
   maxRetries <- EL.runIO getMaxRetries
-  runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
+  Env {..} <- ask
+  let dbModel = showDBModel (Proxy @table)
+  if dbModel `elem` _dontEnableDbTables then pure $ Right id else runUpdateWithRetries id value setClause whereClause dbConf 0 maxRetries
 
 -- TODO test: show AppInstall :: Text = "AppInstall"
 
 runUpdateWithRetries ::
-  IsDbTable table =>
+  forall (table :: TableK).
+  IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
   [Set Postgres table] ->
   Where Postgres table ->
-  DBModel ->
   DBConfig Pg ->
   Int ->
   Int ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdateWithRetries id value setClause whereClause dbModel dbConf retryIndex maxRetries = do
+runUpdateWithRetries id value setClause whereClause dbConf retryIndex maxRetries = do
+  let dbModel = showDBModel (Proxy @table)
   res <- updateDB dbConf Nothing setClause whereClause value
   case (res, retryIndex) of
     (Left _, y) | y < maxRetries -> do
-      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" (show dbModel)
+      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" dbModel
       EL.runIO $ delay =<< getRetryDelay
-      runUpdateWithRetries id value setClause whereClause dbModel dbConf (retryIndex + 1) maxRetries
+      runUpdateWithRetries id value setClause whereClause dbConf (retryIndex + 1) maxRetries
     (Left _, _) -> do
-      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" (show dbModel)
-      EL.logError (("Update failed for model: " :: Text) <> T.pack (show dbModel)) (show [("command" :: String, value)] :: Text)
+      void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" dbModel
+      EL.logError (("Update failed for model: " :: Text) <> dbModel) (show [("command" :: String, value)] :: Text)
       pure $ Left (UnexpectedError "Update failed for model", id)
     (Right _, _) -> do
       pure $ Right id
