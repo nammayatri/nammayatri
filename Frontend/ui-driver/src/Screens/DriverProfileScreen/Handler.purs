@@ -34,20 +34,6 @@ driverProfileScreen = do
   logField_ <- lift $ lift $ getLogFields
   action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen{data{logField = logField_}}
   case action of
-    GoToDriverDetailsScreen updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetails ->
-        driverDetails { data { driverName = updatedState.data.driverName,
-        driverVehicleType = updatedState.data.driverVehicleType,
-        driverRating = updatedState.data.driverRating,
-        base64Image = updatedState.data.base64Image,
-        driverMobile = updatedState.data.driverMobile,
-        driverAlternateMobile = updatedState.data.driverAlternateNumber
-        },
-        props {
-          checkAlternateNumber = (if (updatedState.data.driverAlternateNumber == Nothing) then true else false)
-        }})
-      App.BackT $ App.BackPoint <$> pure DRIVER_DETAILS_SCREEN
-
     GoToVehicleDetailsScreen updatedState -> do
       modifyScreenState $ VehicleDetailsScreenStateType (\vehicleDetails ->
         vehicleDetails { data { vehicleRegNumber = updatedState.data.vehicleRegNumber,
@@ -101,3 +87,6 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure GO_HOME
+    DriverProfilePicture image fileType updatedState -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> pure (ADDING_DRIVER_PROFILE_PICTURE image fileType updatedState)

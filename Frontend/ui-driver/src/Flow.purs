@@ -303,7 +303,10 @@ getDriverInfoFlow event activeRideResp = do
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
-      appConfig <- getAppConfig Constants.appConfig
+      state <- getState
+      case getDriverInfoResp.mediaUrl of
+        Just url -> void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ setProfileImage url
+        Nothing -> pure unit
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -351,6 +354,14 @@ getDriverInfoFlow event activeRideResp = do
       let UpdateDriverInfoReq initialData = Remote.mkUpdateDriverInfoReq ""
           requiredData = initialData{deviceToken = Just token}
       in void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
+
+setProfileImage :: String -> FlowBT String Unit
+setProfileImage url = do
+  resp <- lift $ lift $ Remote.getImageFromUrl url
+  case resp of
+    Right (API.ImageFromUrlResp image) -> setValueToLocalStore DRIVER_PROFILE_IMAGE image
+    Left err -> pure unit
+
 
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp = do
@@ -854,7 +865,6 @@ driverProfileFlow = do
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralScreenFlow
-    DRIVER_DETAILS_SCREEN -> driverDetailsFlow
     VEHICLE_DETAILS_SCREEN -> vehicleDetailsFlow
     ABOUT_US_SCREEN -> aboutUsFlow
     SELECT_LANGUAGE_SCREEN -> do
@@ -1041,6 +1051,7 @@ driverProfileFlow = do
                _ <- pure $ toast $ (decodeErrorCode errorPayload.response.errorMessage)
                modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> state
                driverProfileFlow
+
     DRIVER_GENDER1 state -> do
       let genderSelected = state.data.driverGender
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
@@ -1051,124 +1062,36 @@ driverProfileFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
       setValueToLocalStore IS_BANNER_ACTIVE "False"
       driverProfileFlow
+
     UPDATE_LANGUAGES language -> do
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{languagesSpoken = Just language}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
       driverProfileFlow
-
+    
     SAVED_LOCATIONS_SCREEN -> do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
       goToLocationFlow  
 
-driverDetailsFlow :: FlowBT String Unit
-driverDetailsFlow = do
-  action <- UI.driverDetailsScreen
-  case action of
-    DRIVER_ALTERNATE_CALL_API updatedState -> do
-      let number =  if (updatedState.props.isEditAlternateMobile) then updatedState.data.driverEditAlternateMobile else updatedState.data.driverAlternateMobile
-      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybe "" (number)))
-      case  getAlternateMobileResp of
-            Right (DriverAlternateNumberResp resp) -> do
-                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState)
-                  driverDetailsFlow
-            Left errorPayload -> do
-               let alternateNumber = if updatedState.props.isEditAlternateMobile then updatedState.data.driverAlternateMobile else Nothing
-               if (errorPayload.code == 400 && ((decodeErrorCode errorPayload.response.errorMessage) == "INVALID_REQUEST")) then do
-                modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> updatedState { props {numberExistError = true,keyboardModalType = MOBILE__NUMBER }}
-                driverDetailsFlow
-               else do
-                  pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
-                  modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> updatedState { data {driverAlternateMobile = alternateNumber} , props {keyboardModalType = NONE,isEditAlternateMobile = false,checkAlternateNumber = (alternateNumber == Nothing)}}
-                  driverDetailsFlow
-
-
-
-
-    RESEND_ALTERNATE_OTP updatedState -> do
-      let number =  if (updatedState.props.isEditAlternateMobile) then updatedState.data.driverEditAlternateMobile else updatedState.data.driverAlternateMobile
-      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybe "" (number)))
-      case getAlternateMobileResendOtpResp of
-            Right (AlternateNumberResendOTPResp resp) -> do
-                pure $ toast $ getString OTP_HAS_BEEN_RESENT
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
-                driverDetailsFlow
-            Left errorPayload -> do
-              if (errorPayload.code == 400 &&(decodeErrorCode errorPayload.response.errorMessage) == "AUTH_BLOCKED") then do
-                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
-                  pure $ toast $ getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
-                  driverDetailsFlow
-              else do
-                  pure $ toast $ getString SOMETHING_WENT_WRONG
-                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState {data{ driverAlternateMobile = (if(updatedState.props.isEditAlternateMobile) then updatedState.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = not updatedState.props.isEditAlternateMobile }})
-                  driverDetailsFlow
-
-
-    VERIFY_OTP state -> do
-       let toast_value = if not state.props.isEditAlternateMobile then (getString NUMBER_ADDED_SUCCESSFULLY) else (getString NUMBER_EDITED_SUCCESSFULLY)
-           finalAlternateMobileNumber = state.data.driverEditAlternateMobile
-       getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.props.alternateMobileOtp))
-       case getVerifyAlternateMobileOtpResp of
-         Right (DriverAlternateNumberOtpResp resp) -> do
-              pure $ toast (toast_value)
-              modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data {driverAlternateMobile = finalAlternateMobileNumber , driverEditAlternateMobile = Nothing} , props {otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = false,isEditAlternateMobile = false}})
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {  driverAlternateMobile = finalAlternateMobileNumber  }})
-              modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data { driverAlternateNumber = finalAlternateMobileNumber}})
-              driverDetailsFlow
-         Left errorPayload -> do
-            if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_AUTH_DATA") then do
-               if (state.data.otpLimit == 1)
-               then do
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { props {otpAttemptsExceeded = true, keyboardModalType = NONE}})
-                setValueToLocalStore SET_ALTERNATE_TIME ((getCurrentUTC ""))
-                driverDetailsFlow
-               else do
-                let otpExceeded = ((state.data.otpLimit - 1) <= 0)
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data  { otpLimit = state.data.otpLimit - 1 } , props {otpIncorrect = (if (otpExceeded) then false else true) ,otpAttemptsExceeded = otpExceeded,alternateMobileOtp = ""}})
-                driverDetailsFlow
-            else if (errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage == "HITS_LIMIT_EXCEED"))
-                then do
-                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { props {otpAttemptsExceeded = true, keyboardModalType = NONE}})
-                  setValueToLocalStore SET_ALTERNATE_TIME ((getCurrentUTC ""))
-                  driverDetailsFlow
-            else do
-                pure $ toast $ getString SOMETHING_WENT_WRONG
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = not state.props.isEditAlternateMobile }})
-                driverDetailsFlow
-
-
-    ALTERNATE_NUMBER_REMOVE state -> do
-       getAlternateMobileRemoveResp <- lift $ lift $ Remote.removeAlternateNumber (RemoveAlternateNumberRequest {} )
-       case  getAlternateMobileRemoveResp of
-          Right (RemoveAlternateNumberResp resp) -> do
-                pure $ toast (getString NUMBER_REMOVED_SUCCESSFULLY)
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverAlternateMobile = Nothing}, props  { checkAlternateNumber = true}})
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {  driverAlternateMobile = Nothing  }})
-                modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data { driverAlternateNumber = Nothing}})
-                driverDetailsFlow
-          Left errorPayload -> do
-               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
-               modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> state
-               driverDetailsFlow
-
-    GO_TO_HOMESCREEN state -> do
-       modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {props {keyboardModalType = NONE}} )
-       homeScreenFlow
-
-    DRIVER_GENDER state -> do
-        let genderSelected = state.data.driverGender
-        let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-            requiredData = initialData{gender = genderSelected}
-        (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
-        pure $ toast (getString GENDER_UPDATED)
-        modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverGender = genderSelected}})
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
-        setValueToLocalStore IS_BANNER_ACTIVE "False"
-        driverDetailsFlow
-
-  pure unit
+    ADDING_DRIVER_PROFILE_PICTURE image fileType updatedState  -> do 
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      getDriverProfilePictureResp <- lift $ lift $ Remote.addProfilePicture image fileType
+      void $ lift $ lift $ toggleLoader false
+      case getDriverProfilePictureResp of
+        Right (API.DriverProfilePictureResp resp) -> do
+          let (GlobalState defaultEpassState) = defaultGlobalState
+          modifyScreenState $ DriverProfileScreenStateType (\_ ->  defaultEpassState.driverProfileScreen)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {profileUrl = Just ""}})
+          void $ pure $ JB.renderBase64Image image (getNewIDWithTag "DriverImage") true "CIRCULAR"
+          void $ pure $ JB.renderBase64Image image (getNewIDWithTag "DriverImage1") true "CIRCULAR"
+          setValueToLocalStore DRIVER_PROFILE_IMAGE image
+          pure $ toast $ getString if isJust updatedState.data.profileUrl then PROFILE_PICTURE_UPDATED_SUCCESSFULLY else PROFILE_PICTURE_ADDED_SUCCESSFULLY
+        Left errorPayload -> pure $ toast $ decodeErrorCode errorPayload.response.errorMessage
+      driverProfileFlow
+  driverProfileFlow 
 
 vehicleDetailsFlow :: FlowBT String Unit
 vehicleDetailsFlow = do
@@ -1805,9 +1728,10 @@ homeScreenFlow = do
   void $ lift $ lift $ toggleLoader false
   action <- UI.homeScreen
   case action of
-    GO_TO_PROFILE_SCREEN -> do
-      liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      driverProfileFlow
+    GO_TO_PROFILE_SCREEN state -> do
+     liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+     modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {profileImageData{addProfilePopUp = state.props.profilePicturePopUp}}})
+     driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
       driverProfileFlow
@@ -2700,6 +2624,7 @@ updateDriverDataToStates = do
         , totalEarningsOfDay = resp.totalEarningsOfDay
         , bonusEarned = resp.bonusEarning
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
+        , profileUrl = getDriverInfoResp.mediaUrl
         , driverGotoState { gotoCount = driverGoHomeInfo.cnt,
                             gotoValidTill = fromMaybe "-" driverGoHomeInfo.validTill,
                             isGotoEnabled = driverGoHomeInfo.status == Just "ACTIVE",
@@ -2730,6 +2655,7 @@ updateDriverDataToStates = do
     , capacity = fromMaybe 2 linkedVehicle.capacity
     , downgradeOptions = getDowngradeOptions linkedVehicle.variant
     , vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)
+    , profileUrl = getDriverInfoResp.mediaUrl
     , profileImg = getDriverInfoResp.aadhaarCardPhoto}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName

@@ -45,7 +45,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -231,7 +231,7 @@ view push state =
           driverMapsHeaderView push state
         , rideActionModelView push state
         ]
-      -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
+      , if ((getValueToLocalNativeStore ADD_PROFILE) /= "false" && isNothing state.data.profileUrl) then profileDemoView state push else linearLayout[][]
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
@@ -703,15 +703,31 @@ driverDetail push state =
       , height MATCH_PARENT
       , gravity CENTER
       , padding (Padding 16 20 12 16)
-      ][ linearLayout [
-          width $ V 42
-        , height $ V 42
-        , onClick push $ const GoToProfile
+      ][ relativeLayout 
+        [ width $ V 43
+        , height $ V 43
+        , onClick push $ const $ GoToProfile false
         ][ imageView
-           [ width $ V 42
-           , height $ V 42
+           [ width $ V 43
+           , height $ V 43
+           , layoutGravity "center"
            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_new_avatar_profile"
            ]
+        , PrestoAnim.animationSet [PrestoAnim.Animation [ PrestoAnim.duration 1] true] $
+          linearLayout
+          [ width $ V 43
+          , height $ V 43
+          , stroke $ "2," <> Color.grey900
+          , cornerRadius 50.0
+          , visibility if (isJust state.data.profileUrl || isJust state.data.profileImg) then VISIBLE else GONE
+          , id $ getNewIDWithTag "DriverImage"
+          , onAnimationEnd (\_ -> 
+              case state.data.profileUrl, state.data.profileImg of
+                Just _ , _ -> JB.renderBase64Image (getValueToLocalNativeStore DRIVER_PROFILE_IMAGE) (getNewIDWithTag "DriverImage") false "CIRCULAR"
+                Nothing , Just val -> JB.renderBase64Image val (getNewIDWithTag "DriverImage") false "CIRCULAR"
+                _ , _ -> pure unit
+              )(const NoAction)
+          ][]
          ]
       ]
     , accessibilityHeaderView push state (getAccessibilityHeaderText state)
@@ -865,9 +881,9 @@ profileDemoView state push =
       ][ imageView
           [ width $ V 50
           , height $ V 50
-          , margin $ Margin 5 5 5 5
+          , margin $ Margin 2 2 5 5
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_profile_shadow"
-          , onClick push $ const $ GoToProfile
+          , onClick push $ const $ GoToProfile true
           ]
         , imageView
           [ width $ V 40
@@ -891,7 +907,7 @@ clickHereDemoLayout state push =
   ][ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ getString CLICK_TO_ACCESS_YOUR_ACCOUNT
+      , text $ getString CLICK_TO_ADD_PROFILE_PICTURE
       , color Color.white900
       , padding $ Padding 20 12 20 15
       ] <> FontStyle.body13 TypoGraphy

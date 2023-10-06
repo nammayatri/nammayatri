@@ -68,24 +68,12 @@ public class Utils {
                 .start(activity);
     }
 
-    public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
+    public static ImageProperties encodeImageToBase64(String path, Context context,Bitmap selectedImage) {
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         try {
-            Uri fileUri;
-            if(imageData == null) {
-                CropImage.ActivityResult result = CropImage.getActivityResult(data);
-                fileUri = result.getUri();
-            }
-            else {
-                fileUri = imageData;
-            }
-            InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
-            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
             byte[] b;
             String encImage;
-
             selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, baos);
             b = baos.toByteArray();
             encImage = Base64.encodeToString(b, Base64.NO_WRAP);
@@ -108,20 +96,14 @@ public class Utils {
                     encImage = Base64.encodeToString(b, Base64.NO_WRAP);
                 }
             }
-
             Log.d(UTILS, "encoded image size camera : " + (((encImage.length() / 4) * 3) / 1000));
-            {
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                for (int i = 0; i < callBack.size(); i++) {
-                    if (fileUri != null) {
-                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
-                    }
-                }
-            }
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            return new ImageProperties(encImage, "IMG_" + timeStamp + ".jpg", path);
         } catch (Exception e) {
             e.printStackTrace();
             Bundle params = new Bundle();
             mFirebaseAnalytics.logEvent("exception_crop_image", params);
+            return new ImageProperties(null, null, null);
         }
     }
 

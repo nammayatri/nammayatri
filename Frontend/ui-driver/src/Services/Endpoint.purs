@@ -267,3 +267,6 @@ rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
 
 getMerchantIdList :: String -> String 
 getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"
+
+putProfilePicture :: String -> String 
+putProfilePicture _ = (getBaseUrl "") <> "/driver/profile/photo"

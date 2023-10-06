@@ -32,6 +32,7 @@ initData = {
         vehicleType : "",
         profileImg : Nothing,
         driverAlternateMobile : Nothing,
+        profileUrl : Nothing,
         activeRide : {
           id : "",
           source : "",
@@ -189,7 +190,9 @@ initData = {
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
         waitTimeStatus : NoStatus,
-        isMockLocation : false
+        isMockLocation : false,
+        showBlockingPopup : false,
+        profilePicturePopUp :true
     }
 }
 

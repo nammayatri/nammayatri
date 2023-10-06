@@ -33,6 +33,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.View as PrimaryEditText
+import Components.ValidateProfilePicture as ValidateProfilePicture
 import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -47,6 +48,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, flowRunner)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
@@ -60,6 +62,9 @@ import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback, webView, url, clickable)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
@@ -70,6 +75,7 @@ import Screens.Types as ST
 import Screens.Types(MenuOptions(..), AutoPayStatus(..))
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..))
 import Services.Backend as Remote
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
@@ -80,6 +86,7 @@ import Resource.Constants as Const
 import Data.Either (Either (..))
 import Data.Enum (enumFromThenTo)
 
+
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -89,9 +96,10 @@ screen initialState =
       if initialState.props.openSettings then
       pure unit
       else do
+        _ <- JB.storeCallBackImageUpload push CallBackImageUpload
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
-          lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
+         getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
+         lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
           void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
           EHU.toggleLoader true
@@ -123,7 +131,7 @@ view push state =
         , orientation VERTICAL
         , onBackPressed push $ const BackPressed
         , background Color.white900
-        , visibility if state.props.updateLanguages ||  state.props.updateDetails then GONE else VISIBLE
+        , visibility if state.props.updateLanguages ||  state.props.updateDetails || isJust state.data.profileImageData.selfieView then GONE else VISIBLE
         ][  settingsView state push
           , profileView push state]
       , linearLayout
@@ -143,7 +151,9 @@ view push state =
         , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
         , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
         , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
-    ]
+        , selfieView push state $ isJust state.data.profileImageData.selfieView
+        , if state.data.profileImageData.addProfilePopUp then PopUpModal.view (push <<< AddProfilePictureModalAction) (addProfilePictureStateConfig state) else dummyTextView
+        ]
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
@@ -393,32 +403,8 @@ tabImageView state push =
   , padding $ PaddingVertical 32 32
   , background Color.blue600
   , orientation HORIZONTAL
-  ][  PrestoAnim.animationSet
-      [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
-      , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
-      ] $ 
-      linearLayout[
-        height $ V 88
-      , width $ V 88
-      , cornerRadius 44.0
-      , margin $ MarginRight 10
-      , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
-      , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
-      ] [ (if state.data.profileImg == Nothing then 
-          imageView[ 
-            height $ V 88
-          , width $ V 88
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_new_avatar_profile"
-          ]
-        else 
-          linearLayout [
-            height $ V 88
-          , width $ V 88
-          , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
-          , id (getNewIDWithTag "driver_prof_img")][]
-        )
-      ]      
-  ,  PrestoAnim.animationSet
+  ][  driverProfilePicture push state
+  , PrestoAnim.animationSet
     [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
     , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
     ] $ linearLayout
@@ -452,6 +438,58 @@ tabImageView state push =
         then "ny_ic_black_yellow_auto_side_view"
         else "ny_ic_auto_side_view"
 
+
+driverProfilePicture :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverProfilePicture push state = 
+  PrestoAnim.animationSet
+    [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
+    , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
+    ] $ 
+    relativeLayout[
+      height $ V 88
+    , width $ V 88
+    , cornerRadius 44.0
+    , margin $ MarginRight 10
+    , onClick push $ const $ if (state.props.screenType == ST.DRIVER_DETAILS) then ChangeProfile else ChangeScreen ST.DRIVER_DETAILS
+    , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
+    ] [ relativeLayout 
+        [ width $ V 88
+        , height $ V 88
+        ][ imageView
+           [ width $ V 88
+           , height $ V 88
+           , imageWithFallback $ fetchImage FF_ASSET "ny_ic_new_avatar_profile"
+           ]
+        , PrestoAnim.animationSet [PrestoAnim.Animation [ PrestoAnim.duration 1] true] $
+          linearLayout
+          [ width $ V 88
+          , height $ V 88
+          , id $ getNewIDWithTag "DriverImage1"
+          , stroke $ "1," <> Color.grey900
+          , cornerRadius 50.0
+          , visibility if (isJust state.data.profileUrl || isJust state.data.profileImg) then VISIBLE else GONE
+          , onAnimationEnd push $ const OnAnimationEnd
+          ][]
+         ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , gravity BOTTOM
+        ][ linearLayout
+            [ width MATCH_PARENT
+            , height $ V 30
+            , gravity RIGHT
+            , margin $ MarginBottom 5
+            ][ imageView
+                [ width $ V 30
+                , height $ V 30
+                , gravity RIGHT
+                , cornerRadius 45.0
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_camera"
+                ]
+            ]
+        ]
+    ]      
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 
@@ -1055,9 +1093,19 @@ settingsView state push =
     ][]
   , profileOptionsLayout state push ]
 
+selfieView :: forall w . (Action -> Effect Unit) -> ST.DriverProfileScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+selfieView push state visibility' = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , visibility if visibility' then VISIBLE else GONE
+  ][ ValidateProfilePicture.view (push <<< ValidateProfilePicturePopUpAction) case state.data.profileImageData.selfieView of
+      Just true -> (ValidateProfilePicture.config{background = Color.black,cameraView =true, buttonLoader = state.data.profileImageData.buttonLoader, headerConfig {headTextConfig {text = (getString TAKE_SELFIE)}}})
+      Just false -> (validateProfilePictureModalState state)
+      _ -> ValidateProfilePicture.config
+  ]
 
-
-------------------------------------------------- PROFILE OPTIONS LAYOUT ------------------------------
+------------------------------------------------- profileOptionsLayout ------------------------------
 
 profileOptionsLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 profileOptionsLayout state push =
@@ -1196,6 +1244,7 @@ infoView state push =
                                            else (getRcDetails state)
                             }
     ]
+
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean , isRightInfo :: Boolean}
 getRcDetails state = do
   let config = state.data.activeRCData

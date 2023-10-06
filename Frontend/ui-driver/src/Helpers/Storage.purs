@@ -67,7 +67,7 @@ data KeyStore = USER_NAME
                 | INVALID_OTP_TIME
                 | RIDE_REQUEST_BUFFER
                 | SESSION_ID
-                | PROFILE_DEMO
+                | ADD_PROFILE
                 | SET_ALTERNATE_TIME
                 | SUGGESTIONS
                 | SUGGESTIONS_DEFINITIONS
@@ -114,6 +114,7 @@ data KeyStore = USER_NAME
                 | DRIVER_LOCATION
                 | SHOW_SUBSCRIPTIONS
                 | TOTAL_WAITED
+                | DRIVER_PROFILE_IMAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

@@ -189,7 +189,7 @@ instance loggableAction :: Loggable Action where
       -- ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
       -- ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     SwitchDriverStatus status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "SwitchDriverStatus"
-    GoToProfile -> do
+    GoToProfile _ -> do
       trackAppActionClick appId (getScreen HOME_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen HOME_SCREEN)
     LinkAadhaarPopupAC act -> pure unit --case act of
@@ -289,7 +289,7 @@ data Action = NoAction
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
             | LinkAadhaarPopupAC PopUpModal.Action
-            | GoToProfile
+            | GoToProfile Boolean
             | ClickAddAlternateButton
             | ZoneOtpAction
             | TriggerMaps
@@ -833,10 +833,9 @@ eval (SwitchDriverStatus status) state =
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
 
-eval GoToProfile state =  do
-  _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
-  _ <- pure $ hideKeyboardOnNavigation true
-  exit $ GoToProfileScreen state
+eval (GoToProfile addProfile) state =  do
+  _ <- pure $ setValueToLocalNativeStore ADD_PROFILE "false"
+  exit $ GoToProfileScreen state {props {profilePicturePopUp = addProfile}}
 
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then
@@ -880,7 +879,6 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
-eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}

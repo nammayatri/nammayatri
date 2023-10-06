@@ -50,7 +50,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure GO_TO_VEHICLE_DETAILS_SCREEN
     GoToProfileScreen updatedState-> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
+      App.BackT $ App.BackPoint <$> pure (GO_TO_PROFILE_SCREEN updatedState)
     GoToHelpAndSupportScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN

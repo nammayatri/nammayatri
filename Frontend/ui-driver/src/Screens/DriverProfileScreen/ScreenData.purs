@@ -33,8 +33,8 @@ initData = {
   data:  {
     driverName : "",
     driverVehicleType : "",
-    driverRating : Just 2.0,
-    base64Image : "",
+    driverRating : Nothing,
+    profileUrl : Nothing,
     drivingLicenseNo : "",
     driverMobile : Just "",
     vehicleRegNumber : "",
@@ -86,7 +86,15 @@ initData = {
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config : DC.config
+    config : DC.config,
+    profileImageData : {
+      demoImage : "",
+      addProfilePopUp :false,
+      verificationStatus : true,
+      selfieView : Nothing,
+      buttonLoader : false,
+      failureReason : ""
+    }
     },
 
   props: {

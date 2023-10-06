@@ -310,7 +310,7 @@ type DriverProfileScreenData = {
   driverName :: String,
   driverVehicleType :: String,
   driverRating :: Maybe Number,
-  base64Image :: String,
+  profileUrl :: Maybe String,
   drivingLicenseNo :: String,
   driverMobile :: Maybe String,
   vehicleRegNumber :: String,
@@ -343,7 +343,17 @@ type DriverProfileScreenData = {
   profileImg :: Maybe String,
   payerVpa :: String,
   autoPayStatus :: AutoPayStatus,
-  config :: AppConfig
+  config :: AppConfig,
+  profileImageData :: ProfileImageData
+}
+
+type ProfileImageData = {
+  demoImage :: String,
+  addProfilePopUp :: Boolean,
+  verificationStatus :: Boolean,
+  selfieView :: Maybe Boolean,
+  buttonLoader :: Boolean,
+  failureReason :: String
 }
 
 type RcData = {
@@ -830,6 +840,7 @@ type HomeScreenState = {
 type HomeScreenData =  {
   driverName :: String,
   vehicleType :: String,
+  profileUrl :: Maybe String,
   activeRide :: ActiveRide,
   cancelRideModal :: CancelRideModalData,
   currentDriverLat :: Number,
@@ -1027,7 +1038,9 @@ type HomeScreenProps =  {
   showChatBlockerPopUp :: Boolean,
   showGenericAccessibilityPopUp :: Boolean,
   waitTimeStatus :: TimerStatus,
-  isMockLocation :: Boolean
+  isMockLocation :: Boolean,
+  showBlockingPopup :: Boolean,
+  profilePicturePopUp :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

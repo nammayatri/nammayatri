@@ -15,39 +15,36 @@
 
 module Screens.DriverProfileScreen.ComponentConfig where
 
-import Components.PopUpModal as PopUpModal
-import Components.GenericHeader as GenericHeader
-import Components.PrimaryEditText as PrimaryEditText
-import Components.CheckListView as CheckListView
-import Screens.DriverProfileScreen.Controller
 import Language.Strings
-import PrestoDOM
-import Common.Types.App (LazyCheck)
-import Components.PopUpModal as PopUpModal
-import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (unit, (/=), (<>), (==))
-import Screens.Types as ST
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Data.Maybe(fromMaybe, Maybe(..), isJust)
-import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
-import Prelude ((<>), (||),(&&),(==),(<), not, (>))
-import Engineering.Helpers.Commons as EHC
-import Data.String as DS
-import Data.Array as DA
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude
 import Screens.DriverProfileScreen.Controller
+import Screens.DriverProfileScreen.Controller
+import Common.Types.App (LazyCheck(..))
+import Components.CheckListView as CheckListView
+import Components.GenericHeader as GenericHeader
+import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.InAppKeyboardModal.View as InAppKeyboardModal
+import Components.PopUpModal as PopUpModal
+import Components.PopUpModal as PopUpModal
+import Components.PopUpModal.Controller as PopUpModalConfig
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText as PrimaryEditText
+import Components.ValidateProfilePicture as ValidateProfilePicture
+import Data.Array as DA
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.String as DS
 import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.Commons as EHC
+import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style (Style(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Styles.Colors as Color
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -495,3 +492,53 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         }
       ]
     )
+addProfilePictureStateConfig:: ST.DriverProfileScreenState -> PopUpModalConfig.Config
+addProfilePictureStateConfig state = let
+    config = PopUpModalConfig.config
+    popUpConf' = config {
+      gravity = BOTTOM
+    ,primaryText {
+        text = getString if isJust state.data.profileUrl then UPDATE_PROFILE_PHOTO else ADD_PROFILE_PHOTO
+      , margin = Margin 24 24 24 12
+      , visibility = VISIBLE
+     },
+      secondaryText {
+        text = getString YOUR_PHOTO_WILL_HELP_US_TO_VERIFY_IDENTITY
+      , color = Color.black600
+      , margin = Margin 24 0 24 32
+      , visibility = VISIBLE
+        },
+      option1 {
+        text = getString TRY_AGAIN_LATER
+      , color = Color.black900
+      , strokeColor = Color.black700
+      , visibility =false
+
+      },
+      option2 {text = getString TAKE_SELFIE
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , margin = MarginHorizontal 16 16 
+      , width = V 50
+      , background = Color.black900
+      }
+    }
+  in popUpConf'
+
+validateProfilePictureModalState :: ST.DriverProfileScreenState -> ValidateProfilePicture.IssueListFlowState
+validateProfilePictureModalState state = 
+  ValidateProfilePicture.config {
+    background = Color.black,
+    failureReason = state.data.profileImageData.failureReason,
+    verificationStatus = state.data.profileImageData.verificationStatus,
+    buttonLoader = state.data.profileImageData.buttonLoader,
+    headerConfig {
+      imageConfig {
+      color = Color.white900
+    },
+    headTextConfig {
+      text = getString CONFIRM_SELFIE,
+      color = Color.white900
+    }
+    }
+  }

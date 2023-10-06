@@ -253,6 +253,9 @@ foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Uni
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
+foreign import capturePhoto :: Unit -> Effect Unit
+foreign import showCameraX :: String -> Effect Unit
+foreign import unbindCamera :: Unit -> Effect Unit
 
 type LottieAnimationConfig = {
     rawJson :: String
