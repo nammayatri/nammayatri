@@ -32,7 +32,8 @@ initData =  {
       driverName : "",
       driverMobile : Just "",
       vehicleRegNumber : "",
-      referralCode : Nothing
+      referralCode : Nothing,
+      vehicleVariant : ""
     }
   , driverPerformance : {
       referrals : {

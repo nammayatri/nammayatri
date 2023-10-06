@@ -548,7 +548,8 @@ type ReferralScreenStateData = {
       driverName :: String,
       driverMobile :: Maybe String,
       vehicleRegNumber :: String,
-      referralCode     :: Maybe String
+      referralCode     :: Maybe String,
+      vehicleVariant :: String
     }
   , driverPerformance :: {
       referrals :: {
