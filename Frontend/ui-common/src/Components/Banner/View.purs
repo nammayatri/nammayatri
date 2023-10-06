@@ -17,7 +17,7 @@ module Components.Banner.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
+import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textFromHtml, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
@@ -86,7 +86,7 @@ view push config =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text "→"
+            , textFromHtml "&rarr;"
             , color config.actionTextColor
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5

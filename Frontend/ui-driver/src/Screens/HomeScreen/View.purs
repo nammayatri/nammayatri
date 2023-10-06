@@ -517,6 +517,8 @@ recenterBtnView state push =
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
+  let showGoInYellow = state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.config.subscriptionConfig.highDueWarningLimit)
+  in
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -576,7 +578,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background if state.data.paymentState.driverBlocked then Color.yellowText else Color.darkMint
+                    , background if showGoInYellow then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

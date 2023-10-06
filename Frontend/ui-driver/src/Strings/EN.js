@@ -714,7 +714,7 @@ const englishStrings = {
   TRANSACTION_ON : "Transaction On",
   SUCCESS : "SUCCESS",
   DEBITED_ON : "Debited on",
-  RIDES_TAKEN_ON : "Rides taken on",
+  RIDES_TAKEN_ON : "Rides on",
   JOIN_PLAN : "Join Plan",
   JOIN_NAMMAA_YATRI : "Join Namma Yatri",
   CANCEL_AUTOPAY_AND_PAY_MANUALLY : "Cancel Autopay and Pay Manually",
@@ -925,5 +925,8 @@ const englishStrings = {
   FREE_TRIAL_ENDS_TONIGHT : "Free trial ends tonight!",
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Join a plan to continue taking rides",
   SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "Setup Autopay for easy payments",
-  LOW_DUES_CLEAR_POPUP_DESC : "Clear your dues now to enjoy non-stop rides."
+  LOW_DUES_CLEAR_POPUP_DESC : "Clear your dues now to enjoy non-stop rides.",
+  DUES_PENDING : "⚠️ Dues Pending! ⚠️",
+  DAYS : "Days",
+  ACTIVE_PLAN : "Active Plan"
 } 

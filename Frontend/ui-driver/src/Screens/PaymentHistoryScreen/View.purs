@@ -73,7 +73,7 @@ screen initialState =
           lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
           lift $ lift $ EHU.toggleLoader true
           let tab = if initialState.props.autoPayHistory then "AUTOPAY_INVOICE" else "MANUAL_INVOICE"
-          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" "0" tab
+          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" (show initialState.props.offset) tab
           case resp of
             Right (SA.HistoryEntityV2Resp resp) -> do
               lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory (SA.HistoryEntityV2Resp resp)
@@ -153,72 +153,90 @@ paymentList push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if DA.length transactionItems > 0 then VISIBLE else GONE
-        ] (DA.mapWithIndex (\index item -> 
-          let itemConfig = getStatusConfig item.paymentStatus
-          in
-          linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , stroke $ "1," <> Color.grey900
-            , cornerRadius 8.0
-            , margin $ MarginVertical 6 6
-            , padding $ Padding 16 16 16 16
-            , onClick push $ const $ ListItemClick item
-            ][ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER_VERTICAL
-                , orientation HORIZONTAL
-                , margin $ MarginVertical 0 6
-                ][ commonTV push (itemConfig.description <> "  ") Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
-                , commonTV push (convertUTCtoISC item.transactionDate "Do MMM, YYYY") Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
-                , linearLayout
-                    [ height WRAP_CONTENT
-                    , weight 1.0
-                    ][]
-                , commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
-                , linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , cornerRadius 24.0
-                    , padding $ Padding 8 4 8 4
-                    , background itemConfig.backgroundColor
-                    , margin $ MarginLeft 4
-                    ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
-                ]
-              , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                ][  commonTV push item.description Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
-                    , linearLayout
-                        [ height WRAP_CONTENT
-                        , weight 1.0
-                        ][]
-                    , linearLayout
+        ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , visibility if DA.length transactionItems > 0 then VISIBLE else GONE
+          ] (DA.mapWithIndex (\index item -> 
+            let itemConfig = getStatusConfig item.paymentStatus
+            in
+            linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , stroke $ "1," <> Color.grey900
+              , cornerRadius 8.0
+              , margin $ MarginVertical 6 6
+              , padding $ Padding 16 16 16 16
+              , onClick push $ const $ ListItemClick item
+              ][ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , gravity CENTER_VERTICAL
+                  , orientation HORIZONTAL
+                  , margin $ MarginBottom 6
+                  ][ commonTV push item.description Color.black700 (FontStyle.body2 TypoGraphy) 0 LEFT true
+                  , commonTV push item.ridesTakenDate Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , weight 1.0
+                      ][]
+                  , commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                  , linearLayout
                       [ height WRAP_CONTENT
                       , width WRAP_CONTENT
-                      , orientation HORIZONTAL
-                      , gravity CENTER_VERTICAL
-                      , cornerRadius 20.0
-                      , background Color.white900
-                      , padding $ Padding 8 5 8 5
-                      ][ imageView
-                          [ width $ V 12
-                          , height $ V 12
-                          , margin (MarginRight 4)
-                          , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
+                      , cornerRadius 24.0
+                      , padding $ Padding 8 4 8 4
+                      , background itemConfig.backgroundColor
+                      , margin $ MarginLeft 4
+                      ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
+                  ]
+                , linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , gravity CENTER
+                  ][  commonTV push (itemConfig.description <> "  "  <> convertUTCtoISC item.transactionDate "Do MMM YYYY") Color.black600 (FontStyle.tags TypoGraphy) 0 CENTER true
+                      , linearLayout
+                          [ height WRAP_CONTENT
+                          , weight 1.0
+                          ][]
+                      , linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , orientation HORIZONTAL
+                        , gravity CENTER_VERTICAL
+                        , cornerRadius 20.0
+                        , background Color.white900
+                        , padding $ Padding 8 5 8 5
+                        ][ imageView
+                            [ width $ V 12
+                            , height $ V 12
+                            , margin (MarginRight 4)
+                            , imageWithFallback $ "ny_ic_upi_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_upi_logo.png"
+                            ]
+                          , commonTV push (case item.feeType of 
+                                            AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
+                                            AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
+                                            _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
                           ]
-                        , commonTV push (case item.feeType of 
-                                          AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
-                                          AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
-                                          _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
-                        ]
-                ]
-            ]
-        ) transactionItems)
+                  ]
+              ]
+          ) transactionItems)
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          , visibility if state.props.enableLoadMore then VISIBLE else GONE
+          ][ textView $
+            [ text $ getString LOAD_MORE
+            , color Color.blue900
+            , gravity CENTER
+            , padding $ PaddingVertical 16 16
+            , onClick push $ const LoadMore
+            ] <> FontStyle.body1 TypoGraphy
+          ]
+        ]
     ]
 
 noPaymentsView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

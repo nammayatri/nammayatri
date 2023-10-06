@@ -40,13 +40,10 @@ type Config = {
   noVpaCard :: NoVpaCard,
   primaryButtonConfig :: PB.Config,
   accessibility :: Accessiblity,
-  qrVisibility :: Boolean,
-  payerVpa :: String,
-  noVpaVisibility :: Boolean,
   theme :: Theme,
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
-  showBannerBelowQR :: Boolean
+  viewsByOrder :: Array RideCompletedElements
 }
 
 data Theme = DARK | LIGHT
@@ -55,6 +52,11 @@ derive instance genericTheme :: Generic Theme _
 instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
+
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW
+
+derive instance genericRideCompletedElements :: Generic RideCompletedElements _
+instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
 
 config :: Config 
@@ -136,13 +138,10 @@ config = {
   showContackSupportPopUp : false,
   primaryButtonConfig : PB.config,
   accessibility : ENABLE,
-  qrVisibility : false ,
-  payerVpa : "",
-  noVpaVisibility : false,
   theme : DARK,
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
-  showBannerBelowQR : true
+  viewsByOrder : []
 }
 
 type CustomerIssueCard = {

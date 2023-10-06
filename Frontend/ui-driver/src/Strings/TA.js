@@ -651,7 +651,7 @@ const tamilStrings = {
   PAY_TO_JOIN_THIS_PLAN : "திட்டத்தில் சேர ₹1 செலுத்தவும்",
   GET_FREE_TRAIL_UNTIL : "வரை இலவசம்‌",
   CLEAR_DUES : "பாக்கிகளை செலுத்தவும்‌",
-  PAYMENT_PENDING_ALERT : "⚠️ கட்டணம் நிலுவையில் உள்ளது! ⚠️",
+  PAYMENT_PENDING_ALERT : "⚠️கட்டணம் நிலுவையில் உள்ளது!⚠️",
   PAYMENT_PENDING_ALERT_DESC : "நம்ம யாத்ரியில் தொடர்ந்து சவாரி செய்ய, உங்கள் கட்டண பாக்கிகளை செலுத்தவும்‌",
   LOW_ACCOUNT_BALANCE : "வங்கி தொகை குறைவாக உள்ளது",
   LOW_ACCOUNT_BALANCE_DESC : "வங்கி கணக்கில் தொகை குறைவாக உள்ளது. தடையின்றி சவாரி செய்து மகிழ பணத்தைச் செலுத்தவும்‌.",
@@ -870,7 +870,7 @@ const tamilStrings = {
   EXECUTION_FAILED : "செயல்படுத்தும் தோல்வியடைந்தது", 
   NOTIFICATION_FAILED : "அறிவிப்பு தோல்வியடைந்தது",
   PAY_NOW : "பணம்‌ செலுத்தவும்‌",
-  CLEAR_DUES_BANNER_TITLE : "இடைவிடாத சவாரிகளுக்கு உங்கள் பாக்கிகளை செலுத்தவும்‌",
+  CLEAR_DUES_BANNER_TITLE : "இடைவிடாத சவாரிகளை அனுபவிக்க உங்கள் நிலுவைத் தொகையை (₹{}) செலுத்துங்கள்",
   COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR அல்லது பணத்தின் மூலம் சேகரிக்கவும்",
   TRANSACTION_DEBITED_ON : "பரிவர்த்தனை டெபிட் ஆன்",
   TRANSACTION_ATTEMPTED_ON : "பரிவர்த்தனை முயற்சி",
@@ -885,7 +885,7 @@ const tamilStrings = {
   UPI_AUTOPAY_SETUP : "UPI தானாகச் செலுத்தும் அமைப்பு",
   WATCH_VIDEO_FOR_HELP : "உதவிக்கு வீடியோவைப் பாருங்கள்",
   PAYMENT_PENDING_SOFT_NUDGE : "நிலுவைத் தொகை விரைவில் எட்டப்படும்.இடைவிடாத சவாரிகளை அனுபவிக்க தெளிவான நிலுவைத் தொகை",
-  CLEAR_YOUR_DUES_EARLY : "உங்கள் நிலுவைத் தொகையை சீக்கிரம் முடிக்கவும்",
+  CLEAR_YOUR_DUES_EARLY : "உங்கள் கடன்களை விரைவில் செலுத்துக",
   DUE_LIMIT_WARNING_BANNER_TITLE : "உங்கள் நிலுவைத் தொகையான ₹{} விரைவில் எட்டப்படும்",
   SCHEDULED_ON : "துப்பறியும் தேதி",
   ATTEMPTED_ON : "முயற்சி தேதி",
@@ -895,5 +895,9 @@ const tamilStrings = {
   FREE_TRIAL_ENDS_TONIGHT : "இலவச சோதனை இன்று இரவு முடிவடைகிறது",
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "தொடர்ந்து சவாரி செய்வதற்கான திட்டத்தில் சேரவும்",
   SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "எளிதாகப் பணம் செலுத்துவதற்குத் தானாகப் பணம் செலுத்துதலை அமைக்கவும்",
-  LOW_DUES_CLEAR_POPUP_DESC : "இடைவிடாத சவாரிகளை அனுபவிக்க இப்போது உங்கள் நிலுவைத் தொகையை அழிக்கவும்"
+  LOW_DUES_CLEAR_POPUP_DESC : "இடைவிடாத சவாரிகளை அனுபவிக்க இப்போது உங்கள் நிலுவைத் தொகையை அழிக்கவும்",
+  DUES_PENDING : "⚠️ கட்டணம் நிலுவையில் உள்ளது! ⚠️",
+  DAYS : "நாட்கள்",
+  ACTIVE_PLAN : "செயலில் உள்ள திட்டம்",
+  PAYMENT_PENDING : "கொடுப்பனவு நிலுவை"
 }

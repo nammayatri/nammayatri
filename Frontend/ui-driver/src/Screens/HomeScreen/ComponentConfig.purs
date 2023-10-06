@@ -322,7 +322,8 @@ freeTrialEndingPopupConfig state =
 paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
-      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> show state.data.paymentState.totalPendingManualDues <> ") " else ""
+      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
+      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
   in
   PopUpModal.config {
     gravity = CENTER,
@@ -330,8 +331,9 @@ paymentPendingPopupConfig state =
     buttonLayoutMargin = Margin 16 0 16 if popupType == LOW_DUES_CLEAR_POPUP then 20 else 5 ,
     dismissPopup = true,
     topTitle = Just $ case popupType of
-                        GO_ONLINE_BLOCKER -> "⚠️  " <> getString PAYMENT_PENDING <>  "  ⚠️"
-                        _                 -> getString CLEAR_YOUR_DUES_EARLY,
+                        GO_ONLINE_BLOCKER -> getString PAYMENT_PENDING_ALERT
+                        _  -> getString $ if isHighDues then DUES_PENDING else CLEAR_YOUR_DUES_EARLY,
+    topTitleGravity = CENTER,
     primaryText {
       text = getString case popupType of 
                          LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
@@ -367,7 +369,9 @@ paymentPendingPopupConfig state =
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+      imageUrl = case popupType of
+                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+                          _ ->  "ny_ic_clear_dues_early," <> getAssetStoreLink FunctionCall <> "ny_ic_clear_dues_early.png"
     , visibility = VISIBLE
     , height = V 220
     , width = V 280
@@ -779,7 +783,7 @@ autopayBannerConfig state configureImage =
   let
     config = Banner.config
     bannerType = state.props.autoPayBanner
-    dues = show state.data.paymentState.totalPendingManualDues
+    dues = HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
     config' = config
       {
         backgroundColor = case bannerType of
@@ -791,7 +795,7 @@ autopayBannerConfig state configureImage =
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
                   SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [show state.data.config.subscriptionConfig.maxDuesLimit]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.config.subscriptionConfig.maxDuesLimit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
@@ -953,6 +957,16 @@ getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
   config = RideCompletedCard.config
+  autoPayBanner = state.props.autoPayBanner
+  autoPayStatus = state.data.paymentState.autoPayStatus
+  payerVpa = state.data.endRideData.payerVpa
+  disability = state.data.endRideData.disability /= Nothing
+  viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
+                      {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
+                      {condition : not (autoPayStatus == ACTIVE_AUTOPAY), elementView :  RideCompletedCard.NO_VPA_VIEW },
+                      {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
+                      {condition : disability, elementView :  RideCompletedCard.BADGE_CARD }
+                    ]
   config' = config{
     primaryButtonConfig {
       textConfig {
@@ -977,7 +991,7 @@ getRideCompletedConfig state = let
         visible = GONE
       },
       topPill{
-        visible = (state.data.endRideData.disability /= Nothing),
+        visible = disability,
         text = getString PURPLE_RIDE,
         textColor = Color.white900,
         background = Color.blueMagenta
@@ -1012,7 +1026,7 @@ getRideCompletedConfig state = let
       }
     },
     badgeCard{
-      visible = (state.data.endRideData.disability /= Nothing),
+      visible = disability,
       image = "ny_ic_disability_confetti_badge," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_confetti_badge.png",
       imageWidth = V 152, 
       imageHeight = V 106,
@@ -1023,8 +1037,8 @@ getRideCompletedConfig state = let
     driverUpiQrCard {
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
       id = "renderQRViewOnRideComplete",
-      vpa = state.data.endRideData.payerVpa,
-      vpaIcon = (Const.getPspIcon state.data.endRideData.payerVpa),
+      vpa = payerVpa,
+      vpaIcon = (Const.getPspIcon payerVpa),
       collectCashText = getString OR_COLLECT_CASH_DIRECTLY
     },
     noVpaCard {
@@ -1033,13 +1047,10 @@ getRideCompletedConfig state = let
     },
     showContackSupportPopUp = state.props.showContackSupportPopUp,
     accessibility = DISABLE,
-    qrVisibility = state.data.paymentState.autoPayStatus == ACTIVE_AUTOPAY && state.data.endRideData.payerVpa /= "",
-    payerVpa = state.data.endRideData.payerVpa,
-    noVpaVisibility = not $ state.data.paymentState.autoPayStatus == ACTIVE_AUTOPAY,
     theme = LIGHT,
     isPrimaryButtonSticky = true,
     bannerConfig = autopayBannerConfig state false,
-    showBannerBelowQR = (state.props.autoPayBanner == DUE_LIMIT_WARNING_BANNER)
+    viewsByOrder = map (\item -> item.elementView) (DA.filter (\item -> item.condition) viewOrderConfig)
   }
   in config'
 

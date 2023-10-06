@@ -1619,7 +1619,7 @@ type SubscriptionScreenProps = {
   redirectToNav :: String,
   lastPaymentType :: Maybe String,
   offerBannerProps :: OfferBanner,
-  scrollToBottom :: Boolean
+  isEndRideModal :: Boolean
 }
 
 type OfferBanner = {
@@ -1782,7 +1782,8 @@ type PaymentListItem = {
   paymentStatus :: Common.PaymentStatus,
   amount :: Number,
   feeType :: FeeType,
-  description :: String
+  description :: String,
+  ridesTakenDate :: String
 }
 
 type ChargeBreakupItem = {
@@ -1817,7 +1818,9 @@ type PaymentHistoryScreenProps = {
   subView :: PaymentHistorySubview,
   autoPayHistory :: Boolean,
   autoPaySetup :: Boolean,
-  selectedDue :: String
+  selectedDue :: String,
+  offset :: Int,
+  enableLoadMore :: Boolean
 }
 
 data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails

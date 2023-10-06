@@ -43,7 +43,9 @@ initData = {
         subView : PaymentHistory,
         autoPayHistory : true,
         autoPaySetup : false,
-        selectedDue : ""
+        selectedDue : "",
+        offset : 0,
+        enableLoadMore : true
     }
 }
 

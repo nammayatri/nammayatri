@@ -302,7 +302,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
                           | ON_CALL HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
-                          | HOMESCREEN_NAV NAVIGATION_ACTIONS Boolean
+                          | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
@@ -372,5 +372,6 @@ data NAVIGATION_ACTIONS = HomeScreenNav
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
                                     | SWITCH_TAB
+                                    | LOAD_MORE_ITEMS PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow

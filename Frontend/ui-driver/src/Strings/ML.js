@@ -864,5 +864,9 @@ const mlStrings = {
   FREE_TRIAL_ENDS_TONIGHT : "സൗജന്യ ട്രയൽ ഇന്ന് രാത്രി അവസാനിക്കും",
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "റൈഡുകൾ തുടരാനുള്ള പ്ലാനിൽ ചേരുക",
   SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "എളുപ്പമുള്ള പേയ്‌മെന്റുകൾക്കായി ഓട്ടോപേ സജ്ജീകരിക്കുക",
-  LOW_DUES_CLEAR_POPUP_DESC : "നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ ഇപ്പോൾ നിങ്ങളുടെ കുടിശ്ശിക മായ്ക്കുക"
+  LOW_DUES_CLEAR_POPUP_DESC : "നിർത്താതെയുള്ള റൈഡുകൾ ആസ്വദിക്കാൻ ഇപ്പോൾ നിങ്ങളുടെ കുടിശ്ശിക മായ്ക്കുക",
+  DUES_PENDING : "⚠️ കുടിശ്ശിക ശേഷിക്കുന്നു! ⚠️",
+  DAYS : "ദിവസങ്ങൾ",
+  ACTIVE_PLAN : "സജീവ പദ്ധതി",
+  PAYMENT_PENDING : "പെയ്‌മെന്റ് പെൻഡിംഗ്",
 }

@@ -438,7 +438,7 @@ dueDetailsListState state =
     let planOfferData = decodeOfferPlan item.plan
         autoPayStageData = getAutoPayStageData item.autoPayStage
     {
-      date : convertUTCtoISC item.tripDate "Do MMM, YYYY",
+      date : convertUTCtoISC item.tripDate "Do MMM YYYY",
       planType : planOfferData.plan,
       offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing}]) DA.!! 0,
       noOfRides : item.noOfRides,

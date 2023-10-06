@@ -798,7 +798,7 @@ const kannadaStrings = {
 	PLEASE_HELP_THEM_AS_YOU_CAN: "ನೀವು ಸಹಾಯ ಮಾಡಬಹುದಾದ ರೀತಿಯಲ್ಲಿ ಅವರಿಗೆ ಸಹಾಯ ಮಾಡಿ",
   LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "ವಿಶೇಷ ಸಹಾಯದ ಅಗತ್ಯವಿರುವ ಸವಾರರಿಗೆ ನೀವು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
   ASSISTANCE_REQUIRED : "ನೆರವು ಅಗತ್ಯವಿದೆ",
-  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡ",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡಿ",
 	SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ",
 	NEED_HELP_JOINING_THE_PLAN : "ಪ್ಲಾನ್ ಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ? ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ",
   NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>",
@@ -872,7 +872,7 @@ const kannadaStrings = {
   EXECUTION_FAILED : "ಎಕ್ಸಿಕ್ಯೂಶನ್ ವಿಫಲವಾಗಿದೆ", 
   NOTIFICATION_FAILED : "ಅಧಿಸೂಚನೆ ವಿಫಲವಾಗಿದೆ",
   PAY_NOW : "ಈಗ ಪಾವತಿಸಿ",
-  CLEAR_DUES_BANNER_TITLE : "ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ",
+  CLEAR_DUES_BANNER_TITLE : "ತಡೆರಹಿತ ರೈಡ್‌ಗಳನ್ನು ಆನಂದಿಸಲು ನಿಮ್ಮ ಬಾಕಿಯನ್ನು (₹{}) ತೆರವುಗೊಳಿಸಿ",
   COLLECT_VIA_UPI_QR_OR_CASH : "UPI QR ಅಥವಾ ನಗದು ಮೂಲಕ ಸಂಗ್ರಹಿಸಿ",
   TRANSACTION_DEBITED_ON : "ವ್ಯವಹಾರ ಡೆಬಿಟ್ ಮಾಡಲಾಗಿದೆ",
   TRANSACTION_ATTEMPTED_ON : "ವಹಿವಾಟು ಪ್ರಯತ್ನಿಸಲಾಗಿದೆ",
@@ -888,7 +888,7 @@ const kannadaStrings = {
   WATCH_VIDEO_FOR_HELP : "ಸಹಾಯಕ್ಕಾಗಿ ವೀಡಿಯೊ ನೋಡಿ",
   PAYMENT_PENDING_SOFT_NUDGE : "ಮಿತಿಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು.ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಬಾಕಿ ತೆರವುಗೊಳಿಸಿ",
   CLEAR_YOUR_DUES_EARLY : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಮುಂಚಿತವಾಗಿ ತೆರವುಗೊಳಿಸಿ",
-  DUE_LIMIT_WARNING_BANNER_TITLE : "ನಿಮ್ಮ ಸರಿಯಾದ ಮಿತಿಯನ್ನು ₹{} ಶೀಘ್ರದಲ್ಲೇ ತಲುಪಲಾಗುವುದು",
+  DUE_LIMIT_WARNING_BANNER_TITLE : "ನಿಮ್ಮ ಬಾಕಿಯ ಮಿತಿ ಶೀಘ್ರದಲ್ಲೇ ₹{} ಕ್ಕೆ ತಲುಪಲಿದೆ.",
   SCHEDULED_ON : "ಕಡಿತ ದಿನಾಂಕ",
   ATTEMPTED_ON : "ಪ್ರಯತ್ನದ ದಿನಾಂಕ",
   DEBITED_ON : "ಡೆಬಿಟ್ ದಿನಾಂಕ",
@@ -897,5 +897,8 @@ const kannadaStrings = {
   FREE_TRIAL_ENDS_TONIGHT : "ಫ್ರೀ ಅವಧಿಯು ಇಂದು ರಾತ್ರಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!",
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "ಸವಾರಿಗಳನ್ನು ಮುಂದುವರಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
   SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "ಸುಲಭ ಪಾವತಿಗಳಿಗಾಗಿ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಸೆಟಪ್ ಮಾಡಿ",
-  LOW_DUES_CLEAR_POPUP_DESC : "ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಈಗ ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
+  LOW_DUES_CLEAR_POPUP_DESC : "ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಆನಂದಿಸಲು ಈಗ ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ",
+  DUES_PENDING : "⚠️ ಪಾವತಿ ಬಾಕಿ ಇದೆ! ⚠️",
+  DAYS : "ದಿನಗಳು",
+  ACTIVE_PLAN : "ಸಕ್ರಿಯ ಯೋಜನೆ"
 }

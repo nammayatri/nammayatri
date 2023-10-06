@@ -1,9 +1,10 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..))
+import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
 
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
+import Data.Functor (map)
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint,afterRender, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import Effect (Effect)
@@ -178,12 +179,11 @@ bottomCardView config push =
   ][  if config.customerIssueCard.issueFaced then customerIssueView config push
         else if config.customerBottomCard.visible then customerBottomCardView config push
           else dummyTextView
-    , if not config.showBannerBelowQR then rideEndBannerView config.bannerConfig push else dummyTextView
-    , if config.qrVisibility then driverUpiQrCodeView config push else dummyTextView 
-    , if config.noVpaVisibility then noVpaView config  else dummyTextView
-    , if config.showBannerBelowQR then rideEndBannerView config.bannerConfig push else dummyTextView
-    , if config.badgeCard.visible then badgeCardView config push  else dummyTextView
-    , if config.driverBottomCard.visible then driverBottomCardView config push else dummyTextView
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ](map (\item -> getViewsByOrder config item push) config.viewsByOrder)
     , if not config.isPrimaryButtonSticky then 
       linearLayout
       [ width MATCH_PARENT
@@ -195,6 +195,15 @@ bottomCardView config push =
       else linearLayout [] []
   ]
   ]
+
+getViewsByOrder :: forall w. Config -> RideCompletedElements -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+getViewsByOrder config item push = 
+  case item of 
+    BANNER -> rideEndBannerView config.bannerConfig push
+    QR_VIEW -> driverUpiQrCodeView config push
+    NO_VPA_VIEW -> noVpaView config
+    BADGE_CARD -> badgeCardView config push
+    DRIVER_BOTTOM_VIEW -> driverBottomCardView config push
 
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerIssueView config push =
