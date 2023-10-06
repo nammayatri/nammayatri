@@ -147,7 +147,12 @@ data SendOverlayJobData = SendOverlayJobData
     overlayKey :: Text,
     udf1 :: Maybe Text,
     condition :: OverlayCondition,
-    rescheduleInterval :: Maybe Seconds
+    rescheduleInterval :: Maybe Seconds,
+    scheduledTime :: TimeOfDay,
+    freeTrialDays :: Int,
+    timeDiffFromUtc :: Seconds,
+    driverPaymentCycleDuration :: NominalDiffTime,
+    driverPaymentCycleStartTime :: NominalDiffTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

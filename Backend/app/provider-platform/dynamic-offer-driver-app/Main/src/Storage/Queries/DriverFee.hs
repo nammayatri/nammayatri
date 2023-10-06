@@ -163,6 +163,17 @@ findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
     (Just limitVal)
     (Just offsetVal)
 
+findWindowsWithFeeType :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> FeeType -> m [DriverFee]
+findWindowsWithFeeType merchantId from to feeType =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
+          Se.Is BeamDF.feeType $ Se.Eq feeType,
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+
 findWindows :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
 findWindows (Id driverId) from to limitVal offsetVal =
   findAllWithOptionsKV
@@ -352,6 +363,9 @@ findAllByStatusAndDriverId (Id driverId) driverFeeStatus = findAllWithKV [Se.And
 
 findAllPendingAndDueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE], Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
+
+findAllOverdueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
+findAllOverdueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 findAllPendingRegistrationDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
