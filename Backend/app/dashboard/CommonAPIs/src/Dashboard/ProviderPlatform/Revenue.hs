@@ -28,13 +28,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Summary)
 
-type GetCashCollectionHistory =
-  "cashCollectionHistory"
+type GetCollectionHistory =
+  "collectionHistory"
     :> QueryParam "volunteerId" Text
     :> QueryParam "place" Text
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
-    :> Get '[JSON] CashCollectionListRes
+    :> Get '[JSON] CollectionList
 
 -- from, to is on the basis of startTime
 type GetAllDriverFeeHistory =
@@ -58,14 +58,20 @@ data AllFees = AllFees
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data CashCollectionListRes = CashCollectionListRes
+data CollectionListRes = CollectionListRes
   { totalCount :: Int,
     totalFeeCollected :: HighPrecMoney,
     totalRides :: Int,
     totalDrivers :: Int,
     collectionsTs :: [(HighPrecMoney, Maybe UTCTime)],
     numRidesTs :: [(Int, Maybe UTCTime)],
-    paymentTs :: [Maybe UTCTime]
+    paymentTs :: [(Int, Maybe UTCTime)]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data CollectionList = CollectionList
+  { onlineCollection :: CollectionListRes,
+    offlineCollection :: CollectionListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

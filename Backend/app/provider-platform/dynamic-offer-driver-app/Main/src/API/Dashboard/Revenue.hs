@@ -29,16 +29,16 @@ import Servant
 
 type API =
   "revenue"
-    :> Common.GetCashCollectionHistory
+    :> Common.GetCollectionHistory
     :<|> Common.GetAllDriverFeeHistory
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  getCashCollectionHistory merchantId
+  getCollectionHistory merchantId
     :<|> getAllDriverFeeHistory merchantId
 
-getCashCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo
+getCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
+getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getCollectionHistory merchantShortId volunteerId place mbFrom mbTo
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.AllDriverFeeRes
 getAllDriverFeeHistory merchantShortId mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getAllDriverFeeHistory merchantShortId mbFrom mbTo

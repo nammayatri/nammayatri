@@ -176,7 +176,7 @@ data VolunteerAPIs = VolunteerAPIs
   }
 
 data RevenueAPIs = RevenueAPIs
-  { getCashCollectionHistory :: Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.CashCollectionListRes,
+  { getCollectionHistory :: Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.CollectionList,
     getAllDriverFeeHistory :: Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.AllDriverFeeRes
   }
 
@@ -335,7 +335,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack = issueClient
 
-    getCashCollectionHistory
+    getCollectionHistory
       :<|> getAllDriverFeeHistory = revenueClient
 
 callDriverOfferBPP ::
