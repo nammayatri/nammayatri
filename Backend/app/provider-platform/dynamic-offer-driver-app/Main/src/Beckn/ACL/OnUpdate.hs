@@ -257,6 +257,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
       case fParamsType of
         DFParams.Progressive ->
           breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "DEAD_KILOMETER_FARE"
             || breakup.title == "EXTRA_DISTANCE_FARE"
             || breakup.title == "DRIVER_SELECTED_FARE"
