@@ -17,6 +17,7 @@ module Storage.Queries.DriverFee where
 
 import Data.Time (UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
+import Data.Time (UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
@@ -701,7 +702,10 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             amountPaidByCoin,
             overlaySent = overlaySent,
             specialZoneRideCount,
-            specialZoneAmount
+            specialZoneAmount,
+            badDebtDeclarationDate,
+            badDebtRecoveryDate,
+            overlaySent
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -737,5 +741,8 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.badDebtRecoveryDate = badDebtRecoveryDate,
         BeamDF.amountPaidByCoin = amountPaidByCoin,
         BeamDF.specialZoneRideCount = specialZoneRideCount,
-        BeamDF.specialZoneAmount = specialZoneAmount
+        BeamDF.specialZoneAmount = specialZoneAmount,
+        BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
+        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate,
+        BeamDF.overlaySent = overlaySent
       }

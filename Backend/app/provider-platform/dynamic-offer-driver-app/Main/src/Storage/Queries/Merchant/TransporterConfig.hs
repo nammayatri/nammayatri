@@ -134,6 +134,9 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
             coinExpireTime = secondsToNominalDiffTime coinExpireTime,
             cancellationDistDiff = cancellationDistDiff,
+            badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
+            badDebtSechulerTime = secondsToNominalDiffTime badDebtSechulerTime,
+            badDebtTimeThreshold = secondsToNominalDiffTime badDebtTimeThreshold,
             ..
           }
     where
@@ -234,5 +237,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
         BeamTC.cancellationDistDiff = cancellationDistDiff,
         BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
-        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges
+        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
+        BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
+        BeamTC.badDebtSechulerTime = nominalDiffTimeToSeconds badDebtSechulerTime,
+        BeamTC.badDebtBatchSize = badDebtBatchSize,
+        BeamTC.badDebtTimeThreshold = nominalDiffTimeToSeconds badDebtTimeThreshold
       }

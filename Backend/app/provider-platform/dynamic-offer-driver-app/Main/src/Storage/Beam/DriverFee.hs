@@ -50,6 +50,8 @@ data DriverFeeT f = DriverFeeT
     badDebtDeclarationDate :: B.C f (Maybe UTCTime),
     badDebtRecoveryDate :: B.C f (Maybe UTCTime),
     amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
+    badDebtDeclarationDate :: B.C f (Maybe UTCTime),
+    badDebtRecoveryDate :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     overlaySent :: B.C f Bool,
