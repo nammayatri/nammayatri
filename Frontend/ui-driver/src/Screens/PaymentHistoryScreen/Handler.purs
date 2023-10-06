@@ -41,3 +41,6 @@ paymentHistory = do
     SwitchTab updatedState -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SWITCH_TAB)
+    LoadMoreItems updatedState -> do
+      modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ LOAD_MORE_ITEMS updatedState)

@@ -72,6 +72,7 @@ type Config = {
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: Mb.Maybe String,
+    topTitleGravity :: Gravity,
     listViewArray :: Array String
 }
 
@@ -165,6 +166,7 @@ config = {
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
   , topTitle : Mb.Nothing
+  , topTitleGravity : LEFT
   , primaryText : {
       text : "Text1",
       color : Color.black800,

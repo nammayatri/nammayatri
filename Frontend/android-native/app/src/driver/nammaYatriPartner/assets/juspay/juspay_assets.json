@@ -212,6 +212,7 @@
       "ny_ic_circle" : true,
       "ny_ic_clean_auto_badge" : true,
       "ny_ic_clear_dues_banner" : true,
+      "ny_ic_clear_dues_early" : true,
       "ny_ic_clip_board" : true,
       "ny_ic_close" : true,
       "ny_ic_close_bold" : true,

@@ -129,7 +129,7 @@ baseAppFlow baseFlow event = do
               "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
                 lift $ lift $ doAff do liftEffect hideSplash
                 setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-                updateAvailableAppsAndGoToSubs false
+                updateAvailableAppsAndGoToSubs
               _ -> do
                     setValueToLocalNativeStore REGISTERATION_TOKEN regToken
                     getDriverInfoFlow
@@ -938,7 +938,7 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
-    SUBCRIPTION -> updateAvailableAppsAndGoToSubs false
+    SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
@@ -1389,7 +1389,7 @@ myRidesScreenFlow = do
           modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistoryArray}}})
         Left err -> pure unit
       myRidesScreenFlow
-    RIDE_HISTORY_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs false
+    RIDE_HISTORY_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     RIDE_HISTORY_NAV _ -> myRidesScreenFlow
 
 rideSelectionScreenFlow :: FlowBT String Unit
@@ -1548,7 +1548,7 @@ referralScreenFlow = do
           referralScreenFlow
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
-    REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs false
+    REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
@@ -1598,7 +1598,7 @@ currentRideFlow = do
   case allState.globalProps.callScreen of
     ScreenNames.SUBSCRIPTION_SCREEN -> do 
       lift $ lift $ doAff do liftEffect hideSplash
-      updateAvailableAppsAndGoToSubs false
+      updateAvailableAppsAndGoToSubs
     _ -> pure unit
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
@@ -1790,15 +1790,16 @@ homeScreenFlow = do
       pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
       lowDuesLimit = appConfig.subscriptionConfig.lowDuesLimit
       highDueWarningLimit = appConfig.subscriptionConfig.highDueWarningLimit
+      maxDueLimit = appConfig.subscriptionConfig.maxDuesLimit
       freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
-      shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || getDriverInfoResp.paymentPending)
+      shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed
       autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
-      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, getDriverInfoResp.paymentPending of
+      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
                               true, true, _  -> FREE_TRIAL_BANNER
                               _, false, true -> do
                                           if pendingTotalManualDues < lowDuesLimit then LOW_DUES_BANNER
                                           else if pendingTotalManualDues >= lowDuesLimit && pendingTotalManualDues < highDueWarningLimit then CLEAR_DUES_BANNER
-                                          else if pendingTotalManualDues >= highDueWarningLimit then DUE_LIMIT_WARNING_BANNER
+                                          else if pendingTotalManualDues >= highDueWarningLimit && pendingTotalManualDues <= maxDueLimit then DUE_LIMIT_WARNING_BANNER
                                           else NO_SUBSCRIPTION_BANNER
                               true, _, _     -> SETUP_AUTOPAY_BANNER
                               _, _, _        -> NO_SUBSCRIPTION_BANNER
@@ -1815,9 +1816,10 @@ homeScreenFlow = do
                                   && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
                                     && pendingTotalManualDues >= highDueWarningLimit
                                       && getDriverInfoResp.mode /= Just "OFFLINE"
-  when (moveDriverToOffline) do
+  if (moveDriverToOffline) then do
     _ <- pure $ setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
     changeDriverStatus Offline
+  else pure unit
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning, paymentState{totalPendingManualDues = pendingTotalManualDues, autoPayStatus = autoPayStatus, showShimmer = false}}, props{showGenderBanner = showGender, autoPayBanner = autopayBannerType, subscriptionPopupType = subscriptionPopupType}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -2087,10 +2089,10 @@ homeScreenFlow = do
       (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id)
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
-    HOMESCREEN_NAV GoToSubscription goToBottom -> do
+    HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      updateAvailableAppsAndGoToSubs goToBottom
-    HOMESCREEN_NAV _ _-> homeScreenFlow
+      updateAvailableAppsAndGoToSubs
+    HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
@@ -2219,6 +2221,9 @@ paymentHistoryFlow = do
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
     SWITCH_TAB -> paymentHistoryFlow
+    LOAD_MORE_ITEMS state -> do
+      modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{offset = state.props.offset + 15}})
+      paymentHistoryFlow
   pure unit 
 
 ysPaymentFlow :: FlowBT String Unit
@@ -2345,7 +2350,7 @@ subScriptionFlow = do
           getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
           let (GlobalState defGlobalState) = defaultGlobalState
-          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = state.props.isEndRideModal}})
           pure $ toast $ getString AUTOPAY_CANCELLED
           subScriptionFlow
         Left errorPayload -> do 
@@ -2362,7 +2367,7 @@ subScriptionFlow = do
           _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "previous_plan" state.data.managePlanData.currentPlan.title
           liftFlowBT $ metaLogEventWithTwoParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title "previous_plan" state.data.managePlanData.currentPlan.title
           liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title "previous_plan" state.data.managePlanData.currentPlan.title
-          modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{popUpState = Just SwitchedPlan}, data{managePlanData{currentPlan {title = state.props.managePlanProps.selectedPlanItem.title}}}})
+          modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{popUpState = Just SwitchedPlan, isEndRideModal = state.props.isEndRideModal}, data{managePlanData{currentPlan {title = state.props.managePlanProps.selectedPlanItem.title}}}})
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     RESUME_AUTOPAY state -> do
@@ -2388,9 +2393,11 @@ subScriptionFlow = do
       subScriptionFlow
     REFRESH_SUSCRIPTION -> do
       getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+      (GlobalState state) <- getState
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+          isEndRideModal = state.subscriptionScreen.props.isEndRideModal
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
       uiPlans <- Remote.getUiPlansBT ""
@@ -2519,7 +2526,7 @@ notificationFlow = do
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow
-    NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs false
+    NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow
 
 removeChatService :: String -> FlowBT String Unit
@@ -2545,10 +2552,11 @@ getPaymentPageLangKey key = case key of
   "TA_IN" -> "tamil"
   _       -> "english"
 
-updateAvailableAppsAndGoToSubs :: Boolean -> FlowBT String Unit
-updateAvailableAppsAndGoToSubs goToBottom = do
-  state <- getState
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true, scrollToBottom = goToBottom}})
+updateAvailableAppsAndGoToSubs :: FlowBT String Unit
+updateAvailableAppsAndGoToSubs = do
+  (GlobalState state) <- getState
+  let isEndRideScreen = state.homeScreen.props.currentStage == ST.RideCompleted
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true, isEndRideModal = isEndRideScreen}})
   -- void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ getUpiApps --TODO Handle Properly
   subScriptionFlow
 

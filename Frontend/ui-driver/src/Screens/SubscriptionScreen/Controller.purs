@@ -115,17 +115,18 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
   if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
-  else if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
+  else if ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuState /= ALL_COLLAPSED then continue state{props{optionsMenuState = ALL_COLLAPSED}}
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == DuesView then continue state{props { subView = MyPlan}}
-  else if state.props.subView == DueDetails then 
-          if state.props.myPlanProps.multiTypeDues then continue state{props { subView = DuesView}}
-          else continue state{props { subView = MyPlan}}
+  else if state.props.subView == DueDetails then do
+    let subView' = if state.props.myPlanProps.multiTypeDues then DuesView else MyPlan
+    continue state{props { subView = subView'}, data{myPlanData{selectedDue = ""}}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
-  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -231,11 +232,10 @@ eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  let newState = state{props{optionsMenuState = ALL_COLLAPSED}}
-  _ <- pure $ spy "screeen" screen
+  let newState = state{props{optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   if screen == "Join" then continue state
   else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
-    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED}}
+    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
             "Rides" -> exit $ RideHistory newState

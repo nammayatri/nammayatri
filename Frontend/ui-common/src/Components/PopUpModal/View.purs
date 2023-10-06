@@ -103,6 +103,7 @@ view push state =
                 , height WRAP_CONTENT
                 , margin $ MarginVertical 10 10
                 , color Color.black800
+                , gravity state.topTitleGravity
                 ] <> (case state.topTitle of
                         Just txt -> [text txt]
                         Nothing -> [visibility GONE])

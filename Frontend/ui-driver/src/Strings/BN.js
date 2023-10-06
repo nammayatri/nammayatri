@@ -917,5 +917,8 @@ const bengaliStrings = {
 	SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "সহজ অর্থপ্রদানের জন্য অটোপে সেটআপ করুন",
 	SCHEDULED_ON : "ছাড়ের তারিখ",
 	ATTEMPTED_ON : "প্রচেষ্টার তারিখ",
-	LOW_DUES_CLEAR_POPUP_DESC : "অ-স্টপ রাইডগুলি উপভোগ করতে এখনই আপনার বকেয়া সাফ করুন"
+	LOW_DUES_CLEAR_POPUP_DESC : "অ-স্টপ রাইডগুলি উপভোগ করতে এখনই আপনার বকেয়া সাফ করুন",
+	DUES_PENDING : "⚠️ বকেয়া মুলতুবি! ⚠️",
+	DAYS : "দিন",
+	ACTIVE_PLAN : "সক্রিয় পরিকল্পনা"
 }

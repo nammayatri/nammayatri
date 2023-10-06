@@ -31,7 +31,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "TRIP_DATE",
                     title : getString TRIP_DATE,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else (convertUTCtoISC driverFee'.rideTakenOn "Do MMM, YYYY")
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else (convertUTCtoISC driverFee'.rideTakenOn "Do MMM YYYY")
                   },
                   {
                     key : "PLAN",
@@ -79,8 +79,8 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
               },
               {
                 key : "AMOUNT_PAID",
-                title : getString AMOUNT_PAID,
-                val : "₹" <> getFixedTwoDecimals driverFee'.driverFeeAmount
+                title : getString AMOUNT,
+                val : "₹" <> getFixedTwoDecimals resp.amount
               },
               { key : "PAYMENT_MODE",
                 title : getString PAYMENT_MODE,
@@ -94,7 +94,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                                 planOfferData = decodeOfferPlan offerAndPlanDetails
                                 autoPayStageData = getAutoPayStageData driverFee.autoPayStage
                             {
-                                date : convertUTCtoISC driverFee.rideTakenOn "Do MMM, YYYY",
+                                date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
                                 planType : planOfferData.plan,
                                 offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing}]) !! 0,
                                 noOfRides : driverFee.totalRides,

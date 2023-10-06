@@ -725,5 +725,9 @@ const frenchStrings = {
   FREE_TRIAL_ENDS_TONIGHT : "L'essai gratuit se termine ce soir !",
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES : "Rejoignez un plan pour continuer à faire des courses",
   SETUP_AUTOPAY_FOR_EASY_PAYMENTS : "Configurez le paiement automatique pour des paiements faciles",
-  LOW_DUES_CLEAR_POPUP_DESC : "Effacez vos cotisations maintenant pour profiter des manèges sans escale."
+  LOW_DUES_CLEAR_POPUP_DESC : "Effacez vos cotisations maintenant pour profiter des manèges sans escale.",
+  DUES_PENDING : "⚠️ Cotisation! ⚠️",
+  DAYS : "Jours",
+  ACTIVE_PLAN : "Plan actif",
+  PAYMENT_PENDING : "Paiement en attente"
 }

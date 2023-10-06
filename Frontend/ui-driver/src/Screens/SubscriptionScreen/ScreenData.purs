@@ -96,7 +96,7 @@ initData = {
             offerBannerValidTill : "",
             offerBannerDeadline : ""
         },
-        scrollToBottom : false
+        isEndRideModal : false
     }
 }
 

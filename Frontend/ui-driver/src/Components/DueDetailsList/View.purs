@@ -24,7 +24,7 @@ import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getFixedTwoDecimals)
+import Helpers.Utils (getCommonAssetStoreLink, getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<))
@@ -55,11 +55,11 @@ view push state =
           , orientation VERTICAL
           , padding $ Padding 16 20 16 8
           , gravity CENTER
-          , stroke if item.expanded == true then ("1,"<>Color.blue800) else ("1,"<>Color.grey900)
+          , stroke if item.expanded then ("1,"<>Color.blue800) else ("1,"<>Color.grey900)
           , onClick push $ const $ SelectDue item
           , margin $ MarginBottom 16
           , cornerRadius 10.0
-          , background if item.expanded == true then Color.blue600 else Color.white900
+          , background if item.expanded then Color.blue600 else Color.white900
           ][ 
             linearLayout[
               width MATCH_PARENT
@@ -98,7 +98,7 @@ view push state =
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
-                  [ imageWithFallback if item.expanded == true then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+                  [ imageWithFallback if item.expanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
                   , height (V 11)
                   , margin (Margin 5 2 0 0)
                   , width (V 11)
@@ -109,7 +109,7 @@ view push state =
               orientation VERTICAL
               , width MATCH_PARENT
               , height WRAP_CONTENT
-              , visibility if item.expanded == true then VISIBLE else GONE
+              , visibility if item.expanded then VISIBLE else GONE
             ][
                 linearLayout [
                   height $ V 1
