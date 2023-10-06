@@ -1118,7 +1118,7 @@ qrScreen push state =
           [
             height $ V 80
           ,  width $ V 118
-          , imageWithFallback $ if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then getActiveReferralBannerIcon (getMerchant FunctionCall)  else getReferralBannerIcon (getMerchant FunctionCall) 
+          , imageWithFallback $ if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then getActiveReferralBannerIcon state.data.driverInfo.vehicleVariant else getReferralBannerIcon state.data.driverInfo.vehicleVariant
           ]
       ]
   ,   linearLayout
@@ -1246,18 +1246,14 @@ getReferralScreenIcon merchant =
     YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_sathi_logo_black_icon.png"
     _ -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
 
-getActiveReferralBannerIcon :: Merchant -> String
-getActiveReferralBannerIcon merchant =
-  case merchant of
-    NAMMAYATRI -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
-    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
-    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
-    _ -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+getActiveReferralBannerIcon :: String -> String
+getActiveReferralBannerIcon vehicleType =
+  case vehicleType of
+    "AUTO_RICKSHAW" -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
+    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
 
-getReferralBannerIcon :: Merchant -> String
-getReferralBannerIcon merchant =
-  case merchant of
-    NAMMAYATRI -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
-    YATRI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
-    YATRISATHI -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
-    _ -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+getReferralBannerIcon :: String -> String
+getReferralBannerIcon vehicleType =
+  case vehicleType of
+    "AUTO_RICKSHAW" -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
