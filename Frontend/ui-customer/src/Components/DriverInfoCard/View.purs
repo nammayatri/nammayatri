@@ -982,7 +982,7 @@ ratingView push state =
       , width WRAP_CONTENT
       , height $ V 30
       , accessibility DISABLE
-      ] <> FontStyle.tags TypoGraphy)
+      ]<> FontStyle.body9 TypoGraphy)
     ]
 
 ---------------------------------- paymentMethodView ---------------------------------------

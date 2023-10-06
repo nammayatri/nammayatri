@@ -18,8 +18,9 @@ config =
   , imageUploadOptional : false
   , leaderBoard :{
     isMaskedName : true
-  },
-  subscriptionConfig : {
+  }
+  , showSavedCommission : false
+  , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
     onBoardingSubscription : false
