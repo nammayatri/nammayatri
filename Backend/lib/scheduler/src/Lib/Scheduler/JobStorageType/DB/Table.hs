@@ -5,7 +5,7 @@
 module Lib.Scheduler.JobStorageType.DB.Table where
 
 import qualified Database.Beam as B
-import Kernel.Beam.Lib.UtilsTH
+import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
 import qualified Lib.Scheduler.Types as ST
 
@@ -32,6 +32,6 @@ instance B.Table SchedulerJobT where
 
 type SchedulerJob = SchedulerJobT Identity
 
-$(enableKVPG ''SchedulerJobT ['id] [])
+$(TH.enableKVPG ''SchedulerJobT ['id] [])
 
-$(mkTableInstances ''SchedulerJobT "scheduler_job" "atlas_driver_offer_bpp")
+$(TH.mkTableInstances ''SchedulerJobT "scheduler_job" TH.DoNotUseDrainer "atlas_driver_offer_bpp")

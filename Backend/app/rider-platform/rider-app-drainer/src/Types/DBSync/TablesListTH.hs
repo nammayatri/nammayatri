@@ -30,13 +30,13 @@ tablesList =
 -- https://gitlab.haskell.org/ghc/ghc/-/issues/14838
 -- So, we should use the same tableList for data type and for each pattern matching
 -- For case expressions warnings also do not present
-tablesTList :: [TH.Type]
-tablesTList =
-  TH.ConT
-    <$> [ ''AppInstalls.AppInstallsT,
-          ''BlackListOrg.BlackListOrgT,
-          ''Booking.BookingT
-        ]
+-- tablesTList :: [TH.Type]
+-- tablesTList =
+--   TH.ConT
+--     <$> [ ''AppInstalls.AppInstallsT,
+--           ''BlackListOrg.BlackListOrgT,
+--           ''Booking.BookingT
+--         ]
 
 -- used qualified imports
 tablesTList :: [TH.Type]

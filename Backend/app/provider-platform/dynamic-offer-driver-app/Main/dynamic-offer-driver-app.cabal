@@ -432,6 +432,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.DBModel
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation

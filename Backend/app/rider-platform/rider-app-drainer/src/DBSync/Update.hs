@@ -143,16 +143,23 @@ runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = 
           either
             ( \_ -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
-                EL.logError ("ERROR:" :: Text) ("Kafka Update Error " :: Text)
-                pure $ Left (UnexpectedError "Kafka Error", id)
+                EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
             )
             (\_ -> pure $ Right id)
             res''
         Left _ -> do
-          EL.logError ("ERROR:" :: Text) ("Could not find the key in redis to get the updated object" :: Text)
-          void $ publishDBSyncMetric Event.KafkaUpdateMissing
-          _ <- addValueToErrorQueue C.kafkaUpdateFailedStream [("UpdateCommand", value)]
-          pure $ Right id
+          let updatedJSON = getDbUpdateDataJson (show model) $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+          Env {..} <- ask
+          res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+          either
+            ( \_ -> do
+                void $ publishDBSyncMetric Event.KafkaPushFailure
+                EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
+            )
+            (\_ -> pure $ Right id)
+            res''
 
 runUpdate ::
   IsDbTable table =>

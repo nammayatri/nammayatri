@@ -1,26 +1,70 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
--- TODO check this is safe
-{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Storage.DBModel where
 
-import qualified Data.Serialize as Serialize
-import Database.Beam.Postgres (Postgres)
-import EulerHS.KVConnector.Types (MeshMeta)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import qualified Sequelize
 
-class
-  ( Sequelize.Model Postgres table,
-    Show (table Identity),
-    FromJSON (table Identity),
-    ToJSON (table Identity),
-    MeshMeta Postgres table,
-    Serialize.Serialize (table Identity)
-  ) =>
-  IsDbTable (table :: (Type -> Type) -> Type)
+data RiderApp
 
-data DBModel = AppInstalls | BlackListOrg | Booking
+instance IsDBModel RiderApp where
+  type DBModelType RiderApp = DBModel
+
+-- Each Beam table should be added to DBModel type, used for TH in drainer app
+data DBModel
+  = AadhaarOtpReq
+  | AadhaarOtpVerify
+  | AadhaarVerification
+  | AppInstalls
+  | BecknRequest
+  | BlackListOrg
+  | Booking
+  | BookingCancellationReason
+  | BookingLocation
+  | CallStatus
+  | CallbackRequest
+  | CancellationReason
+  | DirectionsCache
+  | Disability
+  | DisabilityTranslation
+  | DriverOffer
+  | Estimate
+  | EstimateBreakup
+  | Exophone
+  | FareBreakup
+  | FeedbackForm
+  | Geometry
+  | HotSpotConfig
+  | Issue
+  | Location
+  | LocationMapping
+  | Merchant
+  | MerchantConfig
+  | MerchantMessage
+  | MerchantPaymentMethod
+  | MerchantServiceConfig
+  | MerchantServiceUsageConfig
+  | OnSearchEvent
+  | PaymentOrder
+  | PaymentTransaction
+  | Person
+  | PersonDefaultEmergencyNumber
+  | PersonDisability
+  | PersonFlowStatus
+  | PersonStats
+  | PlaceNameCache
+  | Quote
+  | Rating
+  | RegistrationToken
+  | RentalSlab
+  | Ride
+  | SavedReqLocation
+  | SearchReqLocation
+  | SearchRequest
+  | Sos
+  | SpecialZoneQuote
+  | TripTerms
+  | Webengage
   deriving stock (Show, Read, Enum, Bounded, Generic)
   deriving anyclass (FromJSON)

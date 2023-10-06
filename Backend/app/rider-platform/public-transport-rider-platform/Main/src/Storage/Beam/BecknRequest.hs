@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,9 +16,7 @@
 
 module Storage.Beam.BecknRequest (module Reexport) where
 
-import qualified Data.Text as T
 import Kernel.Storage.Beam.BecknRequest as Reexport
-import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.Beam.UtilsTH as TH
 
-instance HasSchemaName BecknRequestT where
-  schemaName _ = T.pack currentSchemaName
+$(TH.mkOrphanTableInstances ''BecknRequestT)

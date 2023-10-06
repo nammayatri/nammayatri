@@ -14,7 +14,7 @@
 
 module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH) where
 
-import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier)
+import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkOrphanTableInstances, mkTableInstances, mkTableInstancesWithTModifier)
 import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
 import Language.Haskell.TH
@@ -23,7 +23,10 @@ currentSchemaName :: String
 currentSchemaName = "atlas_app"
 
 mkTableInstances :: Name -> String -> Q [Dec]
-mkTableInstances name table = TH.mkTableInstances name table currentSchemaName
+mkTableInstances name table = TH.mkTableInstances name table TH.DoNotUseDrainer currentSchemaName
 
 mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
-mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table currentSchemaName
+mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table TH.DoNotUseDrainer currentSchemaName
+
+mkOrphanTableInstances :: Name -> Q [Dec]
+mkOrphanTableInstances name = TH.mkOrphanTableInstances name TH.DoNotUseDrainer currentSchemaName

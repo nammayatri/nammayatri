@@ -11,19 +11,24 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH) where
+module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH, DBModel.DBModel (..)) where
 
-import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier)
+import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkOrphanTableInstances, mkTableInstances, mkTableInstancesWithTModifier)
 import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
 import Language.Haskell.TH
+import qualified Storage.DBModel as DBModel
 
 currentSchemaName :: String
 currentSchemaName = "atlas_app"
 
 mkTableInstances :: Name -> String -> Q [Dec]
-mkTableInstances name table = TH.mkTableInstances name table currentSchemaName
+mkTableInstances name table = TH.mkTableInstances name table (TH.UseDrainer ''DBModel.RiderApp) currentSchemaName
 
 mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
-mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table currentSchemaName
+mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table (TH.UseDrainer ''DBModel.RiderApp) currentSchemaName
+
+mkOrphanTableInstances :: Name -> Q [Dec]
+mkOrphanTableInstances name = TH.mkOrphanTableInstances name (TH.UseDrainer ''DBModel.RiderApp) currentSchemaName
