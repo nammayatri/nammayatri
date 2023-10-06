@@ -2,10 +2,13 @@ module Storage.Queries.Person.GetNearestDrivers (getNearestDrivers, NearestDrive
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Maybe as Mb
+import qualified Data.Text.Encoding as TE
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as DV
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -43,10 +46,22 @@ getNearestDrivers ::
   Maybe Seconds ->
   m [NearestDriversResult]
 getNearestDrivers mbVariant fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+  startTime1 <- getCurrentTime
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
+  endTime1 <- getCurrentTime
+  void $ L.runKVDB meshConfig.kvRedis $ L.lpush (TE.encodeUtf8 "DRIVER_LOCS_KEY") [show (diffUTCTime endTime1 startTime1)]
+  startTime2 <- getCurrentTime
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide)
+  endTime2 <- getCurrentTime
+  void $ L.runKVDB meshConfig.kvRedis $ L.lpush (TE.encodeUtf8 "DRIVER_INFOS_KEY") [show (diffUTCTime endTime2 startTime2)]
+  startTime3 <- getCurrentTime
   vehicle <- Int.getVehicles driverInfos
+  endTime3 <- getCurrentTime
+  void $ L.runKVDB meshConfig.kvRedis $ L.lpush (TE.encodeUtf8 "VEHICLES_KEY") [show (diffUTCTime endTime3 startTime3)]
+  startTime4 <- getCurrentTime
   drivers <- Int.getDrivers vehicle
+  endTime4 <- getCurrentTime
+  void $ L.runKVDB meshConfig.kvRedis $ L.lpush (TE.encodeUtf8 "DRIVERS_KEY") [show (diffUTCTime endTime4 startTime4)]
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)

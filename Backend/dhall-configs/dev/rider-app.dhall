@@ -149,8 +149,59 @@ let hccfg =
 
 let tables =
       { enableKVForWriteAlso =
-          [ "ride" ] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [ "ride" ] : List Text
+            [ { nameOfTable = "search_request_location", percentEnable = 100 }
+            , { nameOfTable = "registration_token", percentEnable = 100 }
+            , { nameOfTable = "search_request", percentEnable = 100 }
+            , { nameOfTable = "person_flow_status", percentEnable = 100 }
+            , { nameOfTable = "estimate_breakup", percentEnable = 100 }
+            , { nameOfTable = "estimate_breakup", percentEnable = 100 }
+            , { nameOfTable = "estimate", percentEnable = 100 }
+            , { nameOfTable = "on_search_event", percentEnable = 100 }
+            , { nameOfTable = "driver_offer", percentEnable = 100 }
+            , { nameOfTable = "quote", percentEnable = 100 }
+            , { nameOfTable = "booking_location", percentEnable = 100 }
+            , { nameOfTable = "ride", percentEnable = 100 }
+            , { nameOfTable = "fare_breakup", percentEnable = 100 }
+            , { nameOfTable = "directions_cache", percentEnable = 100 }
+            , { nameOfTable = "place_name_cache", percentEnable = 100 }
+            , { nameOfTable = "booking_cancellation_reason"
+              , percentEnable = 100
+              }
+            , { nameOfTable = "rental_slab", percentEnable = 100 }
+            , { nameOfTable = "special_request_zone", percentEnable = 100 }
+            , { nameOfTable = "saved_req_location", percentEnable = 100 }
+            , { nameOfTable = "trip_terms", percentEnable = 100 }
+            , { nameOfTable = "web_engage", percentEnable = 100 }
+            , { nameOfTable = "booking", percentEnable = 100 }
+            , { nameOfTable = "beckn_request", percentEnable = 100 }
+            ]
+          : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead =
+            [ "search_request_location"
+            , "registration_token"
+            , "search_request"
+            , "person_flow_status"
+            , "estimate_breakup"
+            , "estimate_breakup"
+            , "estimate"
+            , "on_search_event"
+            , "driver_offer"
+            , "quote"
+            , "booking_location"
+            , "ride"
+            , "fare_breakup"
+            , "directions_cache"
+            , "place_name_cache"
+            , "booking_cancellation_reason"
+            , "rental_slab"
+            , "special_request_zone"
+            , "saved_req_location"
+            , "trip_terms"
+            , "booking"
+            , "web_engage"
+            , "beckn_request"
+            ]
+          : List Text
       }
 
 let dontEnableForDb = [] : List Text
