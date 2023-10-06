@@ -215,6 +215,14 @@ public class MobilityCommonBridge extends HyperBridge {
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
         receivers = new Receivers(bridgeComponents);
         receivers.initReceiver();
+        fetchAndUpdateLastKnownLocation();
+    }
+
+    private void fetchAndUpdateLastKnownLocation() {
+        String lat = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT");
+        String lon = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON");
+        lastLatitudeValue = lat != "__failed" ? Double.parseDouble(lat) : lastLatitudeValue;
+        lastLongitudeValue = lon != "__failed" ? Double.parseDouble(lon) : lastLongitudeValue;
     }
 
     public static boolean isClassAvailable(String className) {
