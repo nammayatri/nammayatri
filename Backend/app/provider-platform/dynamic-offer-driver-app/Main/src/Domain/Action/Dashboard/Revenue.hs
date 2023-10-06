@@ -13,14 +13,14 @@
 -}
 
 module Domain.Action.Dashboard.Revenue
-  ( getCashCollectionHistory,
+  ( getCollectionHistory,
     getAllDriverFeeHistory,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Revenue as Common
-import Data.List (nub)
+import qualified Data.List as DL
 import Data.Maybe
 import Data.Text hiding (drop, filter, length, map, take)
 import Data.Time hiding (getCurrentTime)
@@ -29,9 +29,10 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
+import Kernel.Utils.Common (HighPrecMoney)
 import Kernel.Utils.Time
 import SharedLogic.Merchant
-import Storage.Queries.DriverFee (findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
+import Storage.Queries.DriverFee (findAllByStatus, findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
 import Storage.Queries.Volunteer (findAllByPlace)
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.AllDriverFeeRes
@@ -63,20 +64,20 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
         Common.AllFees Common.EXEMPTED (getNumRides exemptedFees) (getTotalAmount exemptedFees)
       ]
   where
-    getNumDrivers fee = length $ nub (map driverId fee)
+    getNumDrivers fee = length $ DL.nub (map driverId fee)
     getFeeWithStatus status = filter (\fee_ -> fee_.status `elem` status)
     getNumRides fee = sum $ map numRides fee
     getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 
-getCashCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CashCollectionListRes
-getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
+getCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
+getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0
       from_ = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  collections <- case (place, volunteerId) of
-    (Nothing, Nothing) -> pure []
+  offlineCollections <- case (place, volunteerId) of
+    (Nothing, Nothing) -> findAllByStatus merchant.id COLLECTED_CASH from_ to
     (Nothing, Just cId) -> findAllByVolunteerIds merchant.id [cId] from_ to
     (Just stn, _) -> do
       volunteers <- findAllByPlace stn
@@ -84,13 +85,36 @@ getCashCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
             Just cId -> [cId | cId `elem` ((.id.getId) <$> volunteers)]
             _ -> (.id.getId) <$> volunteers
       findAllByVolunteerIds merchant.id relevantIds from_ to
+  onlineCollections <- findAllByStatus merchant.id CLEARED from_ to
+  let offlineCollectionsRes = getCollectionSummary offlineCollections
+  let onlineCollectionsRes = getCollectionSummary onlineCollections
+  pure $ Common.CollectionList onlineCollectionsRes offlineCollectionsRes
+
+getCollectionSummary :: [DriverFee] -> Common.CollectionListRes
+getCollectionSummary collections = do
   let totalCnt = length collections
       totalFeeCollected = sum $ map calcFee collections
       totalRides = sum $ map (.numRides) collections
-      totalDrivers = length $ nub (map driverId collections)
-      collectionsTs = [(calcFee fee, fee.collectedAt) | fee <- collections]
-      numRidesTs = [(fee.numRides, fee.collectedAt) | fee <- collections]
-      driversPmtTs = [fee.collectedAt | fee <- collections]
-  pure $ Common.CashCollectionListRes totalCnt totalFeeCollected totalRides totalDrivers collectionsTs numRidesTs driversPmtTs
+      totalDrivers = length $ DL.nub (map driverId collections)
+      collectionsTs =
+        [ (calculateTotalFee tmp, listToMaybe [x | (_, Just x) <- tmp])
+          | tmp <-
+              DL.groupBy (\(_, a) (_, b) -> a == b) $
+                sortBy (comparing snd) [(calcFee fee, fee.collectedAt) | fee <- collections]
+        ]
+      numRidesTs =
+        [ (calculateTotalRides tmp, listToMaybe [x | (_, Just x) <- tmp])
+          | tmp <-
+              DL.groupBy (\(_, a) (_, b) -> a == b) $
+                sortBy (comparing snd) [(fee.numRides, fee.collectedAt) | fee <- collections]
+        ]
+      driversPmtTs = [(length tmp, listToMaybe tmp) | tmp <- DL.group $ DL.sort $ catMaybes [fee.collectedAt | fee <- collections]]
+  Common.CollectionListRes totalCnt totalFeeCollected totalRides totalDrivers collectionsTs numRidesTs driversPmtTs
   where
     calcFee fee = fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst
+
+calculateTotalFee :: [(HighPrecMoney, Maybe UTCTime)] -> HighPrecMoney
+calculateTotalFee tmp = sum [fee | (fee, _) <- tmp]
+
+calculateTotalRides :: [(Int, Maybe UTCTime)] -> Int
+calculateTotalRides tmp = sum [numberOfRides | (numberOfRides, _) <- tmp]

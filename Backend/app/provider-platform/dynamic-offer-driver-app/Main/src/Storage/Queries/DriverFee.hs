@@ -371,6 +371,18 @@ findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
     Nothing
     Nothing
 
+findAllByStatus :: MonadFlow m => Id Merchant -> DriverFeeStatus -> UTCTime -> UTCTime -> m [DriverFee]
+findAllByStatus (Id merchantId) status from to = do
+  findAllWithOptionsKV
+    [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+      Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
+      Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to),
+      Se.Is BeamDF.status $ Se.Eq status
+    ]
+    (Se.Desc BeamDF.updatedAt)
+    Nothing
+    Nothing
+
 findAllByDriverFeeIds :: MonadFlow m => [Id DriverFee] -> m [DriverFee]
 findAllByDriverFeeIds driverFeeIds = do
   findAllWithKV
