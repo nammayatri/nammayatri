@@ -119,7 +119,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , currentSearchResultType : if isQuote == true then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
-      , rating : ceil (fromMaybe 0.0 rideList.driverRatings)
+      , rating : (fromMaybe 0.0 rideList.driverRatings)
       , startedAt : (convertUTCtoISC resp.createdAt "h:mm A")
       , endedAt : (convertUTCtoISC resp.updatedAt "h:mm A")
       , source : decodeAddress (Booking resp.fromLocation)

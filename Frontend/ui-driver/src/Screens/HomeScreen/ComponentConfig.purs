@@ -33,7 +33,7 @@ import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Debug (spy)
 import Engineering.Helpers.Commons as EHC
@@ -830,8 +830,8 @@ getRideCompletedConfig state = let
       bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
-      visible = true,
-      savedMoney = [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] <> (case state.data.endRideData.tip of 
+      visible = state.data.config.showSavedCommission || isJust state.data.endRideData.tip,
+      savedMoney = if state.data.config.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else [] <> (case state.data.endRideData.tip of 
                             Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
                             Nothing -> [])
     },
