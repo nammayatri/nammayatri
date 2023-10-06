@@ -97,6 +97,7 @@ getLocationBlockerPopUpConfig state = let
     , height = WRAP_CONTENT
     , width = MATCH_PARENT 
     , gravity = CENTER
+    , visibility = VISIBLE
     }
   , primaryText {
       visibility = GONE

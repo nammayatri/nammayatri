@@ -172,8 +172,8 @@ config = {
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
   , topTitle : {
-      text : "title"
-    , visibility : VISIBLE
+      text : ""
+    , visibility : GONE
     , width : WRAP_CONTENT
     , height : WRAP_CONTENT 
     , margin : MarginVertical 10 10
