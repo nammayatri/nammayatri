@@ -24,12 +24,14 @@ import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
 import qualified Data.Map as M
 import Data.Ord
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPlan, mkDriverFeeBillNumberKey)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
+import Domain.Types.Merchant.Overlay (OverlayCondition (..))
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
 import Domain.Types.Plan (PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..))
@@ -404,3 +406,35 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
         startTime = startTime,
         endTime = endTime
       }
+  createJobIn @_ @'SendOverlay dfCalculationJobTs maxShards $
+    SendOverlayJobData
+      { merchantId = merchantId,
+        rescheduleInterval = Nothing,
+        overlayKey = manualInvoiceGeneratedNudgeKey,
+        udf1 = Just $ show MANUAL,
+        condition = InvoiceGenerated MANUAL,
+        scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+        freeTrialDays = transporterConfig.freeTrialDays,
+        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+        driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime
+      }
+  createJobIn @_ @'SendOverlay dfCalculationJobTs maxShards $
+    SendOverlayJobData
+      { merchantId = merchantId,
+        rescheduleInterval = Nothing,
+        overlayKey = autopayInvoiceGeneratedNudgeKey,
+        udf1 = Just $ show AUTOPAY,
+        condition = InvoiceGenerated AUTOPAY,
+        scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+        freeTrialDays = transporterConfig.freeTrialDays,
+        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+        driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime
+      }
+
+manualInvoiceGeneratedNudgeKey :: Text
+manualInvoiceGeneratedNudgeKey = "INVOICE_GENERATED_MANUAL"
+
+autopayInvoiceGeneratedNudgeKey :: Text
+autopayInvoiceGeneratedNudgeKey = "INVOICE_GENERATED_AUTOPAY"

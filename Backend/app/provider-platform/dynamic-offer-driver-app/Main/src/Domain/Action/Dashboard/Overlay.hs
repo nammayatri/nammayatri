@@ -200,11 +200,20 @@ scheduleOverlay merchantShortId req@ScheduleOverlay {..} = do
   maxShards <- asks (.maxShards)
   transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let jobScheduledTime = diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
+  let scheduledTime = UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)
+  let jobScheduledTime =
+        if scheduledTime < now
+          then diffUTCTime (addUTCTime 86400 (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime))) now
+          else diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
   createJobIn @_ @'SendOverlay jobScheduledTime maxShards $
     SendOverlayJobData
       { merchantId = merchant.id,
         rescheduleInterval = req.rescheduleInterval,
+        scheduledTime = req.scheduleTime,
+        freeTrialDays = transporterConfig.freeTrialDays,
+        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+        driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
         ..
       }
   pure Success

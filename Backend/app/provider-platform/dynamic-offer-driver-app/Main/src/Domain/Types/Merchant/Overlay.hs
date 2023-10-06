@@ -18,12 +18,16 @@ module Domain.Types.Merchant.Overlay where
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Plan (PaymentMode (..))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
 
 data OverlayCondition
-  = PaymentPendingGreaterThan Int
+  = PaymentOverdueGreaterThan Int
+  | PaymentOverdueBetween Int Int
+  | FreeTrialDaysLeft Int
+  | InvoiceGenerated PaymentMode
   | InactiveAutopay
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

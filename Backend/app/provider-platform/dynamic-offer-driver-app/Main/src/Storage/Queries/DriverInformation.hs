@@ -48,6 +48,16 @@ getEnabledAt driverId = do
   dInfo <- findById driverId
   return (dInfo >>= (.enabledAt))
 
+findAllByEnabledAtInWindow :: MonadFlow m => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
+findAllByEnabledAtInWindow merchantId from to = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDI.enabledAt $ Se.GreaterThanOrEq from,
+          Se.Is BeamDI.enabledAt $ Se.LessThanOrEq to,
+          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+        ]
+    ]
+
 findAllByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
 findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds = do
   findAllWithKV
