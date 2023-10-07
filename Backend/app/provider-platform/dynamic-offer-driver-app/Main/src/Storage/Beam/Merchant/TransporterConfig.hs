@@ -89,6 +89,7 @@ data TransporterConfigT f = TransporterConfigT
     updateNotificationStatusBatchSize :: B.C f Int,
     updateOrderStatusBatchSize :: B.C f Int,
     orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
+    ratingAsDecimal :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
