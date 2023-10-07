@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Person where
 
@@ -144,3 +145,6 @@ getPersonNumber person = do
 
 getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
+
+roundToOneDecimal :: Centesimal -> Centesimal
+roundToOneDecimal x = fromIntegral (round (x * 10)) / 10
