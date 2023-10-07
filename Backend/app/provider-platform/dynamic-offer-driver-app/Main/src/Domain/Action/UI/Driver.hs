@@ -805,6 +805,10 @@ buildDriverEntityRes (person, driverInfo) = do
   aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+  let rating =
+        if transporterConfig.ratingAsDecimal
+          then SP.roundToOneDecimal <$> person.rating
+          else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   return $
     DriverEntityRes
       { id = person.id,
@@ -812,7 +816,7 @@ buildDriverEntityRes (person, driverInfo) = do
         middleName = person.middleName,
         lastName = person.lastName,
         mobileNumber = decMobNum,
-        rating = person.rating,
+        rating,
         linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
@@ -1245,7 +1249,7 @@ respondQuote (driverId, _) req = do
             searchRequestForDriverId = Just sd.id,
             driverId,
             driverName = driver.firstName,
-            driverRating = driver.rating,
+            driverRating = SP.roundToOneDecimal <$> driver.rating,
             status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
             distance = searchReq.estimatedDistance,

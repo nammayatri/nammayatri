@@ -88,7 +88,7 @@ data Driver = Driver
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    rating :: Maybe Int,
+    rating :: Maybe Centesimal,
     merchantId :: Id DM.Merchant
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
@@ -167,6 +167,6 @@ mkDriverObj person =
       firstName = person.firstName,
       middleName = person.middleName,
       lastName = person.lastName,
-      rating = round <$> person.rating,
+      rating = SP.roundToOneDecimal <$> person.rating,
       merchantId = person.merchantId
     }

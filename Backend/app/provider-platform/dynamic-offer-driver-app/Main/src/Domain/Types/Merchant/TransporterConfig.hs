@@ -96,7 +96,8 @@ data TransporterConfigD u = TransporterConfig
     freeTrialDays :: Int,
     openMarketUnBlocked :: Bool,
     cacheOfferListByDriverId :: Bool,
-    useOfferListCache :: Bool
+    useOfferListCache :: Bool,
+    ratingAsDecimal :: Bool
   }
   deriving (Generic, Show)
 

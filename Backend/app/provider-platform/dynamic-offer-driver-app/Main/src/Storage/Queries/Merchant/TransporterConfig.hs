@@ -196,5 +196,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
-        BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize
+        BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
+        BeamTC.ratingAsDecimal = ratingAsDecimal
       }
