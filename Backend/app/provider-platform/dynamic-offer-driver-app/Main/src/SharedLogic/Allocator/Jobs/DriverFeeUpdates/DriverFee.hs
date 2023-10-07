@@ -58,7 +58,6 @@ import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
-import qualified Tools.Payment as Payment
 import qualified Tools.Payment as TPayment
 
 sendPaymentReminderToDriver ::
