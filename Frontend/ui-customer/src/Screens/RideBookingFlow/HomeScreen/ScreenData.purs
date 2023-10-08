@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Screens.Types (RentalStage(..), Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -220,6 +220,7 @@ initData = {
     , confirmLocationCategory : ""
     , canSendSuggestion : true
     , sheetState : COLLAPSED
+    , rentalStage : NotRental
     }
 }
 

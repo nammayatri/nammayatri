@@ -88,7 +88,7 @@ import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location)
+import Screens.Types (RentalStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location)
 import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
@@ -1390,7 +1390,18 @@ homeScreenFlow = do
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       tripDetailsScreenFlow Home
+    RENTAL_SLAB_SCREEN state -> do
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ys_rental_current_location"
+      modifyScreenState $ HomeScreenStateType (\homwScreen -> state{props{currentStage = ConfirmingLocation, rentalStage = RentalSlab}})
+      flow <- UI.homeScreen
+      homeScreenFlow
     _ -> homeScreenFlow
+
+-- rentalBookingFlow :: HomeScreenState -> FlowBT String Unit
+-- rentalBookingFlow state = do
+--   flow <- UI.rentalBookingFlow
+--   case flow of
+
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
 getDistanceDiff state lat lon = do

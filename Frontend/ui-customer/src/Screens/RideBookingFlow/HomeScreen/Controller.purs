@@ -102,7 +102,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
+import Screens.Types (RentalStage(..), TipViewData(..) , TipViewProps(..), RateCardDetails)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | RentalSlabScreen HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -619,6 +620,7 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | RentalButtonAction PrimaryButtonController.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1045,8 +1047,8 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
-  let newState = state{props{isSource = Just false, sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
-  updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
+  let updatedState = state{props{sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = if(state.props.rentalStage == RentalSearchLocation) then ConfirmingLocation else SearchLocationModel, locateOnMap = false}}
+  if(state.props.rentalStage == RentalSearchLocation) then updateAndExit updatedState $ (RentalSlabScreen updatedState) else updateAndExit updatedState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false updatedState
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
     _ <- pure $ spy "state homeScreen" state
@@ -1070,6 +1072,14 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
 
+eval (RentalButtonAction (PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ spy "state homeScreen" state
+  case state.props.currentStage of
+    _ -> do
+      _ <- pure $ performHapticFeedback unit
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_timer_clock"
+      -- let updatedState = state{props{currentStage = SearchLocationModel}, data{source=(getString CURRENT_LOCATION)}}d
+      exit $ UpdateSavedLocation state{props{rentalStage = RentalSearchLocation, isSource = Nothing, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source=(getString CURRENT_LOCATION)}}
 
 eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
   case state.data.ratingViewState.issueFacedView of

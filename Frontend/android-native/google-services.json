@@ -1,0 +1,468 @@
+{
+    "project_info": {
+      "project_number": "851504048323",
+      "firebase_url": "https://jp-beckn-dev.firebaseio.com",
+      "project_id": "jp-beckn-dev",
+      "storage_bucket": "jp-beckn-dev.appspot.com"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:eb687e36243075a9685a76",
+          "android_client_info": {
+            "package_name": "com.example.fcm"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:debc92e3f0b225ab685a76",
+          "android_client_info": {
+            "package_name": "com.webengage.sample"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:092641961d16c4cb685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.beckn.customer"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:ecec78722f6bc9c1685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.beckn.transporter"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-gkjd09lipkmd3qktr81jkb4da5rk41u7.apps.googleusercontent.com",
+            "client_type": 1,
+            "android_info": {
+              "package_name": "in.juspay.beckn.transporter",
+              "certificate_hash": "dfe177c06304313e487a413b9bc5cf0cdc8cdb5a"
+            }
+          },
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:6058de0217244765685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.becknui"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:db4f614d530236fe685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.becknuser"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-0t010mfj2bjs2c2ie5sv3s62k4nit5j5.apps.googleusercontent.com",
+            "client_type": 1,
+            "android_info": {
+              "package_name": "in.juspay.becknuser",
+              "certificate_hash": "a05103bde1145bd13c5fcc476a058e864d5c4556"
+            }
+          },
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:eaf60c444f8979bd685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.jatrisaathi.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:114dbe48ff52e5e4685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.jatrisaathidriver.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:74646a7f48263779685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.nammayatri.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-n11ja8v85pvmv685ktggk0f22huuelon.apps.googleusercontent.com",
+            "client_type": 1,
+            "android_info": {
+              "package_name": "in.juspay.nammayatri.debug",
+              "certificate_hash": "1e0b11ee6c9ded4d0e53501598ce710910b671ec"
+            }
+          },
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:73ba309bf9996aa4685a76",
+          "android_client_info": {
+            "package_name": "in.juspay.nammayatripartner.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:31fe5e0574e8bef5685a76",
+          "android_client_info": {
+            "package_name": "net.openkochi.yatri.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:851504048323:android:a0cae189ae7dbf2c685a76",
+          "android_client_info": {
+            "package_name": "net.openkochi.yatripartner.debug"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "851504048323-4boljq2gkdtsibig9fjk0ulkhe7rb57h.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyD4tyG5We6p4WnP8_OGM_3hH4KqWaIgOak"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "106262699400101866822",
+                "client_type": 3
+              },
+              {
+                "client_id": "851504048323-2ihg4fak86r4dfd61etv2tgo0vb5p88j.apps.googleusercontent.com",
+                "client_type": 2,
+                "ios_info": {
+                  "bundle_id": "net.openkochi.yatri.debug"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }
+  

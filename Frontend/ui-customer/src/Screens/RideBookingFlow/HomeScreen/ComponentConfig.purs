@@ -251,6 +251,35 @@ whereToButtonConfig state =
       }
   in primaryButtonConfig'
 
+bookARentalButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+bookARentalButtonConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = ("Book a Rental")
+        , width = MATCH_PARENT
+        , gravity = LEFT
+        , color = Color.black800
+        , accessibilityHint = "Book a Rental : Button"
+        }
+      , height = V 48
+      , gravity = CENTER_VERTICAL
+      , cornerRadius = 8.0
+      , margin = (Margin 16 12 16 0)
+      , isClickable = true
+      , isPrefixImage = true
+      , background = Color.blue600
+      , prefixImageConfig
+        { imageUrl = "ny_ic_timer_clock," <> (getAssetStoreLink FunctionCall) <> "ny_ic_timer_clock.png"
+        , height = V 16
+        , width = V 21
+        , margin = (Margin 17 0 17 0)
+        }
+      , id = "bookARentalButton"
+      }
+  in primaryButtonConfig'
+
 primaryButtonRequestRideConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonRequestRideConfig state =
   let
@@ -733,6 +762,7 @@ driverInfoCardViewState state = { props:
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
+                                  , rentalStage : state.props.rentalStage
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -855,6 +885,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , savedlocationList: state.data.savedLocations
                                     , homeScreenConfig : state.data.config
                                     , logField : state.data.logField
+                                    , rentalStage : state.props.rentalStage
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

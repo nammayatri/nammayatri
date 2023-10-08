@@ -80,7 +80,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
+import Screens.Types (RentalStage(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -567,7 +567,7 @@ searchLocationView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background if state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == LocateOnMap then Color.transparent else Color.grey800
-  ] [ if state.props.currentStage == SearchLocationModel then (searchLocationModelView push state) else emptyTextView state
+  ] [ if (state.props.currentStage == SearchLocationModel) then (searchLocationModelView push state) else emptyTextView state
     , if state.props.currentStage == FavouriteLocationModel then (favouriteLocationModel push state) else emptyTextView state
 ]
 
@@ -730,7 +730,7 @@ buttonLayout state push =
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
         , orientation VERTICAL
-        , accessibility if state.props.currentStage == HomeScreen && (not (state.data.settingSideBar.opened /= SettingSideBar.CLOSED )) then DISABLE else DISABLE_DESCENDANT
+        , accessibility if state.props.currentStage == HomeScreen && (state.data.settingSideBar.opened == SettingSideBar.CLOSED ) then DISABLE else DISABLE_DESCENDANT
         ]
         [
           linearLayout
@@ -750,9 +750,29 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
+            , PrimaryButton.view (push <<< RentalButtonAction) (bookARentalButtonConfig state)
             , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
             ]
         ]
+
+-- rentalButtonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- rentalButtonLayout state push =
+--   linearLayout
+--         [ height WRAP_CONTENT
+--         , width MATCH_PARENT
+--         , alignParentBottom "true,-1"
+--         , orientation VERTICAL
+--         , accessibility if state.props.currentStage == HomeScreen && (state.data.settingSideBar.opened == SettingSideBar.CLOSED ) then DISABLE else DISABLE_DESCENDANT
+--         ]
+--         [
+--           linearLayout
+--           [ width MATCH_PARENT
+--           , height WRAP_CONTENT
+--           , orientation HORIZONTAL
+--           ] [
+--             referralView
+--           ]
+--         ]
 
 recentSearchesAndFavourites :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 recentSearchesAndFavourites state push =

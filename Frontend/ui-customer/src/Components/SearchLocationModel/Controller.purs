@@ -21,7 +21,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Screens.Types (RentalStage(..), SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
@@ -58,6 +58,7 @@ type SearchLocationModelState = {
   , isRideServiceable :: Boolean
   , homeScreenConfig :: AppConfig
   , logField :: Object Foreign
+  , rentalStage :: RentalStage
 }
 
 dummy_data :: Array LocationListItemState

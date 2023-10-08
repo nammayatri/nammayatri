@@ -44,7 +44,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Screens.Types (RentalStage(..), SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.String as DS
@@ -192,7 +192,7 @@ locationUnserviceableView state push =
 sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
   frameLayout
-    [ height $ V 136
+    [ height $ V if state.rentalStage == RentalSearchLocation then 48 else 136
     , width $ V 50
     , margin (Margin 5 15 0 0)
     , gravity CENTER
@@ -212,12 +212,14 @@ sourceDestinationImageView state =
         , width $ V 20
         , imageUrl if os == "IOS" then ( if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then  "ic_line_img" else "ny_ic_line_img") else "ic_line"
         , margin if os == "IOS" then (Margin 0 35 0 0) else (Margin 24 35 0 0)
+        , visibility if state.rentalStage == RentalSearchLocation then GONE else VISIBLE
         ]
     , linearLayout
         [ height WRAP_CONTENT
         , width $ V 50
         , gravity CENTER
         , margin (Margin 0 80 2 0)
+        , visibility if state.rentalStage == RentalSearchLocation then GONE else VISIBLE
         ][  imageView
             [ height $ V 25
             , width $ V 25
@@ -232,9 +234,8 @@ sourceDestinationEditTextView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
-    , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 15 15 0)
-    , height $ V 136
-  
+    , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 0 15 0)
+    , height $ V if state.rentalStage == RentalSearchLocation then 48 else 136
     ][linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -288,7 +289,7 @@ sourceDestinationEditTextView state push =
                       )(const $ SourceClear)
             , accessibilityHint "Clear Source Text : Button"
             , accessibility ENABLE
-            , visibility if state.source /= "" then VISIBLE else GONE
+            , visibility if state.source == "" || state.rentalStage == RentalSearchLocation then GONE else VISIBLE
             ]
             [ imageView
                 [ height $ V 16
@@ -302,14 +303,12 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isSrcServiceable then "#FDD836" else Color.textDanger
-        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
-        , visibility if state.isSource == Just false then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -317,6 +316,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin (Margin 0 10 0 0)
+        , visibility if state.rentalStage == RentalSearchLocation then GONE else VISIBLE
         ]
         [ editText
             ( [ height $ V 45
@@ -426,7 +426,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
+        { text =  if state.rentalStage == RentalSearchLocation then (getString CONFIRM_PICKUP_LOCATION) else if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = state.homeScreenConfig.primaryTextColor
         , height = V 40
         }
@@ -435,7 +435,7 @@ primaryButtonConfig state =
       , cornerRadius = state.homeScreenConfig.primaryButtonCornerRadius
       , background = state.homeScreenConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
-      , isClickable = if (state.isSource == Just true && state.source /= "" && state.isSrcServiceable) || (state.isSource == Just false && state.destination /= "" && state.isDestServiceable) then true else false
+      , isClickable = if (state.rentalStage == RentalSearchLocation) then true else if (state.isSource == Just true && state.source /= "" && state.isSrcServiceable) || (state.isSource == Just false && state.destination /= "" && state.isDestServiceable) then true else false
       , id = "SelectLocationFromMap"
       }
   in primaryButtonConfig'
@@ -465,8 +465,8 @@ primaryButtonView state push =
     , background Color.transparent
     , visibility if state.isSearchLocation == LocateOnMap then VISIBLE else GONE
     ][ recenterButtonView push state
-      , PrimaryButton.view (push <<< PrimaryButtonActionController)(primaryButtonConfig state)]
-
+      , PrimaryButton.view (push <<< PrimaryButtonActionController)(primaryButtonConfig state)
+    ]
 
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
