@@ -55,8 +55,15 @@
                             android:orientation="vertical"
                             android:paddingHorizontal="10dp"
                             android:paddingVertical="15dp"
+                            android:background="#1A09C3C6"
                             android:layout_height="match_parent">
 
+                            <ImageView
+                                android:id="@+id/assetZonePickup1"
+                                android:layout_width="64dp"
+                                android:layout_height="20dp"
+
+                                android:src="@drawable/rental_bg" />
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"

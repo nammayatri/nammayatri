@@ -286,21 +286,7 @@
                                     android:visibility="gone"
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/distanceToBeCovered"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="85dp"
-                                android:background="@drawable/ic_roundcorner_overlay"
-                                android:elevation="1dp"
-                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="6dp"
-                                android:text="12Km"
-                                android:lineHeight="20dp"
-                                android:textColor="#2C2F3A"
-                                android:textSize="16dp" />
+                          
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -382,7 +368,9 @@
                                         app:strokeWidth="3dp" />
 
                                     <ImageView
-                                        android:layout_width="3dp"
+                                        android:id="@+id/srcTodestDash"
+                                        android:layout_width="wrap_content"
+
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center_horizontal"
                                         android:layout_marginTop="2dp"
@@ -392,8 +380,10 @@
                                         android:src="@drawable/dashed_line" />
 
                                     <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/destinationIcon"
                                         android:layout_width="15dp"
-                                        android:layout_height="15dp"
+                                        android:layout_height="14dp"
+
                                         android:layout_marginBottom="44dp"
                                         android:theme="@style/Theme.MaterialComponents.Light"
                                         app:cardCornerRadius="45dp"

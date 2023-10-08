@@ -82,7 +82,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             sourceAddress = itemView.findViewById(R.id.journeySource);
             destinationArea = itemView.findViewById(R.id.destinationArea);
             destinationAddress = itemView.findViewById(R.id.journeyDestination);
-            distanceToBeCovered = itemView.findViewById(R.id.distanceToBeCovered);
+//            distanceToBeCovered = itemView.findViewById(R.id.distanceToBeCovered);
             acceptRejTimer = itemView.findViewById(R.id.acceptRejTimer);
             reqButton = itemView.findViewById(R.id.reqButton);
             rejectButton = itemView.findViewById(R.id.rejButton);

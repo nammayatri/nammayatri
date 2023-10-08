@@ -36,21 +36,96 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="#FEEBB9"
+                        android:background="@color/grey900"
                         android:visibility="gone"
                         android:id="@+id/customer_tip_block"
-                        android:paddingVertical="3dp"
-                        android:gravity="center">
+                        android:padding="10dp">
+                    <HorizontalScrollView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@color/grey900">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
 
-                        <TextView
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_tip_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingHorizontal="3dp"
+                                android:visibility="gone"
+                                android:id="@+id/customerTipTag"
+                                android:layout_marginEnd="10dp"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_tip_icon"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/tip_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="₹10 Tip"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/Black900"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_accessibility_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:id="@+id/accessibilityTag"
+                                android:visibility="gone"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_wheelchair"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/accessibilityTagText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="Assistance Required"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                        </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:background="#E5E7EB"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="₹ 10 tip included !"
-                            android:id="@+id/customer_tip_text"
-                            android:textSize="16dp"
-                            android:lineHeight="20dp"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:textColor="@color/Black900" />
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:id="@+id/assetZonePickup1"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="8dp"
+                                android:src="@drawable/rental_logo" />
+
+                        </LinearLayout>
                     </LinearLayout>
 
                     <LinearLayout
@@ -73,7 +148,8 @@
                                 <LinearLayout
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:orientation="vertical">
+                                    android:orientation="vertical"
+                                    android:gravity="start">
 
                                     <TextView
                                         android:layout_width="wrap_content"
@@ -94,6 +170,39 @@
                                         android:fontFamily="@font/plus_jakarta_sans_bold"
                                         android:lineHeight="28dp"
                                         android:text="1.2 km"
+                                        android:textColor="#454545"
+                                        android:textFontWeight="600"
+                                        android:textSize="24dp" />
+
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:gravity="end"
+                                    android:layout_marginLeft="150dp"
+                                    >
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center_vertical"
+                                        android:alpha="0.5"
+                                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                                        android:lineHeight="20dp"
+                                        android:text="Today"
+                                        android:textColor="#2C2F3A"
+                                        android:textFontWeight="600"
+                                        android:textSize="16dp" />
+
+                                    <TextView
+                                        android:id="@+id/distancePickUp1"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                                        android:lineHeight="20dp"
+                                        android:text="12:30 PM"
                                         android:textColor="#454545"
                                         android:textFontWeight="600"
                                         android:textSize="24dp" />
@@ -275,7 +384,7 @@
                                         android:textSize="14dp"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:textStyle="bold"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         />
                                 </LinearLayout>
 
@@ -287,21 +396,45 @@
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
-                            <TextView
-                                android:id="@+id/distanceToBeCovered"
-                                android:layout_width="wrap_content"
+                              <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="85dp"
-                                android:background="@drawable/ic_roundcorner_overlay"
-                                android:elevation="1dp"
-                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="6dp"
-                                android:text="12Km"
-                                android:lineHeight="20dp"
-                                android:textColor="#2C2F3A"
-                                android:textSize="16dp" />
+                                android:layout_weight="1"
+                                android:orientation="horizontal"
+                                android:layout_marginLeft="27dp"
+                                android:layout_marginTop="10dp">
+                                <TextView
+                                    android:id="@+id/distanceToBeCovered"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="8 hr"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp" />
 
+                                <TextView
+                                    android:id="@+id/distanceToBeCovered1"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="15dp"
+                                    android:paddingVertical="6dp"
+                                    android:layout_marginLeft="16dp"
+                                    android:text="80 Km"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp" />
+
+                            </LinearLayout>
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -389,6 +522,7 @@
                                         android:layout_marginBottom="2dp"
                                         android:layout_weight="1"
                                         android:layerType="software"
+                                        android:visibility="gone"
                                         android:src="@drawable/dashed_line" />
 
                                     <com.google.android.material.card.MaterialCardView
@@ -398,6 +532,7 @@
                                         android:theme="@style/Theme.MaterialComponents.Light"
                                         app:cardCornerRadius="45dp"
                                         app:strokeColor="#ED4D41"
+                                        android:visibility="gone"
                                         app:strokeWidth="3dp" />
                                 </LinearLayout>
                             </LinearLayout>

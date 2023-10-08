@@ -178,26 +178,36 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
-            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            // holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            // holder.distanceToBeCovered1.setText(  "123 km");
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            holder.destinationArea.setVisibility(View.GONE);
+            holder.destinationAddress.setVisibility(View.GONE);
+            holder.sourcePinCode.setVisibility(View.VISIBLE);
+            // if(holder.srcTodestDash != null)
+            // holder.srcTodestDash.setVisibility(View.GONE);
+            
+            // holder.destinationIcon.setVisibility(View.GONE);
             if (model.getSourcePinCode() != null && model.getSourcePinCode().trim().length() > 0) {
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
             } else {
                 holder.sourceAddress.setMaxLines(2);
-                holder.sourcePinCode.setVisibility(View.GONE);
+                // holder.sourcePinCode.setVisibility(View.GONE);
             }
             if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
                 holder.destinationPinCode.setText(model.getDestinationPinCode());
-                holder.destinationPinCode.setVisibility(View.VISIBLE);
+                holder.destinationPinCode.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
             } else {
                 holder.destinationAddress.setMaxLines(2);
                 holder.destinationPinCode.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
             }
             if (holder.specialLocationTag != null && model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
