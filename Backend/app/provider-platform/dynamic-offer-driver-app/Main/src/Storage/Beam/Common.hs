@@ -38,6 +38,7 @@ import Storage.Beam.Message.MessageReport
 import Storage.Beam.Message.MessageTranslation
 import Storage.Beam.Notification
 import Storage.Beam.Person
+import Storage.Beam.QuoteRental
 import Storage.Beam.QuoteSpecialZone
 import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride.Table
@@ -97,6 +98,7 @@ data AtlasDB f = AtlasDB
     rideDetails :: f (B.TableEntity RideDetailsT),
     rDetails :: f (B.TableEntity RiderDetailsT),
     callStatus :: f (B.TableEntity CallStatusT),
+    quoteRental :: f (B.TableEntity QuoteRentalT),
     quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
     messageReport :: f (B.TableEntity MessageReportT),
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),

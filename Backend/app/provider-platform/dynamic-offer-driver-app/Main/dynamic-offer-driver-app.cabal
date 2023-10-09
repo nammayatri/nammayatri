@@ -242,6 +242,7 @@ library
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.QuoteRental
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -388,6 +389,7 @@ library
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
+      Storage.Beam.QuoteRental
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -519,6 +521,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.QuoteRental
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
