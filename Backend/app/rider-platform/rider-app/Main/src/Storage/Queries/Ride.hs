@@ -326,6 +326,15 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
+updateEditLocationAttempts :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateEditLocationAttempts rideId attempts = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.allowedEditLocationAttempts attempts,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 createMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m [DLM.LocationMapping]
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId bookingId
@@ -404,6 +413,7 @@ instance FromTType' BeamR.Ride Ride where
             createdAt = createdAt,
             updatedAt = updatedAt,
             driverMobileCountryCode = driverMobileCountryCode,
+            allowedEditLocationAttempts = allowedEditLocationAttempts,
             ..
           }
 
@@ -439,5 +449,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
         BeamR.driverImage = driverImage,
-        BeamR.safetyCheckStatus = safetyCheckStatus
+        BeamR.safetyCheckStatus = safetyCheckStatus,
+        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts
       }

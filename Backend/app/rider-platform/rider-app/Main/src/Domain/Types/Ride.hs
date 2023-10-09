@@ -70,6 +70,7 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    allowedEditLocationAttempts :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     safetyCheckStatus :: Maybe Bool
