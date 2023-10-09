@@ -15,21 +15,11 @@
 
 module Components.DueDetailsList.Controller where
 
-import Screens.Types (PromoConfig)
+import Screens.Types(DueCard)
 
-data Action = SelectDue Int
+data Action = SelectDue DueCard
 
 type DueDetailsListState = {
   dues :: Array DueCard
 }
 
-type DueCard = {
-  date :: String,
-  planType :: String,
-  offerApplied :: PromoConfig,
-  noOfRides :: String,
-  totalEarningsOfDay :: String,
-  dueAmount :: String,
-  fareBreakup :: String,
-  expanded :: Boolean
-}

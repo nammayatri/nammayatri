@@ -25,6 +25,8 @@ foreign import getENStrings :: String -> String
 
 foreign import getMerchantId :: String -> Foreign
 
+foreign import getStringWithVar :: String -> Array String -> String
+
 data Merchant
   = NAMMAYATRI
   | YATRISATHI

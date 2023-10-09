@@ -20,17 +20,21 @@ module Screens.SubscriptionScreen.Transformer where
 import Prelude
 
 import Common.Types.App (LazyCheck(..))
-import Data.Array (cons, (!!), length)
+import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
+import Data.Int (floor, fromNumber, toNumber)
 import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number.Format (fixed, toStringWith)
 import Data.String (Pattern(..), split, toLower)
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
+import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.Types (KeyValType, PromoConfig, SubscriptionScreenState, PlanCardConfig)
-import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
+import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
+import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
+
 
 type PlanData = {
     title :: String,
@@ -83,6 +87,10 @@ decodeOfferDescription str = do
                 "ML_IN" | len > 4 -> 4
                 _ -> 0
     
+decodeOfferPlan :: String -> {plan :: String, offer :: String}
+decodeOfferPlan str = do
+    let strArray = split (Pattern "-*@*-") str
+    {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
 freeRideOfferConfig :: LazyCheck -> PromoConfig
 freeRideOfferConfig lazy = 
@@ -124,25 +132,6 @@ getAutoPayDetailsList (MandateData mandateDetails) =
         {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}
     ]
 
-getPspIcon :: String -> String 
-getPspIcon vpa = do
-    let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
-    case handleName of 
-        Nothing -> "ny_ic_defaultpg,"
-        Just handle -> case handle of
-            "ybl" -> "ny_ic_phonepe,"
-            "ibl" -> "ny_ic_phonepe,"
-            "axl" -> "ny_ic_phonepe,"
-            "okhdfcbank" -> "ny_ic_gpay,"
-            "okicici" -> "ny_ic_gpay,"
-            "oksbi" -> "ny_ic_gpay,"
-            "okaxis" -> "ny_ic_gpay,"
-            "paytm" -> "ny_ic_paytm,"
-            "apl" -> "ny_ic_amazonpay,"
-            "yapl" -> "ny_ic_amazonpay,"
-            "indus" -> "ny_ic_induspay,"
-            "upi" -> "ny_ic_bhim,"
-            _ -> "ny_ic_defaultpg,"
 
 getFrequencyText :: String -> String
 getFrequencyText constructor = 
@@ -192,3 +181,42 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized =
             freeRideCount : planEntity.freeRideCount,
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
+
+constructDues :: Array DriverDuesEntity -> Array DueItem
+constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
+  let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
+  in
+  {    
+    tripDate: item.rideTakenOn,
+    amount: item.driverFeeAmount,
+    earnings: item.totalEarnings,
+    noOfRides: item.totalRides,
+    scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
+    paymentStatus: "", --Paid
+    feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides , --Breakup
+    plan: offerAndPlanDetails,--"Plan",
+    mode: item.feeType,
+    autoPayStage : item.autoPayStage,
+    randomId : (getCurrentUTC "") <> show ind,
+    isSplit : item.isSplit
+  }) duesArr)
+
+getFeeBreakup :: String -> Int -> String
+getFeeBreakup plan rides = 
+    let planWithTranslations = fromMaybe "" ((split (Pattern "-*@*-") plan) !! 0)
+        planInEng = fromMaybe "" ((split (Pattern "-*$*-") planWithTranslations) !! 0)
+        planConfig = getPlanAmountConfig planInEng
+    in
+    case planConfig.isFixed of
+        true -> "₹" <> getFixedTwoDecimals planConfig.value
+        false -> if planConfig.value <= (toNumber rides) * planConfig.perRide 
+                    then "₹" <> getFixedTwoDecimals planConfig.value
+                 else show rides <> " " <> getString RIDES <> " X " <>  "₹" <> getFixedTwoDecimals planConfig.perRide
+    
+
+
+getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
+getPlanAmountConfig plan = case plan of
+                            "DAILY UNLIMITED" -> {value : 25.0, isFixed : true, perRide : 0.0}
+                            "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
+                            _ ->  {value : 25.0, isFixed : true, perRide : 0.0}

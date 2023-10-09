@@ -1529,6 +1529,11 @@ export const shareImageMessage = function(message){
           JBridge.shareTextMessage("", message);
         }
       }
+  // subs-branch
+  // return function (id){
+  //   if(JBridge.shareTextMessage){
+  //     JBridge.shareImageMessage(message, id);
+  //   }
   }
 }
 

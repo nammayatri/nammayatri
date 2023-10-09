@@ -17,20 +17,22 @@ module Engineering.Helpers.Utils where
 import Prelude
 
 import Common.Types.App (MobileNumberValidatorResp(..))
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
+import Effect (Effect (..))
+import Foreign.Class (class Decode, class Encode, encode)
+import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON)
 import Control.Monad.Except (runExcept)
-import Data.Either (Either(..))
+import Data.Either (Either(..), hush)
 import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Time.Duration (Milliseconds(..))
-import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, liftFlow)
 import Foreign (Foreign, unsafeToForeign)
-import Foreign.Generic (decode)
 import Helpers.FileProvider.Utils (loadInWindow, mergeObjects)
 import LoaderOverlay.Handler as UI
 import Log (printLog)
@@ -46,6 +48,13 @@ foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 foreign import loaderTextIOS :: EffectFn2 String String Unit
 
 foreign import getFromWindow :: EffectFn1 String Foreign
+
+foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+
+foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+
+saveToLocalStore' :: String -> String -> EffectFnAff Unit
+saveToLocalStore' = saveToLocalStoreImpl
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader = 
@@ -125,3 +134,16 @@ getAppConfigImpl =
           Left err -> do
             _ <- pure $ printLog "Not able to decode config not able to  find in default config" (show err)
             pure $ DefaultConfig.config
+
+class Serializable a where
+  serialize :: a -> String
+  deserialize :: String -> Maybe a
+
+instance genericSerializable :: (Encode a, Decode a) => Serializable a where
+  serialize = encodeJSON
+  deserialize = decodeJSON >>> runExcept >>> hush
+
+saveObject :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
+saveObject objName obj =
+  doAff do
+    (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))

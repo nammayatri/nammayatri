@@ -225,3 +225,12 @@ postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
 
 generateReferralCode :: String -> String
 generateReferralCode dummyString = (getBaseUrl "") <> "/driver/generateReferralCode"
+
+paymentHistoryListV2 :: String -> String -> String -> String
+paymentHistoryListV2 limit offset historyType = (getBaseUrl "") <> "/driver/v2/payments/history?limit=" <> limit <> "&offset=" <> offset <> "&paymentMode=" <> show historyType
+
+paymentEntityDetails :: String -> String 
+paymentEntityDetails id = (getBaseUrl "") <> "/driver/v2/payments/history/" <> id <> "/entity"
+
+cleardues :: String -> String 
+cleardues _ = (getBaseUrl "") <> "/driver/cleardues"

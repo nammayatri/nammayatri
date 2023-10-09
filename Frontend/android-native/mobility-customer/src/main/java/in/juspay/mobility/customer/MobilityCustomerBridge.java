@@ -937,7 +937,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     pdfDocument.writeTo(fos);
                     JuspayLogger.d(OTHERS, "PDF Document written to path " + file.getPath());
                     Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-                    showInvoiceNotification(path);
+                    showNotificationWithURI(path, context.getString(R.string.invoice_downloaded), context.getString(R.string.invoice_for_your_ride_is_downloaded), "application/pdf", "Invoice", "Invoice Download");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -947,50 +947,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 JuspayLogger.e(OTHERS, e.toString());
             }
         }).start();
-    }
-
-    private void showInvoiceNotification(Uri path) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                toast("Invoice Downloaded!!!");
-                Context context = bridgeComponents.getContext();
-                JuspayLogger.d(OTHERS, "PDF Document inside Show Notification");
-                Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
-                pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                pdfOpenintent.setDataAndType(path, "application/pdf");
-                String CHANNEL_ID = "Invoice";
-                PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Invoice Download", NotificationManager.IMPORTANCE_HIGH);
-                    channel.setDescription("Invoice Download");
-                    NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-                    AudioAttributes attributes = new AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                            .build();
-                    channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
-                    notificationManager.createNotificationChannel(channel);
-                }
-                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
-                int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
-                mBuilder.setContentTitle("Invoice Downloaded")
-                        .setSmallIcon(launcher)
-                        .setContentText("Invoice for your ride is downloaded!!!")
-                        .setAutoCancel(true)
-                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                        .setPriority(NotificationCompat.PRIORITY_MAX);
-                mBuilder.setContentIntent(pendingIntent);
-                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-                JuspayLogger.d(OTHERS, "PDF Document notification is Created");
-                if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    JuspayLogger.d(OTHERS, "PDF Document Notification permission is not given");
-                } else {
-                    notificationManager.notify(234567, mBuilder.build());
-                    JuspayLogger.d(OTHERS, "PDF Document notification is notified");
-                }
-            }
-        });
     }
 
     @SuppressLint("SetTextI18n")

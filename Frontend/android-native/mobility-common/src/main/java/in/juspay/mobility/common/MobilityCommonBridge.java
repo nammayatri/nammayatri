@@ -14,6 +14,9 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -41,6 +44,8 @@ import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -48,6 +53,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -86,7 +93,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.location.LocationManagerCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -132,6 +142,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -1792,6 +1803,29 @@ public class MobilityCommonBridge extends HyperBridge {
                 Log.e("IMAGE_TEXT_SHARE", "Error in sharing the message");
                 e.printStackTrace();
             }
+    // subs-branch
+    // public void shareImageMessage(String message, String id) {
+    //     ExecutorManager.runOnMainThread(() -> {
+    //         Intent sendIntent = new Intent();
+    //         Context context = bridgeComponents.getContext();
+    //         Activity activity = bridgeComponents.getActivity();
+    //         View layoutView = activity.findViewById(Integer.parseInt(id));
+
+    //         Bitmap bitmap = Bitmap.createBitmap(layoutView.getWidth(), layoutView.getHeight(), Bitmap.Config.ARGB_8888);
+    //         Canvas canvas = new Canvas(bitmap);
+    //         layoutView.draw(canvas);
+
+    //         File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+    //         File imageFile = new File(directory, "QR.png");
+    //         Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", imageFile);
+    //         sendIntent.setAction(Intent.ACTION_SEND);
+    //         sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
+    //         sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+    //         sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    //         sendIntent.setType("image/*");
+    //         Intent shareIntent = Intent.createChooser(sendIntent, null);
+    //         shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    //         bridgeComponents.getContext().startActivity(shareIntent);
         });
     }
 
@@ -2119,5 +2153,73 @@ public class MobilityCommonBridge extends HyperBridge {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    @JavascriptInterface
+    public void downloadLayoutAsImage(String qr) {
+        Context context = bridgeComponents.getContext();
+        Activity activity = bridgeComponents.getActivity();
+        View layoutView = activity.findViewById(Integer.parseInt(qr));
+
+        Bitmap bitmap = Bitmap.createBitmap(layoutView.getWidth(), layoutView.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        layoutView.draw(canvas);
+
+        File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        File imageFile = new File(directory, "QR.png");
+        Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", imageFile);
+        try {
+            FileOutputStream fos = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.close();
+
+            showNotificationWithURI(path, activity.getString(R.string.qr_downloaded), context.getString(R.string.qr_for_your_vpa_is_downloaded), "image/png", "QR", "QR Download");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showNotificationWithURI(Uri path, String toastMessage, String notificationContent, String dataType, String channelId, String channelDesc) {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                toast(toastMessage);
+                Context context = bridgeComponents.getContext();
+                JuspayLogger.d(OTHERS, channelDesc + "inside Show Notification");
+                Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
+                pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                pdfOpenintent.setDataAndType(path, dataType);
+                String CHANNEL_ID = channelId;
+                PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationChannel channel = new NotificationChannel(CHANNEL_ID, channelDesc, NotificationManager.IMPORTANCE_HIGH);
+                    channel.setDescription(channelDesc);
+                    NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .build();
+                    channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
+                    notificationManager.createNotificationChannel(channel);
+                }
+                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+                int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
+                mBuilder.setContentTitle(toastMessage)
+                        .setSmallIcon(launcher)
+                        .setContentText(notificationContent)
+                        .setAutoCancel(true)
+                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .setPriority(NotificationCompat.PRIORITY_MAX);
+                mBuilder.setContentIntent(pendingIntent);
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+                JuspayLogger.d(OTHERS, channelDesc + "notification is Created");
+                if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    JuspayLogger.d(OTHERS, channelDesc + "Notification permission is not given");
+                } else {
+                    notificationManager.notify(234567, mBuilder.build());
+                    JuspayLogger.d(OTHERS, channelDesc + "notification is notified");
+                }
+            }
+        });
     }
 }

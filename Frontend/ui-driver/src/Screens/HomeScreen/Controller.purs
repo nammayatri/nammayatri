@@ -15,6 +15,9 @@
 
 module Screens.HomeScreen.Controller where
 
+import Helpers.Utils
+import Screens.SubscriptionScreen.Controller
+
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
 import Components.Banner as Banner
@@ -44,10 +47,11 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
+import Engineering.Helpers.Utils (saveObject)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
@@ -56,7 +60,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -64,6 +68,7 @@ import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..)
 import Types.ModifyScreenState (modifyScreenState)
 import Services.Config (getSupportNumber)
 import Helpers.Utils
+import Effect.Uncurried (runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -189,6 +194,7 @@ instance loggableAction :: Loggable Action where
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
+    FreeTrialEndingAC _ -> pure unit
     _ -> pure unit
 
 
@@ -213,10 +219,11 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
-                    | SubscriptionScreen ST.HomeScreenState 
+                    | SubscriptionScreen ST.HomeScreenState
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
+                    | ClearPendingDues ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -270,6 +277,9 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
+            | FreeTrialEndingAC PopUpModal.Action 
+            | GetCurrentDuesAction GetCurrentPlanResp
+            | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
@@ -277,6 +287,7 @@ data Action = NoAction
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
+            | PaymentPendingPopupAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -300,13 +311,14 @@ eval BackPressed state = do
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
                         else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else if state.props.showBlockingPopup then continue state {props{showBlockingPopup = false}}
-                            else if state.props.showRideRating then continue state {props {showRideRating = false}}
-                              else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
-                                else if state.props.currentStage == ST.RideCompleted then continue state
-                                  else do
-                                    _ <- pure $ minimizeApp ""
-                                    continue state
+                          else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
+                            else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+                              else if state.props.showRideRating then continue state {props {showRideRating = false}}
+                                else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
+                                  else if state.props.currentStage == ST.RideCompleted then continue state
+                                    else do
+                                      _ <- pure $ minimizeApp ""
+                                      continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -373,6 +385,55 @@ eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
 eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
+
+eval (PaymentPendingPopupAC PopUpModal.OnButton1Click) state = do
+  if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
+    _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
+    exit $ ClearPendingDues state {props{subscriptionPopupType = ST.GO_ONLINE_BLOCKER}}
+  else do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+    exit $ SubscriptionScreen state {props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} 
+
+eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
+  if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_view_details"
+    _ <- pure $ metaLogEvent "ny_driver_due_payment_view_details"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
+    exit $ SubscriptionScreen state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+  else do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
+    exit (DriverAvailabilityStatus state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}} ST.Online)
+
+eval (PaymentPendingPopupAC PopUpModal.OnSecondaryTextClick) state = do
+  continueWithCmd state [do
+    _ <- openUrlInApp $ "https://www.youtube.com/shorts/x9cJN78j9V8"
+    pure NoAction
+  ]
+  
+eval (PaymentPendingPopupAC PopUpModal.DismissPopup) state = do
+  if (state.props.subscriptionPopupType == ST.SOFT_NUDGE_POPUP) then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan_dismiss"
+    pure unit
+  else if (state.props.subscriptionPopupType == ST.LOW_DUES_CLEAR_POPUP) then do
+    _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+    pure unit
+  else pure unit
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+
+eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
+  exit $ SubscriptionScreen state
+
+eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
@@ -624,7 +685,8 @@ eval (RideActiveAction activeRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.props.driverBlocked then continue state { props{ showBlockingPopup = true}}
+  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if not state.props.rcActive then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
@@ -637,7 +699,7 @@ eval (SwitchDriverStatus status) state =
   else if state.props.driverStatusSet == status then continue state
     else
       case status of
-        ST.Online -> exit (DriverAvailabilityStatus state status)
+        ST.Online -> if state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit then continue state { props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} else exit (DriverAvailabilityStatus state status)
         ST.Silent -> exit (DriverAvailabilityStatus state status)
         ST.Offline ->
           do
@@ -676,6 +738,12 @@ eval (GenderBannerModal (Banner.OnClick)) state = do
   exit $ GotoEditGenderScreen
 
 eval (AutoPayBanner (Banner.OnClick)) state = do
+  let ctEvent = case state.props.autoPayBanner of
+                  ST.CLEAR_DUES_BANNER -> "clear_dues_banner_clicked"
+                  ST.SETUP_AUTOPAY_BANNER -> "setup_autopay_banner_clicked"
+                  ST.FREE_TRIAL_BANNER -> "setup_autopay_trial_ends_banner_clicked"
+                  _ -> ""
+  _ <- pure $ cleverTapCustomEvent ctEvent
   exit $ SubscriptionScreen state
 
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
@@ -699,7 +767,7 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
 
-eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { props {showBlockingPopup = false}}
+eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}}
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
   _ <- pure $ showDialer "08069490091" false
@@ -726,6 +794,12 @@ eval (PaymentStatusAction status) state =
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
   
+eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
+  continueWithCmd state [ do
+                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa) id 200 0
+                    pure $ NoAction
+                ]
+
 eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContactSupportPopUp = true}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContactSupportPopUp = false}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
@@ -735,6 +809,8 @@ eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.Dismis
 
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ GoToRideDetailsScreen state
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = continue state {props {showRideRating = true}}
+eval (RideCompletedAC (RideCompletedCard.BannerAction (Banner.OnClick))) state = continueWithCmd state [pure $ AutoPayBanner (Banner.OnClick) ]
+
 
 eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
 eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}

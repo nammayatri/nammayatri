@@ -28,7 +28,15 @@ type LeaderBoard = {
 type SubscriptionConfig =  {
   enableBlocking :: Boolean,
   completePaymentPopup :: Boolean,
-  onBoardingSubscription :: Boolean
+  onBoardingSubscription :: Boolean,
+  showDUOfferBanner :: Boolean,
+  offerBannerValidTill :: String,
+  offerBannerDeadline :: String,
+  currentPlanCacheExpTime :: Int,
+  lowDuesLimit :: Number,
+  maxDuesLimit :: Number,
+  highDueWarningLimit :: Number,
+  moveDriverToOfflineInHighDueDaily :: Boolean
  }
 
 type RideActionModelConfig = {

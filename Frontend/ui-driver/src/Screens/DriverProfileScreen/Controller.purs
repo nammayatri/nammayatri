@@ -36,8 +36,8 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings)
-import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation)
+import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings, generateQR, downloadQR)
+import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -58,6 +58,10 @@ import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
+import Screens.SubscriptionScreen.Controller
+import Effect.Aff (launchAff_)
+import Effect.Uncurried(runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -83,7 +87,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
-      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
     ActivateOrDeactivateRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
@@ -95,7 +100,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
-      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
     DeleteRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
@@ -106,7 +112,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
       PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
-      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
     CallDriverPopUpModalAction act -> case act of
@@ -117,9 +124,10 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "no_action"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
       PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
-      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "go_home_or_submit"
@@ -151,6 +159,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_selection"
@@ -183,6 +192,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
+                    | SubscriptionScreen
 
 data Action = BackPressed
             | NoAction
@@ -219,6 +229,7 @@ data Action = BackPressed
             | GetRcsDataResponse SA.GetAllRcDataResp
             | UpdateRC String Boolean
             | ActivateOrDeactivateRcPopUpModalAction PopUpModal.Action
+            | PaymentInfoPopUpModalAction PopUpModal.Action
             | DeleteRcPopUpModalAction PopUpModal.Action
             | CallDriverPopUpModalAction PopUpModal.Action
             | AddRc
@@ -229,6 +240,12 @@ data Action = BackPressed
             | SkipActiveRc
             | RemoveEditRC
             | DirectActivateRc EditRc
+            | UpiQrRendered String
+            | DismissQrPopup
+            | PaymentInfo
+            | LeftKeyAction
+            | DownloadQR PrimaryButtonController.Action
+            | ShareQR PrimaryButtonController.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -279,6 +296,7 @@ eval (UpdateValue value) state = do
     LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}, data {languageList = updateLanguageList state state.data.languagesSpoken}}
     VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
     VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
+    PAYMENT -> continue state{props {upiQrView = true }}
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -296,6 +314,26 @@ eval (OptionClick optionIndex) state = do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+
+eval (UpiQrRendered id) state = do
+  continueWithCmd state [ do
+                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.payerVpa) id 200 0
+                    pure $ NoAction
+                ]
+eval (DismissQrPopup) state = continue state {props { upiQrView = false}}
+
+eval (PaymentInfo) state = continue state {props { paymentInfoView = true }}
+
+eval (LeftKeyAction) state = exit $ SubscriptionScreen
+
+eval (DownloadQR (PrimaryButton.OnClick)) state = do 
+  _ <- pure $ downloadQR $ getNewIDWithTag "QRpaymentview"
+  continueWithCmd state [pure DismissQrPopup]
+
+eval (ShareQR (PrimaryButton.OnClick)) state = do 
+  -- subs-branch
+  -- _ <- pure $ shareImageMessage "Hey!\nPay your Namma Yatri fare directly to me ..." (getNewIDWithTag "QRpaymentview")
+  continue state
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
@@ -315,7 +353,9 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleColor = linkedVehicle.color,
                                       vehicleSelected = getDowngradeOptionsSelected  (SA.GetDriverInfoResp driverProfileResp),
                                       driverAlternateNumber = driverProfileResp.alternateNumber ,
-                                      driverGender = driverProfileResp.gender
+                                      driverGender = driverProfileResp.gender,
+                                      payerVpa = fromMaybe "" driverProfileResp.payerVpa,
+                                      autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
                                       }})
 
 eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
@@ -473,6 +513,10 @@ eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state 
 eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}}
 
 eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{activateOrDeactivateRcView=false}}
+
+eval (PaymentInfoPopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ paymentInfoView = false}}
+
+eval (PaymentInfoPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{ paymentInfoView = false}}
 
 eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ DeletingRc state
 
