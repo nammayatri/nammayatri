@@ -771,7 +771,7 @@ export const saveSuggestionDefs = function(key){
 export const getSuggestionsfromLocal = function(key) {
     try {
       if(!window.suggestions) {
-        window.suggestions = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS"));
+        window.suggestions = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS_MAP"));
       }
       let suggestions = window.suggestions;
       let keys = suggestions[key];

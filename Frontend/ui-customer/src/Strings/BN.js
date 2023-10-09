@@ -633,5 +633,14 @@ const bengaliStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "ENABLE_LOCATION_PERMISSION_TO" : "রাইড অনুসন্ধান করার জন্য অবস্থানের অনুমতি সক্ষম করুন",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "সেই জায়গা যেগুলি আপনি পছন্দ করতে পারেন",
+  "SUGGESTED_DESTINATION": "প্রস্তুতির গন্তব্য",
+  "RECENT_RIDES": "সাম্প্রতিক যাত্রা",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "আপনার পছন্দের যাত্রার জন্য এক ক্লিক বুকিং!",
+  "VIEW_MORE": "আরও দেখুন",
+  "VIEW_LESS": "কম দেখুন",
+  "HAVE_A_REFFERAL" : "আপনার কাছে কোন রেফারেল আছে?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "আপনার প্রস্তাবিত গন্তব্য এবং সাম্প্রতিক রাইড এখানে দেখানো হবে",
+  "WELCOME_TO_NAMMA_YATRI_" : "নম্মা যাত্রীতে আপনাকে স্বাগতম!",
 }

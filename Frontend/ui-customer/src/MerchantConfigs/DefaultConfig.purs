@@ -113,6 +113,18 @@ config =
           title : "Paytm",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
+  , suggestedDestinations  : {
+          frequencyWeight  : 0.7,
+          itemsToShow  : 5,
+          geohashPrecision  : 7,
+          geohashLimitForMap : 60,
+          itemLimitForMap : 30
+      }
+  , recentTrips : {
+          itemsToShow  : 5,
+          rideSuggestionRadius  : 0.015,
+          itemLimitForMap : 30
+      }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
   , showGenderBanner : true

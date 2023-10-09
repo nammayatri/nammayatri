@@ -613,5 +613,14 @@ const kannadaStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ", 
   "SENT_OTP_VIA_SMS" : "SMS ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ",
   "ENABLE_LOCATION_PERMISSION_TO" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕಲು ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "ನೀವು ಹೋಗಲು ಇಷ್ಟಪಡಬಹುದಾದ ಸ್ಥಳಗಳು",
+  "SUGGESTED_DESTINATION": "ಸೂಚಿತ ಗಂತವ್ಯಗಳು",
+  "RECENT_RIDES": "ಇತ್ತೀಚಿನ ಸವಾರಿಗಳು",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "ನಿಮ್ಮ ಇಷ್ಟಪಟ್ಟ ಪ್ರಯಾಣಗಳಿಗಾಗಿ ಒಂದು ಕ್ಲಿಕ್ ಬುಕಿಂಗ್!",
+  "VIEW_MORE": "ಹೆಚ್ಚು ವೀಕ್ಷಿಸಿ",
+  "VIEW_LESS": "ಕಡಿಮೆ ವೀಕ್ಷಿಸಿ",
+  "HAVE_A_REFFERAL": "ನಿಮಗೆ ರೆಫರಲ್ ಕೋಡ್ ಇದೆಯೇ?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "ನಿಮ್ಮ ಸೂಚಿತ ಗಂತವ್ಯಗಳು ಮತ್ತು ಇತ್ತೀಚಿನ ಸವಾರಿಗಳು ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ",
+  "WELCOME_TO_NAMMA_YATRI_" : "ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸುಸ್ವಾಗತ",
 }

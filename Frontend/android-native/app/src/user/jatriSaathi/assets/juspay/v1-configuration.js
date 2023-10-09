@@ -223,6 +223,18 @@ window.getMerchantConfig = function () {
       "title" : "",
       "imageUrl" : ""
   }
+  , "suggestedDestinations" : {
+    "frequencyWeight" : 0.7
+  , "itemsToShow" : 5
+  , "geohashPrecision" : 7
+  , "geohashLimitForMap" : 60
+  , "itemLimitForMap" : 30
+  }
+  , "recentTrips" : {
+      "itemsToShow" : 5
+    , "rideSuggestionRadius" : 0.015
+    , "itemLimitForMap" : 30
+  }
   , "showDeleteAccount" : true
   , "fontName" : "PlusJakartaSans"
   , "fontKannada" : "NotoSansKannada"

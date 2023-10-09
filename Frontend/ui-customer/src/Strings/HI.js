@@ -617,5 +617,15 @@ const hindiStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
   "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
   "ENABLE_LOCATION_PERMISSION_TO" : "सवारी खोजने के लिए स्थान अनुमति सक्षम करें",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
+  "SENT_OTP_VIA_SMS" : "एसएमएस के माध्यम से ओटीपी भेजें",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO" : "वे स्थान जहाँ आप जाना पसंद कर सकते हैं।",
+  "SUGGESTED_DESTINATION" : "सुझाए गए गंतव्य",
+  "RECENT_RIDES" : "हाल की सवारी",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS" : "आपकी पसंदीदा यात्राओं के लिए एक क्लिक बुकिंग!",
+  "VIEW_MORE" : "और देखें",
+  "VIEW_LESS" : "कम देखें",
+  "HAVE_A_REFFERAL" : "क्या आपके पास रेफरल है?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "आपके सुझाए गए गंतव्य और हाल की सवारियां यहां दिखाई देंगी",
+  "WELCOME_TO_NAMMA_YATRI_" : "नम्मा यात्री में आपका स्वागत है!",
 }

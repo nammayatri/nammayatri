@@ -617,5 +617,14 @@ const englishStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "OTP Sent via Whatsapp", 
   "SENT_OTP_VIA_SMS" : "OTP Sent via SMS",
   "ENABLE_LOCATION_PERMISSION_TO" : "Enable Location Permission to Search for Rides", 
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO" : "Places you might like to go to.",
+  "SUGGESTED_DESTINATION" : "Suggested Destinations",
+  "RECENT_RIDES" : "Recent Rides",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS" : "One click booking for your favourite journeys!",
+  "VIEW_MORE" : "View More",
+  "VIEW_LESS" : "View Less",
+  "HAVE_A_REFFERAL" : "Have a Referral?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "Your suggested destinations and recent rides will appear here",
+  "WELCOME_TO_NAMMA_YATRI_" : "Welcome to Namma Yatri!",
 }

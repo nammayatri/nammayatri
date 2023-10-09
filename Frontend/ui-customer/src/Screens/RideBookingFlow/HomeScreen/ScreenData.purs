@@ -29,6 +29,7 @@ import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..))
+import Data.Map as Map 
 
 initData :: HomeScreenState
 initData = {
@@ -47,6 +48,9 @@ initData = {
     , locationList : []
     , savedLocations : []
     , recentSearchs : { predictionArray : []}
+    , destinationSuggestions : []
+    , tripSuggestions: []
+    , suggestionsData : { suggestionsMap: Map.empty }
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
@@ -130,6 +134,7 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , isHomescreenExpanded : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false
@@ -222,6 +227,15 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , isRepeatRide : false
+    , currSlideIndex : 0.0
+    , suggestionsListExpanded : false
+    , homescreenHeaderExpanded : false
+    , repeatRideTimer : ""
+    , repeatRideTimerId : ""
+    , homeScrollTimerId : ""
+    , homeScrollTimer : ""
+    , homescreenSheetState : COLLAPSED
     }
 }
 
@@ -371,7 +385,8 @@ dummyLocationName = PlaceName {
     "lon" : 0.0
   },
   "plusCode" : Nothing,
-  "addressComponents" : []
+  "addressComponents" : [],
+  "placeId" : Just ""
 }
 
 specialLocation :: SpecialLocation

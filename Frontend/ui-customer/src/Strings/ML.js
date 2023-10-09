@@ -630,5 +630,14 @@ const malayalamStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "ഒടിപി വാട്ട്‌സ്ആപ്പ് വഴി അയച്ചു", 
   "SENT_OTP_VIA_SMS" : "എസ്എംഎസ് വഴി OTP അയച്ചു",
   "ENABLE_LOCATION_PERMISSION_TO" : "റൈഡുകൾക്കായി തിരയാൻ ലൊക്കേഷൻ അനുമതി പ്രവർത്തനക്ഷമമാക്കുക",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "സവാരികൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് നമ്മ യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്‌തമാക്കുക."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "സവാരികൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് നമ്മ യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്‌തമാക്കുക.",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "നിനക്ക് ഇഷ്ടപ്പെടുകയായ സ്ഥലങ്ങൾ",
+  "SUGGESTED_DESTINATION": "സൂചിപ്പിച്ച ഗോളാഭ്യന്തരങ്ങൾ",
+  "RECENT_RIDES": "ഏറ്റവും പുതിയ സൈക്കിൾകൾ",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "നിനക്ക് ഇഷ്ടപ്പെട്ട യാത്രകളിനോട് ഒരു ക്ലിക്ക് ബുക്കിംഗ്!",
+  "VIEW_MORE": "കൂടുതൽ കാണുക",
+  "VIEW_LESS": "കുറഞ്ഞ കാണുക",
+  "HAVE_A_REFFERAL": "ഒരു റഫറൽ കോഡ് ഉണ്ടോ?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "നിങ്ങളുടെ സൂചിപ്പിച്ച ഗോളാഭ്യന്തരങ്ങൾ അവിടെ കാണാൻ കഴിയും",
+  "WELCOME_TO_NAMMA_YATRI_" : "നമ്മ യാത്രിയിലേക്ക് സ്വാഗതം!",
 }

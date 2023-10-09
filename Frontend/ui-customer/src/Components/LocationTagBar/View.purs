@@ -37,6 +37,7 @@ view push state =
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
+ , gravity CENTER 
  ][ linearLayout
     [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 
@@ -50,7 +51,7 @@ view push state =
         , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius 16.0
+        , cornerRadius 8.0
         ][ imageView
             [ width $ V 15
             , height $ V 17

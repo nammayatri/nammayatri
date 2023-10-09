@@ -22,7 +22,7 @@ import Engineering.Helpers.BackTrack (modifyState, getState)
 import Prelude (Unit, bind, ($))
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
-import Screens.Types (MyRidesScreenState, Stage(..))
+import Screens.Types (MyRidesScreenState, Stage(..), Trip(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
@@ -73,6 +73,36 @@ updateRideDetails state = do
     , currentStage = FindingEstimate
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
+    , isBanner = globalState.homeScreen.props.isBanner
+    }
+    })
+
+updateRepeatRideDetails :: Trip -> FlowBT String Unit
+updateRepeatRideDetails state = do 
+  (GlobalState globalState) <- getState
+  modifyScreenState $ HomeScreenStateType 
+    (\homeScreen -> HomeScreen.initData{ 
+    data {
+      source =  state.source
+    , destination = state.destination
+    , locationList = homeScreen.data.locationList
+    , sourceAddress = state.sourceAddress
+    , savedLocations = homeScreen.data.savedLocations
+    , destinationAddress = state.destinationAddress 
+    , settingSideBar {
+        gender = globalState.homeScreen.data.settingSideBar.gender 
+      , email = globalState.homeScreen.data.settingSideBar.email
+    }
+    }
+    , props{
+      sourceSelectedOnMap = true
+    , sourceLat = state.sourceLat
+    , sourceLong = state.sourceLong
+    , destinationLat = state.destLat
+    , destinationLong = state.destLong
+    , currentStage = FindingEstimate
+    , rideRequestFlow = true
+    , isSpecialZone = state.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
     }
     })

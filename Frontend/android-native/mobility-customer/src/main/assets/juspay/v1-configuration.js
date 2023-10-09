@@ -161,6 +161,18 @@ window.getMerchantConfig = function () {
       "title" : "",
       "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
   }
+  , "suggestedDestinations" : {
+    "frequencyWeight" : 0.7
+  , "itemsToShow" : 5
+  , "geohashPrecision" : 7
+  , "geohashLimitForMap" : 60
+  , "itemLimitForMap" : 30
+  }
+  , "recentTrips" : {
+      "itemsToShow" : 5
+    , "rideSuggestionRadius" : 0.015
+    , "itemLimitForMap" : 30
+  }
   , "showDeleteAccount" : false
   , "fontName" : "Montserrat"
   , "fontKannada" : "Montserrat"

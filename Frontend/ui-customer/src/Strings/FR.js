@@ -504,5 +504,14 @@ export function getStringValue(key) {
     "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
     "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
     "ENABLE_LOCATION_PERMISSION_TO": "Activer l'autorisation de localisation pour rechercher des courses",
-   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets."
+   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets.",
+    "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "Les endroits que vous pourriez aimer visiter",
+    "SUGGESTED_DESTINATION": "Destinations suggérées",
+    "RECENT_RIDES": "Trajets récents",
+    "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "Réservation en un clic pour vos voyages préférés",
+    "VIEW_MORE": "Voir plus",
+    "VIEW_LESS": "Voir moins",
+    "HAVE_A_REFFERAL": "Vous avez un code de référence?",
+    "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "Vos destinations suggérées et vos trajets récents apparaîtront ici",
+    "WELCOME_TO_NAMMA_YATRI_" : "Bienvenue à Namma Yatri!",
   }
