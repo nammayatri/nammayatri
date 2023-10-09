@@ -125,7 +125,8 @@ runSchedulerM schedulerConfig env action = do
             }
           ( Tables
               { enableKVForWriteAlso = [],
-                enableKVForRead = []
+                enableKVForRead = [],
+                kafkaNonKVTables = []
               }
           )
       )
