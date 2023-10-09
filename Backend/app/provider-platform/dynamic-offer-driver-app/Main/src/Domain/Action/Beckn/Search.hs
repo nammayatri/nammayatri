@@ -14,6 +14,8 @@
 
 module Domain.Action.Beckn.Search
   ( DSearchReq (..),
+    DSearchReqOnDemand' (..),
+    DSearchReqRental' (..),
     DSearchRes (..),
     EstimateInfo (..),
     SpecialZoneQuoteInfo (..),
@@ -71,26 +73,43 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
-data DSearchReq = DSearchReq
-  { messageId :: Text,
-    transactionId :: Text,
-    bapId :: Text,
-    bapUri :: BaseUrl,
-    bapCity :: Context.City,
-    bapCountry :: Context.Country,
-    pickupLocation :: LatLong,
-    pickupTime :: UTCTime,
-    dropLocation :: LatLong,
-    pickupAddress :: Maybe BA.Address,
-    dropAddrress :: Maybe BA.Address,
-    routeDistance :: Maybe Meters,
-    routeDuration :: Maybe Seconds,
-    device :: Maybe Text,
-    customerLanguage :: Maybe Maps.Language,
-    disabilityTag :: Maybe Text,
-    routePoints :: Maybe [LatLong]
-  }
+data DSearchReqOnDemand' =
+  DSearchReqOnDemand'
+    { messageId :: Text,
+      transactionId :: Text,
+      bapId :: Text,
+      bapUri :: BaseUrl,
+      bapCity :: Context.City,
+      bapCountry :: Context.Country,
+      pickupLocation :: LatLong,
+      pickupTime :: UTCTime,
+      dropLocation :: LatLong,
+      pickupAddress :: Maybe BA.Address,
+      dropAddrress :: Maybe BA.Address,
+      routeDistance :: Maybe Meters,
+      routeDuration :: Maybe Seconds,
+      device :: Maybe Text,
+      customerLanguage :: Maybe Maps.Language,
+      disabilityTag :: Maybe Text,
+      routePoints :: Maybe [LatLong]
+    }
+data  DSearchReqRental' =
+  DSearchReqRental'
+     { messageId :: Text,
+      transactionId :: Text,
+      bapId :: Text,
+      bapUri :: BaseUrl,
+      bapCity :: Context.City,
+      bapCountry :: Context.Country,
+      pickupLocation :: LatLong,
+      pickupTime :: UTCTime,
+      pickupAddress :: Maybe BA.Address,
+      device :: Maybe Text,
+      customerLanguage :: Maybe Maps.Language,
+      disabilityTag :: Maybe Text
+    }
 
+data DSearchReq = DSearchReqOnDemand DSearchReqOnDemand' | DSearchReqRental DSearchReqRental'
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
   { quoteId :: Id DQuoteSpecialZone.QuoteSpecialZone,
     vehicleVariant :: DVeh.Variant,
@@ -136,65 +155,69 @@ getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
   return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
 handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
-handler merchant sReq = do
-  searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
-  let fromLocationLatLong = sReq.pickupLocation
-      toLocationLatLong = sReq.dropLocation
-      merchantId = merchant.id
-  result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
-  logDebug $ "distance: " <> show result.distance
-  sessiontoken <- generateGUIDText
-  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
-  let routeInfo = RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
+handler merchant sReq' =
+  case sReq' of
+    DSearchReqOnDemand sReq -> do
+      searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
+      let fromLocationLatLong = sReq.pickupLocation
+          toLocationLatLong = sReq.dropLocation
+          merchantId = merchant.id
+      result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
+      logDebug $ "distance: " <> show result.distance
+      sessiontoken <- generateGUIDText
+      fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
+      toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
+      let routeInfo = RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
 
-  allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
-  let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
-  (quotes, mbEstimateInfos) <-
-    case allFarePoliciesProduct.flow of
-      DFareProduct.RIDE_OTP -> do
-        whenJustM
-          (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
-          (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
-        triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
-        _ <- QSearchRequestSpecialZone.createSearchRequestSpecialZone searchRequestSpecialZone
-        Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
-        now <- getCurrentTime
-        let listOfVehicleVariants = listVehicleVariantHelper farePolicies
-        listOfSpecialZoneQuotes <- do
-          for listOfVehicleVariants $ \farePolicy -> do
-            fareParams <-
-              calculateFareParameters
-                CalculateFareParametersParams
-                  { farePolicy = farePolicy,
-                    distance = result.distance,
-                    rideTime = sReq.pickupTime,
-                    waitingTime = Nothing,
-                    driverSelectedFare = Nothing,
-                    customerExtraFee = Nothing,
-                    nightShiftCharge = Nothing
-                  }
-            buildSpecialZoneQuote
-              searchRequestSpecialZone
-              fareParams
-              merchant.id
-              result.distance
-              farePolicy.vehicleVariant
-              result.duration
-              allFarePoliciesProduct.specialLocationTag
-        for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
-        return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
-  merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
-  let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
-  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
+      allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
+      let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
+      (quotes, mbEstimateInfos) <-
+        case allFarePoliciesProduct.flow of
+          DFareProduct.RIDE_OTP -> do
+            whenJustM
+              (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
+              (\_ -> throwError $ InvalidRequest "Duplicate Search request")
+            searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
+            triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
+            _ <- QSearchRequestSpecialZone.createSearchRequestSpecialZone searchRequestSpecialZone
+            Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
+            now <- getCurrentTime
+            let listOfVehicleVariants = listVehicleVariantHelper farePolicies
+            listOfSpecialZoneQuotes <- do
+              for listOfVehicleVariants $ \farePolicy -> do
+                fareParams <-
+                  calculateFareParameters
+                    CalculateFareParametersParams
+                      { farePolicy = farePolicy,
+                        distance = result.distance,
+                        rideTime = sReq.pickupTime,
+                        waitingTime = Nothing,
+                        driverSelectedFare = Nothing,
+                        customerExtraFee = Nothing,
+                        nightShiftCharge = Nothing
+                      }
+                buildSpecialZoneQuote
+                  searchRequestSpecialZone
+                  fareParams
+                  merchant.id
+                  result.distance
+                  farePolicy.vehicleVariant
+                  result.duration
+                  allFarePoliciesProduct.specialLocationTag
+            for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
+            return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
+          DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
+      merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+      let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
+      buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
+    DSearchReqRental DSearchReqRental' {..} -> do
+      undefined
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
-    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
+    buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
       driverPoolCfg <- getDriverPoolConfig merchant.id result.distance
-      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo
+      estimateInfos <- buildEstimatesInfos onDemandSearchRequest fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo
       return (Nothing, Just estimateInfos)
 
     selectFarePolicy distance farePolicies = do
@@ -215,6 +238,7 @@ handler merchant sReq = do
         Just dp -> return (estimate, dp)
 
     buildEstimatesInfos ::
+      DSearchReqOnDemand' ->
       DLoc.Location ->
       DLoc.Location ->
       DriverPoolConfig ->
@@ -224,7 +248,7 @@ handler merchant sReq = do
       DFareProduct.Area ->
       RouteInfo ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo = do
+    buildEstimatesInfos onDemandSearchRequest fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo = do
       let merchantId = merchant.id
       if null farePolicies
         then do
@@ -247,9 +271,9 @@ handler merchant sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
-          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
+          searchReq <- buildSearchRequest onDemandSearchRequest merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
           Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
-          estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
+          estimates <- mapM (SHEst.buildEstimate searchReq.id onDemandSearchRequest.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
 
           forM_ estimates $ \est -> do
@@ -259,7 +283,7 @@ handler merchant sReq = do
 
           let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
               tuplesOfEstAndDBR :: [(DEst.Estimate, NonEmpty DriverPoolResult)] = zipMatched estimates mapOfDPRByVariant
-          logDebug $ "bap uri: " <> show sReq.bapUri
+          logDebug $ "bap uri: " <> show onDemandSearchRequest.bapUri
           return $ makeEstimateInfo <$> tuplesOfEstAndDBR
 
     makeEstimateInfo :: (DEst.Estimate, NonEmpty DriverPoolResult) -> EstimateInfo
@@ -297,7 +321,7 @@ buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchM
 buildSearchRequest ::
   ( MonadFlow m
   ) =>
-  DSearchReq ->
+  DSearchReqOnDemand' ->
   Id DM.Merchant ->
   DLoc.Location ->
   DLoc.Location ->
@@ -306,7 +330,7 @@ buildSearchRequest ::
   Maybe Text ->
   DFareProduct.Area ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
+buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
@@ -326,7 +350,7 @@ buildSearchRequestSpecialZone ::
     MonadReader r m,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
-  DSearchReq ->
+  DSearchReqOnDemand' ->
   Id DM.Merchant ->
   DLoc.Location ->
   DLoc.Location ->
@@ -334,7 +358,7 @@ buildSearchRequestSpecialZone ::
   Seconds ->
   DFareProduct.Area ->
   m DSRSZ.SearchRequestSpecialZone
-buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration area = do
+buildSearchRequestSpecialZone DSearchReqOnDemand' {..} providerId fromLocation toLocation estimatedDistance estimatedDuration area = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -389,12 +413,13 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
     }
 
 validateRequest :: Id DM.Merchant -> DSearchReq -> Flow DM.Merchant
-validateRequest merchantId sReq = do
+validateRequest merchantId sReq' = do
+  let (fromLocationLatLong,toLocationLatLong) = case sReq' of
+        DSearchReqOnDemand sReq -> (sReq.pickupLocation,Just sReq.dropLocation)
+        DSearchReqRental sReq -> (sReq.pickupLocation,Nothing)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   unless merchant.enabled $ throwError AgencyDisabled
-  let fromLocationLatLong = sReq.pickupLocation
-      toLocationLatLong = sReq.dropLocation
-  unlessM (rideServiceable' merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
+  unlessM (rideServiceable' merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong toLocationLatLong) $
     throwError RideNotServiceable
   return merchant
   where
