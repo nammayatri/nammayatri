@@ -35,7 +35,7 @@ createBooking :: MonadFlow m => Booking -> m ()
 createBooking = createWithKV
 
 create :: MonadFlow m => Booking -> m ()
-create dBooking = QBBL.create dBooking.fromLocation >> QBBL.create dBooking.toLocation >> createBooking dBooking
+create dBooking = QBBL.create dBooking.fromLocation >> forM_ (dBooking.toLocation) QBBL.create >> createBooking dBooking
 
 findById :: MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -109,7 +109,9 @@ findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.sta
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> show fromLocationId)
-    tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> show toLocationId)
+    tl <- case toLocationId of
+      Just locId -> Just <$> QBBL.findById (Id locId) >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> show toLocationId)
+      Nothing -> pure Nothing
     fp <- QueriesFP.findById (Id fareParametersId)
     pUrl <- parseBaseUrl bapUri
     if isJust fp
@@ -173,7 +175,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.bapCity = bapCity,
         BeamB.bapCountry = bapCountry,
         BeamB.fromLocationId = getId fromLocation.id,
-        BeamB.toLocationId = getId toLocation.id,
+        BeamB.toLocationId = toLocation <&> (\l -> getId l.id),
         BeamB.vehicleVariant = vehicleVariant,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,

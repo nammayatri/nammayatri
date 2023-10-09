@@ -75,7 +75,8 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             device = device,
             createdAt = createdAt,
             specialLocationTag = specialLocationTag,
-            autoAssignEnabled = autoAssignEnabled
+            autoAssignEnabled = autoAssignEnabled,
+            quoteId = quoteId
           }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
@@ -98,5 +99,6 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.device = device,
         BeamSR.createdAt = createdAt,
         BeamSR.autoAssignEnabled = autoAssignEnabled,
-        BeamSR.specialLocationTag = specialLocationTag
+        BeamSR.specialLocationTag = specialLocationTag,
+        BeamSR.quoteId = quoteId
       }

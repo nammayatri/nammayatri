@@ -32,6 +32,7 @@ instance ToSchema Order where
 
 data BookingStatus
   = NEW_BOOKING
+  | SCHEDULED
   | TRIP_ASSIGNED
   | BOOKING_COMPLETED
   | BOOKING_CANCELLED

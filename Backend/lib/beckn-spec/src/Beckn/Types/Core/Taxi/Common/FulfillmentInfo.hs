@@ -60,7 +60,7 @@ data FulfillmentType
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
-    end :: EndInfo,
+    end :: Maybe EndInfo,
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,

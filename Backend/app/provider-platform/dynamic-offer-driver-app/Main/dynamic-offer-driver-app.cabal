@@ -236,6 +236,7 @@ library
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.QuoteRental
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken

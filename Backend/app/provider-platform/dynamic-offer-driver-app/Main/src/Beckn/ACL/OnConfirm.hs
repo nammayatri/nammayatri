@@ -18,6 +18,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DConfirm
+import qualified Domain.Types.Booking as Dconfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import Kernel.Prelude
 import Kernel.Types.Beckn.DecimalValue
@@ -36,9 +37,11 @@ buildOnConfirmMessage res = do
       currency = "INR"
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
-      otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+      otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId) --TODO:RENTAL Next line toLoc
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation (fromJust res.toLocation) otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation (fromJust res.toLocation) booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+    Dconfirm.RentalBooking -> do
+      return $ mkRentalFulfillmentInfo res.fromLocation booking.quoteId OnConfirm.RIDE res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant --TODO:RENTAL Need to check this
   return $
     OnConfirm.OnConfirmMessage
       { order =
@@ -166,6 +169,48 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
                 phone = Nothing,
                 image = Nothing
               }
+    }
+
+mkRentalFulfillmentInfo :: DBL.BookingLocation -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkRentalFulfillmentInfo fromLoc fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
+  OnConfirm.FulfillmentInfo
+    { id = fulfillmentId,
+      _type = fulfillmentType,
+      state =
+        OnConfirm.FulfillmentState
+          { descriptor =
+              OnConfirm.Descriptor
+                { code = Just "NEW",
+                  short_desc = Nothing
+                }
+          },
+      start =
+        OnConfirm.StartInfo
+          { location = mklocation fromLoc,
+            authorization = Nothing
+          },
+      end = Nothing,
+      vehicle =
+        OnConfirm.Vehicle
+          { category = vehicleVariant
+          },
+      customer =
+        OnConfirm.Customer
+          { contact =
+              OnConfirm.Contact
+                { phone =
+                    OnConfirm.Phone
+                      { phoneNumber = riderPhoneNumber,
+                        phoneCountryCode = riderMobileCountryCode
+                      }
+                },
+            person =
+              mbRiderName <&> \riderName ->
+                OnConfirm.OrderPerson
+                  { name = riderName
+                  }
+          },
+      agent = Nothing
     }
 
 mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo

@@ -50,7 +50,7 @@ data BookingT f = BookingT
     startTime :: B.C f Time.UTCTime,
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f Text,
-    toLocationId :: B.C f Text,
+    toLocationId :: B.C f (Maybe Text),
     vehicleVariant :: B.C f Veh.Variant,
     estimatedDistance :: B.C f Meters,
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),

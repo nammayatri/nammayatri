@@ -71,19 +71,21 @@ mkOnInitMessage res = do
                             },
                         authorization = Nothing
                       },
-                  end =
-                    Just
-                      OnInit.StopInfo
-                        { location =
-                            OnInit.Location
-                              { gps =
-                                  OnInit.Gps
-                                    { lat = res.booking.toLocation.lat,
-                                      lon = res.booking.toLocation.lon
-                                    },
-                                address = castAddress res.booking.toLocation.address
-                              }
-                        },
+                  end = case rb.bookingType of
+                    DRB.RentalBooking -> Nothing
+                    _ ->
+                      Just
+                        OnInit.StopInfo
+                          { location =
+                              OnInit.Location
+                                { gps =
+                                    OnInit.Gps
+                                      { lat = (fromJust res.booking.toLocation).lat, --TODO:RENTAL FIX ME
+                                        lon = (fromJust res.booking.toLocation).lon
+                                      },
+                                  address = castAddress (fromJust res.booking.toLocation).address
+                                }
+                          },
                   vehicle =
                     OnInit.Vehicle
                       { category = vehicleVariant
@@ -142,6 +144,7 @@ mkOnInitMessage res = do
     buildFulfillmentType = \case
       DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+      DRB.RentalBooking -> OnInit.RIDE_OTP
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->

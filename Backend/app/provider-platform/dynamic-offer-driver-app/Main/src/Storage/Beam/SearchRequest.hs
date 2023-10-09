@@ -55,7 +55,8 @@ data SearchRequestT f = SearchRequestT
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.UTCTime,
+    quoteId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

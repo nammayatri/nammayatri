@@ -148,19 +148,23 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
             { authorization =
                 case booking.bookingType of
                   DRB.SpecialZoneBooking -> Just authorization
-                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+                  DRB.NormalBooking -> Just authorization
+                  DRB.RentalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
               location =
                 RideAssignedOU.Location
                   { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
                   }
             },
         end =
-          RideAssignedOU.EndInfo
-            { location =
-                RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon}
-                  }
-            },
+          booking.toLocation
+            <&> ( \toLoc ->
+                    RideAssignedOU.EndInfo
+                      { location =
+                          RideAssignedOU.Location
+                            { gps = RideAssignedOU.Gps {lat = toLoc.lat, lon = toLoc.lon}
+                            }
+                      }
+                ),
         agent,
         _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
         vehicle = veh,

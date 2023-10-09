@@ -122,7 +122,9 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion mbDevice oneWay
-    RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion mbDevice rental
+    RentalSearch rental -> do
+      logDebug "We are searching Rentals !!!!!!!!"
+      rentalSearch personId mbBundleVersion mbClientVersion mbDevice rental
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::

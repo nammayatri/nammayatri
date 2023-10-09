@@ -36,6 +36,7 @@ import Tools.Beam.UtilsTH
 
 data BookingStatus
   = NEW
+  | SCHEDULED
   | TRIP_ASSIGNED
   | COMPLETED
   | CANCELLED
@@ -72,7 +73,7 @@ data Booking = Booking
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,
-    toLocation :: DLoc.BookingLocation,
+    toLocation :: Maybe DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
@@ -87,7 +88,7 @@ data Booking = Booking
   }
   deriving (Generic)
 
-data BookingType = SpecialZoneBooking | NormalBooking
+data BookingType = SpecialZoneBooking | NormalBooking | RentalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BookingType)

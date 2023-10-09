@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import Data.Maybe (fromJust)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
@@ -236,16 +237,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          pure $ getCoordinates booking.toLocation
+          pure $ getCoordinates $ fromJust booking.toLocation --TODO:RENTAL FIX ME
     CronJobReq cronJobReq -> do
       logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
       case cronJobReq.point of
         Just point -> pure point
         Nothing -> do
-          pure $ getCoordinates booking.toLocation
+          pure $ getCoordinates $ fromJust booking.toLocation --TODO:RENTAL FIX ME
     CallBasedReq _ -> do
-      pure $ getCoordinates booking.toLocation
-
+      pure $ getCoordinates $ fromJust booking.toLocation --TODO:RENTAL FIX ME
   goHomeConfig <- CQGHC.findByMerchantId booking.providerId
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
 
@@ -382,7 +382,7 @@ isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
+      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates $ fromJust booking.toLocation) tripEndPoint --TODO:RENTAL --FIX ME
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
       logTagInfo "Locations differences" $

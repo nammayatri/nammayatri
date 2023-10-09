@@ -208,7 +208,7 @@ fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
 
 fetchToLocationIDFromBooking :: [Booking.Booking] -> [Id BookingLocation]
-fetchToLocationIDFromBooking = map (.toLocation.id)
+fetchToLocationIDFromBooking = map (\a -> (fromJust a.toLocation).id) --TODO:RENTAL FIX ME
 
 fetchQuoteIdFromDriverQuotes :: [DriverQuote] -> [Text]
 fetchQuoteIdFromDriverQuotes = map (.id.getId)

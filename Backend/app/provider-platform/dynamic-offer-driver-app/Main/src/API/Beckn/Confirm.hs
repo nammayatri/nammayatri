@@ -56,10 +56,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
       let context = req.context
       now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+      (transporter, confirmQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+          dConfirmRes <- DConfirm.handler transporter dConfirmReq confirmQuote
           case dConfirmRes.booking.bookingType of
             DBooking.NormalBooking -> do
               ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
@@ -76,6 +76,12 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                     BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
               DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
             DBooking.SpecialZoneBooking -> do
+              fork "on_confirm/on_update" $ do
+                handle (errHandler' dConfirmRes transporter) $ do
+                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                  void $
+                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+            DBooking.RentalBooking -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler' dConfirmRes transporter) $ do
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes

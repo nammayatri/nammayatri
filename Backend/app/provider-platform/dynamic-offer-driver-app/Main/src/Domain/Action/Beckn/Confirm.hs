@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Confirm where
 
@@ -84,7 +85,7 @@ data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
     fromLocation :: DBL.BookingLocation,
-    toLocation :: DBL.BookingLocation,
+    toLocation :: Maybe DBL.BookingLocation,
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
@@ -94,6 +95,11 @@ data DConfirmRes = DConfirmRes
     driverId :: Maybe Text,
     driverName :: Maybe Text
   }
+
+data ConfirmQuoteDetails
+  = ONEWAY_QUOTE_DETAILS (DPerson.Person, DDQ.DriverQuote)
+  | SPECIAL_ZONE_QUOTE_DETAILS DQSZ.QuoteSpecialZone
+  | RENTAL_QUOTE_DETAILS -- QuoteRental --TODO:RENTAL Add QuoteRental data type
 
 handler ::
   ( CacheFlow m r,
@@ -113,7 +119,7 @@ handler ::
   ) =>
   DM.Merchant ->
   DConfirmReq ->
-  Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone ->
+  ConfirmQuoteDetails ->
   m DConfirmRes
 handler transporter req quote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
@@ -124,7 +130,7 @@ handler transporter req quote = do
   case booking.bookingType of
     DRB.NormalBooking -> do
       case quote of
-        Left (driver, driverQuote) -> do
+        ONEWAY_QUOTE_DETAILS (driver, driverQuote) -> do
           cfg <- QGHC.findByMerchantId transporter.id
           ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id transporter.id (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
 
@@ -158,7 +164,7 @@ handler transporter req quote = do
           QRB.updateRiderId booking.id riderDetails.id
           QRideD.create rideDetails
           QBL.updateAddress booking.fromLocation.id req.fromAddress
-          QBL.updateAddress booking.toLocation.id req.toAddress
+          QBL.updateAddress (fromJust booking.toLocation).id req.toAddress
           QDQ.setInactiveBySTId driverQuote.searchTryId
           QSRD.setInactiveBySTId driverQuote.searchTryId
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
@@ -193,17 +199,16 @@ handler transporter req quote = do
                 driverName = Just driver.firstName,
                 vehicleVariant = req.vehicleVariant
               }
-        Right _ -> throwError AccessDenied
+        _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
       case quote of
-        Left _ -> throwError AccessDenied
-        Right _ -> do
+        SPECIAL_ZONE_QUOTE_DETAILS _ -> do
           otpCode <- generateOTPCode
           QRB.updateSpecialZoneOtpCode booking.id otpCode
           when isNewRider $ QRD.create riderDetails
           QRB.updateRiderId booking.id riderDetails.id
           QBL.updateAddress booking.fromLocation.id req.fromAddress
-          QBL.updateAddress booking.toLocation.id req.toAddress
+          QBL.updateAddress (fromJust booking.toLocation).id req.toAddress
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
           QBE.logRideConfirmedEvent booking.id
 
@@ -224,6 +229,12 @@ handler transporter req quote = do
                 driverName = Nothing,
                 vehicleVariant = req.vehicleVariant
               }
+        _ -> throwError AccessDenied
+    DRB.RentalBooking -> do
+      case quote of
+        RENTAL_QUOTE_DETAILS -> do
+          undefined --TODO:RENTAL Need to add part of rental
+        _ -> throwError AccessDenied
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -407,7 +418,7 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
-  m (DM.Merchant, Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone)
+  m (DM.Merchant, ConfirmQuoteDetails) --TODO:RENTAL Make a new data type here
 validateRequest subscriber transporterId req now = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
@@ -425,10 +436,12 @@ validateRequest subscriber transporterId req now = do
       unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
         cancelBooking booking (Just driver) transporter
         throwError $ QuoteExpired driverQuote.id.getId
-      return (transporter, Left (driver, driverQuote))
+      return (transporter, ONEWAY_QUOTE_DETAILS (driver, driverQuote))
     DRB.SpecialZoneBooking -> do
       quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       unless (quoteSpecialZone.validTill > now) $ do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
-      return (transporter, Right quoteSpecialZone)
+      return (transporter, SPECIAL_ZONE_QUOTE_DETAILS quoteSpecialZone)
+    DRB.RentalBooking -> do
+      undefined --TODO:RENTAL find the quote from the QuoteRental table

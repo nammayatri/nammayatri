@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Init where
 
@@ -68,7 +69,7 @@ data InitReq = InitReq
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
-data InitTypeReq = InitSpecialZoneReq | InitNormalReq
+data InitTypeReq = InitSpecialZoneReq | InitNormalReq | InitRentalReq
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
@@ -77,6 +78,11 @@ data InitRes = InitRes
     driverName :: Maybe Text,
     driverId :: Maybe Text
   }
+
+data ValidatedInitRequest
+  = ONE_WAY_INIT (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry)
+  | SPECIAL_ZONE_INIT (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone)
+  | RENTAL_INIT --TODO:RENTAL -- have to make this
 
 buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
 buildBookingLocation DLoc.SearchReqLocation {..} = do
@@ -125,6 +131,7 @@ cancelBooking booking transporterId = do
             driverDistToPickup = Nothing
           }
 
+--TODO:RENTAL -- code the rental part
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -132,9 +139,9 @@ handler ::
   ) =>
   Id DM.Merchant ->
   InitReq ->
-  Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) ->
+  ValidatedInitRequest ->
   m InitRes
-handler merchantId req eitherReq = do
+handler merchantId req validatedReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
 
@@ -146,17 +153,18 @@ handler merchantId req eitherReq = do
   let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
   (booking, driverName, driverId) <- case req.initTypeReq of
     InitNormalReq -> do
-      case eitherReq of
-        Left (driverQuote, searchRequest, searchTry) -> do
+      case validatedReq of
+        ONE_WAY_INIT (driverQuote, searchRequest, searchTry) -> do
           booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.create booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
-        Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
+        SPECIAL_ZONE_INIT _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
+        RENTAL_INIT -> throwError $ InvalidRequest "Can't have rentalQuote in normal booking"
     InitSpecialZoneReq -> do
-      case eitherReq of
-        Right (specialZoneQuote, searchRequest) -> do
+      case validatedReq of
+        SPECIAL_ZONE_INIT (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
           _ <- QRB.create booking
           -- moving route from search request id to booking id
@@ -166,7 +174,15 @@ handler merchantId req eitherReq = do
             Nothing -> logDebug "Unable to get the key"
 
           return (booking, Nothing, Nothing)
-        Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+        ONE_WAY_INIT _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+        RENTAL_INIT -> throwError $ InvalidRequest "Can't have rentalQuote in specialZone booking"
+    InitRentalReq -> do
+      case validatedReq of
+        RENTAL_INIT -> do
+          undefined --TODO:RENTAL --code this part of inserting it in booking table
+        ONE_WAY_INIT _ -> throwError $ InvalidRequest "Can't have driverQuote in rental booking"
+        SPECIAL_ZONE_INIT _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in rental booking"
+
   let paymentMethodInfo = req.paymentMethodInfo
   pure InitRes {..}
   where
@@ -216,7 +232,7 @@ handler merchantId req eitherReq = do
             createdAt = now,
             updatedAt = now,
             fromLocation,
-            toLocation,
+            toLocation = Just toLocation,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
@@ -238,7 +254,7 @@ findRandomExophone merchantId = do
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m (Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone))
+validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m ValidatedInitRequest
 validateRequest merchantId req = do
   _ <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
@@ -250,13 +266,15 @@ validateRequest merchantId req = do
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
-      return $ Left (driverQuote, searchRequest, searchTry)
+      return $ ONE_WAY_INIT (driverQuote, searchRequest, searchTry)
     InitSpecialZoneReq -> do
       specialZoneQuote <- QSZoneQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      return $ Right (specialZoneQuote, searchRequest)
+      return $ SPECIAL_ZONE_INIT (specialZoneQuote, searchRequest)
+    InitRentalReq -> do
+      undefined -- TODO:RENTAL --valid this for Rental
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
 compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =

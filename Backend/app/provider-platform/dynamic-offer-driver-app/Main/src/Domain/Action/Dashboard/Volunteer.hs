@@ -49,7 +49,7 @@ bookingInfo merchantShortId otpCode = do
       Common.BookingInfoResponse
         { bookingId = cast id,
           fromLocation = buildBookingLocation fromLocation,
-          toLocation = buildBookingLocation toLocation,
+          toLocation = buildBookingLocation <$> toLocation,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,

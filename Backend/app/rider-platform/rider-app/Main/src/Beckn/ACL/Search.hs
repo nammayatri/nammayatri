@@ -41,7 +41,7 @@ buildOneWaySearchReq ::
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
-    destination
+    (pure destination)
     searchId
     device
     (shortestRouteInfo >>= (.distance))
@@ -60,7 +60,7 @@ buildRentalSearchReq ::
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
-    origin
+    Nothing
     searchId
     Nothing
     Nothing
@@ -73,7 +73,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
   Maybe Text ->
   Maybe Meters ->
@@ -95,7 +95,7 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   Maybe Maps.Language ->
   Maybe Text ->
   Maybe Meters ->
@@ -107,11 +107,7 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
         Search.StartInfo
           { location = mkLocation origin
           }
-      endLocation =
-        Search.StopInfo
-          { location = mkLocation destination
-          }
-
+      endLocation = Search.StopInfo . mkLocation <$> destination
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,

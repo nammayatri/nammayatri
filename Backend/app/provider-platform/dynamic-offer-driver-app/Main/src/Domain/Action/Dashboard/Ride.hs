@@ -244,7 +244,7 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = mkLocationAPIEntity <$> booking.toLocation,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,

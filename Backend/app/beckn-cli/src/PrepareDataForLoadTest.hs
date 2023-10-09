@@ -100,13 +100,14 @@ generateSearchRequest = do
                                   }
                             },
                         end =
-                          API.StopInfo
-                            { location =
-                                API.Location
-                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
-                                    address = Nothing
-                                  }
-                            },
+                          Just $
+                            API.StopInfo
+                              { location =
+                                  API.Location
+                                    { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                      address = Nothing
+                                    }
+                              },
                         tags = Nothing,
                         customer = Nothing
                         -- API.Tags
