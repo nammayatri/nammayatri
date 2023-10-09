@@ -16,33 +16,29 @@ module Engineering.Helpers.Utils where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
-import Data.Time.Duration (Milliseconds(..))
-import Presto.Core.Types.Language.Flow (delay)
-import Effect.Aff (launchAff)
-import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
-import LoaderOverlay.Handler as UI
-import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState)
-import PrestoDOM.Core (terminateUI)
-import Types.App (GlobalState(..))
-import Debug (spy)
-import Engineering.Helpers.Commons (os)
-import Effect (Effect (..))
-import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
-import Data.String (length)
-import Data.String.CodeUnits (charAt)
-import Engineering.Helpers.BackTrack (liftFlowBT)
-import Foreign.Generic (decode, encode)
-import MerchantConfig.Types (AppConfig)
-import MerchantConfig.DefaultConfig as DefaultConfig
-import Types.App (FlowBT)
+import Common.Types.App (MobileNumberValidatorResp(..))
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
-import Common.Types.App (MobileNumberValidatorResp(..))
-import Foreign (Foreign)
-import Effect.Uncurried (mkEffectFn1)
+import Data.Maybe (Maybe(..))
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
+import Data.Time.Duration (Milliseconds(..))
+import Effect (Effect)
+import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
+import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Foreign (Foreign, unsafeToForeign)
+import Foreign.Generic (decode)
+import Helpers.FileProvider.Utils (loadInWindow, mergeObjects)
+import LoaderOverlay.Handler as UI
 import Log (printLog)
+import MerchantConfig.DefaultConfig as DefaultConfig
+import MerchantConfig.Types (AppConfig)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, delay)
+import PrestoDOM.Core (terminateUI)
+import Types.App (FlowBT, GlobalState(..))
 
 
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
@@ -119,6 +115,13 @@ getAppConfigImpl =
     config <- runEffectFn1 getFromWindow key
     case runExcept (decode config) of
       Right obj -> pure obj
-      Left err -> do
-        _ <- pure $ printLog ("Not able to decode config" <> show err) config
-        pure $ DefaultConfig.config
+      Left err1 -> do
+        _ <- pure $ printLog "Not able to decode config" $ "Fallbacks to default config for missing Keys" <> (show err1)
+        mergedObjects <- runEffectFn1 mergeObjects [(unsafeToForeign DefaultConfig.config),config]
+        case runExcept (decode mergedObjects) of
+          Right obj -> do
+            runEffectFn2 loadInWindow key mergedObjects
+            pure obj
+          Left err -> do
+            _ <- pure $ printLog "Not able to decode config not able to  find in default config" (show err)
+            pure $ DefaultConfig.config
