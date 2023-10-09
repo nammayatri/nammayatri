@@ -31,9 +31,6 @@ import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 create :: MonadFlow m => DriverRCAssociation -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
-findById (Id drcaId) = findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]
-
 findAllByDriverId ::
   MonadFlow m =>
   Id Person ->

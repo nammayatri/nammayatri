@@ -94,9 +94,6 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     snd' (_, y, _) = y
     thd' (_, _, z) = z
 
-findById :: MonadFlow m => Id MessageReport -> m (Maybe MessageReport)
-findById (Id id) = findOneWithKV [Se.Is BeamMR.messageId $ Se.Eq id]
-
 findAllMessageWithSeConditionCreatedAtdesc :: MonadFlow m => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
 findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsDb conditions (Se.Desc BeamM.createdAt) Nothing Nothing
 

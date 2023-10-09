@@ -48,9 +48,6 @@ createInitialDriverStats driverId = do
           }
   createWithKV dStats
 
-getTopDriversByIdleTime :: MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
-
 updateIdleTime :: MonadFlow m => Id Driver -> m ()
 updateIdleTime driverId = updateIdleTimes [driverId]
 
@@ -61,9 +58,6 @@ updateIdleTimes driverIds = do
     [ Se.Set BeamDS.idleSince now
     ]
     [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
-
-fetchAll :: MonadFlow m => m [DriverStats]
-fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
 findById :: MonadFlow m => Id Driver -> m (Maybe DriverStats)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
@@ -107,14 +101,11 @@ setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
     Just ds ->
       updateOneWithKV
         [ Se.Set BeamDS.updatedAt now,
-          Se.Set BeamDS.totalRidesAssigned $ (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
+          Se.Set BeamDS.totalRidesAssigned (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
           Se.Set BeamDS.ridesCancelled (Just cancelledCount),
           Se.Set BeamDS.earningsMissed missedEarning
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
-
-getDriversSortedOrder :: MonadFlow m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal = findAllWithOptionsDb [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
 
 setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m) => Id Driver -> Int -> Money -> m ()
 setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount missedEarning = do
@@ -129,6 +120,26 @@ setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount m
           Se.Set BeamDS.earningsMissed (ds.earningsMissed + missedEarning)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m) => Id Driver -> Money -> Money -> Int -> m ()
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEarning increasedBonus tripCount = do
+  now <- getCurrentTime
+  res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
+  case res of
+    Nothing -> pure ()
+    Just ds ->
+      updateOneWithKV
+        [ Se.Set BeamDS.updatedAt now,
+          Se.Set BeamDS.totalEarnings (ds.totalEarnings + increasedEarning),
+          Se.Set BeamDS.bonusEarned (ds.bonusEarned + increasedBonus),
+          Se.Set BeamDS.lateNightTrips (ds.lateNightTrips + tripCount)
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+setMissedEarnings :: (MonadFlow m) => Id Driver -> Money -> m ()
+setMissedEarnings (Id driverId') missedEarnings = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDS.updatedAt now, Se.Set BeamDS.earningsMissed missedEarnings] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 instance FromTType' BeamDS.DriverStats DriverStats where
   fromTType' BeamDS.DriverStatsT {..} = do
@@ -163,23 +174,3 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.earningsMissed = earningsMissed,
         BeamDS.updatedAt = updatedAt
       }
-
-incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m) => Id Driver -> Money -> Money -> Int -> m ()
-incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEarning increasedBonus tripCount = do
-  now <- getCurrentTime
-  res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
-  case res of
-    Nothing -> pure ()
-    Just ds ->
-      updateOneWithKV
-        [ Se.Set BeamDS.updatedAt now,
-          Se.Set BeamDS.totalEarnings (ds.totalEarnings + increasedEarning),
-          Se.Set BeamDS.bonusEarned (ds.bonusEarned + increasedBonus),
-          Se.Set BeamDS.lateNightTrips (ds.lateNightTrips + tripCount)
-        ]
-        [Se.Is BeamDS.driverId (Se.Eq driverId')]
-
-setMissedEarnings :: (MonadFlow m) => Id Driver -> Money -> m ()
-setMissedEarnings (Id driverId') missedEarnings = do
-  now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDS.updatedAt now, Se.Set BeamDS.earningsMissed missedEarnings] [Se.Is BeamDS.driverId (Se.Eq driverId')]

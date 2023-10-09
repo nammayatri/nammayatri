@@ -45,9 +45,6 @@ upsert a@DriverLicense {..} = do
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     else createWithKV a
 
-findById :: MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
-findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
-
 findByDriverId :: MonadFlow m => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
 
