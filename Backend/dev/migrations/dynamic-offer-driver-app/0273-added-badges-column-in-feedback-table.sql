@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN badges TEXT[];

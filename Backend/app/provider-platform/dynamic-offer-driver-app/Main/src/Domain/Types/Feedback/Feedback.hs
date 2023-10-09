@@ -24,6 +24,7 @@ data Feedback = Feedback
     rideId :: Id Ride,
     driverId :: Id Person,
     badge :: Text,
+    badges :: [Text],
     createdAt :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, Eq)

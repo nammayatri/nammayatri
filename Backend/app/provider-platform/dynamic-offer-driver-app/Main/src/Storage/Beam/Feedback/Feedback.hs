@@ -25,6 +25,7 @@ data FeedbackT f = FeedbackT
     driverId :: B.C f Text,
     rideId :: B.C f Text,
     badge :: B.C f Text,
+    badges :: B.C f [Text],
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

@@ -40,6 +40,7 @@ instance FromTType' BeamF.Feedback Feedback where
             rideId = Id rideId,
             driverId = Id driverId,
             badge = badge,
+            badges = badges,
             createdAt = createdAt
           }
 
@@ -50,5 +51,6 @@ instance ToTType' BeamF.Feedback Feedback where
         BeamF.rideId = getId rideId,
         BeamF.driverId = getId driverId,
         BeamF.badge = badge,
+        BeamF.badges = badges,
         BeamF.createdAt = createdAt
       }

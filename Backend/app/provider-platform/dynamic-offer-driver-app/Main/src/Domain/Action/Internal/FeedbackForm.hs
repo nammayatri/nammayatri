@@ -52,11 +52,18 @@ getFeedbackAnswers req = do
 addFeedback :: [Text] -> Id DRide.Ride -> Id DP.Person -> Flow ()
 addFeedback feedbackChipsList rideId driverId = do
   unless (null feedbackChipsList) $ do
-    newFeedbacks <- generateFeedbackList feedbackChipsList
-    QFeedback.createMany newFeedbacks
+    newFeedbacks <- generateFeedback feedbackChipsList
+    QFeedback.create newFeedbacks
   where
-    generateFeedbackList :: MonadFlow m => [Text] -> m [DFeedback.Feedback]
-    generateFeedbackList = mapM (buildFeedback rideId driverId)
+    generateFeedback :: MonadFlow m => [Text] -> m DFeedback.Feedback
+    generateFeedback badges = do
+      id <- Id <$> L.generateGUID
+      now <- getCurrentTime
+      pure $
+        DFeedback.Feedback
+          { createdAt = now,
+            ..
+          }
 
 updateFeedbackBadge :: [Text] -> Id DP.Person -> Flow ()
 updateFeedbackBadge feedbackChipsList driverId = do
@@ -73,8 +80,9 @@ updateFeedbackBadge feedbackChipsList driverId = do
           newFeedbackBadge <- buildFeedbackBadge driverId badge
           QFeedbackBadge.createFeedbackBadge newFeedbackBadge
 
-buildFeedback :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Text -> m DFeedback.Feedback
-buildFeedback rideId driverId badge = do
+buildFeedback :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> [Text] -> m DFeedback.Feedback
+buildFeedback rideId driverId badges = do
+  -- handle badge
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   pure $
