@@ -2368,6 +2368,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/Kafka-pushing-non-KV-table-data-to-kafka",
         "repo": "shared-kernel",
         "type": "github"
       }

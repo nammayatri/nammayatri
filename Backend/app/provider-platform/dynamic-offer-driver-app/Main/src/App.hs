@@ -21,10 +21,12 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
+import Kernel.Beam.Types (KafkaConn (..))
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Verification.Interface.Idfy
@@ -70,16 +72,19 @@ runDynamicOfferDriverApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnectionDriver
-          ConnectionConfigDriver
-            { esqDBCfg = appCfg.esqDBCfg,
-              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = appCfg.hedisClusterCfg,
-              locationDbCfg = appCfg.esqLocationDBCfg,
-              locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
-            }
-          appCfg.tables
+      ( ( prepareConnectionDriver
+            ConnectionConfigDriver
+              { esqDBCfg = appCfg.esqDBCfg,
+                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                hedisClusterCfg = appCfg.hedisClusterCfg,
+                locationDbCfg = appCfg.esqLocationDBCfg,
+                locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
+              }
+            appCfg.tables
+        )
+          >> L.setOption KafkaConn appEnv.kafkaProducerTools
       )
+
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
