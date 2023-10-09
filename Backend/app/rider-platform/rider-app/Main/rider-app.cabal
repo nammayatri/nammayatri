@@ -179,7 +179,6 @@ library
       Domain.Types.Location
       Domain.Types.LocationAddress
       Domain.Types.LocationMapping
-      Domain.Types.Maps.DirectionsCache
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
@@ -211,7 +210,6 @@ library
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
-      SharedLogic.DirectionsCache
       SharedLogic.GoogleTranslate
       SharedLogic.LocationMapping
       SharedLogic.Merchant
@@ -246,7 +244,6 @@ library
       Storage.Beam.Issue
       Storage.Beam.Location
       Storage.Beam.LocationMapping
-      Storage.Beam.Maps.DirectionsCache
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
@@ -278,7 +275,6 @@ library
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.HotSpotConfig
-      Storage.CachedQueries.Maps.DirectionsCache
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -311,7 +307,6 @@ library
       Storage.Queries.Issues
       Storage.Queries.Location
       Storage.Queries.LocationMapping
-      Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
