@@ -308,3 +308,12 @@ type ShareImageConfig = {
   , logoId :: String
   , isReferral :: Boolean
 }
+type YoutubeData = {
+    videoTitle :: String
+  , setVideoTitle :: Boolean
+  , showMenuButton :: Boolean
+  , showDuration :: Boolean
+  , showSeekBar :: Boolean
+  , videoId :: String
+  , videoType :: String
+}

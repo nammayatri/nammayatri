@@ -21,7 +21,7 @@ import Animation (scaleYAnimWithDuration)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
-import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
+import Common.Types.App (LazyCheck(..), APIPaymentStatus(..), YoutubeData)
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
 import Components.BottomNavBar as BottomNavBar
@@ -69,7 +69,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, (+))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift  )
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -238,6 +238,7 @@ view push state =
       , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
+      , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
   ] <> if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
@@ -316,13 +317,51 @@ driverMapsHeaderView push state =
                 ]
               ]
             , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push else linearLayout[][]
-            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
+            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
+                else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
+                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
+                else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen) then accessibilityBanner state push 
+                else dummyTextView
             ]
         ]
         , bottomNavBar push state
   ]
+
+accessibilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+accessibilityBanner state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin (Margin 10 10 10 10)
+  , gravity BOTTOM 
+  , weight 1.0 
+  ][
+    Banner.view (push <<< AccessibilityBannerAction) (accessbilityBannerConfig state )
+  ]
+
+genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+genericAccessibilityPopUpView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , onClick push (const BackPressed)
+  , gravity CENTER
+  , background Color.blackLessTrans
+  ][ PopUpModal.view (push <<< GenericAccessibilityPopUpAction) (genericAccessibilityPopUpConfig state)]
+
+
+youtubeData :: HomeScreenState -> String -> YoutubeData
+youtubeData state mediaType =
+  { videoTitle: "title"
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: HU.getVideoID "https://youtu.be/5s21p2rI58c"
+  , videoType: "PortraitVideoLink"
+  }
+
 
 rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =
@@ -654,7 +693,7 @@ driverDetail push state =
   ]
 
 
-accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> {primaryText :: String, secondaryText :: String, imageUrl :: String} -> PrestoDOM (Effect Unit) w
+accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> ContentConfig -> PrestoDOM (Effect Unit) w
 accessibilityHeaderView push state accessibilityHeaderconfig = 
   linearLayout
   [ weight 1.0

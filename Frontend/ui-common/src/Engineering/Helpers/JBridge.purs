@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig)
+import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -231,6 +231,9 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
+foreign import getVideoID :: String -> String
+foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
+
 
 type LottieAnimationConfig = {
     rawJson :: String

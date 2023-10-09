@@ -16,14 +16,14 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout)
-import Components.PopUpModal.Controller (Action(..), Config)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
+import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Font.Size as FontSize
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag)
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
@@ -33,8 +33,10 @@ import Engineering.Helpers.Commons (os, clearTimer, countDown)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (startTimerWithTime)
+import JBridge (startTimerWithTime, setYoutubePlayer, getVideoID)
+import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
+import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -116,6 +118,48 @@ view push state =
                 , visibility state.coverImageConfig.visibility
                 ]
             ]
+        ,   linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            , visibility state.coverVideoConfig.visibility
+            , cornerRadii state.cornerRadius
+            , accessibility DISABLE_DESCENDANT
+            , orientation VERTICAL
+            ][  textView $
+                [ width state.topTitle.width
+                , height state.topTitle.height
+                , margin state.topTitle.margin
+                , color state.topTitle.color
+                , gravity state.topTitle.gravity
+                , text state.topTitle.text
+                , visibility state.topTitle.visibility
+                ] <> (FontStyle.h2 LanguageStyle)
+                , linearLayout[
+                    height state.coverVideoConfig.height
+                , width MATCH_PARENT
+                , gravity CENTER
+                ][PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $ linearLayout
+                [ height WRAP_CONTENT
+                , width state.coverVideoConfig.width
+                , margin state.coverVideoConfig.margin
+                , padding state.coverVideoConfig.padding
+                , cornerRadius 16.0
+                , visibility state.coverVideoConfig.visibility
+                , id (getNewIDWithTag "popUpModalCoverVideo")
+                , onAnimationEnd
+                    ( \action -> do
+                        let
+                            mediaType = state.coverVideoConfig.mediaType
+                            id = (getNewIDWithTag "popUpModalCoverVideo")
+                            url = state.coverVideoConfig.mediaUrl
+                        case mediaType of
+                            "VideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "VIDEO") id ("PLAY")
+                            "PortraitVideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "PORTRAIT_VIDEO") id ("PLAY")
+                            _ -> pure unit
+                    )(const NoAction)
+                ][]
+            ]]
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -537,3 +581,14 @@ contactView push state =
             ]
         ]
     ]
+
+youtubeData :: CoverVideoConfig -> String -> YoutubeData
+youtubeData state mediaType =
+  { videoTitle: "title"
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: getVideoID state.mediaUrl
+  , videoType: mediaType
+  }

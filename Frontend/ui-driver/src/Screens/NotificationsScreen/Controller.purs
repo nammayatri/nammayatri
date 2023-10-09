@@ -34,18 +34,19 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
-import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, parseNumber)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
+import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
+import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeVideoStatus(..))
 import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
+import Common.Types.App(YoutubeData)
 
 instance showAction :: Show Action where
   show _ = ""

@@ -924,7 +924,8 @@ type HomeScreenProps =  {
   showRideCompleted :: Boolean,
   showRideRating :: Boolean,
   showContactSupportPopUp :: Boolean,
-  showChatBlockerPopUp :: Boolean
+  showChatBlockerPopUp :: Boolean,
+  showGenericAccessibilityPopUp :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1446,16 +1447,6 @@ type NotificationDetailModelState = {
   likeCount :: Int,
   likeStatus :: Boolean,
   viewCount :: Int
-}
-
-type YoutubeData = {
-    videoTitle :: String
-  , setVideoTitle :: Boolean
-  , showMenuButton :: Boolean
-  , showDuration :: Boolean
-  , showSeekBar :: Boolean
-  , videoId :: String
-  , videoType :: String
 }
 
 data YoutubeVideoStatus = PLAY | PAUSE

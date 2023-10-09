@@ -288,6 +288,8 @@ data Action = NoAction
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
             | PaymentPendingPopupAC PopUpModal.Action
+            | AccessibilityBannerAction Banner.Action
+            | GenericAccessibilityPopUpAction PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -295,30 +297,28 @@ eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenSt
 eval AfterRender state = do
   continue state{props{mapRendered= true}}
 eval BackPressed state = do
-  if state.props.enterOtpModal then do
-    continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
-    else if (state.props.currentStage == ST.ChatWithCustomer) then do
-      _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
-      continue state{props{currentStage = ST.RideAccepted}}
-      else if state.props.cancelRideModalShow then do
-        continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
-          else if state.props.cancelConfirmationPopup then do
-            _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
-            continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
-              else if state.props.showBonusInfo then do
-                continue state { props { showBonusInfo = false } }
-                  else if state.data.paymentState.showRateCard then
-                    continue state { data { paymentState{ showRateCard = false } } }
-                      else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
-                        else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
+  if state.props.showGenericAccessibilityPopUp then continue state{props{showGenericAccessibilityPopUp = false}}
+    else if state.props.enterOtpModal then do
+      continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
+      else if (state.props.currentStage == ST.ChatWithCustomer) then do
+        _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
+        continue state{props{currentStage = ST.RideAccepted}}
+        else if state.props.cancelRideModalShow then do
+          continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
+            else if state.props.cancelConfirmationPopup then do
+              _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
+              continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
+                else if state.props.showBonusInfo then do
+                  continue state { props { showBonusInfo = false } }
+                    else if state.data.paymentState.showRateCard then
+                      continue state { data { paymentState{ showRateCard = false } } }
+                        else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
+                          else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
+                            else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
                             else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
-                              else if state.props.showRideRating then continue state {props {showRideRating = false}}
-                                else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
-                                  else if state.props.currentStage == ST.RideCompleted then continue state
-                                    else do
-                                      _ <- pure $ minimizeApp ""
-                                      continue state
+                              else do
+                                _ <- pure $ minimizeApp ""
+                                continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -764,6 +764,7 @@ eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerifi
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
 eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue state{props{showAccessbilityPopup = false}}
 
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continue state{props{showGenericAccessibilityPopUp = false}}
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
@@ -821,6 +822,8 @@ eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick))
 eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
+
+eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval _ state = continue state
 

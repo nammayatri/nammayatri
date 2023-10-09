@@ -772,7 +772,7 @@ const mlStrings = {
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING: "റൈഡർ കുറഞ്ഞ കേർണ്ണൽ ഉണ്ട്. അവർക്ക് അഴൈക്കുക അല്ലെങ്കിൽ അവരുടെ മോനോളി അയയ്ക്കുക.",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "ഗ്രാഹകൻ കുറഞ്ഞ ദർശനം ഉണ്ട്. അവർക്ക് ചാറ്റിംഗ് അയയ്ക്കാൻ അല്ലെങ്കിൽ അവരുടെ ഫോൺ അയയ്ക്കുക.",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "നിങ്ങൾ ചെയ്യാനാകുന്നത് പ്രകാരം അവർക്ക് സഹായിക്കുക",
-  LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "പ്രത്യേക സഹായം ആവശ്യമുള്ള റൈഡർമാരെ നിങ്ങൾക്ക് എങ്ങനെ സഹായിക്കാമെന്ന് അറിയുക",
+  LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE: "പ്രത്യേക സഹായം ആവശ്യമുള്ള ഉപഭോക്താക്കളെ നിങ്ങൾക്ക് എങ്ങനെ സഹായിക്കാമെന്ന് അറിയുക",
   ASSISTANCE_REQUIRED : "സഹായം ആവശ്യമാണ്",
 	SETUP_NOW : "ഇപ്പോൾ സജ്ജീകരണം",
 	NEED_HELP_JOINING_THE_PLAN : "പ്ലാനിൽ ചേരുന്നതിന് സഹായം ആവശ്യമുണ്ടോ? ഞങ്ങളെ സമീപിക്കുക",
@@ -875,5 +875,6 @@ const mlStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "റൈഡുകളും എടുക്കാൻ നിങ്ങളെ അനുവദിക്കും",
   AC_CAB : "എസി ക്യാബ്",
   AC_SUV : "എസി എസ്‌യുവി",
-  DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക"
+  DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക",
+  WHAT_ARE_PURPLE_RIDES : "എന്താണ് പർപ്പിൾ റൈഡുകൾ?"
 }

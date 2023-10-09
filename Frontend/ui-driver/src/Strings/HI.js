@@ -825,7 +825,7 @@ const hindiStrings = {
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING: "राइडर की कम सुनाई देती है. कृपया उनके साथ चैट करें कॉल की बजाय",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "ग्राहक की कम दृष्टि है. कृपया चैट की बजाय उन्हें कॉल करें",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "कृपया यथासंभव उनकी मदद करें",
-  LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE : "जानें कि आप विशेष सहायता की आवश्यकता वाले सवारों की मदद कैसे कर सकते हैं",
+  LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE : "जानें कि आप विशेष सहायता की आवश्यकता वाले ग्राहकों की मदद कैसे कर सकते हैं",
   ASSISTANCE_REQUIRED : "सहायता आवश्यक है",
 	SETUP_NOW : "अभी सेटअप करें",
 	NEED_HELP_JOINING_THE_PLAN : "योजना में शामिल होने में सहायता चाहिए? संपर्क करें",
@@ -934,5 +934,7 @@ const hindiStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "की सवारी दोनों ले सकेंगे",
   AC_CAB : "एसी कैब",
   AC_SUV : "एसी एसयूवी",
-  DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन"
+  DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन",
+  LOW_DUES_CLEAR_POPUP_DESC : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अभी अपना बकाया भुगतान करें",
+  WHAT_ARE_PURPLE_RIDES : "पर्पल सवारी क्या है?"
 }

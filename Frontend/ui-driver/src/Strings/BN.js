@@ -818,7 +818,7 @@ const bengaliStrings = {
 	CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING: "রাইডারের দুর্দশার্য শ্রবণ রয়েছে। কল করার পরিবর্তে তাদের চ্যাট করুন।",
 	CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "গ্রাহকের দুর্দশার্য দর্শন রয়েছে। চ্যাট করার পরিবর্তে তাদের কল করুন।",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "আপনি যেতে পারেন সেই মধ্যে তাদের সাহায্য করুন",
-	LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "বিশেষ সহায়তা প্রয়োজন এমন রাইডারদের আপনি কীভাবে সাহায্য করতে পারেন তা জানুন",
+	LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE: "বিশেষ সহায়তার প্রয়োজন এমন গ্রাহকদের আপনি কীভাবে সাহায্য করতে পারেন তা জানুন",
 	ASSISTANCE_REQUIRED : "সহায়তা প্রয়োজন",
 	NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>",
 	SAVED_DUE_TO_ZERO_COMMISSION : "জিরো কমিশনের\nকারণে সংরক্ষিত", 
@@ -926,6 +926,7 @@ const bengaliStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "এবং",
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "রাইড উভয়ই নিতে পারবেন",
 	AC_CAB : "এসি ক্যাব",
-  	AC_SUV : "এসি এসইউভি",
-	DOWNGRADE_VEHICLE : "ডাউনগ্রেড যানবাহন"
+  AC_SUV : "এসি এসইউভি",
+	DOWNGRADE_VEHICLE : "ডাউনগ্রেড যানবাহন",
+	WHAT_ARE_PURPLE_RIDES : "পার্পল রাইডস কি?"
 }

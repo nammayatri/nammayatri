@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData, DisabilityType(..))
+import Screens.Types (AllocationData, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex) as DA
@@ -105,7 +105,6 @@ foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String
 foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
-foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import getTimeStampString :: String -> String
 foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import saveAudioFile :: String -> Effect String
