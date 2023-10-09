@@ -90,6 +90,13 @@ buildSearchReq subscriber req = do
             customerLanguage = customerLanguage,
             disabilityTag = disabilityTag
           }
+
+getSearchReqMessageId :: DSearch.DSearchReq -> Text
+getSearchReqMessageId req =
+  case req of
+    DSearchReqOnDemand DSearchReqOnDemand' {messageId} -> messageId
+    DSearchReqRental DSearchReqRental' {messageId} -> messageId
+
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do
   tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
