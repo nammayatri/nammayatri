@@ -985,8 +985,8 @@ getRideCompletedConfig state = let
       bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
-      visible = state.data.config.showSavedCommission || isJust state.data.endRideData.tip,
-      savedMoney = if state.data.config.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else [] <> (case state.data.endRideData.tip of 
+      visible = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip,
+      savedMoney = if state.data.config.rideCompletedCardConfig.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else [] <> (case state.data.endRideData.tip of 
                             Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
                             Nothing -> [])
     },

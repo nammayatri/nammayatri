@@ -9,7 +9,7 @@ type AppConfig =
     popupBackground :: String,
     defaultLanguage :: String,
     imageUploadOptional :: Boolean,
-    showSavedCommission :: Boolean,
+    rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig 
@@ -41,4 +41,8 @@ type SubscriptionConfig =  {
 
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
+}
+
+type RideCompletedCardConfig = {
+  showSavedCommission :: Boolean
 }
