@@ -13,8 +13,8 @@
 -}
 
 module Domain.Action.UI.Route
-  ( SDC.GetRoutesReq,
-    SDC.GetRoutesResp,
+  ( Maps.GetRoutesReq,
+    Maps.GetRoutesResp,
     getRoutes,
     getPickupRoutes,
     getTripRoutes,
@@ -26,11 +26,11 @@ import qualified Domain.Types.Person as DP
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
-import qualified SharedLogic.DirectionsCache as SDC
 import qualified Tools.Maps as Maps
 
-getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> SDC.GetRoutesReq -> m SDC.GetRoutesResp
-getRoutes (_, merchantId) = SDC.getRoutes merchantId
+getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes (_, merchantId) req = do
+  Maps.getRoutes merchantId req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId) req = do

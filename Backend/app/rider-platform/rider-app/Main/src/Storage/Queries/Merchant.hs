@@ -89,7 +89,6 @@ instance FromTType' BeamM.Merchant Merchant where
             createdAt = createdAt,
             timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
-            dirCacheSlot = dirCacheSlot,
             isAvoidToll = isAvoidToll,
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
             aadhaarKeyExpiryTime = aadhaarKeyExpiryTime
@@ -123,7 +122,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
         BeamM.timeDiffFromUtc = timeDiffFromUtc,
-        BeamM.dirCacheSlot = dirCacheSlot,
         BeamM.isAvoidToll = isAvoidToll,
         BeamM.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
         BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime

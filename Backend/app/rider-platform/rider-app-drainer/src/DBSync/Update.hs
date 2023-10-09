@@ -100,7 +100,6 @@ runUpdateCommands (cmd, val) streamKey = do
     UpdateDBCommand id _ tag _ _ (FareBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("FareBreakup" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (GeometryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Geometry" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (IssueOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Issue" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (DirectionsCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("DirectionsCache" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("PlaceNameCache" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Merchant" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("MerchantMessage" :: Text) =<< dbConf
