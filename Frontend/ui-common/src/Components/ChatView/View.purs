@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
-import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey)
+import JBridge (renderImage, scrollToEnd, addMediaFile, getSuggestionfromKey, renderImageConfig)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
 import Common.Styles.Colors (white900) as Color
@@ -34,6 +34,7 @@ import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
 import Engineering.Helpers.Suggestions(getMessageFromKey)
 import Helpers.Utils (getCommonAssetStoreLink)
+import Effect.Uncurried (runEffectFn3)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -393,9 +394,7 @@ chatComponent state push config isLastItem userType =
                  , background Color.white900
                  , width $ V 180
                  , id (getNewIDWithTag config.message)
-                 , afterRender (\action -> do
-                                renderBase64Image config.message (getNewIDWithTag config.message) true "FIT_CENTER"
-                 ) (const NoAction)
+                 , afterRender (\action -> runEffectFn3 renderImage config.message (getNewIDWithTag config.message) renderImageConfig{scaleType = "FIT_CENTER"}) (const NoAction)
                  , onClick push (const $ OnImageClick config.message)
                  , height $ V 180
                  , gravity CENTER

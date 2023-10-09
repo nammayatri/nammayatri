@@ -131,3 +131,14 @@ translateYAnimConfigUpdatePopUp = animConfig {
  fromY = (300)
 , toY = 0
 }
+
+
+
+scaleAnimConfig :: AnimConfig
+scaleAnimConfig = animConfig{ 
+  duration = 200
+, fromScaleX = 0.8
+, fromScaleY = 0.8
+, toScaleX = 1.0
+, toScaleY = 1.0
+}

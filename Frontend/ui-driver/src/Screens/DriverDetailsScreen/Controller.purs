@@ -24,7 +24,7 @@ import Language.Types(STR(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
 import Effect.Class (liftEffect)
-import JBridge (renderBase64Image, toast)
+import JBridge (renderImage, toast, renderImageConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress,trackAppScreenEvent)
@@ -43,9 +43,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Common.Types.App (OptionButtonList)
 import Data.Array as Array
 import Components.PopUpModal as PopUpModal
-
-
-
+import Effect.Uncurried (runEffectFn3)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -130,7 +128,7 @@ eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") th
                                               continue state
 
 eval RenderBase64Image state = continueWithCmd state [do
-  _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage") true "CENTER_CROP"
+  _ <- runEffectFn3 renderImage state.data.base64Image (getNewIDWithTag "EditProfileImage") renderImageConfig {scaleType = "CENTER_CROP"}
   pure NoAction]
 eval AfterRender state = continue state
 

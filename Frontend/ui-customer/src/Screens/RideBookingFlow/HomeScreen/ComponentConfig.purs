@@ -21,11 +21,8 @@ import Prelude
 import PrestoDOM
 
 import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
-import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -41,7 +38,6 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
-import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
@@ -50,10 +46,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
-import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
-import Data.String as DS
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -69,8 +62,6 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Constants (getKmMeter)
 import Resources.Constants (getKmMeter)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
 import Screens.Types as ST

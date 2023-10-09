@@ -568,22 +568,6 @@ export const stopAudioRecording = function (id) {
     }
 }
 
-export const renderBase64ImageFile = function (base64Image) {
-    return function(id) {
-        return function (fitCenter) {
-          return function (imgScaleType){
-            return function () {
-              try{
-                return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-              }catch (err){
-                return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
-              }
-            }
-          }  
-        }
-    }
-}
-
 export const removeMediaPlayer = function (id) {
   return function () {
     JBridge.removeMediaPlayer();

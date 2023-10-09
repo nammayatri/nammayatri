@@ -32,7 +32,7 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType)
+import JBridge (renderImage, renderImageConfig, openUrlInApp, setScaleType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
@@ -43,6 +43,7 @@ import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
+import Effect.Uncurried (runEffectFn3) 
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -107,7 +108,7 @@ view push state =
                                           case mediaType of
                                             VideoLink -> pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show PLAY)
                                             PortraitVideoLink -> pure $ setYoutubePlayer (youtubeData state "PORTRAIT_VIDEO") id (show PLAY)
-                                            Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
+                                            Image -> runEffectFn3 renderImage state.mediaUrl (getNewIDWithTag "illustrationView") renderImageConfig{scaleType = "FIT_CENTER"}
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             _ -> pure unit

@@ -1434,32 +1434,7 @@ export const previewImage = function (base64Image) {
   }
 }
 
-export const renderBase64Image = function (image) {
-  return function (id) {
-    return function (fitCenter) {
-      return function (imgScaleType){
-        try {
-          if(JBridge.renderBase64Image){
-            return JBridge.renderBase64Image(image, id, fitCenter, imgScaleType);
-          }
-        }catch(err1){
-          try {
-            if (JBridge.renderBase64Image) {
-              return JBridge.renderBase64Image(image, id, fitCenter);
-            }
-          } catch (err2) {
-          /*
-          * This function is deprecated on 22 May - 2023
-          * Added only for Backward Compability
-          * Remove this function once it is not begin used.
-          */
-            return JBridge.renderBase64Image(image, id);
-          }
-        }
-      }
-    };
-  };
-};
+export const renderImage = (image, id, properties) => JBridge.renderImage ? JBridge.renderImage(image, id, JSON.stringify(properties)) : JBridge.renderBase64Image(image, id, false, properties.imgScaleType);
 
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {

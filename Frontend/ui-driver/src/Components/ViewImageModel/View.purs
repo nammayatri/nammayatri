@@ -14,7 +14,7 @@
 -}
 module Components.ViewImageModel.View where
 
-import Prelude (Unit, const, ($), (<>))
+import Prelude (Unit, const, ($), (<>), unit)
 import Components.ViewImageModel.Controller (Action(..), ViewImageModelState)
 import Effect (Effect)
 import PrestoDOM.Types.Core (PrestoDOM)
@@ -32,7 +32,8 @@ import Font.Style (h3) as FontStyle
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import JBridge (renderBase64Image)
+import JBridge (renderImage, renderImageConfig)
+import Effect.Uncurried (runEffectFn3)
 
 view :: forall w. (Action -> Effect Unit) -> ViewImageModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -52,7 +53,7 @@ view push state =
    , gravity CENTER
    ][ linearLayout
     [ onClick push (const NoAction)
-    , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
+    , afterRender (\action ->  runEffectFn3 renderImage state.image (getNewIDWithTag "view_image_model_image") renderImageConfig{scaleType = "CENTER_CROP"}) (const NoAction)
     , id (getNewIDWithTag "view_image_model_image")
     ][ progressBar
        [ width WRAP_CONTENT

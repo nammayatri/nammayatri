@@ -111,7 +111,6 @@ foreign import clearFocus :: String -> Effect Unit
 foreign import uploadMultiPartData :: String -> String -> String -> Effect String
 foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
-foreign import renderBase64ImageFile :: String -> String -> Boolean -> String ->  Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String

@@ -34,8 +34,8 @@ import Data.Foldable (find)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
-import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig)
+import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
+import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig, renderImage, renderImageConfig)
 import Data.String.CodeUnits (stripSuffix)
 import Data.String.Common (joinWith)
 import Data.String.Pattern (Pattern(Pattern))
@@ -51,6 +51,7 @@ import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
+import Effect.Uncurried (runEffectFn3)
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -255,7 +256,7 @@ eval (AddImagesModelAction (ImageModel.OnClickDelete index)) state = do
   let imageIds' = fromMaybe state.data.addImagesState.imageMediaIds $ deleteAt index state.data.addImagesState.imageMediaIds
   continueWithCmd state { data { addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' } } } [do
     _ <- forWithIndex images' \i x -> do
-      _ <- renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false "CENTER_CROP"
+      _ <- runEffectFn3 renderImage  x.image (getNewIDWithTag "add_image_component_image" <> (show i)) renderImageConfig {scaleType = "CENTER_CROP"}
       pure NoAction
     pure NoAction
   ]

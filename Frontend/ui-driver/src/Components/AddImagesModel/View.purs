@@ -32,10 +32,11 @@ import Styles.Colors (black900, blue900, white900) as Color
 import Font.Size (a_16, a_18, a_20) as Font
 import Components.PrimaryButton (view) as PrimaryButton
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (renderBase64ImageFile)
+import JBridge (renderImage, renderImageConfig)
 import Animation (screenAnimationFadeInOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Effect.Uncurried (runEffectFn3)
 
 view :: forall w . (Action -> Effect Unit) -> AddImagesModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -68,9 +69,7 @@ view push state =
                       , cornerRadius 8.0
                       , margin (MarginBottom 16)
                       , gravity CENTER_VERTICAL
-                      , afterRender (\action -> do
-                                      renderBase64ImageFile image.image (getNewIDWithTag "add_image_component_image" <> (show index)) false "CENTER_CROP"
-                                    ) (const NoAction)
+                      , afterRender (\action -> runEffectFn3 renderImage image.image (getNewIDWithTag "add_image_component_image" <> (show index)) renderImageConfig{scaleType = "CENTER_CROP"}) (const NoAction)
                       , padding (Padding 16 16 16 16)
                       ][ linearLayout
                        [ width $ V 48

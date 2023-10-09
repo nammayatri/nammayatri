@@ -69,8 +69,7 @@ import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, (+))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift  )
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift , onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -86,6 +85,7 @@ import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Effect.Uncurried (runEffectFn3)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -193,16 +193,15 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([ relativeLayout
+  ]([ PrestoAnim.animationSet [ Anim.scaleAnim AnimConfig.scaleAnimConfig ] $ relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , background Color.white900
       , weight 1.0
-      , afterRender
+      , onAnimationEnd
         (\action -> do
           _ <- push action
           _ <- JB.setFCMToken push $ SetToken
-          _ <- JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
           _ <- JB.getCurrentPosition push CurrentLocation
           pure unit
         ) (const AfterRender)
@@ -275,7 +274,7 @@ driverMapsHeaderView push state =
         , frameLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          ][  googleMap state
+          ][  googleMap push state
             , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
@@ -467,13 +466,15 @@ linkAadhaarPopup push state =
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< LinkAadhaarPopupAC) (linkAadhaarPopupConfig state )]
 
-googleMap :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
-googleMap state =
-  linearLayout
+googleMap :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+googleMap push state =
+  PrestoAnim.animationSet [ Anim.scaleAnim AnimConfig.scaleAnimConfig  ] $ linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , background Color.white900
   , id (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
+  , onAnimationEnd
+      (\_ -> void $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap) (const unit)
   ][]
 
 driverActivityStatus :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -623,11 +624,18 @@ driverDetail push state =
           width $ V 42
         , height $ V 42
         , onClick push $ const GoToProfile
-        ][ imageView
-           [ width $ V 42
-           , height $ V 42
-           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
-           ]
+        ][ case state.data.profileImg of
+            Nothing -> imageView
+                        [ width $ V 42
+                        , height $ V 42
+                        , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+                        ] 
+            Just img -> linearLayout[
+                          width $ V 42
+                        , height $ V 42
+                        , id $ getNewIDWithTag "driver_home_prof"
+                        , afterRender (\_ -> runEffectFn3 JB.renderImage img (getNewIDWithTag "driver_home_prof") JB.renderImageConfig{scaleType = "CENTER_CROP", cornerRadius = 21}) (const unit)
+                        ][]
          ]
       ]
     , accessibilityHeaderView push state (getAccessibilityHeaderText state)

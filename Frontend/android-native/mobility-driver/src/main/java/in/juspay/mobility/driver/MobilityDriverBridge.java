@@ -59,6 +59,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
@@ -447,69 +449,37 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         });
     }
 
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        if (url.contains("http"))
-            url = getAPIResponse(url);
-        renderBase64ImageFile(url, id, fitCenter, imgScaleType);
-    }
-
-    @JavascriptInterface
-    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
-        ExecutorManager.runOnMainThread(() -> {
-            try {
-                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
-                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    if (layout != null){
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(bridgeComponents.getContext());
-                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
-                        imageView.setLayoutParams(layoutParams);
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(getScaleTypes(imgScaleType));
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /*
-     * This function is deprecated on 22 May - 2023
-     * Added only for Backward Compatibility
-     * Remove this function once it is not begin used.
-     */
-
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id) {
-        String base64Image = getAPIResponse(url);
-        if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> {
-                try {
-                    if (!base64Image.equals("") && id != null) {
-                        LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(bridgeComponents.getContext());
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-        }
-    }
+     @JavascriptInterface
+     public void renderImage(String source, String id, String properties) {
+         String base64Image = source.startsWith("http") ? getAPIResponse(source) : source;
+         ExecutorManager.runOnMainThread(() -> {
+             try {
+                 if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                     LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                     JSONObject propertiesObj = new JSONObject(properties);
+                     String scaleType = propertiesObj.getString("scaleType");
+                     int cornerRadius = propertiesObj.getInt("cornerRadius");
+                     if (layout != null){
+                         byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                         ShapeableImageView imageView = new ShapeableImageView(bridgeComponents.getContext());
+                         ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                         ShapeAppearanceModel shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(dpToPx(cornerRadius)).build();
+                         imageView.setShapeAppearanceModel(shapeAppearanceModel);
+                         imageView.setLayoutParams(layoutParams);
+                         imageView.setImageBitmap(decodedByte);
+                         imageView.setScaleType(getScaleTypes(scaleType));
+                         imageView.setAdjustViewBounds(true);
+                         imageView.setClipToOutline(true);
+                         layout.removeAllViews();
+                         layout.addView(imageView);
+                     }
+                 }
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+         });
+     }
 
     @JavascriptInterface
     public void removeMediaPlayer() {

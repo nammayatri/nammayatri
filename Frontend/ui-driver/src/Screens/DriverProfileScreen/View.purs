@@ -103,6 +103,7 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Effect.Uncurried (runEffectFn3)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -357,19 +358,17 @@ tabImageView state push =
       , margin $ MarginRight 10
       , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
       , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
-      ] [ (if state.data.profileImg == Nothing then 
-          imageView[ 
-            height $ V 88
-          , width $ V 88
-          , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
-          ]
-        else 
-          linearLayout [
-            height $ V 88
-          , width $ V 88
-          , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
-          , id (getNewIDWithTag "driver_prof_img")][]
-        )
+      ] [ case state.data.profileImg of
+            Nothing -> imageView[ 
+                          height $ V 88
+                        , width $ V 88
+                        , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+                        ]
+            Just img -> linearLayout [
+                          height $ V 88
+                        , width $ V 88
+                        , afterRender (\action -> runEffectFn3 JB.renderImage (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") JB.renderImageConfig{scaleType = "CENTER_CROP", cornerRadius = 44}) (const unit)
+                        , id (getNewIDWithTag "driver_prof_img")][]
       ]      
   ,  PrestoAnim.animationSet
     [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}

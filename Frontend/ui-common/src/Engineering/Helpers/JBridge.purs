@@ -109,7 +109,7 @@ foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
-foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
+foreign import renderImage :: EffectFn3 String String RenderImageConfig Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
@@ -251,6 +251,17 @@ lottieAnimationConfig = {
   , scaleType : "DEFAULT"
   , minProgress : 0.0
   , maxProgress : 1.0
+}
+
+type RenderImageConfig = {
+  scaleType :: String
+, cornerRadius :: Int
+}
+
+renderImageConfig :: RenderImageConfig 
+renderImageConfig = {
+  scaleType : ""
+, cornerRadius : 0
 }
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean

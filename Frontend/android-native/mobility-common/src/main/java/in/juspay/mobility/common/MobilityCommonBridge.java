@@ -1373,9 +1373,14 @@ public class MobilityCommonBridge extends HyperBridge {
         return bounds.toString();
     }
 
-    private int pxToDp(int px) {
+    protected int pxToDp(int px) {
         DisplayMetrics displayMetrics = bridgeComponents.getContext().getResources().getDisplayMetrics();
         return Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
+    }
+
+    protected int dpToPx(int dp) {
+        DisplayMetrics displayMetrics = bridgeComponents.getContext().getResources().getDisplayMetrics();
+        return Math.round(dp * (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
     //endregion
 
