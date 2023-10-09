@@ -39,6 +39,8 @@ import qualified Domain.Types.FarePolicy as DFP
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Kernel.Utils.Common (Kilometers(getKilometers), Meters (getMeters))
+import Extra (intToFloat)
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
@@ -124,7 +126,7 @@ fareSum fareParams = do
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
 pureFareSum fareParams = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee, extraRentalFare) = countFullFareOfParamsDetails fareParams.fareParametersDetails
   fareParams.baseFare
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
@@ -133,11 +135,13 @@ pureFareSum fareParams = do
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
+    + extraRentalFare
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
     distance :: Meters,
     rideTime :: UTCTime,
+    endRideTime :: Maybe UTCTime,
     waitingTime :: Maybe Minutes,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
@@ -154,11 +158,12 @@ calculateFareParameters params = do
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
-      (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
+      (partOfNightShiftCharge, notPartOfNightShiftCharge, _, rentalExtraFare) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
+          + rentalExtraFare
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       fullRideCostN {-without govtCharges and platformFee-} =
@@ -187,7 +192,8 @@ calculateFareParameters params = do
                 countPlatformFee -- Mb change platformFee from Nothing to proper value
                   fullCompleteRideCost
                   (DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs & (.platformFeeInfo))
-                  fareParametersDetails,
+                  fareParametersDetails
+              DFP.RentalSlabDetails _ -> fareParametersDetails,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -196,7 +202,7 @@ calculateFareParameters params = do
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs
-
+      DFP.RentalSlabDetails det -> processFPRSlabDetailsSlab params.rideTime params.endRideTime params.distance det
     processFPProgressiveDetails DFP.FPProgressiveDetails {..} = do
       let mbExtraDistance =
             params.distance - baseDistance
@@ -237,6 +243,28 @@ calculateFareParameters params = do
               cgst = Nothing
             }
         )
+    processFPRSlabDetailsSlab startTime endTime distance req = do
+      let (extraTotalRentalHourFare,extraTotalRentalKmFare) = case endTime of
+              Nothing  -> (Just (0 :: Money), Just 0 :: Maybe Money)
+              Just endTime ->
+                let actualDuration = div (fromEnum . nominalDiffTimeToSeconds $ diffUTCTime endTime startTime) 1000000000000
+                    actualHours = ceiling $ intToFloat actualDuration / 3600.0
+                    diffHours = max (0::Int) (actualHours - req.baseDuration)
+                    totalKmOffered = (diffHours * (getKilometers req.kmAddedForEveryExtraHour)) + (getKilometers req.baseDistance)
+                    diffKilometer = max (0::Int) (getMeters distance - totalKmOffered)
+                in  ( Just Money { getMoney=diffHours * (getMoney req.extraRentalHoursFare)} ,Just Money { getMoney=(diffKilometer * (getMoney req.extraRentalKmFare)) })
+
+        in
+        ( req.baseFare,
+          req.nightShiftCharge,
+          req.waitingChargeInfo,
+          DFParams.RentalSlabDetails
+            DFParams.FParamsRentalDetails
+              {
+                extraRentalHourFare=extraTotalRentalHourFare,
+                extraRentalKmFare=extraTotalRentalKmFare
+              }
+        )
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
@@ -272,11 +300,11 @@ calculateFareParameters params = do
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
 
-countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
+countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money, Money)
 countFullFareOfParamsDetails = \case
-  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
-
+  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0,0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
+  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst),0)
+  DFParams.RentalSlabDetails det -> (0,0,0,fromMaybe 0 det.extraRentalHourFare+ fromMaybe 0 det.extraRentalKmFare)
 isNightShift ::
   DFP.NightShiftBounds ->
   UTCTime ->

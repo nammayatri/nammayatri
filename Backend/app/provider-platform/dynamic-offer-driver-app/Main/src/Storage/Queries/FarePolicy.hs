@@ -37,6 +37,7 @@ import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
+import qualified Storage.Queries.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails as QueriesFPRSDS
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
 findById :: MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
@@ -68,11 +69,16 @@ update farePolicy = do
         ]
         [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
     SlabsDetails (FPSlabsDetails slabs) -> do
-      _ <- QueriesFPSDS.deleteAll' farePolicy.id
+      _ <- QueriesFPRSDS.deleteAll' farePolicy.id
       mapM_ (create'' farePolicy.id) slabs
+    RentalSlabDetails (FPRSlabDetails slab) -> do
+      _ <- QueriesFPRSDS.deleteAll' farePolicy.id
+      mapM_ (createRentalSlab'' farePolicy.id) slab
   where
     create'' :: MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
+    createRentalSlab'' :: MonadFlow m => Id FarePolicy -> FPRSlabDetails -> m ()
+    createRentalSlab'' id' slab = createWithKV (id', slab)
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where
   toTType' FarePolicy {..} = do
@@ -106,6 +112,12 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
           let slabs = snd <$> fullSlabs
           case nonEmpty slabs of
             Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
+            Nothing -> return Nothing
+        Rental -> do
+          fullSlabs <- QueriesFPRSDS.findAll' (Id id)
+          let slabs = snd <$> fullSlabs
+          case nonEmpty slabs of
+            Just nESlabs -> return $ Just (RentalSlabDetails (FPRSlabDetails nESlabs))
             Nothing -> return Nothing
     case mFarePolicyDetails of
       Just farePolicyDetails -> do

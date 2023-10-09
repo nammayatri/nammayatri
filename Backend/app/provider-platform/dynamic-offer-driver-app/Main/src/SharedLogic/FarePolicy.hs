@@ -48,7 +48,7 @@ getFarePolicy merchantId vehVariant (Just area) = do
 
 getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId fromlocaton toLocation = do
-  allFareProducts <- FareProduct.getAllFareProducts merchantId fromlocaton toLocation
+  allFareProducts <- FareProduct.getAllFareProducts merchantId fromlocaton (Just toLocation)
   farePolicies <-
     mapM
       ( \fareProduct -> do

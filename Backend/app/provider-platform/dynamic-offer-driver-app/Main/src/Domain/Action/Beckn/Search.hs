@@ -38,9 +38,11 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
+import qualified Domain.Types.QuoteRental as DQuoteRental
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
+import qualified Domain.Types.SearchRequestRental as DSRR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import EulerHS.Prelude (Alternative (empty), whenJustM)
@@ -66,6 +68,7 @@ import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
+import qualified Storage.Queries.SearchRequestRental as QSearchRequestRental
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -97,6 +100,15 @@ data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
     estimatedFare :: Money,
     fromLocation :: LatLong,
     toLocation :: LatLong,
+    specialLocationTag :: Maybe Text,
+    startTime :: UTCTime
+  }
+
+data RentalQuoteInfo = RentalQuoteInfo
+  { quoteId :: Id DQuoteRental.QuoteRental,
+    vehicleVariant :: DVeh.Variant,
+    estimatedFare :: Money,
+    fromLocation :: LatLong,
     specialLocationTag :: Maybe Text,
     startTime :: UTCTime
   }
@@ -186,6 +198,39 @@ handler merchant sReq = do
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
+      DFareProduct.RENTAL -> do
+        -- whenJustM
+        --   (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
+        --   (\_ -> throwError $ InvalidRequest "Duplicate Search request")
+        searchRequestRental <- buildSearchRequestRental sReq merchantId fromLocation
+        -- triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
+        _ <- QSearchRequestRental.create searchRequestSpecialZone
+        -- Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
+        now <- getCurrentTime
+        let listOfVehicleVariants = listVehicleVariantHelper farePolicies
+        listOfRentalQuote <- do
+          for listOfVehicleVariants $ \farePolicy -> do
+            fareParams <-
+              calculateFareParameters
+                CalculateFareParametersParams
+                  { farePolicy = farePolicy,
+                    distance = result.distance,
+                    rideTime = sReq.pickupTime,
+                    waitingTime = Nothing,
+                    driverSelectedFare = Nothing,
+                    customerExtraFee = Nothing,
+                    nightShiftCharge = Nothing
+                  }
+            buildRentalQuote
+              searchRequestRental
+              fareParams
+              merchant.id
+              result.distance
+              farePolicy.vehicleVariant
+              result.duration
+              allFarePoliciesProduct.specialLocationTag
+        for_ listOfRentalQuote QQuoteRental.create
+        return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuote), Nothing)
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
   let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
@@ -269,6 +314,7 @@ handler merchant sReq = do
       EstimateInfo
         { ..
         }
+    
 
 buildSearchRes ::
   (MonadTime m) =>
@@ -379,10 +425,75 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
         ..
       }
 
+buildSearchRequestRental ::
+  ( MonadGuid m,
+    MonadTime m,
+    MonadReader r m,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  DSearchReq ->
+  Id DM.Merchant ->
+  DLoc.SearchReqLocation ->
+  m DSRR.SearchRequestSpecialZone
+buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation = do
+  uuid <- generateGUID
+  now <- getCurrentTime
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let validTill = searchRequestExpirationSeconds `addUTCTime` now
+  pure
+    DSRR.SearchRequestSpecialZone
+      { id = Id uuid,
+        startTime = pickupTime,
+        createdAt = now,
+        updatedAt = now,
+        area = Just area,
+        ..
+      }
+
+buildRentalQuote ::
+  ( EsqDBFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  DSRR.SearchRequestSpecialZone ->
+  FareParameters ->
+  Id DM.Merchant ->
+  Meters ->
+  DVeh.Variant ->
+  Seconds ->
+  Maybe Text ->
+  m DQuoteSpecialZone.QuoteSpecialZone
+buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration specialLocationTag = do
+  quoteId <- Id <$> generateGUID
+  now <- getCurrentTime
+  let estimatedFare = fareSum fareParams
+      estimatedFinishTime = fromIntegral duration `addUTCTime` now
+  -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let validTill = searchRequestExpirationSeconds `addUTCTime` now
+  pure
+    DQuoteSpecialZone.QuoteSpecialZone
+      { id = quoteId,
+        searchRequestId = productSearchRequest.id,
+        providerId = transporterId,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
+
+
+
 mkQuoteInfo :: DLoc.Location -> DLoc.Location -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
 mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
       toLocation = Maps.getCoordinates toLoc
+  SpecialZoneQuoteInfo
+    { quoteId = id,
+      ..
+    }
+
+mkRentalQuoteInfo :: DLoc.SearchReqLocation -> UTCTime -> DQuoteRental.QuoteRental -> RentalQuoteInfo
+mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
+  let fromLocation = Maps.getCoordinates fromLoc
   SpecialZoneQuoteInfo
     { quoteId = id,
       ..
