@@ -19,7 +19,9 @@ config =
   , leaderBoard :{
     isMaskedName : true
   }
-  , showSavedCommission : false
+  , rideCompletedCardConfig : {
+      showSavedCommission : false
+    }
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
