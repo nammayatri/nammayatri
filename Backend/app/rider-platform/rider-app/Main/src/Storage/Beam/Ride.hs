@@ -50,6 +50,7 @@ data RideT f = RideT
     rideStartTime :: B.C f (Maybe UTCTime),
     rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
+    allowedEditLocationAttempts :: B.C f (Maybe Int),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text),

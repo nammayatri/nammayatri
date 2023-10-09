@@ -65,6 +65,17 @@ updateVersion entityId order version = do
     ]
     [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
 
+findLastMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m (Maybe LocationMapping)
+findLastMapping entityId order = do
+  let latestVersion = "LATEST"
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Eq order,
+          Se.Is BeamLM.version $ Se.Eq latestVersion
+        ]
+    ]
+
 instance FromTType' BeamLM.LocationMapping LocationMapping where
   fromTType' BeamLM.LocationMappingT {..} = do
     pure $

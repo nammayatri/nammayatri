@@ -33,7 +33,6 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
-import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -50,15 +49,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
-import Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -265,7 +263,8 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate ValidatedRideAssignedReq {..} = do
-  ride <- buildRide
+  mbMerchant <- CQM.findById booking.merchantId
+  ride <- buildRide mbMerchant
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -279,8 +278,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
   Notify.notifyOnRideAssigned booking ride
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => m SRide.Ride
-    buildRide = do
+    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> m SRide.Ride
+    buildRide mbMerchant = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -290,6 +289,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             SRB.RentalDetails _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       return
         SRide.Ride
           { id = guid,

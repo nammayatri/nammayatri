@@ -19,10 +19,10 @@ import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Kernel.Utils.Time (Seconds)
 
 data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
@@ -53,7 +53,10 @@ data MerchantD (s :: UsageSafety) = Merchant
     aadhaarKeyExpiryTime :: Seconds,
     mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
-    trackingShortUrlPattern :: Text
+    trackingShortUrlPattern :: Text,
+    editPickupDistanceThreshold :: HighPrecMeters,
+    driverDistanceThresholdFromPickup :: HighPrecMeters,
+    numOfAllowedEditPickupLocationAttemptsThreshold :: Int
   }
   deriving (Generic, Show)
 

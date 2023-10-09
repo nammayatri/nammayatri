@@ -61,7 +61,6 @@ import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator (fareSum)
-import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Exophone as CQExophone
