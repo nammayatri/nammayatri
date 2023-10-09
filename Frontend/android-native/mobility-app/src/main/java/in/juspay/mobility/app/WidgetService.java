@@ -10,6 +10,7 @@
 package in.juspay.mobility.app;
 
 import android.animation.ValueAnimator;
+import android.app.ActivityManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -442,8 +443,9 @@ public class WidgetService extends Service {
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
                                     if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
+                                        long percentUsedRam = (long) Math.round(getCurrentUsedRam());
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
-                                        mainLooper.postDelayed(() -> openMainActivity(), 600);
+                                        mainLooper.postDelayed(() -> openMainActivity(), percentUsedRam*10 > 500 ? percentUsedRam*10 : 500 );
                                     } else {
                                         openMainActivity();
                                     }
@@ -501,6 +503,13 @@ public class WidgetService extends Service {
             windowManager.removeView(imageClose);
             imageClose = null;
         }
+    }
+
+    private double getCurrentUsedRam(){
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        activityManager.getMemoryInfo(mi);
+        return ((double)mi.totalMem - mi.availMem) / (double)mi.totalMem * 100.0;
     }
 
     private void openMainActivity() {
