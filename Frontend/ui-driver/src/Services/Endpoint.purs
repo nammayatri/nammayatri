@@ -51,10 +51,10 @@ getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
 getRideHistory :: String -> String -> String -> String -> String -> String
-getRideHistory limit offset isActive status day= do
-  case status of
-    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
-    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
+getRideHistory limit offset isActive status day= (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+  -- case status of
+  --   "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+  --   _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
 
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"

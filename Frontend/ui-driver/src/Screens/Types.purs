@@ -475,6 +475,7 @@ instance decodeAnimationState :: Decode AnimationState where decode = defaultEnu
 
 type RideHistoryScreenState =
   {
+    currentItem :: Int,
     shimmerLoader :: AnimationState,
     prestoListArrayItems :: Array ItemState,
     rideList :: Array IndividualRideCardState,

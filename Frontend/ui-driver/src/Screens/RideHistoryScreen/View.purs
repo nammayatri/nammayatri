@@ -47,10 +47,10 @@ import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC)
 import JBridge (horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import Services.API (GetRidesHistoryResp(..), Status(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, currentItem, enableRefresh, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onPageScrollStateChanged, onPageScrolled, onPageSelected, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, viewPager, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -60,10 +60,10 @@ import Resource.Constants (tripDatesCount)
 import Screens as ScreenNames
 import Screens.RideHistoryScreen.Controller (Action(..), ScreenOutput, eval, prestoListFilter)
 import Screens.Types as ST
+import Services.API (GetRidesHistoryResp(..), Status(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
-import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Types.App (defaultGlobalState)
 
 
@@ -81,10 +81,10 @@ screen initialState rideListItem =
             _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
               let date = if initialState.datePickerState.selectedItem.date == 0 then getcurrentdate "" else (convertUTCtoISC initialState.datePickerState.selectedItem.utcDate "YYYY-MM-DD" )
               if initialState.currentTab == "COMPLETED" then do
-                (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED" date
+                (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "10" (show initialState.offsetValue) "false" "null" date
                 lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
                 else do
-                  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "CANCELLED" date
+                  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "10" (show initialState.offsetValue) "false" "null" date
                   lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
             pure $ pure unit
         )
@@ -327,71 +327,77 @@ ridesView rideListItem push state =
   ]$[ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      ][ swipeRefreshLayout
+      ][ linearLayout
           [height MATCH_PARENT
           , width MATCH_PARENT
+          , orientation VERTICAL
           , onRefresh push (const Refresh)
           , id "2000030"
+          , enableRefresh false
           ]
           [ Keyed.relativeLayout
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation VERTICAL
-            ]([ DT.Tuple "Rides"
-                $ PrestoList.list
-                [ height MATCH_PARENT
+            ][ DT.Tuple "Rides"
+                $ PrestoList.viewPager2
+                [ height WRAP_CONTENT
                 , scrollBarY false
-                , width MATCH_PARENT
-                , onScroll "rides" "RideHistoryScreen" push (Scroll)
-                , onScrollStateChange push (ScrollStateChanged)
-                , visibility $ case state.shimmerLoader of
-                            ST.AnimatedOut -> VISIBLE
-                            _ -> if state.props.showPaymentHistory then VISIBLE else GONE
+                , width WRAP_CONTENT
+                -- , onScroll "rides" "RideHistoryScreen" push (Scroll)
+                -- , onScrollStateChange push (ScrollStateChanged)
+                , visibility $ VISIBLE --case state.shimmerLoader of
+                            -- ST.AnimatedOut -> VISIBLE
+                            -- _ -> if state.props.showPaymentHistory then VISIBLE else GONE
                 , PrestoList.listItem rideListItem
                 , background Color.bg_grey
-                , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
+                , PrestoList.listDataV2 state.prestoListArrayItems--(prestoListFilter state.currentTab state.prestoListArrayItems)
+                -- , onPageScrolled push $ OnPageScrolled
+                , onPageSelected push $ OnPageSelected
+                -- , onPageScrollStateChanged push $ OnPageScrollStateChange
+                , currentItem state.currentItem
                 ]
-              , DT.Tuple "LOADER"
-                  $ PrestoAnim.animationSet
-                  [ PrestoAnim.Animation
-                    [ PrestoAnim.duration 1000
-                    , PrestoAnim.toAlpha $
-                        case state.shimmerLoader of
-                            ST.AnimatingIn -> 1.0
-                            ST.AnimatedIn -> 1.0
-                            ST.AnimatingOut -> 0.0
-                            ST.AnimatedOut -> 0.0
-                    , PrestoAnim.fromAlpha $
-                        case state.shimmerLoader of
-                            ST.AnimatingIn -> 0.0
-                            ST.AnimatedIn -> 1.0
-                            ST.AnimatingOut -> 1.0
-                            ST.AnimatedOut -> 0.0
-                    , PrestoAnim.tag "Shimmer"
-                    ] true
-                  ] $ PrestoList.list
-                    [ height MATCH_PARENT
-                    , scrollBarY false
-                    , background Color.bg_grey
-                    , width MATCH_PARENT
-                    , onAnimationEnd push OnFadeComplete
-                    , PrestoList.listItem rideListItem
-                    , PrestoList.listDataV2 $ shimmerData <$> (1..5)
-                    , visibility $ case state.shimmerLoader of
-                            ST.AnimatedOut -> GONE
-                            _ -> if state.props.showPaymentHistory then GONE else VISIBLE
-                    ]
-              , DT.Tuple "NoRides"
-                  $ linearLayout
-                    [ height MATCH_PARENT
-                    , width MATCH_PARENT
-                    , padding (PaddingBottom safeMarginBottom)
-                    , background Color.white900
-                    , visibility $ case state.shimmerLoader of
-                              ST.AnimatedOut ->  if (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0) then GONE else VISIBLE
-                              _ -> if state.props.showPaymentHistory then VISIBLE else GONE
-                    ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
-              ])
+              -- , DT.Tuple "LOADER"
+              --     $ PrestoAnim.animationSet
+              --     [ PrestoAnim.Animation
+              --       [ PrestoAnim.duration 1000
+              --       , PrestoAnim.toAlpha $
+              --           case state.shimmerLoader of
+              --               ST.AnimatingIn -> 1.0
+              --               ST.AnimatedIn -> 1.0
+              --               ST.AnimatingOut -> 0.0
+              --               ST.AnimatedOut -> 0.0
+              --       , PrestoAnim.fromAlpha $
+              --           case state.shimmerLoader of
+              --               ST.AnimatingIn -> 0.0
+              --               ST.AnimatedIn -> 1.0
+              --               ST.AnimatingOut -> 1.0
+              --               ST.AnimatedOut -> 0.0
+              --       , PrestoAnim.tag "Shimmer"
+              --       ] true
+              --     ] $ PrestoList.list
+              --       [ height MATCH_PARENT
+              --       , scrollBarY false
+              --       , background Color.bg_grey
+              --       , width MATCH_PARENT
+              --       , onAnimationEnd push OnFadeComplete
+              --       , PrestoList.listItem rideListItem
+              --       , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+              --       , visibility $ case state.shimmerLoader of
+              --               ST.AnimatedOut -> GONE
+              --               _ -> if state.props.showPaymentHistory then GONE else VISIBLE
+              --       ]
+              -- , DT.Tuple "NoRides"
+              --     $ linearLayout
+              --       [ height MATCH_PARENT
+              --       , width MATCH_PARENT
+              --       , padding (PaddingBottom safeMarginBottom)
+              --       , background Color.white900
+              --       , visibility $ case state.shimmerLoader of
+              --                 ST.AnimatedOut ->  if (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0) then GONE else VISIBLE
+              --                 _ -> if state.props.showPaymentHistory then VISIBLE else GONE
+              --       ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
+              ]
             ]
       ]
   ] <> if state.props.showDatePicker then [linearLayout

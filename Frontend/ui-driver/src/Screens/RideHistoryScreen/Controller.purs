@@ -85,6 +85,7 @@ instance loggableAction :: Loggable Action where
           trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
     PaymentHistoryModelAC act -> pure unit
     OpenPaymentHistory -> pure unit
+    _ -> pure unit
 
 data ScreenOutput = GoBack
                     | RideHistoryScreen RideHistoryScreenState
@@ -109,6 +110,9 @@ data Action = Dummy
             | IndividualRideCardAction IndividualRideCardController.Action
             | RideHistoryAPIResponseAction (Array RidesInfo)
             | Loader
+            | OnPageScrollStateChange Int
+            | OnPageScrolled String
+            | OnPageSelected Int
             | Scroll String
             | ErrorModalActionController ErrorModalController.Action
             | NoAction
@@ -175,7 +179,7 @@ eval (RideHistoryAPIResponseAction rideList) state = do
   let filteredRideList = (rideListResponseTransformer rideList)
   _ <- pure $ setRefreshing "2000030" false
   let loadBtnDisabled = if(length rideList == 0) then true else false
-  continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
+  continue $ state {currentItem = 3,shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
 
 eval (Scroll value) state = do
   -- TODO : LOAD MORE FUNCTIONALITY

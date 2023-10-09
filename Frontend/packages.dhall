@@ -136,61 +136,8 @@ in  upstream
     , repo = "https://github.com/juspay/purescript-backtrack.git"
     , version = "update/github-purescript-backtrack-repo"
     }
-  with presto-dom =
-    { dependencies =
-      [ "effect"
-      , "prelude"
-      , "hyrule"
-      , "halogen-vdom"
-      , "tracker"
-      , "presto"
-      , "aff"
-      , "arrays"
-      , "control"
-      , "either"
-      , "exceptions"
-      , "foldable-traversable"
-      , "foreign"
-      , "foreign-generic"
-      , "foreign-object"
-      , "functions"
-      , "integers"
-      , "lists"
-      , "maybe"
-      , "newtype"
-      , "refs"
-      , "strings"
-      , "transformers"
-      , "tuples"
-      , "typelevel-prelude"
-      , "unsafe-coerce"
-      , "web-dom"
-      , "web-events"
-      ]
-    , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "nammayatri"
-    }
-  with halogen-vdom =
-    { dependencies =
-      [ "effect"
-      , "prelude"
-      , "foreign-object"
-      , "arrays"
-      , "bifunctors"
-      , "foreign"
-      , "functions"
-      , "maybe"
-      , "newtype"
-      , "nullable"
-      , "refs"
-      , "tuples"
-      , "unsafe-coerce"
-      , "web-dom"
-      , "web-events"
-      ]
-    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "update/github-purescript-halogen-vdom-repo"
-    }
+  with presto-dom = /Users/vigneshs/Documents/presto/purescript-presto-dom/spago.dhall as Location
+  with halogen-vdom = /Users/vigneshs/Documents/purescript-ref/purescript-halogen-vdom/spago.dhall as Location
   with foreign-generic =
     { dependencies =
       [ "assert"

@@ -32,13 +32,14 @@ import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Services.API (RidesInfo(..), Status(..))
 import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-
+import Debug
 
 rideHistory :: FlowBT String MY_RIDES_SCREEN_OUTPUT
 rideHistory = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "RideHistoryScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push
+  _ <- pure $ spy "rideListItem" $ rideListItem
   act <- lift $ lift $ runScreen $ RideHistoryScreen.screen state.rideHistoryScreen{shimmerLoader = AnimatedIn} rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack

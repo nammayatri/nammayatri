@@ -215,6 +215,7 @@ public class MobilityCommonBridge extends HyperBridge {
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
         receivers = new Receivers(bridgeComponents);
         receivers.initReceiver();
+        fetchAndUpdateLastKnownLocation();
     }
 
     public static boolean isClassAvailable(String className) {
@@ -369,6 +370,13 @@ public class MobilityCommonBridge extends HyperBridge {
                     });
         }
 
+    }
+
+    private void fetchAndUpdateLastKnownLocation() {
+        String lat = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT");
+        String lon = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON");
+        lastLatitudeValue = lat.equals("__failed") ? Double.parseDouble(lat) : lastLatitudeValue;
+        lastLongitudeValue = lon.equals("__failed") ? Double.parseDouble(lon) : lastLongitudeValue;
     }
 
     @SuppressLint("MissingPermission")

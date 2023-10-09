@@ -18,10 +18,11 @@ module Screens.RideHistoryScreen.ScreenData where
 import Foreign.Object (empty)
 import Prelude ((-))
 import Resource.Constants (tripDatesCount)
-import Screens.Types (AnimationState(..), RideHistoryScreenState)
+import Screens.Types (AnimationState(..), RideHistoryScreenState, IndividualRideCardState)
 
 initData :: RideHistoryScreenState
 initData = {
+  currentItem : 4,
   shimmerLoader : AnimatingIn,
   recievedResponse: false,
   prestoListArrayItems : [],
@@ -71,3 +72,26 @@ initData = {
   , showPaymentHistory : false
   }
 }
+
+
+dummyCard :: IndividualRideCardState
+dummyCard =  {
+    date : "",
+    time : "",
+    total_amount : 0,
+    card_visibility : "",
+    shimmer_visibility : "",
+    rideDistance : "",
+    status : "",
+    vehicleModel : "",
+    shortRideId : "",
+    vehicleNumber : "",
+    driverName : "",
+    driverSelectedFare : 0,
+    vehicleColor : "",
+    id : "",
+    updatedAt : "",
+    source : "",
+    destination : "",
+    vehicleType : ""
+  }

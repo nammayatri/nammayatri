@@ -696,18 +696,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (sharedPref != null) {
-            sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onDestroy").apply();
-            String role = sharedPref.getString("ROLE_KEY", "null");
-            String location_status = sharedPref.getString("LOCATION_STATUS", "PAUSE");
-            System.out.println("Outside onDestroy Driver" + role);
-            if (role.equals("DRIVER") && location_status.equals("START") && (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
-                Intent broadcastIntent = new Intent();
-                broadcastIntent.setAction("restartservice");
-                broadcastIntent.setClass(this, BootUpReceiver.class);
-                this.sendBroadcast(broadcastIntent);
-            }
-        }
         if (hyperServices != null) {
             hyperServices.terminate();
         }
