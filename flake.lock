@@ -2359,16 +2359,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1696869201,
-        "narHash": "sha256-PoStDhLtabDP8aIX1lECJpam55Vg/a9SUTI/sfzkhwM=",
+        "lastModified": 1697015887,
+        "narHash": "sha256-NkLAKXaydfYNmSURt2GRDsIdSUxxsU9GnL9G/WpcifU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "40d95ba961b4b761bf3c27d7ae6cb39ad011c44e",
+        "rev": "72378f38f807c6b8af901e44b38c361ec1b979b5",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/Kafka-pushing-non-KV-table-data-to-kafka",
         "repo": "shared-kernel",
         "type": "github"
       }

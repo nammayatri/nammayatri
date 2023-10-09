@@ -139,6 +139,7 @@ let tables =
       { enableKVForWriteAlso =
           [] : List { nameOfTable : Text, percentEnable : Natural }
       , enableKVForRead = [] : List Text
+      , kafkaNonKVTables = [] : List Text
       }
 
 let dontEnableForDb = [] : List Text
