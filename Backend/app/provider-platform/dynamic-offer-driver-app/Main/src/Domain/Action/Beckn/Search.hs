@@ -70,48 +70,51 @@ import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
+import qualified Storage.Queries.FareProduct as QFareProduct
+import SharedLogic.FareProduct
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
-data DSearchReqOnDemand' =
-  DSearchReqOnDemand'
-    { messageId :: Text,
-      transactionId :: Text,
-      bapId :: Text,
-      bapUri :: BaseUrl,
-      bapCity :: Context.City,
-      bapCountry :: Context.Country,
-      pickupLocation :: LatLong,
-      pickupTime :: UTCTime,
-      dropLocation :: LatLong,
-      pickupAddress :: Maybe BA.Address,
-      dropAddrress :: Maybe BA.Address,
-      routeDistance :: Maybe Meters,
-      routeDuration :: Maybe Seconds,
-      device :: Maybe Text,
-      customerLanguage :: Maybe Maps.Language,
-      disabilityTag :: Maybe Text,
-      routePoints :: Maybe [LatLong]
-    }
-data  DSearchReqRental' =
-  DSearchReqRental'
-     { messageId :: Text,
-      transactionId :: Text,
-      bapId :: Text,
-      bapUri :: BaseUrl,
-      bapCity :: Context.City,
-      bapCountry :: Context.Country,
-      pickupLocation :: LatLong,
-      pickupTime :: UTCTime,
-      pickupAddress :: Maybe BA.Address,
-      device :: Maybe Text,
-      customerLanguage :: Maybe Maps.Language,
-      disabilityTag :: Maybe Text
-    }
+data DSearchReqOnDemand' = DSearchReqOnDemand'
+  { messageId :: Text,
+    transactionId :: Text,
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    bapCity :: Context.City,
+    bapCountry :: Context.Country,
+    pickupLocation :: LatLong,
+    pickupTime :: UTCTime,
+    dropLocation :: LatLong,
+    pickupAddress :: Maybe BA.Address,
+    dropAddrress :: Maybe BA.Address,
+    routeDistance :: Maybe Meters,
+    routeDuration :: Maybe Seconds,
+    device :: Maybe Text,
+    customerLanguage :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text,
+    routePoints :: Maybe [LatLong]
+  }
+
+data DSearchReqRental' = DSearchReqRental'
+  { messageId :: Text,
+    transactionId :: Text,
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    bapCity :: Context.City,
+    bapCountry :: Context.Country,
+    pickupLocation :: LatLong,
+    pickupTime :: UTCTime,
+    pickupAddress :: Maybe BA.Address,
+    device :: Maybe Text,
+    customerLanguage :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text
+  }
 
 data DSearchReq = DSearchReqOnDemand DSearchReqOnDemand' | DSearchReqRental DSearchReqRental'
+
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
   { quoteId :: Id DQuoteSpecialZone.QuoteSpecialZone,
     vehicleVariant :: DVeh.Variant,
@@ -212,8 +215,55 @@ handler merchant sReq' =
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
-    DSearchReqRental DSearchReqRental' {..} -> do
-      undefined
+    DSearchReqRental sReq -> do
+      searchMetricsMVar <- Metrics.startSearchMetrics sReq.merchant.name
+      let fromLocationLatLong = sReq.pickupLocation
+          merchantId = sReq.merchant.id
+      sessiontoken <- generateGUIDText
+      fromLocation <- buildSearchReqLocation merchantId sReq.sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
+
+      rentalFareProducts <- do
+        res <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
+        return $
+          FareProducts
+            { fareProducts = res,
+              area = DFareProduct.Default,
+              specialLocationTag = Nothing
+            }
+      rentalfarePolicies <-
+        mapM
+          ( \fareProduct -> do
+              farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+              return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
+          )
+          rentalFareProducts.fareProducts
+      rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
+      Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
+      triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
+      let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
+      listOfRentalQuotes <- do
+        for listOfVehicleVariants $ \farePolicy -> do
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = farePolicy,
+                  distance = result.distance,
+                  rideTime = sReq.pickupTime,
+                  waitingTime = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = Nothing,
+                  nightShiftCharge = Nothing
+                }
+          buildRentalQuote
+            rentalSearchReq
+            fareParams
+            merchant.id
+            result.distance
+            farePolicy.vehicleVariant
+            result.duration
+            allFarePoliciesProduct.specialLocationTag
+      for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
+      return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -346,6 +396,27 @@ buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation e
         ..
       }
 
+buildRentalSearchRequest ::
+  ( MonadFlow m
+  ) =>
+  DSearchReqRental' ->
+  Id DM.Merchant ->
+  DLoc.Location ->
+  m DSR.SearchRequest
+buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
+  uuid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DSR.SearchRequest
+      { id = Id uuid,
+        createdAt = now,
+        area = Just area,
+        bapCity = Just bapCity,
+        bapCountry = Just bapCountry,
+        autoAssignEnabled = Nothing,
+        ..
+      }
+
 buildSearchRequestSpecialZone ::
   ( MonadGuid m,
     MonadTime m,
@@ -405,6 +476,35 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
         ..
       }
 
+buildRentalQuote ::
+  ( EsqDBFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  DSRSZ.SearchRequestSpecialZone ->
+  FareParameters ->
+  Id DM.Merchant ->
+  Meters ->
+  DVeh.Variant ->
+  Seconds ->
+  Maybe Text ->
+  m DQuoteRental.QuoteRental
+buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
+  quoteId <- Id <$> generateGUID
+  now <- getCurrentTime
+  let estimatedFare = fareSum fareParams
+      estimatedFinishTime = fromIntegral duration `addUTCTime` now
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let validTill = searchRequestExpirationSeconds `addUTCTime` now
+  pure
+    DQuoteRental.QuoteRental
+      { id = quoteId,
+        searchRequestId = productSearchRequest.id,
+        providerId = transporterId,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
+
 mkQuoteInfo :: DLoc.Location -> DLoc.Location -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
 mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
@@ -416,9 +516,9 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
 
 validateRequest :: Id DM.Merchant -> DSearchReq -> Flow DM.Merchant
 validateRequest merchantId sReq' = do
-  let (fromLocationLatLong,toLocationLatLong) = case sReq' of
-        DSearchReqOnDemand sReq -> (sReq.pickupLocation,Just sReq.dropLocation)
-        DSearchReqRental sReq -> (sReq.pickupLocation,Nothing)
+  let (fromLocationLatLong, toLocationLatLong) = case sReq' of
+        DSearchReqOnDemand sReq -> (sReq.pickupLocation, Just sReq.dropLocation)
+        DSearchReqRental sReq -> (sReq.pickupLocation, Nothing)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   unless merchant.enabled $ throwError AgencyDisabled
   unlessM (rideServiceable' merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong toLocationLatLong) $
