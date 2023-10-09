@@ -1801,7 +1801,7 @@ homeScreenFlow = do
                                           else if pendingTotalManualDues >= lowDuesLimit && pendingTotalManualDues < highDueWarningLimit then CLEAR_DUES_BANNER
                                           else if pendingTotalManualDues >= highDueWarningLimit && pendingTotalManualDues <= maxDueLimit then DUE_LIMIT_WARNING_BANNER
                                           else NO_SUBSCRIPTION_BANNER
-                              true, _, _     -> SETUP_AUTOPAY_BANNER
+                              true, _, _     -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
                               _, _, _        -> NO_SUBSCRIPTION_BANNER
       subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
                                   true, _, true -> case freeTrialDays of
