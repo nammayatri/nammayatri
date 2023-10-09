@@ -40,7 +40,6 @@
                     android:scaleType="centerCrop"
                     app:lottie_loop="true"
                     android:layout_gravity="center"
-                    android:visibility="gone"
                     app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
 
                 <ImageView
@@ -49,6 +48,7 @@
                     android:layout_height="125dp"
                     android:layout_gravity="center"
                     android:layout_marginTop="20dp"
+                    android:visibility="gone"
                     android:background="@drawable/ic_waiting_image" />
 
 

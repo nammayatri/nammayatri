@@ -253,7 +253,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
-                startApiLoader();
+                if (key != null && key.equals("nammayatriprovider"))
+                    startApiLoader();
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
@@ -668,6 +669,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String version = sharedPref.getString("VERSION_NAME", "null");
         String sessionToken = sharedPref.getString("SESSION_ID", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+        if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+            lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+        }
         try {
             String orderUrl = baseUrl + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -806,7 +812,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void showAcknowledgement(String ackType) {
         Handler handler = new Handler(Looper.getMainLooper());
         String ackText = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? getString(R.string.ride_assigned) : getString(R.string.ride_assigned_to_another_driver);
-        int rawResource = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? R.raw.ride_accepted_lottie : R.raw.accepted_by_another_driver_lottie;
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+        int rawResource;
+        if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
+            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+                rawResource = R.raw.yatri_auto_accepted_lottie;
+            }
+            else
+                rawResource = R.raw.ride_accepted_lottie;
+        }
+        else{
+            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+                rawResource = R.raw.yatri_auto_declined;
+            }
+            else
+                rawResource = R.raw.accepted_by_another_driver_lottie;
+        }
+
         handler.post(() -> {
             if (progressDialog != null) {
                 TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
