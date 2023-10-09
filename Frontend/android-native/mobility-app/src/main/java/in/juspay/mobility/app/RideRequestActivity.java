@@ -176,8 +176,15 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
+            String key = getApplicationContext().getResources().getString(R.string.service);
+            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+            View progressDialog = findViewById(R.id.progress_loader);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
+                if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
                     Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
@@ -316,9 +323,25 @@ public class RideRequestActivity extends AppCompatActivity {
 
     private void showAcknowledgement(String ackType) {
         String ackText = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? getString(R.string.ride_assigned) : getString(R.string.ride_assigned_to_another_driver);
-        int rawResource = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? R.raw.ride_accepted_lottie : R.raw.accepted_by_another_driver_lottie;
+        String key = getApplicationContext().getResources().getString(R.string.service);
+        String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+        View progressDialog = findViewById(R.id.progress_loader);
+        int rawResource;
+        if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
+            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+                rawResource = R.raw.yatri_auto_accepted_lottie;
+            }
+            else
+                rawResource = R.raw.ride_accepted_lottie;
+        }
+        else{
+            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+                rawResource = R.raw.yatri_auto_declined;
+            }
+            else
+                rawResource = R.raw.accepted_by_another_driver_lottie;
+        }
         mainLooper.post(() -> {
-            View progressDialog = findViewById(R.id.progress_loader);
             TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
             loaderText.setText(ackText);
