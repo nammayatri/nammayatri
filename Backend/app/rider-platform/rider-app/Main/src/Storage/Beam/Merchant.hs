@@ -22,7 +22,6 @@ import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.FromField (fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
@@ -64,7 +63,6 @@ data MerchantT f = MerchantT
     updatedAt :: B.C f UTCTime,
     createdAt :: B.C f UTCTime,
     timeDiffFromUtc :: B.C f Seconds,
-    dirCacheSlot :: B.C f [Domain.Slot],
     isAvoidToll :: B.C f Bool,
     aadhaarVerificationTryLimit :: B.C f Int,
     aadhaarKeyExpiryTime :: B.C f Seconds

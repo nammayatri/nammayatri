@@ -23,7 +23,6 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
-import qualified "rider-app" Storage.Beam.Maps.DirectionsCache as DirectionsCache
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -67,7 +66,6 @@ data UpdateModel
   | FareBreakupUpdate
   | GeometryUpdate
   | IssueUpdate
-  | DirectionsCacheUpdate
   | PlaceNameCacheUpdate
   | MerchantUpdate
   | MerchantMessageUpdate
@@ -111,7 +109,6 @@ getTagUpdate ExophoneUpdate = "ExophoneOptions"
 getTagUpdate FareBreakupUpdate = "FareBreakupOptions"
 getTagUpdate GeometryUpdate = "GeometryOptions"
 getTagUpdate IssueUpdate = "IssueOptions"
-getTagUpdate DirectionsCacheUpdate = "DirectionsCacheOptions"
 getTagUpdate PlaceNameCacheUpdate = "PlaceNameCacheOptions"
 getTagUpdate MerchantUpdate = "MerchantOptions"
 getTagUpdate MerchantMessageUpdate = "MerchantMessageOptions"
@@ -154,7 +151,6 @@ parseTagUpdate "ExophoneOptions" = return ExophoneUpdate
 parseTagUpdate "FareBreakupOptions" = return FareBreakupUpdate
 parseTagUpdate "GeometryOptions" = return GeometryUpdate
 parseTagUpdate "IssueOptions" = return IssueUpdate
-parseTagUpdate "DirectionsCacheOptions" = return DirectionsCacheUpdate
 parseTagUpdate "PlaceNameCacheOptions" = return PlaceNameCacheUpdate
 parseTagUpdate "MerchantOptions" = return MerchantUpdate
 parseTagUpdate "MerchantMessageOptions" = return MerchantMessageUpdate
@@ -198,7 +194,6 @@ data DBUpdateObject
   | FareBreakupOptions UpdateModel [Set Postgres FareBreakup.FareBreakupT] (Where Postgres FareBreakup.FareBreakupT)
   | GeometryOptions UpdateModel [Set Postgres Geometry.GeometryT] (Where Postgres Geometry.GeometryT)
   | IssueOptions UpdateModel [Set Postgres Issue.IssueT] (Where Postgres Issue.IssueT)
-  | DirectionsCacheOptions UpdateModel [Set Postgres DirectionsCache.DirectionsCacheT] (Where Postgres DirectionsCache.DirectionsCacheT)
   | PlaceNameCacheOptions UpdateModel [Set Postgres PlaceNameCache.PlaceNameCacheT] (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MerchantOptions UpdateModel [Set Postgres Merchant.MerchantT] (Where Postgres Merchant.MerchantT)
   | MerchantMessageOptions UpdateModel [Set Postgres MerchantMessage.MerchantMessageT] (Where Postgres MerchantMessage.MerchantMessageT)
@@ -281,9 +276,6 @@ instance FromJSON DBUpdateObject where
       PlaceNameCacheUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PlaceNameCacheOptions updateModel updVals whereClause
-      DirectionsCacheUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ DirectionsCacheOptions updateModel updVals whereClause
       MerchantUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MerchantOptions updateModel updVals whereClause

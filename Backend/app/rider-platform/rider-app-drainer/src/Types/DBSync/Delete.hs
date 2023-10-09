@@ -23,7 +23,6 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
-import qualified "rider-app" Storage.Beam.Maps.DirectionsCache as DirectionsCache
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -64,7 +63,6 @@ data DeleteModel
   | FareBreakupDelete
   | GeometryDelete
   | IssueDelete
-  | DirectionsCacheDelete
   | PlaceNameCacheDelete
   | MerchantDelete
   | MerchantMessageDelete
@@ -108,7 +106,6 @@ getTagDelete ExophoneDelete = "ExophoneOptions"
 getTagDelete FareBreakupDelete = "FareBreakupOptions"
 getTagDelete GeometryDelete = "GeometryOptions"
 getTagDelete IssueDelete = "IssueOptions"
-getTagDelete DirectionsCacheDelete = "DirectionsCacheOptions"
 getTagDelete PlaceNameCacheDelete = "PlaceNameCacheOptions"
 getTagDelete MerchantDelete = "MerchantOptions"
 getTagDelete MerchantMessageDelete = "MerchantMessageOptions"
@@ -151,7 +148,6 @@ parseTagDelete "ExophoneOptions" = return ExophoneDelete
 parseTagDelete "FareBreakupOptions" = return FareBreakupDelete
 parseTagDelete "GeometryOptions" = return GeometryDelete
 parseTagDelete "IssueOptions" = return IssueDelete
-parseTagDelete "DirectionsCacheOptions" = return DirectionsCacheDelete
 parseTagDelete "PlaceNameCacheOptions" = return PlaceNameCacheDelete
 parseTagDelete "MerchantOptions" = return MerchantDelete
 parseTagDelete "MerchantMessageOptions" = return MerchantMessageDelete
@@ -195,7 +191,6 @@ data DBDeleteObject
   | FareBreakupDeleteOptions DeleteModel (Where Postgres FareBreakup.FareBreakupT)
   | GeometryDeleteOptions DeleteModel (Where Postgres Geometry.GeometryT)
   | IssueDeleteOptions DeleteModel (Where Postgres Issue.IssueT)
-  | DirectionsCacheDeleteOptions DeleteModel (Where Postgres DirectionsCache.DirectionsCacheT)
   | PlaceNameCacheDeleteOptions DeleteModel (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MerchantDeleteOptions DeleteModel (Where Postgres Merchant.MerchantT)
   | MerchantMessageDeleteOptions DeleteModel (Where Postgres MerchantMessage.MerchantMessageT)
@@ -276,9 +271,6 @@ instance FromJSON DBDeleteObject where
       PlaceNameCacheDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PlaceNameCacheDeleteOptions deleteModel whereClause
-      DirectionsCacheDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ DirectionsCacheDeleteOptions deleteModel whereClause
       MerchantDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MerchantDeleteOptions deleteModel whereClause

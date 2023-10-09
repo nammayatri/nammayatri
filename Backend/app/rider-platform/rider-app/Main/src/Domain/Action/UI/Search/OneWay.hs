@@ -43,7 +43,6 @@ import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
-import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -154,7 +153,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- SDC.getRoutes person.merchantId request
+  routeResponse <- Maps.getRoutes person.merchantId request
   let durationWeightage = 100 - merchant.distanceWeightage
   let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
