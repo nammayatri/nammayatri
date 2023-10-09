@@ -795,7 +795,7 @@ const tamilStrings = {
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING : "சவாரி செய்பவருக்கு செவித்திறன் குறைவாக உள்ளது. அழைப்பதற்கு பதிலாக அவர்களுக்கு செய்தி அனுப்பவும்.",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING : "வாடிக்கையாளருக்கு பார்வை குறைவாக உள்ளது. செய்தி அனுப்புவதற்குப் பதிலாக அவர்களை அழைக்கவும்.",
   PLEASE_HELP_THEM_AS_YOU_CAN : "தயவுசெய்து உங்களால் முடிந்தவரை அவர்களுக்கு உதவவும்",
-  LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE : "சிறப்பு உதவி தேவைப்படும் ரைடர்களுக்கு நீங்கள் எப்படி உதவலாம் என்பதை அறிக",
+  LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE : "சிறப்பு உதவி தேவைப்படும் வாடிக்கையாளர்களுக்கு நீங்கள் எவ்வாறு உதவலாம் என்பதை அறிக",
   ASSISTANCE_REQUIRED : "உதவி தேவை",
 	SETUP_NOW : "இப்போதே அமைக்கவும்",
 	NEED_HELP_JOINING_THE_PLAN : "திட்டத்தில் சேர உதவி வேண்டுமா?எங்களை தொடர்பு கொள்ளவும்",
@@ -906,5 +906,6 @@ const tamilStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
   AC_CAB : "ஏசி வண்டி",
   AC_SUV : "ஏசி எஸ்யூவி",
-  DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்"
+  DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்",
+  WHAT_ARE_PURPLE_RIDES : "பர்பிள் சவாரிகள் என்றால் என்ன?"
 }

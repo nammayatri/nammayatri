@@ -16,7 +16,7 @@
 module Components.NotificationDetailModel.View where
 
 import Animation (screenAnimationFadeInOut)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), YoutubeData)
 import Types.App (defaultGlobalState)
 import Components.NotificationDetailModel.Controller (Action(..), fetchTitleAndUrl)
 import Components.PopUpModal as PopUpModal
@@ -31,14 +31,14 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType)
+import Helpers.Utils (addMediaPlayer, parseNumber)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, getVideoID)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (NotificationDetailModelState, YoutubeData, YoutubeVideoStatus(..))
+import Screens.Types (NotificationDetailModelState, YoutubeVideoStatus(..))
 import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color

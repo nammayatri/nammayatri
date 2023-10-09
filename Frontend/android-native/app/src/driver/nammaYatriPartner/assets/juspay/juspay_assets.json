@@ -343,6 +343,7 @@
       "ny_ic_poor_hearing" : true,
       "ny_ic_profile" : true,
       "ny_ic_profile_image" : true,
+      "ny_ic_purple_badge" : true,
       "ny_ic_qr_code" : true,
       "ny_ic_radio_button" : true,
       "ny_ic_radio_selected" : true,

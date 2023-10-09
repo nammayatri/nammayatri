@@ -1792,6 +1792,7 @@ homeScreenFlow = do
       homeScreenFlow
     FCM_NOTIFICATION notificationType -> do
       _ <- pure $ removeAllPolylines ""
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
       case notificationType of
         "CANCELLED_PRODUCT" -> do
           _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"

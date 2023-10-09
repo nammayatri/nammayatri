@@ -796,7 +796,7 @@ const kannadaStrings = {
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING: "ರೈಡರಿಗೆ ಕಡಿಮೆ ಕೇಳಿಸುವ ಶಕ್ತಿ ಇದೆ. ಅವರಿಗೆ ಕರೆ ಬದಲಾಗಿ ಚಾಟ್ ಮಾಡಿ.",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "ಗ್ರಾಹಕನಲ್ಲಿ ಕಡಿಮೆ ದೃಷ್ಟಿ ಇದೆ. ಅವರಿಗೆ ಚಾಟ್ ಮಾಡುವ ಬದಲಾಗಿ ಅವರಿಗೆ ಕರೆ ಮಾಡಿ.",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "ನೀವು ಸಹಾಯ ಮಾಡಬಹುದಾದ ರೀತಿಯಲ್ಲಿ ಅವರಿಗೆ ಸಹಾಯ ಮಾಡಿ",
-  LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "ವಿಶೇಷ ಸಹಾಯದ ಅಗತ್ಯವಿರುವ ಸವಾರರಿಗೆ ನೀವು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
+  LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE: "ವಿಶೇಷ ಸಹಾಯದ ಅಗತ್ಯವಿರುವ ಗ್ರಾಹಕರಿಗೆ ನೀವು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು ಎಂಬುದನ್ನು ತಿಳಿಯಿರಿ",
   ASSISTANCE_REQUIRED : "ನೆರವು ಅಗತ್ಯವಿದೆ",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡಿ",
 	SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ",
@@ -907,5 +907,6 @@ const kannadaStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿಸುತ್ತದೆ",
   AC_CAB : "ಎಸಿ ಕ್ಯಾಬ್",
   AC_SUV : "ಎಸಿ ಎಸ್ಯುವಿ",
-  DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ"
+  DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ",
+  WHAT_ARE_PURPLE_RIDES : "ಪರ್ಪಲ್ ರೈಡ್ಸ್ ಎಂದರೇನು?"
 }

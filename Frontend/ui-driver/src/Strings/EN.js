@@ -826,7 +826,7 @@ const englishStrings = {
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING : "Customer has poor hearing. Please chat with them instead of calling.",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING : "Customer has poor vision. Please call them instead of chatting.",
   PLEASE_HELP_THEM_AS_YOU_CAN : "Please help them as you can",
-  LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE : "Learn how you can help riders requiring special assistance",
+  LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE : "Learn how you can help customers requiring special assistance",
   ASSISTANCE_REQUIRED : "Assistance Required",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
 	SETUP_NOW : "Setup Now",
@@ -935,5 +935,6 @@ const englishStrings = {
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "rides",
   AC_CAB : "AC Cab",
   AC_SUV : "AC SUV",
-  DOWNGRADE_VEHICLE : "Downgrade Vehicle"
+  DOWNGRADE_VEHICLE : "Downgrade Vehicle",
+  WHAT_ARE_PURPLE_RIDES : "What are Purple Rides?"
 } 
