@@ -168,21 +168,14 @@ view push state =
             , frameLayout [
               height MATCH_PARENT
               , width MATCH_PARENT
-              ][ case state.props.subView of
-                    JoinPlan -> joinPlanView push state (state.props.subView == JoinPlan)
-                    ManagePlan -> linearLayout 
-                                  [ width MATCH_PARENT
-                                  , height MATCH_PARENT
-                                  ][ managePlanView push state (state.props.subView == ManagePlan)]
-                    MyPlan -> linearLayout 
-                              [ width MATCH_PARENT
-                              , height MATCH_PARENT
-                              ][ myPlanView push state (state.props.subView == MyPlan) ] 
-                    PlanDetails -> autoPayDetailsView push state (state.props.subView == PlanDetails)
-                    FindHelpCentre -> findHelpCentreView push state (state.props.subView == FindHelpCentre)
-                    DuesView -> duesOverView push state (state.props.subView == DuesView)
-                    DueDetails -> dueDetails push state (state.props.subView == DueDetails)
-                    _ -> dummyView
+              , visibility if state.props.showShimmer then  GONE else VISIBLE
+              ][ joinPlanView push state (state.props.subView == JoinPlan)
+                , managePlanView push state (state.props.subView == ManagePlan)
+                , myPlanView push state (state.props.subView == MyPlan)
+                , autoPayDetailsView push state (state.props.subView == PlanDetails)
+                , if (state.props.subView == FindHelpCentre) then findHelpCentreView push state (state.props.subView == FindHelpCentre) else dummyView
+                , if (state.props.subView == DuesView) then duesOverView push state (state.props.subView == DuesView) else dummyView
+                , if (state.props.subView == DueDetails) then dueDetails push state (state.props.subView == DueDetails) else dummyView
               ]
           ]
         , linearLayout
@@ -194,7 +187,7 @@ view push state =
           , onClick push $ const $ if state.props.myPlanProps.isDueViewExpanded then ToggleDueDetailsView else NoAction
           , gravity BOTTOM
           ][ duesView push state
-           , if any (_ == state.props.subView) [MyPlan, JoinPlan] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN) else dummyView
+           , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN) else dummyView
           ]
           , if state.props.optionsMenuState /= ALL_COLLAPSED then
               linearLayout
@@ -1032,7 +1025,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
     ([ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 1 1 1 1
-    , margin if isMyPlan then Margin 16 16 16 0 else MarginVertical 16 16      
+    , margin if isMyPlan then Margin 16 13 16 0 else MarginVertical 13 16      
     , cornerRadius 8.0
    ] <> if isActivePlan then [gradient gradient'] else [])
    [ linearLayout
@@ -1107,7 +1100,8 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
                         Mb.Just desc -> [text desc, visibility if isSelected then VISIBLE else GONE]
                         Mb.Nothing -> [visibility GONE])
                   [ textView $
-                    [ color Color.black600
+                    [ textFromHtml $ Mb.fromMaybe "" item.offerDescription
+                    , color Color.black600
                     , lineHeight "20"
                     ] <> if isSelectedLangTamil then FontStyle.captions TypoGraphy else FontStyle.body3 TypoGraphy
                   ]
@@ -1121,14 +1115,14 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
       , width MATCH_PARENT
       , gravity CENTER
       , visibility if isActivePlan then VISIBLE else GONE
-     ][ textView [
+     ][ textView $ [
         text $ "● " <> getString ACTIVE_PLAN
       , background Color.green900
       , color Color.white900
       , padding $ Padding 8 5 8 5
       , cornerRadius 100.0
-      ]]
-   
+      ] <> FontStyle.tags TypoGraphy
+    ]
 ]
   
   
