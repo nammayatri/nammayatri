@@ -23,7 +23,6 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
@@ -59,4 +58,4 @@ makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
     { ..
     }
 
-$(mkBeamInstancesForJSON ''PlatformFeeCharge)
+-- $(mkBeamInstancesForJSON ''PlatformFeeCharge)

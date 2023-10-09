@@ -243,6 +243,7 @@ library
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.QuoteRental
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -313,7 +314,6 @@ library
       Storage.Beam.BapMetadata
       Storage.Beam.BecknRequest
       Storage.Beam.Booking
-      Storage.Beam.SearchRequestRental
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BusinessEvent
@@ -402,6 +402,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
+      Storage.Beam.SearchRequestRental
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
@@ -524,6 +525,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.QuoteRental
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken

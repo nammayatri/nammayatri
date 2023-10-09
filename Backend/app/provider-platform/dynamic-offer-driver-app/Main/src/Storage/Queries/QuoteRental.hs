@@ -50,7 +50,7 @@ findById :: MonadFlow m => Id QuoteRental -> m (Maybe QuoteRental)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQR.id $ Se.Eq dQuoteId]
 
 instance FromTType' BeamQR.QuoteRental QuoteRental where
-  fromTType' BeamQR.QuoteSpecialZoneT {..} = do
+  fromTType' BeamQR.QuoteRentalT {..} = do
     fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in QuoteRental for id: " <> show fareParametersId)
     return $
       Just
@@ -71,7 +71,7 @@ instance FromTType' BeamQR.QuoteRental QuoteRental where
 
 instance ToTType' BeamQR.QuoteRental QuoteRental where
   toTType' QuoteRental {..} = do
-    BeamQR.QuoteSpecialZoneT
+    BeamQR.QuoteRentalT
       { BeamQR.id = getId id,
         BeamQR.searchRequestId = getId searchRequestId,
         BeamQR.providerId = getId providerId,
