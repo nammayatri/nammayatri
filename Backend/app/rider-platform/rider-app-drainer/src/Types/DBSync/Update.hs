@@ -23,6 +23,8 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import qualified "rider-app" Storage.Beam.Location as Location
+import qualified "rider-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -92,6 +94,8 @@ data UpdateModel
   | FeedbackFormUpdate
   | HotSpotConfigUpdate
   | BecknRequestUpdate
+  | LocationUpdate
+  | LocationMappingUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -135,6 +139,8 @@ getTagUpdate WebengageUpdate = "WebengageOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
+getTagUpdate LocationUpdate = "LocationOptions"
+getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -177,6 +183,8 @@ parseTagUpdate "WebengageOptions" = return WebengageUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
+parseTagUpdate "LocationOptions" = return LocationUpdate
+parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -220,6 +228,8 @@ data DBUpdateObject
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
+  | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
+  | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -351,3 +361,9 @@ instance FromJSON DBUpdateObject where
       BecknRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BecknRequestOptions updateModel updVals whereClause
+      LocationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ LocationOptions updateModel updVals whereClause
+      LocationMappingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ LocationMappingOptions updateModel updVals whereClause

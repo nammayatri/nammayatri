@@ -55,6 +55,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as Is
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueReport as IssueReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
+import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.MediaFile as MediaFile
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
@@ -171,6 +173,8 @@ data UpdateModel
   | DriverGoHomeRequestUpdate
   | DriverHomeLocationUpdate
   | GoHomeConfigUpdate
+  | LocationUpdate
+  | LocationMappingUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -254,6 +258,8 @@ getTagUpdate RegistryMapFallbackUpdate = "RegistryMapFallbackOptions"
 getTagUpdate DriverGoHomeRequestUpdate = "DriverGoHomeRequestOptions"
 getTagUpdate DriverHomeLocationUpdate = "DriverHomeLocationOptions"
 getTagUpdate GoHomeConfigUpdate = "GoHomeConfigOptions"
+getTagUpdate LocationUpdate = "LocationOptions"
+getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
@@ -336,6 +342,8 @@ parseTagUpdate "RegistryMapFallbackOptions" = return RegistryMapFallbackUpdate
 parseTagUpdate "DriverGoHomeRequestOptions" = return DriverGoHomeRequestUpdate
 parseTagUpdate "DriverHomeLocationOptions" = return DriverHomeLocationUpdate
 parseTagUpdate "GoHomeConfigOptions" = return GoHomeConfigUpdate
+parseTagUpdate "LocationOptions" = return LocationUpdate
+parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -419,6 +427,8 @@ data DBUpdateObject
   | DriverGoHomeRequestOptions UpdateModel [Set Postgres DriverGoHomeRequest.DriverGoHomeRequestT] (Where Postgres DriverGoHomeRequest.DriverGoHomeRequestT)
   | DriverHomeLocationOptions UpdateModel [Set Postgres DriverHomeLocation.DriverHomeLocationT] (Where Postgres DriverHomeLocation.DriverHomeLocationT)
   | GoHomeConfigOptions UpdateModel [Set Postgres GoHomeConfig.GoHomeConfigT] (Where Postgres GoHomeConfig.GoHomeConfigT)
+  | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
+  | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -670,3 +680,9 @@ instance FromJSON DBUpdateObject where
       GoHomeConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ GoHomeConfigOptions updateModel updVals whereClause
+      LocationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ LocationOptions updateModel updVals whereClause
+      LocationMappingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ LocationMappingOptions updateModel updVals whereClause

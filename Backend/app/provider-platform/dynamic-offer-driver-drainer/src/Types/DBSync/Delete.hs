@@ -55,6 +55,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as Is
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueReport as IssueReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
+import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.MediaFile as MediaFile
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
@@ -169,6 +171,8 @@ data DeleteModel
   | DriverGoHomeRequestDelete
   | DriverHomeLocationDelete
   | GoHomeConfigDelete
+  | LocationDelete
+  | LocationMappingDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -252,6 +256,8 @@ getTagDelete RegistryMapFallbackDelete = "RegistryMapFallbackOptions"
 getTagDelete DriverGoHomeRequestDelete = "DriverGoHomeRequestOptions"
 getTagDelete DriverHomeLocationDelete = "DriverHomeLocationOptions"
 getTagDelete GoHomeConfigDelete = "GoHomeConfigOptions"
+getTagDelete LocationDelete = "LocationOptions"
+getTagDelete LocationMappingDelete = "LocationMappingOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -331,6 +337,8 @@ parseTagDelete "RegistryMapFallbackOptions" = return RegistryMapFallbackDelete
 parseTagDelete "DriverGoHomeRequestOptions" = return DriverGoHomeRequestDelete
 parseTagDelete "DriverHomeLocationOptions" = return DriverHomeLocationDelete
 parseTagDelete "GoHomeConfigOptions" = return GoHomeConfigDelete
+parseTagDelete "LocationOptions" = return LocationDelete
+parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -414,6 +422,8 @@ data DBDeleteObject
   | DriverGoHomeRequestDeleteOptions DeleteModel (Where Postgres DriverGoHomeRequest.DriverGoHomeRequestT)
   | DriverHomeLocationDeleteOptions DeleteModel (Where Postgres DriverHomeLocation.DriverHomeLocationT)
   | GoHomeConfigDeleteOptions DeleteModel (Where Postgres GoHomeConfig.GoHomeConfigT)
+  | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
+  | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -663,3 +673,9 @@ instance FromJSON DBDeleteObject where
       GoHomeConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ GoHomeConfigDeleteOptions deleteModel whereClause
+      LocationDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ LocationDeleteOptions deleteModel whereClause
+      LocationMappingDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ LocationMappingDeleteOptions deleteModel whereClause

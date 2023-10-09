@@ -21,6 +21,8 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import qualified "rider-app" Storage.Beam.Location as Location
+import qualified "rider-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -88,6 +90,8 @@ data DBCreateObject
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   | BecknRequestObject BecknRequest.BecknRequest
+  | LocationObject Location.Location
+  | LocationMappingObject LocationMapping.LocationMapping
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -132,3 +136,5 @@ modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
+modelName (LocationObject _) = "Location"
+modelName (LocationMappingObject _) = "LocationMapping"

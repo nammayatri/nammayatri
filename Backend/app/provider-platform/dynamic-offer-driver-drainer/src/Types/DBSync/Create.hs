@@ -52,6 +52,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as Is
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueReport as IssueReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
+import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
+import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.MediaFile as MediaFile
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
@@ -165,6 +167,8 @@ data DBCreateObject
   | DriverGoHomeRequestObject DriverGoHomeRequest.DriverGoHomeRequest
   | DriverHomeLocationObject DriverHomeLocation.DriverHomeLocation
   | GoHomeConfigObject GoHomeConfig.GoHomeConfig
+  | LocationObject Location.Location
+  | LocationMappingObject LocationMapping.LocationMapping
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -251,3 +255,5 @@ modelName (RegistryMapFallbackObject _) = "RegistryMapFallback"
 modelName (DriverGoHomeRequestObject _) = "DriverGoHomeRequest"
 modelName (DriverHomeLocationObject _) = "DriverHomeLocation"
 modelName (GoHomeConfigObject _) = "GoHomeConfig"
+modelName (LocationObject _) = "Location"
+modelName (LocationMappingObject _) = "LocationMappingObject"

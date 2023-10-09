@@ -68,6 +68,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FeedbackForm" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (HotSpotConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("HotSpotConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (BecknRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("BecknRequest" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (LocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Location" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (LocationMappingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LocationMapping" :: Text) =<< dbConf
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

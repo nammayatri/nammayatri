@@ -108,6 +108,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (DriverGoHomeRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverGoHomeRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverHomeLocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverHomeLocation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (GoHomeConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("GoHomeConfig" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (LocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Location" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (LocationMappingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LocationMapping" :: Text) =<< dbConf
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

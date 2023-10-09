@@ -14,7 +14,6 @@
 
 module SharedLogic.LocationMapping where
 
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Kernel.Prelude
@@ -24,22 +23,17 @@ import qualified Storage.Queries.LocationMapping as QLM
 
 buildPickUpLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
 buildPickUpLocationMapping locationId entityId tag = do
-  version <- getMappingVersion
   id <- generateGUID
   let order = 0
+  QLM.updatePastMappingVersions entityId order
+  let version = "LATEST"
   return DLM.LocationMapping {..}
 
 buildDropLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
 buildDropLocationMapping locationId entityId tag = do
   id <- generateGUID
-  version <- getMappingVersion
   noOfEntries <- QLM.countOrders entityId
   let order = if noOfEntries == 0 then 1 else noOfEntries
+  QLM.updatePastMappingVersions entityId order
+  let version = "LATEST"
   return DLM.LocationMapping {..}
-
-getMappingVersion :: MonadFlow m => m Text
-getMappingVersion = do
-  now <- getCurrentTime
-  let epochVersion = round $ Time.utcTimeToPOSIXSeconds now
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  pure $ show epochVersionLast5Digits
