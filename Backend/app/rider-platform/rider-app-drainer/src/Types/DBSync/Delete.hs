@@ -23,6 +23,8 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import qualified "rider-app" Storage.Beam.Location as Location
+import qualified "rider-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -89,6 +91,8 @@ data DeleteModel
   | FeedbackFormDelete
   | HotSpotConfigDelete
   | BecknRequestDelete
+  | LocationDelete
+  | LocationMappingDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -132,6 +136,8 @@ getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
+getTagDelete LocationDelete = "LocationOptions"
+getTagDelete LocationMappingDelete = "LocationMappingOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -174,6 +180,8 @@ parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
+parseTagDelete "LocationOptions" = return LocationDelete
+parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -217,6 +225,8 @@ data DBDeleteObject
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
+  | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
+  | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -346,3 +356,9 @@ instance FromJSON DBDeleteObject where
       BecknRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BecknRequestDeleteOptions deleteModel whereClause
+      LocationDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ LocationDeleteOptions deleteModel whereClause
+      LocationMappingDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ LocationMappingDeleteOptions deleteModel whereClause

@@ -12,9 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Queries.LocationMapping where
 
+import qualified Data.Text as T
 import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -31,6 +33,33 @@ countOrders entityId = findAllWithKV [Se.Is BeamLM.entityId $ Se.Eq entityId] <&
 
 findByEntityId :: MonadFlow m => Text -> m [LocationMapping] --TODO : SORT BY ORDER
 findByEntityId entityId = findAllWithKV [Se.Is BeamLM.entityId $ Se.Eq entityId]
+
+findAllByEntityIdAndOrder :: MonadFlow m => Text -> Int -> m [LocationMapping]
+findAllByEntityIdAndOrder entityId order =
+  findAllWithKV
+    [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
+
+updatePastMappingVersions :: MonadFlow m => Text -> Int -> m ()
+updatePastMappingVersions entityId order = do
+  mappings <- findAllByEntityIdAndOrder entityId order
+  traverse_ incrementVersion mappings
+
+incrementVersion :: MonadFlow m => LocationMapping -> m ()
+incrementVersion mapping = do
+  let newVersion = getNewVersion mapping.version
+  updateVersion mapping.entityId mapping.order newVersion
+
+getNewVersion :: Text -> Text
+getNewVersion oldVersion =
+  case T.splitOn "-" oldVersion of
+    ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
+    _ -> "v-1"
+
+updateVersion :: MonadFlow m => Text -> Int -> Text -> m ()
+updateVersion entityId order version =
+  updateOneWithKV
+    [Se.Set BeamLM.version version]
+    [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
 
 instance FromTType' BeamLM.LocationMapping LocationMapping where
   fromTType' BeamLM.LocationMappingT {..} = do

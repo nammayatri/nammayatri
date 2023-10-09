@@ -1,0 +1,1 @@
+UPDATE atlas_app.location_mapping SET version = 'LATEST';

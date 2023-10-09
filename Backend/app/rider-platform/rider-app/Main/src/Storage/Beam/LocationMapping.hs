@@ -41,6 +41,6 @@ instance B.Table LocationMappingT where
 
 type LocationMapping = LocationMappingT Identity
 
-$(enableKVPG ''LocationMappingT ['id] [])
+$(enableKVPG ''LocationMappingT ['id] [['entityId]])
 
 $(mkTableInstances ''LocationMappingT "location_mapping")

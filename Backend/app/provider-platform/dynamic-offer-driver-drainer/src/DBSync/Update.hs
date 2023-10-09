@@ -166,6 +166,8 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (DriverGoHomeRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverGoHomeRequest" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverHomeLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverHomeLocation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (GoHomeConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("GoHomeConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (LocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (LocationMappingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationMappingConfig" :: Text) =<< dbConf
   where
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
