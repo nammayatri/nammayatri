@@ -70,6 +70,7 @@ module Domain.Action.UI.Driver
     getDriverPaymentsHistoryV2,
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
+    fetchDriverPhoto,
   )
 where
 
@@ -1324,7 +1325,7 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   filePath <- createFilePath (getId driverId) fileType imageExtension
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
-          & T.replace "<DOMAIN>" "driver-profile-picture"
+          & T.replace "<DOMAIN>" "driver/profile/photo"
           & T.replace "<FILE_PATH>" filePath
   result <- try @_ @SomeException $ S3.put (T.unpack filePath) image
   case result of
@@ -1344,6 +1345,9 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
           "image/jpeg" -> pure "jpg"
           _ -> throwError $ FileFormatNotSupported reqContentType
         _ -> throwError $ FileFormatNotSupported reqContentType
+
+fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant) -> Text -> Flow Text
+fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>

@@ -133,9 +133,14 @@ type API =
                         :> MandatoryQueryParam "day" Day
                         :> Get '[JSON] DDriver.DriverStatsRes
                       :<|> "photo"
-                        :> TokenAuth
-                        :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
-                        :> Post '[JSON] APISuccess
+                        :> ( TokenAuth
+                               :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
+                               :> Post '[JSON] APISuccess
+                               :<|> "media"
+                                 :> TokenAuth
+                                 :> MandatoryQueryParam "filePath" Text
+                                 :> Get '[JSON] Text
+                           )
                   )
              :<|> "metaData"
                :> TokenAuth
@@ -209,6 +214,7 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                       :<|> uploadDriverPhoto
+                      :<|> fetchDriverPhoto
                   )
              :<|> updateMetaData
              :<|> ( validate
@@ -283,6 +289,9 @@ getStats day = withFlowHandlerAPI . DDriver.getStats day
 
 updateMetaData :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
+
+fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
+fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
 
 uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
