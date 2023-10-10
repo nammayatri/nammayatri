@@ -136,7 +136,7 @@ getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc dri
         QDF.findWindowsWithFeeType merchantId startTime endTime (getFeeType paymentMode) <&> (<&> (.driverId))
       DOverlay.FreeTrialDaysLeft numOfDays -> do
         now <- getCurrentTime
-        let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - numOfDays)) (UTCTime (utctDay now) (secondsToDiffTime 0))
+        let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))
             endTime = addUTCTime 86400 startTime
         QDI.findAllByEnabledAtInWindow merchantId (Just startTime) (Just endTime) <&> (<&> (.driverId))
       _ -> return []
