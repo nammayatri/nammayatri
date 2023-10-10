@@ -13,6 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-unused-record-wildcards #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module Domain.Action.Beckn.Search
   ( DSearchReq (..),
@@ -68,6 +69,7 @@ import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
+import qualified Storage.Queries.QuoteRental as QQuoteRental
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import qualified Storage.Queries.FareProduct as QFareProduct
@@ -80,6 +82,7 @@ import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Domain.Types.QuoteRental as DQuoteRental
+import qualified Control.Monad as NE
 
 data DSearchReqOnDemand' = DSearchReqOnDemand'
   { messageId :: Text,
@@ -254,17 +257,38 @@ handler merchant sReq' =
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
+      -- let listOfBuildRentalQuote = []
       listOfRentalQuotes <- do
-        for listOfVehicleVariants $ \farePolicy -> do
-          buildRentalQuote
-            rentalSearchReq
-            fareParams
-            merchant.id
-            
-            farePolicy.vehicleVariant
-            result.duration
-      for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
-      return (Just (mkRentalQuoteInfo fromLocation now <$> listOfSpecialZoneQuotes), Nothing)
+          for listOfVehicleVariants $ \farePolicy -> do
+            case farePolicy.farePolicyDetails of
+              FarePolicyD.RentalSlabsDetails slabList -> do
+                for (toList slabList.rentalSlabs) $
+                  (\slab -> do
+                      fareParams <-
+                        calculateFareParameters
+                          CalculateFareParametersParams
+                            { farePolicy = farePolicy,
+                              distance = kilometersToMeters slab.baseDistance,
+                              rideTime = sReq.pickupTime,
+                              endRideTime = Nothing,
+                              waitingTime = Nothing,
+                              driverSelectedFare = Nothing,
+                              customerExtraFee = Nothing,
+                              nightShiftCharge = Nothing
+                            }
+                      buildRentalQuote
+                        rentalSearchReq
+                        fareParams
+                        merchant.id
+                        (kilometersToMeters slab.baseDistance)
+                        farePolicy.vehicleVariant
+                        slab.duration)
+                   
+              _ -> undefined
+              _ -> undefined
+      let z = concat listOfRentalQuotes
+      for_ z QQuoteRental.create
+      return (Just (mkRentalQuoteInfo fromLocation now <$> z), Nothing)
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -507,7 +531,6 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
       estimatedFinishTime = fromIntegral duration `addUTCTime` now
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
-
   pure
     DQuoteRental.QuoteRental
       { id = quoteId,
@@ -515,7 +538,6 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
         providerId = transporterId,
         createdAt = now,
         updatedAt = now,
-
         ..
       }
 

@@ -155,7 +155,15 @@ mkOnInitMessage res = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-        DFParams.RENTAL -> undefined
+        DFParams.RENTAL -> 
+          breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "EXTRA_KILOMETER_FARE"
+            || breakup.title == "EXTRA_HOUR_FARE"
+            || breakup.title == "DRIVER_SELECTED_FARE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
+            || breakup.title == "TOTAL_FARE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
         DFParams.Slab ->
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"

@@ -47,7 +47,7 @@ instance FromJSON (FarePolicyD 'Unsafe)
 
 instance ToJSON (FarePolicyD 'Unsafe)
 
-data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalSlabsDetails (FPRSlabDetailsD s)
+data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalSlabsDetails (FPRSlabsDetailsD s)
   deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'Safe
