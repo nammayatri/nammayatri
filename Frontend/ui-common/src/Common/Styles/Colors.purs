@@ -58,6 +58,9 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
+white200 :: Color
+white200 = "#99FFFFFF"
+
 yellow900 :: Color
 yellow900 = "#FCC32C"
 
@@ -147,3 +150,15 @@ yellow500 = "#F5C061"
 
 yellow700 :: Color
 yellow700 = "#F09A01"
+
+yellow800 :: Color
+yellow800 = "#FEEBB9"
+
+yellowOpacity16 :: Color
+yellowOpacity16 = "#29FCC32C"
+
+greenOpacity16 :: Color
+greenOpacity16 = "#2953BB6F"
+
+redOpacity16 :: Color
+redOpacity16 = "#29E55454"

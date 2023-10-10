@@ -23,7 +23,7 @@ import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..))
 
 initData :: DriverProfileScreenState
@@ -67,6 +67,8 @@ initData = {
     vehicleName : "",
     languagesSpoken : [],
     profileImg : Nothing,
+    payerVpa : "",
+    autoPayStatus : NO_AUTOPAY,
     analyticsData : {
         totalEarnings : ""
       , bonusEarned : ""
@@ -112,7 +114,9 @@ initData = {
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false,
-    showBookingOptionForTaxi : false
+    showBookingOptionForTaxi : false,
+    upiQrView : false,
+    paymentInfoView : false
    }
 }
 
@@ -192,6 +196,9 @@ dummyDriverInfo = GetDriverInfoResp {
     , mediaUrl              : Nothing
     , aadhaarCardPhoto      : Nothing 
     , freeTrialDaysLeft     : Nothing
+    , payerVpa              : Nothing
+    , currentDues           : Nothing
+    , manualDues           : Nothing
 }
 
 organizationInfo :: OrganizationInfo

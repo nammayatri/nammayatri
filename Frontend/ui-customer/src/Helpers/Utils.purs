@@ -53,6 +53,7 @@ import Effect.Console (logShow)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
+import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
@@ -217,18 +218,6 @@ derive instance genericTimeUnit :: Generic TimeUnit _
 instance showTimeUnit :: Show TimeUnit where
   show = genericShow
 
-class Serializable a where
-  serialize :: a -> String
-  deserialize :: String -> Maybe a
-
-instance genericSerializable :: (Encode a, Decode a) => Serializable a where
-  serialize = encodeJSON
-  deserialize = decodeJSON >>> runExcept >>> hush
-
-saveRecents :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
-saveRecents objName obj =
-  doAff do
-    (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
 fetchRecents :: Decode RecentlySearchedObject => String -> Flow GlobalState (Maybe RecentlySearchedObject)
 fetchRecents objName = do

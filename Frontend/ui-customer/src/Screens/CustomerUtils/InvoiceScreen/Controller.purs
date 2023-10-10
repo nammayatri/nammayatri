@@ -21,6 +21,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, exit, continue, continueWithCmd)
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeaderController
+import Foreign (unsafeToForeign)
 import JBridge (generatePDF)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -69,11 +70,11 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = contin
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continueWithCmd state
     [ do
-        let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : state.data.selectedItem.baseFare},
-                                                                                                                    { key : "Distance", value : state.data.selectedItem.baseDistance},
-                                                                                                                    { key : "Driver pickup charges", value : "₹ 10"},
-                                                                                                                    { key : "Total fare", value : state.data.selectedItem.totalAmount},
-                                                                                                                    { key : "Ride completion timestamp", value : state.data.selectedItem.rideEndTime}]
+        let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : unsafeToForeign state.data.selectedItem.baseFare},
+                                                                                                                    { key : "Distance", value : unsafeToForeign state.data.selectedItem.baseDistance},
+                                                                                                                    { key : "Driver pickup charges", value : unsafeToForeign "₹ 10"},
+                                                                                                                    { key : "Total fare", value : unsafeToForeign state.data.selectedItem.totalAmount},
+                                                                                                                    { key : "Ride completion timestamp", value : unsafeToForeign state.data.selectedItem.rideEndTime}]
         _ <- pure $ generatePDF state "NEW"
         pure NoAction
     ]

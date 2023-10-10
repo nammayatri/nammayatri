@@ -43,7 +43,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
-import Data.Int (ceil, toNumber)
+import Data.Int (ceil, toNumber, fromString)
 import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
@@ -53,13 +53,12 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getEN)
@@ -78,7 +77,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..))
+import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..), LocalStoreSubscriptionInfo)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..))
 import Services.API (Status(..))
@@ -228,11 +227,17 @@ view push state =
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI
+           then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
+           else linearLayout[visibility GONE][]
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-  ] <> if (state.props.showChatBlockerPopUp || state.props.showBlockingPopup )then [blockerPopUpView push state] else [])
+      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
+          then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
+        else linearLayout[visibility GONE][]
+  ] <> if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup )then [blockerPopUpView push state] else [])
 
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -241,8 +246,8 @@ blockerPopUpView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view 
-    (push <<< if state.props.showBlockingPopup then StartEarningPopupAC else PopUpModalChatBlockerAction ) 
-    (if state.props.showBlockingPopup then subsBlockerPopUpConfig state else chatBlockerPopUpConfig state)]
+    (push <<< if state.data.paymentState.showBlockingPopup then StartEarningPopupAC else PopUpModalChatBlockerAction ) 
+    (if state.data.paymentState.showBlockingPopup then subsBlockerPopUpConfig state else chatBlockerPopUpConfig state)]
   
 accessibilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 accessibilityPopUpView push state =
@@ -304,15 +309,15 @@ driverMapsHeaderView push state =
                     , width MATCH_PARENT
                     , gravity RIGHT
                   ][
-                    if (state.props.autoPayBanner && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                    if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
                     , viewRecenterAndSupport state push
                   ]
                 ]
               ]
             , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && not state.props.autoPayBanner) then genderBannerView state push else linearLayout[][]
+            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push else linearLayout[][]
             , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
+            , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
             ]
         ]
         , bottomNavBar push state
@@ -408,20 +413,13 @@ autoPayBannerView state push configureImage =
     , width  MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
-    , visibility if state.props.autoPayBanner then VISIBLE else GONE
+    , visibility if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER then VISIBLE else GONE
     , gravity BOTTOM
     , weight 1.0
     ][
-    linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity RIGHT
-      ][
         Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
-      ]
     ]
-
+  
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
   linearLayout
@@ -436,7 +434,7 @@ otpButtonView state push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
     ][ imageView
-        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
+        [ imageWithFallback $ "ic_mode_standby," <> (HU.getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
@@ -511,7 +509,7 @@ recenterBtnView state push =
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
-    , imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+    , imageWithFallback $ "ny_ic_recenter_btn," <> (HU.getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
     , onClick (\action -> do
             _ <- JB.getCurrentPosition push CurrentLocation
             pure unit
@@ -521,6 +519,8 @@ recenterBtnView state push =
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
+  let showGoInYellow = state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.config.subscriptionConfig.highDueWarningLimit)
+  in
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -559,7 +559,9 @@ offlineView push state =
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
-              , text $ getString if state.props.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE else GO_ONLINE_PROMPT
+              , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
+                                 else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
+                                 else GO_ONLINE_PROMPT
               ] <> FontStyle.paragraphText TypoGraphy
             ]
         ]
@@ -578,7 +580,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background if state.props.driverBlocked then Color.yellowText else Color.darkMint 
+                    , background if showGoInYellow then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView
@@ -626,7 +628,7 @@ driverDetail push state =
         ][ imageView
            [ width $ V 42
            , height $ V 42
-           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+           , imageWithFallback $ "ny_ic_user," <> HU.getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
            ]
          ]
       ]
@@ -828,7 +830,7 @@ viewRecenterAndSupport state push =
     -- [ width ( V 40 )
     -- , height ( V 40 )
     -- , margin $ MarginBottom 10
-    -- , imageWithFallback "ny_ic_homepage_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
+    -- , imageWithFallback "ny_ic_homepage_support," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
     -- -- , onClick (\action -> do
     -- --         _ <- JB.getCurrentPosition push CurrentLocation
     -- --         pure unit
@@ -854,7 +856,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
+        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -903,7 +905,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
+             , imageWithFallback $ "ny_ic_offline_status," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
              ]
           ]
         , linearLayout
@@ -970,18 +972,18 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
+             , imageWithFallback $ "ic_vehicle_side_active," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
+             , imageWithFallback $ "ny_ic_chevrons_right," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ "ic_vehicle_side_inactive," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
@@ -1060,7 +1062,7 @@ addAlternateNumber push state =
       , imageWithFallback if state.props.showlinkAadhaarPopup then
                             "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
                           else
-                            "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
+                            "ic_call_plus," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
       ]
     , textView $
@@ -1114,7 +1116,7 @@ updateButtonIconAndText push state =
     [ width $ V 20
     , height $ V 20
     , margin $ MarginRight 5
-    , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
+    , imageWithFallback $ "ny_ic_refresh," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     , gravity RIGHT
     ],
     textView $

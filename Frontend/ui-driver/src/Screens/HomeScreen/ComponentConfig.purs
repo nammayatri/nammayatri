@@ -30,15 +30,18 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
+import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Debug (spy)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
+import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
 import Helpers.Utils as HU
@@ -46,13 +49,14 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), cornerRadius, gravity, padding)
 import PrestoDOM.Types.DomAttributes as PTD
+import Resource.Constants as Const
+import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..))
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
-import Font.Style (Style (..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -255,12 +259,148 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     , color = Color.black650
     } 
     , height = V 24
-    , margin = MarginVertical 0 20
+    , margin = MarginBottom 20
     , visibility = true
     , background = Color.white900
     , strokeColor = Color.white900
   }
 }
+
+freeTrialEndingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+freeTrialEndingPopupConfig state = 
+  let autoPayStatus = state.data.paymentState.autoPayStatus
+      noOfDaysLeft = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) 
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
+    primaryText {
+      text = case noOfDaysLeft of
+        3 -> getString FREE_TRIAL_ENDING_IN_2_DAYS
+        2 -> getString FREE_TRIAL_ENDING_TOMORROW
+        1 -> getString FREE_TRIAL_ENDS_TONIGHT
+        _ -> ""
+    , margin = Margin 16 16 16 4 },
+    secondaryText {
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES else getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
+    , margin = MarginBottom 24
+    },
+    option1 {
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = true,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = case noOfDaysLeft of
+        3 -> "ny_ic_2_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_2_days_left.png"
+        2 -> "ny_ic_1_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_1_days_left.png"
+        1 -> "ny_ic_offer_ends_tonight," <> getAssetStoreLink FunctionCall <> "ny_ic_offer_ends_tonight.png"
+        _ -> ""
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    , margin = MarginTop 20
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString NOT_NOW
+    , visibility = VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
+    , visibility = true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
+
+paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+paymentPendingPopupConfig state =
+  let popupType = state.props.subscriptionPopupType
+      dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
+      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 if popupType == LOW_DUES_CLEAR_POPUP then 20 else 5 ,
+    dismissPopup = true,
+    topTitle {
+      text = case popupType of
+                GO_ONLINE_BLOCKER -> getString PAYMENT_PENDING_ALERT
+                _  -> getString $ if isHighDues then DUES_PENDING else CLEAR_YOUR_DUES_EARLY
+    , visibility = VISIBLE
+    , gravity = CENTER
+    },
+    primaryText {
+      text = getString case popupType of 
+                         LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
+                         SOFT_NUDGE_POPUP     -> PAYMENT_PENDING_SOFT_NUDGE
+                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC
+                         _                    -> LOW_DUES_CLEAR_POPUP_DESC
+    , margin = Margin 16 16 16 4
+    , textStyle = SubHeading2
+    , color = Color.black700
+    , visibility = VISIBLE },
+    secondaryText {
+      text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+    , textStyle = SubHeading2
+    , margin = MarginBottom 24
+    , suffixImage = {
+        visibility : VISIBLE
+        , imageUrl : "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+        , height : (V 24)
+        , width : (V 24)
+        , margin : MarginLeft 4 
+        , padding : Padding 0 0 0 0
+      }
+    },
+    option1 {
+      text = getString CLEAR_DUES <> dues
+    , background = Color.black900
+    , color = Color.yellow900
+    , showShimmer = state.data.paymentState.showShimmer
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = true,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = case popupType of
+                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+                          _ ->  if isHighDues 
+                                then "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png" 
+                                else "ny_ic_clear_dues_early," <> getAssetStoreLink FunctionCall <> "ny_ic_clear_dues_early.png"
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString case popupType of
+                          SOFT_NUDGE_POPUP  -> GO_ONLINE_POPUP
+                          GO_ONLINE_BLOCKER -> VIEW_DUE_DETAILS
+                          _ -> VIEW_DUE_DETAILS
+    , visibility =  VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginBottom 20
+    , visibility = popupType == SOFT_NUDGE_POPUP || popupType == GO_ONLINE_BLOCKER
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  }
 
 offerConfigParams :: ST.HomeScreenState -> PromotionPopupConfig
 offerConfigParams state = PromotionPopupConfig $ {
@@ -650,19 +790,46 @@ autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
 autopayBannerConfig state configureImage =
   let
     config = Banner.config
+    bannerType = state.props.autoPayBanner
+    dues = HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
     config' = config
       {
-        backgroundColor = "#269574",
-        title = if onBoardingSubscriptionScreenCheck 0 true then getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES else getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS,
-        titleColor = Color.white900,
-        actionText = (getString SETUP_NOW),
-        actionTextColor = Color.white900,
-        imageUrl = if onBoardingSubscriptionScreenCheck 0 true then "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" else "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
-        isBanner = state.props.autoPayBanner,
-        imageHeight = if configureImage then (V 75) else (V 95),
+        backgroundColor = case bannerType of
+                        CLEAR_DUES_BANNER -> Color.yellow900
+                        DUE_LIMIT_WARNING_BANNER -> Color.pearl
+                        LOW_DUES_BANNER -> Color.yellow800
+                        _ -> Color.green600,
+        title = case bannerType of
+                  FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
+                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
+                  _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.config.subscriptionConfig.maxDuesLimit]
+                  _ -> "",
+        titleColor = case bannerType of
+                        DUE_LIMIT_WARNING_BANNER -> Color.red
+                        _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
+                        _ -> Color.white900,
+        actionText = case bannerType of
+                        _ | bannerType == DUE_LIMIT_WARNING_BANNER || bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getString PAY_NOW
+                        _ -> (getString SETUP_NOW),
+        actionTextColor = case bannerType of
+                            _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
+                            DUE_LIMIT_WARNING_BANNER -> Color.red
+                            _ -> Color.white900,
+        imageUrl = case bannerType of
+                      FREE_TRIAL_BANNER -> "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" 
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
+                      DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_due_limit_warning.png"
+                      _ -> "",
+        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
+        imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
-        titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
+        titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7,
+        imagePadding = case bannerType of
+                            _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> PaddingTop 0
+                            _ -> PaddingVertical 5 5
       }
   in config'
   
@@ -798,6 +965,16 @@ getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
   config = RideCompletedCard.config
+  autoPayBanner = state.props.autoPayBanner
+  autoPayStatus = state.data.paymentState.autoPayStatus
+  payerVpa = state.data.endRideData.payerVpa
+  disability = state.data.endRideData.disability /= Nothing
+  viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
+                      {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
+                      {condition : not (autoPayStatus == ACTIVE_AUTOPAY), elementView :  RideCompletedCard.NO_VPA_VIEW },
+                      {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
+                      {condition : disability, elementView :  RideCompletedCard.BADGE_CARD }
+                    ]
   config' = config{
     primaryButtonConfig {
       width = MATCH_PARENT,
@@ -807,9 +984,10 @@ getRideCompletedConfig state = let
       }
     },
     topCard {
-      title = getString RIDE_COMPLETED,
+      title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
+      gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -819,10 +997,11 @@ getRideCompletedConfig state = let
         background = Color.peacoat,
         stroke = "1," <> Color.peacoat,
         alpha = 0.8,
-        fontStyle = Body1
+        fontStyle = Body1,
+        visible = GONE
       },
       topPill{
-        visible = (state.data.endRideData.disability /= Nothing),
+        visible = disability,
         text = getString PURPLE_RIDE,
         textColor = Color.white900,
         background = Color.blueMagenta
@@ -857,7 +1036,7 @@ getRideCompletedConfig state = let
       }
     },
     badgeCard{
-      visible = (state.data.endRideData.disability /= Nothing),
+      visible = disability,
       image = "ny_ic_disability_confetti_badge," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_confetti_badge.png",
       imageWidth = V 152, 
       imageHeight = V 106,
@@ -866,7 +1045,22 @@ getRideCompletedConfig state = let
       background = Color.mangolia
     },
     showContactSupportPopUp = state.props.showContactSupportPopUp,
-    accessibility = DISABLE
+    driverUpiQrCard {
+      text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
+      id = "renderQRViewOnRideComplete",
+      vpa = payerVpa,
+      vpaIcon = (Const.getPspIcon payerVpa),
+      collectCashText = getString OR_COLLECT_CASH_DIRECTLY
+    },
+    noVpaCard {
+      title = getString SETUP_AUTOPAY_TO_ACCEPT_PAYMENT,
+      collectCashText = getString COLLECT_CASH_DIRECTLY
+    },
+    accessibility = DISABLE,
+    theme = LIGHT,
+    isPrimaryButtonSticky = true,
+    bannerConfig = autopayBannerConfig state false,
+    viewsByOrder = map (\item -> item.elementView) (DA.filter (\item -> item.condition) viewOrderConfig)
   }
   in config'
 

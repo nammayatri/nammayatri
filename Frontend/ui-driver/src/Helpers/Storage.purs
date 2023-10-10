@@ -105,6 +105,8 @@ data KeyStore = USER_NAME
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
                 | BUNDLE_TIME_OUT
+                | APP_SESSION_TRACK_COUNT
+                | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

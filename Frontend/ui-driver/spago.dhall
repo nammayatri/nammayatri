@@ -16,6 +16,7 @@ to generate this file without the comments in this block.
   , "arrays"
   , "backtrack"
   , "beckn-common"
+  , "bifunctors"
   , "control"
   , "datetime"
   , "debug"
@@ -32,6 +33,7 @@ to generate this file without the comments in this block.
   , "integers"
   , "js-timers"
   , "lists"
+  , "lite-decode"
   , "maybe"
   , "newtype"
   , "numbers"
@@ -44,7 +46,6 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
-  , "lite-decode"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

@@ -240,6 +240,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_CALL_DRIVER DriverProfileScreenState
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
+                                    | SUBCRIPTION 
 
 
 
@@ -305,6 +306,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
+                          | CLEAR_PENDING_DUES
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -358,6 +360,8 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | REFRESH_SUSCRIPTION
                                   | RETRY_PAYMENT_AC SubscriptionScreenState String
                                   | REFRESH_HELP_CENTRE SubscriptionScreenState
+                                  | CLEAR_DUES_ACT
+                                  | SUBSCRIBE_API SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory
@@ -365,6 +369,9 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToContest
                           | GoToAlerts
 
-data PAYMENT_HISTORY_SCREEN_OUTPUT = ViewDetails PaymentHistoryScreenState
+data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
+                                    | EntityDetailsAPI PaymentHistoryScreenState String
+                                    | SWITCH_TAB
+                                    | LOAD_MORE_ITEMS PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow

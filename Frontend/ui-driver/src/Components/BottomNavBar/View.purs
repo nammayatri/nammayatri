@@ -28,7 +28,7 @@ import JBridge (startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
@@ -40,11 +40,12 @@ view push state =
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
     , gravity CENTER
-    , stroke ("1,"<> Color.borderColorLight)
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , margin (Margin 0 10 0 10)
+       , padding (PaddingVertical 10 10)
+       , stroke ("1,"<> Color.grey900)
+       , background Color.white900
        ](mapWithIndex
          (\index item ->
           linearLayout

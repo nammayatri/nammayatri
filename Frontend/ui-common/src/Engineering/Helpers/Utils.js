@@ -13,3 +13,25 @@ export const getFromWindow = function (key) {
     return window[key];
   }
 }
+
+export const saveToLocalStoreImpl = function(key) {
+  return function (state) {
+      window.JBridge.setKeysInSharedPrefs(key, state);
+      return function () {
+      };
+    };
+}
+
+export const fetchFromLocalStoreImpl = function(key) {
+  return function (just) {
+      return function (nothing) {
+        return function () {
+          var state = JBridge.getFromSharedPrefs(key);
+          if (state != "__failed" && state != "(null)") {
+            return just(state);
+          }
+          return nothing;
+        };
+      };
+    };
+}

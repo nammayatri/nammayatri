@@ -17,7 +17,7 @@ module Components.Banner.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
+import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textFromHtml, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
@@ -32,11 +32,13 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ MarginTop 12
+    , margin config.margin
+    , padding config.padding
     , background config.backgroundColor
     , visibility if config.isBanner then VISIBLE else GONE
     , gravity CENTER_VERTICAL
     , onClick push (const OnClick)
+    , clickable config.bannerClickable
     , stroke config.stroke
     ]
     [  linearLayout
@@ -46,18 +48,30 @@ view push config =
         , orientation VERTICAL
         , layoutGravity "center_vertical"
         ]
-        [ textView $
+        [ 
+          textView $
+          [ height if config.alertTextVisibility then WRAP_CONTENT else V 0
+          , width MATCH_PARENT
+          , gravity LEFT
+          , text config.alertText
+          , color config.alertTextColor
+          , padding $ PaddingBottom 2
+          , visibility if config.alertTextVisibility then VISIBLE else GONE
+          ] <> (FontStyle.getFontStyle config.alertTextStyle LanguageStyle)
+        , textView $
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
           , text config.title
           , color config.titleColor
           , padding $ PaddingBottom 2
+          , visibility if config.titleTextVisibility then VISIBLE else GONE
           ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , visibility if config.actionTextVisibility then VISIBLE else GONE
           ]
           [
             textView $
@@ -72,10 +86,11 @@ view push config =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text "→"
+            , textFromHtml "&rarr;"
             , color config.actionTextColor
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5
+            , visibility if config.showActionArrow then VISIBLE else GONE
             ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
           ]
         ]
@@ -84,7 +99,7 @@ view push config =
             height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , padding $ PaddingVertical 5 5
+          , padding $ config.imagePadding
         ][imageView
             [
               height config.imageHeight

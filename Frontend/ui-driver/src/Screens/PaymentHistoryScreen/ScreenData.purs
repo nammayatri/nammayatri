@@ -16,73 +16,70 @@
 module Screens.PaymentHistoryScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, TransactionListItem)
+import Data.Maybe as Mb
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
+import Services.API (AutopayPaymentStage(..), FeeType(..))
 
 initData :: PaymentHistoryScreenState
 initData = {
     data: {
-        paymentListItem : [],
-        transactionListItem : dummyTransactionListItem,
-        manualPaymentRidesListItem : dManualPaymentRidesListItem
+        autoPayList : [],
+        manualPayList : [],
+        transactionDetails : {
+            notificationStatus : Mb.Just NOTIFICATION_SCHEDULED,
+            paymentStatus : Pending,
+            statusTime : "",
+            details : [],
+            manualSpecificDetails : [],
+            isSplit : false,
+            isAutoPayFailed : false,
+            feeType : AUTOPAY_PAYMENT,
+            numOfDriverFee : 0
+        },
+        planData : dummyPlanConfig
     },
 
     props: {
         subView : PaymentHistory,
-        autoPayHistory : true
+        autoPayHistory : true,
+        autoPaySetup : false,
+        selectedDue : "",
+        offset : 0,
+        enableLoadMore : true
     }
 }
 
 
-dummyPaymentListItem :: Array PaymentListItem
-dummyPaymentListItem = [
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success},
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success},
-    {paidDate : "String",
-    rideTakenDate : "String",
-    amount : "String",
-    paymentStatus : Success}
-]
+dummyPlanConfig :: PlanCardConfig
+dummyPlanConfig = 
+    { id : ""
+    , title : ""
+    , description : ""
+    , isSelected : false
+    , offers : [
+                {
+                title : Mb.Nothing,
+                isGradient : true,
+                gradient : [],
+                hasImage : true,
+                imageURL : "",
+                offerDescription : Mb.Nothing,
+                addedFromUI : false
+                }
+                ]
+    , priceBreakup : []
+    , frequency : ""
+    , freeRideCount : 1
+    , showOffer : true
+}
 
-dummyTransactionListItem :: Array TransactionListItem
-dummyTransactionListItem = [
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "OFFER",
-    title : "String",
-    val : "String"},
-    {key : "PAYMENT_METHOD",
-    title : "String",
-    val : "String"},
-    {key : "TXN_ID",
-    title : "String",
-    val : "String"}
-]
-
-dManualPaymentRidesListItem :: Array TransactionListItem
-dManualPaymentRidesListItem = [
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "OFFER",
-    title : "String",
-    val : "String"},
-    {key : "String",
-    title : "String",
-    val : "String"},
-    {key : "TXN_ID",
-    title : "String",
-    val : "String"}
-]
+dummyPromoConfig :: PromoConfig
+dummyPromoConfig = {
+                        title : Mb.Nothing,
+                        offerDescription : Mb.Nothing,
+                        isGradient : false,
+                        gradient : [],
+                        hasImage : false,
+                        imageURL : "",
+                        addedFromUI : false
+                    }

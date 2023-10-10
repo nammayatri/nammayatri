@@ -97,11 +97,18 @@ initData = {
           bannerTitleColor : "",
           banneActionText : "",
           actionTextColor : "",
+          totalPendingManualDues : 0.0,
           bannerImage : "",
           showBannerImage : false,
           chargesBreakup : [],
           blockedDueToPayment : false,
-          laterButtonVisibility : false
+          laterButtonVisibility : false,
+          orderId : "",   
+          subscribed : true,
+          showShimmer : false,
+          driverBlocked : false,
+          showBlockingPopup : false,
+          autoPayStatus : NO_AUTOPAY
         },
         profileImg : Nothing,
         endRideData : {
@@ -112,7 +119,8 @@ initData = {
           riderName : "",
           rating : 0,
           feedback : "",
-          disability : Nothing
+          disability : Nothing,
+          payerVpa : ""
         }
     },
     props: {
@@ -134,7 +142,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : true,
-        currentStage : HomeScreen,
+        currentStage : HomeScreen ,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,
@@ -154,13 +162,12 @@ initData = {
         showOffer : false,
         rcActive : false, 
         rcDeactivePopup : false,
-        autoPayBanner : false,
+        autoPayBanner : NO_SUBSCRIPTION_BANNER,
         showAccessbilityPopup : false,
         showRideCompleted : false,
         showRideRating : false,
         showContactSupportPopUp : false,
         showChatBlockerPopUp : false,
-        driverBlocked : false,
-        showBlockingPopup : false
+        subscriptionPopupType : NO_SUBSCRIPTION_POPUP
     }
 }
