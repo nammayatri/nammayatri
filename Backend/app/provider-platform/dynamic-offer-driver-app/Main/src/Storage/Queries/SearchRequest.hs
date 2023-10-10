@@ -39,7 +39,8 @@ createDSReq' = createWithKV
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
   _ <- whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
-  _ <- whenNothingM_ (QL.findById dsReq.toLocation.id) $ do QL.create dsReq.toLocation
+  _ <- whenNothingM_ (QL.findById dsReq.toLocation.id) $ do
+        whenJust dsReq.toLocation QL.create
   createDSReq' dsReq
 
 createDSReq :: MonadFlow m => SearchRequest -> m ()

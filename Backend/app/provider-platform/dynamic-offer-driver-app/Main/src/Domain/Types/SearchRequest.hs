@@ -25,12 +25,13 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import qualified Tools.Maps as Maps
 
+
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
     providerId :: Id DM.Merchant,
     fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
+    toLocation :: Maybe DLoc.Location,
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
@@ -46,3 +47,4 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
+
