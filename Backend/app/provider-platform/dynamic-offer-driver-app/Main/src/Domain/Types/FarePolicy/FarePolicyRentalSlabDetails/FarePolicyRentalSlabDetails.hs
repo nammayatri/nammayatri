@@ -27,7 +27,7 @@ import Kernel.Types.Common
 data FPRSlabDetailsSlabD (s :: UsageSafety) = FPRSlabDetailsSlab
   { 
     id :: Text,
-    baseDuration :: Int,
+    baseDuration :: Seconds,
     baseDistance :: Kilometers,
     baseFare :: Money,
     kmAddedForEveryExtraHour :: Kilometers,
@@ -50,7 +50,7 @@ instance ToJSON (FPRSlabDetailsSlabD 'Unsafe)
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPRSlabDetailsSlabAPIEntity = FPRSlabDetailsSlabAPIEntity
-  { baseDuration :: Int,
+  { baseDuration :: Seconds,
     baseDistance :: Kilometers,
     baseFare :: Money,
     kmAddedForEveryExtraHour :: Kilometers,

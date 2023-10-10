@@ -81,6 +81,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+            
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc

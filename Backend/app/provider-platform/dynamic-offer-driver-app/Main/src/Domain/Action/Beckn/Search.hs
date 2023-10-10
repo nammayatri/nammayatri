@@ -214,6 +214,7 @@ handler merchant sReq' =
                       { farePolicy = farePolicy,
                         distance = result.distance,
                         rideTime = sReq.pickupTime,
+                        endRideTime = Nothing,
                         waitingTime = Nothing,
                         driverSelectedFare = Nothing,
                         customerExtraFee = Nothing,
@@ -230,23 +231,24 @@ handler merchant sReq' =
             for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
             return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
           DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
-          DFareProduct.RENTAL -> throwError "RentalRequest is not allowed in onDemand"
+          DFareProduct.RENTAL -> throwError $ InvalidRequest "RentalRequest is not allowed in onDemand"
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
-      buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
+      buildSearchRes merchant fromLocationLatLong (Just toLocationLatLong) mbEstimateInfos quotes Nothing searchMetricsMVar paymentMethodsInfo
     DSearchReqRental sReq -> do
-      searchMetricsMVar <- Metrics.startSearchMetrics sReq.merchant.name
-      let merchantId = sReq.merchant.id
+      searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
+      let fromLocationLatLong = sReq.pickupLocation
+          merchantId = merchant.id
       sessiontoken <- generateGUIDText
       fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
       rentalFareProducts <- do
-        res <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
-        return $
-          FareProducts
-            { fareProducts = res,
-              area = DFareProduct.Default,
-              specialLocationTag = Nothing
-            }
+          res <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
+          return $
+            FareProducts
+              { fareProducts = res,
+                area = DFareProduct.Default,
+                specialLocationTag = Nothing
+              }
       rentalfarePolicies <-
         mapM
           ( \fareProduct -> do
@@ -257,38 +259,43 @@ handler merchant sReq' =
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
-      -- let listOfBuildRentalQuote = []
-      listOfRentalQuotes <- do
-          for listOfVehicleVariants $ \farePolicy -> do
-            case farePolicy.farePolicyDetails of
-              FarePolicyD.RentalSlabsDetails slabList -> do
-                for (toList slabList.rentalSlabs) $
-                  (\slab -> do
-                      fareParams <-
-                        calculateFareParameters
-                          CalculateFareParametersParams
-                            { farePolicy = farePolicy,
-                              distance = kilometersToMeters slab.baseDistance,
-                              rideTime = sReq.pickupTime,
-                              endRideTime = Nothing,
-                              waitingTime = Nothing,
-                              driverSelectedFare = Nothing,
-                              customerExtraFee = Nothing,
-                              nightShiftCharge = Nothing
-                            }
-                      buildRentalQuote
-                        rentalSearchReq
-                        fareParams
-                        merchant.id
-                        (kilometersToMeters slab.baseDistance)
-                        farePolicy.vehicleVariant
-                        slab.duration)
-                   
-              _ -> undefined
-              _ -> undefined
-      let z = concat listOfRentalQuotes
-      for_ z QQuoteRental.create
-      return (Just (mkRentalQuoteInfo fromLocation now <$> z), Nothing)
+      (quotes, mbEstimateInfos) <- do
+        now <- getCurrentTime
+        -- let listOfBuildRentalQuote = []
+        listOfRentalQuotes <- do
+            for listOfVehicleVariants $ \farePolicy -> do
+              case farePolicy.farePolicyDetails of
+                FarePolicyD.RentalSlabsDetails slabList -> do
+                  for (toList slabList.rentalSlabs) $
+                    (\slab -> do
+                        fareParams <-
+                          calculateFareParameters
+                            CalculateFareParametersParams
+                              { farePolicy = farePolicy,
+                                distance = kilometersToMeters slab.baseDistance,
+                                rideTime = sReq.pickupTime,
+                                endRideTime = Nothing,
+                                waitingTime = Nothing,
+                                driverSelectedFare = Nothing,
+                                customerExtraFee = Nothing,
+                                nightShiftCharge = Nothing
+                              }
+                        buildRentalQuote
+                          rentalSearchReq
+                          fareParams
+                          merchant.id
+                          (kilometersToMeters slab.baseDistance)
+                          farePolicy.vehicleVariant
+                          slab.baseDuration)
+                    
+                _ -> undefined
+                _ -> undefined
+        let z = concat listOfRentalQuotes
+        for_ z QQuoteRental.create
+        return (Just (mkRentalQuoteInfo fromLocation now <$> z), Nothing)
+      merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+      let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
+      buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -375,13 +382,14 @@ buildSearchRes ::
   (MonadTime m) =>
   DM.Merchant ->
   LatLong ->
-  LatLong ->
+  Maybe LatLong ->
   Maybe [EstimateInfo] ->
   Maybe [SpecialZoneQuoteInfo] ->
+  Maybe [RentalQuoteInfo] ->
   Metrics.SearchMetricsMVar ->
   [DMPM.PaymentMethodInfo] ->
   m DSearchRes
-buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar paymentMethodsInfo = do
+buildSearchRes org fromLocation toLocation estimateList specialQuoteList rentalQuoteList searchMetricsMVar paymentMethodsInfo = do
   now <- getCurrentTime
   pure $
     DSearchRes
@@ -391,6 +399,7 @@ buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchM
         toLocation,
         estimateList,
         specialQuoteList,
+        rentalQuoteList,
         searchMetricsMVar,
         paymentMethodsInfo
       }
