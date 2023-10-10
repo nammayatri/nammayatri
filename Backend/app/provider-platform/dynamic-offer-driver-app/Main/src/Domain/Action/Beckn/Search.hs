@@ -77,6 +77,9 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
+import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import qualified Domain.Types.QuoteRental as DQuoteRental
 
 data DSearchReqOnDemand' = DSearchReqOnDemand'
   { messageId :: Text,
@@ -125,13 +128,25 @@ data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
     startTime :: UTCTime
   }
 
+data RentalQuoteInfo = RentalQuoteInfo
+ { quoteId :: Id DQuoteRental.QuoteRental,
+   vehicleVariant :: DVeh.Variant,
+   baseFare :: Money,
+   baseDistance :: Kilometers,
+   baseDuration :: Hours,
+   fromLocation :: LatLong,
+   rentalTag :: Maybe Text,
+   startTime :: UTCTime
+ }
+
 data DSearchRes = DSearchRes
   { provider :: DM.Merchant,
     fromLocation :: LatLong,
-    toLocation :: LatLong,
+    toLocation :: Maybe LatLong,
     now :: UTCTime,
     estimateList :: Maybe [EstimateInfo],
     specialQuoteList :: Maybe [SpecialZoneQuoteInfo],
+    rentalQuoteList :: Maybe [RentalQuoteInfo],
     searchMetricsMVar :: Metrics.SearchMetricsMVar,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
@@ -212,16 +227,15 @@ handler merchant sReq' =
             for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
             return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
           DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
+          DFareProduct.RENTAL -> throwError "RentalRequest is not allowed in rental"
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
     DSearchReqRental sReq -> do
       searchMetricsMVar <- Metrics.startSearchMetrics sReq.merchant.name
-      let fromLocationLatLong = sReq.pickupLocation
-          merchantId = sReq.merchant.id
+      let merchantId = sReq.merchant.id
       sessiontoken <- generateGUIDText
-      fromLocation <- buildSearchReqLocation merchantId sReq.sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-
+      fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
       rentalFareProducts <- do
         res <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
         return $
@@ -238,8 +252,7 @@ handler merchant sReq' =
           )
           rentalFareProducts.fareProducts
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
-      Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
-      triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
+      triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
       listOfRentalQuotes <- do
         for listOfVehicleVariants $ \farePolicy -> do
@@ -263,7 +276,7 @@ handler merchant sReq' =
             result.duration
             allFarePoliciesProduct.specialLocationTag
       for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
-      return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
+      return (Just (mkRentalQuoteInfo fromLocation now <$> listOfSpecialZoneQuotes), Nothing)
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -410,7 +423,7 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
     DSR.SearchRequest
       { id = Id uuid,
         createdAt = now,
-        area = Just area,
+        area = Nothing,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
@@ -511,6 +524,15 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
       toLocation = Maps.getCoordinates toLoc
   SpecialZoneQuoteInfo
     { quoteId = id,
+      ..
+    }
+
+mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> DQuoteRental.QuoteRental -> RentalQuoteInfo
+mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
+  let fromLocation = Maps.getCoordinates fromLoc
+  RentalQuoteInfo
+    {
+      quoteId = id,
       ..
     }
 
