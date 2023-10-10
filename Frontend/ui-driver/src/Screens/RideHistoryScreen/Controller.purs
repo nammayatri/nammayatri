@@ -234,7 +234,8 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
                     "CANCELLED" -> Color.red
                     _ -> Color.black800),
       riderName : toPropValue $ fromMaybe "" ride.riderName,
-      metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing || ride.disabilityTag /= Nothing  || (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing) then "visible" else "gone",
+      metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing && (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing) then "visible" else "gone",
+      accessibilityTagVisibility : toPropValue if (isJust accessibilityTag) then "visible" else "gone",
       specialZoneText : toPropValue $ getRideLabelData "text" (if (isJust accessibilityTag) then Just "Purple_Ride" else ride.specialLocationTag) Nothing,
       specialZoneImage : toPropValue $ getRideLabelData "imageUrl" ride.specialLocationTag accessibilityTag,
       specialZoneLayoutBackground : toPropValue $ getRideLabelData "backgroundColor" ride.specialLocationTag accessibilityTag

@@ -636,6 +636,7 @@ type ItemState =
     amountColor :: PropValue,
     riderName :: PropValue,
     metroTagVisibility :: PropValue,
+    accessibilityTagVisibility :: PropValue,
     specialZoneText :: PropValue,
     specialZoneImage :: PropValue,
     specialZoneLayoutBackground :: PropValue
