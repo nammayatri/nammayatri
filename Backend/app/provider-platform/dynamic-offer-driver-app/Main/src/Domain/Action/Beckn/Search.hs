@@ -386,6 +386,14 @@ buildSearchRequest ::
 buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
+  let searchDetails = DSR.SearchRequestDetailsOnDemand {
+      fromLocation = fromLocation,
+      toLocation = toLocation,
+      estimatedDistance = estimatedDistance,
+      estimatedDuration = estimatedDuration,
+      specialLocationTag = specialLocationTag,
+      autoAssignEnabled = Nothing
+      }
   pure
     DSR.SearchRequest
       { id = Id uuid,
@@ -393,7 +401,8 @@ buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation e
         area = Just area,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        autoAssignEnabled = Nothing,
+        searchRequestDetails = searchDetails,
+        tag = DSR.ON_DEMAND,
         ..
       }
 
@@ -407,6 +416,9 @@ buildRentalSearchRequest ::
 buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
   uuid <- generateGUID
   now <- getCurrentTime
+  let searchDetails = DSR.SearchRequestDetailsRental {
+      rentalFromLocation = fromLocation
+      }
   pure
     DSR.SearchRequest
       { id = Id uuid,
@@ -414,7 +426,7 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
         area = Nothing,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        autoAssignEnabled = Nothing,
+        searchRequestDetails = searchDetails,
         ..
       }
 
@@ -481,7 +493,7 @@ buildRentalQuote ::
   ( EsqDBFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
-  DSRSZ.SearchRequest ->
+  DSR.SearchRequest ->
   FareParameters ->
   Id DM.Merchant ->
   Meters ->
@@ -495,7 +507,7 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
       estimatedFinishTime = fromIntegral duration `addUTCTime` now
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
-  
+
   pure
     DQuoteRental.QuoteRental
       { id = quoteId,
