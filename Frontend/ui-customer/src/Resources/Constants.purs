@@ -18,11 +18,13 @@ module Resources.Constants where
 import Accessor (_description, _amount)
 import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (parseFloat, toString)
+import Helpers.Utils (getAssetStoreLink, parseFloat, toString, extractKeyByRegex)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -79,11 +81,13 @@ encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
 encodeAddress fullAddress addressComponents placeId =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
+    areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
+    areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
 
     splitedAddress = split (Pattern ", ") fullAddress
   in
     { area: splitedAddress !! (totalAddressComponents - 4)
-    , areaCode: Just (getValueByComponent addressComponents "postal_code")
+    , areaCode: Just if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
     , building: splitedAddress !! (totalAddressComponents - 6)
     , city: splitedAddress !! (totalAddressComponents - 3)
     , country: splitedAddress !! (totalAddressComponents - 1)
@@ -287,3 +291,6 @@ dummyDisabilityList ={
   id : "8a365d73-b81e-6b21-962b-b1397aa687e0",
   description : "Other"
 }
+
+areaCodeRegex :: String 
+areaCodeRegex = "\\b\\d{6}\\b"
