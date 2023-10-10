@@ -192,9 +192,9 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
     earnings: item.totalEarnings,
     noOfRides: item.totalRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
-    paymentStatus: "", --Paid
-    feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides , --Breakup
-    plan: offerAndPlanDetails,--"Plan",
+    paymentStatus: "",
+    feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides ,
+    plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
     randomId : (getCurrentUTC "") <> show ind,

@@ -2180,45 +2180,42 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     public void showNotificationWithURI(Uri path, String toastMessage, String notificationContent, String dataType, String channelId, String channelDesc) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                toast(toastMessage);
-                Context context = bridgeComponents.getContext();
-                JuspayLogger.d(OTHERS, channelDesc + "inside Show Notification");
-                Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
-                pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                pdfOpenintent.setDataAndType(path, dataType);
-                String CHANNEL_ID = channelId;
-                PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    NotificationChannel channel = new NotificationChannel(CHANNEL_ID, channelDesc, NotificationManager.IMPORTANCE_HIGH);
-                    channel.setDescription(channelDesc);
-                    NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-                    AudioAttributes attributes = new AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                            .build();
-                    channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
-                    notificationManager.createNotificationChannel(channel);
-                }
-                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
-                int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
-                mBuilder.setContentTitle(toastMessage)
-                        .setSmallIcon(launcher)
-                        .setContentText(notificationContent)
-                        .setAutoCancel(true)
-                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                        .setPriority(NotificationCompat.PRIORITY_MAX);
-                mBuilder.setContentIntent(pendingIntent);
-                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-                JuspayLogger.d(OTHERS, channelDesc + "notification is Created");
-                if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    JuspayLogger.d(OTHERS, channelDesc + "Notification permission is not given");
-                } else {
-                    notificationManager.notify(234567, mBuilder.build());
-                    JuspayLogger.d(OTHERS, channelDesc + "notification is notified");
-                }
+        new Handler(Looper.getMainLooper()).post(() -> {
+            toast(toastMessage);
+            Context context = bridgeComponents.getContext();
+            JuspayLogger.d(OTHERS, channelDesc + "inside Show Notification");
+            Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
+            pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            pdfOpenintent.setDataAndType(path, dataType);
+            String CHANNEL_ID = channelId;
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, channelDesc, NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription(channelDesc);
+                NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+                AudioAttributes attributes = new AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .build();
+                channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
+                notificationManager.createNotificationChannel(channel);
+            }
+            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+            int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
+            mBuilder.setContentTitle(toastMessage)
+                    .setSmallIcon(launcher)
+                    .setContentText(notificationContent)
+                    .setAutoCancel(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setPriority(NotificationCompat.PRIORITY_MAX);
+            mBuilder.setContentIntent(pendingIntent);
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            JuspayLogger.d(OTHERS, channelDesc + "notification is Created");
+            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                JuspayLogger.d(OTHERS, channelDesc + "Notification permission is not given");
+            } else {
+                notificationManager.notify(234567, mBuilder.build());
+                JuspayLogger.d(OTHERS, channelDesc + "notification is notified");
             }
         });
     }

@@ -1805,7 +1805,7 @@ homeScreenFlow = do
                                   true, _, true -> case freeTrialDays of
                                                       _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
                                                       _ -> NO_SUBSCRIPTION_POPUP
-                                  false, _, true -> LOW_DUES_CLEAR_POPUP
+                                  false, _, true -> if pendingTotalManualDues >= maxDueLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
                                   _, _, _        -> NO_SUBSCRIPTION_POPUP
       shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss"))
       moveDriverToOffline = (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE == "") 

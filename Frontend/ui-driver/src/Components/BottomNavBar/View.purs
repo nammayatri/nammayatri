@@ -43,7 +43,7 @@ view push state =
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , padding (Padding 0 10 0 10)
+       , padding (PaddingVertical 10 10)
        , stroke ("1,"<> Color.grey900)
        , background Color.white900
        ](mapWithIndex

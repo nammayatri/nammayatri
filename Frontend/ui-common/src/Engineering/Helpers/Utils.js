@@ -16,12 +16,8 @@ export const getFromWindow = function (key) {
 
 export const saveToLocalStoreImpl = function(key) {
   return function (state) {
-      console.log("==------>>>>>> SAVE SCREEN");
-      console.log(key);
-      console.log(state);
       window.JBridge.setKeysInSharedPrefs(key, state);
       return function () {
-        console.log("==------>>>>>> SAVED SCREEN");
       };
     };
 }

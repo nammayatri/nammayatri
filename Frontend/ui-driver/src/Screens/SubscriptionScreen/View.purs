@@ -510,7 +510,6 @@ headerView push state =
     linearLayout
     [ height $ V 55
     , width MATCH_PARENT
-    , orientation HORIZONTAL
     , gravity CENTER_VERTICAL
     , padding $ PaddingLeft 16
     , background Color.white900
@@ -584,7 +583,6 @@ myPlanBodyview push state =
     ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       , margin $ Margin 16 0 16 16 
       ][ linearLayout
@@ -725,7 +723,6 @@ duesView push state =
           , relativeLayout
             [ height $ V 4
             , width MATCH_PARENT
-            , orientation HORIZONTAL
             , margin $ MarginTop 8
             , gravity CENTER
             ][ linearLayout
@@ -737,7 +734,6 @@ duesView push state =
             , linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
-              , orientation HORIZONTAL
               ][ linearLayout
                   [ height $ V 4
                   , width $ V $ ceil $ HU.getValueBtwRange state.data.myPlanData.manualDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 60)
@@ -796,7 +792,6 @@ duesView push state =
       , cornerRadius 8.0
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      , visibility VISIBLE
       ][ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -938,7 +933,6 @@ paymentMethodView push state =
   in linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , cornerRadius 100.0
   , background Color.grey700
@@ -1079,7 +1073,6 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
             ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
-              , orientation HORIZONTAL
               ](map  (\item -> promoCodeView push item) state.offers)
             ]
           , linearLayout
@@ -1333,7 +1326,6 @@ shimmerView state = linearLayout
   ][ linearLayout
       [ height $ V 55
       , width MATCH_PARENT
-      , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       , padding $ PaddingHorizontal 10 10
       , stroke $ "2," <> Color.grey900
@@ -1350,8 +1342,7 @@ shimmerView state = linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , padding $ PaddingHorizontal 16 16
-            , margin $ MarginTop 30
-            , orientation HORIZONTAL][
+            , margin $ MarginTop 30][
               customTextView 40 100 true
               , linearLayout [weight 1.0][]
               ,  customTextView 40 100 true
@@ -1656,7 +1647,6 @@ tripList push trips isManual isExpanded viewDatailsText useFixedHeight =
     ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , orientation HORIZONTAL
         , margin $ MarginVertical 4 8
         ][ textView $
           [ text (getString TRIP_DATE)
@@ -1681,7 +1671,6 @@ tripList push trips isManual isExpanded viewDatailsText useFixedHeight =
                 linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , orientation HORIZONTAL
                 , margin $ MarginBottom 8
                 ][ textView $
                   [ text $ convertUTCtoISC item.tripDate "Do MMM YYYY"

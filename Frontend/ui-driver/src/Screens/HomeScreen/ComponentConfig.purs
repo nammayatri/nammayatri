@@ -377,7 +377,9 @@ paymentPendingPopupConfig state =
     coverImageConfig {
       imageUrl = case popupType of
                           GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
-                          _ ->  "ny_ic_clear_dues_early," <> getAssetStoreLink FunctionCall <> "ny_ic_clear_dues_early.png"
+                          _ ->  if isHighDues 
+                                then "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png" 
+                                else "ny_ic_clear_dues_early," <> getAssetStoreLink FunctionCall <> "ny_ic_clear_dues_early.png"
     , visibility = VISIBLE
     , height = V 220
     , width = V 280
@@ -794,7 +796,7 @@ autopayBannerConfig state configureImage =
       {
         backgroundColor = case bannerType of
                         CLEAR_DUES_BANNER -> Color.yellow900
-                        DUE_LIMIT_WARNING_BANNER -> "#FFECED"
+                        DUE_LIMIT_WARNING_BANNER -> Color.pearl
                         LOW_DUES_BANNER -> Color.yellow800
                         _ -> Color.green600,
         title = case bannerType of
@@ -820,7 +822,7 @@ autopayBannerConfig state configureImage =
                       _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_due_limit_warning.png"
                       _ -> "",
-        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER,
+        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,

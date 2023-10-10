@@ -867,13 +867,11 @@ payment push state =
   , margin $ Margin 16 40 16 0
   , orientation VERTICAL
   , visibility if state.data.payerVpa == "" && state.data.autoPayStatus == ACTIVE_AUTOPAY then GONE else VISIBLE
-  ]([  textView
+  ]([  textView $
       [ text $ getString PAYMENT
       , margin $ MarginBottom 12
-      , textSize FontSize.a_16
       , color Color.black900
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ]
+      ] <> FontStyle.subHeading1 TypoGraphy
   ] <> if state.data.autoPayStatus == ACTIVE_AUTOPAY then [detailsListViewComponent state push {  backgroundColor : Color.blue600
                               , separatorColor : Color.white900
                               , isLeftKeyClickable : false
@@ -1382,7 +1380,6 @@ detailsListViewComponent state push config =
               [ linearLayout
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , orientation HORIZONTAL
                 ][ textView $
                     [ text item.key
                     , color if config.isLeftKeyClickable then Color.blue900 else Color.black700

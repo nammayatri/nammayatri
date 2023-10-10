@@ -52,11 +52,10 @@ view config push =
         , cornerRadii $ Corners 16.0 true true false false
         , background Color.white900
         , layoutGravity "bottom"
-        , gravity BOTTOM
         , alignParentBottom "true,-1"
         , padding $ Padding 16 16 16 16
         ][ PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
-        else linearLayout [][]
+        else linearLayout [visibility GONE][]
     , if config.customerIssueCard.reportIssueView then reportIssueView config push else dummyTextView
     , if config.showContactSupportPopUp then contactSupportPopUpView config push else dummyTextView
   ]
@@ -191,7 +190,7 @@ bottomCardView config push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , padding $ Padding 16 16 16 60
+  , padding $ Padding 16 16 16 70
   , background Color.grey700
   , gravity CENTER
   , weight 1.0
@@ -543,9 +542,8 @@ driverUpiQrCodeView config push =
           height WRAP_CONTENT
         , width WRAP_CONTENT
         , background Color.white900
-        , orientation HORIZONTAL
         , cornerRadius 28.0
-        , stroke $ "1,#E5E7EB"
+        , stroke $ "1," <> Color.grey900
         , gravity CENTER
       ][
         imageView [

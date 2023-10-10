@@ -122,7 +122,7 @@ view push state =
   ]
 
 emptyView :: forall w. PrestoDOM (Effect Unit) w
-emptyView = linearLayout[][]
+emptyView = linearLayout[visibility GONE][]
 
 paymentHistoryView :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 paymentHistoryView push state visibility' = 
@@ -174,7 +174,6 @@ paymentList push state =
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , gravity CENTER_VERTICAL
-                  , orientation HORIZONTAL
                   , margin $ MarginBottom 6
                   ][ commonTV push item.description Color.black700 (FontStyle.body2 TypoGraphy) 0 LEFT true
                   , commonTV push item.ridesTakenDate Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
@@ -204,7 +203,6 @@ paymentList push state =
                       , linearLayout
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
-                        , orientation HORIZONTAL
                         , gravity CENTER_VERTICAL
                         , cornerRadius 20.0
                         , background Color.white900
@@ -223,19 +221,15 @@ paymentList push state =
                   ]
               ]
           ) transactionItems)
-        , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
+        , textView $
+          [ text $ getString LOAD_MORE
+          , color Color.blue900
           , gravity CENTER
+          , padding $ PaddingVertical 16 16
+          , onClick push $ const LoadMore
+          , width MATCH_PARENT
           , visibility if state.props.enableLoadMore then VISIBLE else GONE
-          ][ textView $
-            [ text $ getString LOAD_MORE
-            , color Color.blue900
-            , gravity CENTER
-            , padding $ PaddingVertical 16 16
-            , onClick push $ const LoadMore
-            ] <> FontStyle.body1 TypoGraphy
-          ]
+          ] <> FontStyle.body1 TypoGraphy
         ]
     ]
 
@@ -544,7 +538,6 @@ manualPaymentRidesList push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginBottom 12
-      , orientation HORIZONTAL
       ][ textView $
           [ text $ getString TRIP_DATE
           , width $ V (screenwidth/3)
