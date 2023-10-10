@@ -29,7 +29,6 @@ data QuoteRental = QuoteRental
     providerId :: Id DMerchant.Merchant,
     vehicleVariant :: Variant.Variant,
     estimatedFinishTime :: UTCTime,
-    fareParametersId :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,

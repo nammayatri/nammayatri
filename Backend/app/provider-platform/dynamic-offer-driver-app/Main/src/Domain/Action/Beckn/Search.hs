@@ -21,6 +21,7 @@ module Domain.Action.Beckn.Search
     DSearchReqRental' (..),
     DSearchRes (..),
     EstimateInfo (..),
+    RentalQuoteInfo (..),
     SpecialZoneQuoteInfo (..),
     handler,
     validateRequest,
@@ -80,9 +81,9 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 import qualified Storage.CachedQueries.FarePolicy as QFP
-import qualified Storage.CachedQueries.FareProduct as QFareProduct
+-- import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Domain.Types.QuoteRental as DQuoteRental
-import qualified Control.Monad as NE
+-- import qualified Control.Monad as NE
 
 data DSearchReqOnDemand' = DSearchReqOnDemand'
   { messageId :: Text,
@@ -460,6 +461,7 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         searchRequestDetails = searchDetails,
+        tag = DSR.RENTAL ,
         ..
       }
 
@@ -547,6 +549,9 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
         providerId = transporterId,
         createdAt = now,
         updatedAt = now,
+        baseDistance = metersToKilometers distance,
+        baseDuration = Hours $ div (getSeconds duration ) 3600,
+        baseFare = estimatedFare,
         ..
       }
 
@@ -565,6 +570,7 @@ mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
   RentalQuoteInfo
     {
       quoteId = id,
+      rentalTag = Nothing,
       ..
     }
 
