@@ -26,10 +26,11 @@ library
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Storage.Beam.BeamFlow
+      Lib.Payment.Storage.Beam.PaymentOrder
+      Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
-      Lib.Payment.Storage.Tabular.PaymentOrder
-      Lib.Payment.Storage.Tabular.PaymentTransaction
   other-modules:
       Paths_payment
   hs-source-dirs:
@@ -73,7 +74,11 @@ library
       aeson
     , base >=4.7 && <5
     , base16-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , cryptohash
     , euler-hs
@@ -81,13 +86,16 @@ library
     , http-client
     , http-types
     , mobility-core
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant
     , servant-client
     , servant-server
     , text
     , time
+    , unordered-containers
     , uri-encode
   default-language: Haskell2010
   if os(darwin)

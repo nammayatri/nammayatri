@@ -256,8 +256,7 @@ library
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
-      Storage.Beam.Payment.PaymentOrder
-      Storage.Beam.Payment.PaymentTransaction
+      Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonDisability

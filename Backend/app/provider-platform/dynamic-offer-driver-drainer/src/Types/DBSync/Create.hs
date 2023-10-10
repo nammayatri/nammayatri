@@ -9,6 +9,8 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
 import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
+import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -71,6 +73,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport a
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
+import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
@@ -168,6 +171,8 @@ data DBCreateObject
   | GoHomeConfigObject GoHomeConfig.GoHomeConfig
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
+  | PaymentOrderObject PaymentOrder.PaymentOrder
+  | PaymentTransactionObject PaymentTransaction.PaymentTransaction
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -255,3 +260,5 @@ modelName (DriverHomeLocationObject _) = "DriverHomeLocation"
 modelName (GoHomeConfigObject _) = "GoHomeConfig"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMappingObject"
+modelName (PaymentOrderObject _) = "PaymentOrder"
+modelName (PaymentTransactionObject _) = "PaymentTransaction"

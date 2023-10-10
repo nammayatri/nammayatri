@@ -110,6 +110,7 @@ library:
   dependencies:
     - dynamic-offer-driver-app
     - mobility-core
+    - payment
     - shared-services
 
 executables:

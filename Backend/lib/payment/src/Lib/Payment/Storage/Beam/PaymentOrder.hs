@@ -14,31 +14,46 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Payment.PaymentOrder where
+module Lib.Payment.Storage.Beam.PaymentOrder where
 
 import qualified Database.Beam as B
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
-import Tools.Beam.UtilsTH
+import qualified Lib.Payment.Domain.Types.PaymentOrder ()
 
 data PaymentOrderT f = PaymentOrderT
   { id :: B.C f Text,
     shortId :: B.C f Text,
-    customerId :: B.C f Text,
+    paymentServiceOrderId :: B.C f Text,
+    personId :: B.C f Text,
     merchantId :: B.C f Text,
-    amount :: B.C f Money,
+    paymentMerchantId :: B.C f (Maybe Text),
+    requestId :: B.C f (Maybe Text),
+    service :: B.C f (Maybe Text),
+    clientId :: B.C f (Maybe Text),
+    description :: B.C f (Maybe Text),
+    returnUrl :: B.C f (Maybe Text),
+    action :: B.C f (Maybe Text),
+    amount :: B.C f HighPrecMoney,
     currency :: B.C f Payment.Currency,
     status :: B.C f Payment.TransactionStatus,
     webPaymentLink :: B.C f (Maybe Text),
     iframePaymentLink :: B.C f (Maybe Text),
     mobilePaymentLink :: B.C f (Maybe Text),
-    clientAuthTokenEncrypted :: B.C f Text,
-    clientAuthTokenHash :: B.C f DbHash,
-    clientAuthTokenExpiry :: B.C f UTCTime,
+    clientAuthTokenEncrypted :: B.C f (Maybe Text),
+    clientAuthTokenHash :: B.C f (Maybe DbHash),
+    clientAuthTokenExpiry :: B.C f (Maybe UTCTime),
     getUpiDeepLinksOption :: B.C f (Maybe Bool),
     environment :: B.C f (Maybe Text),
+    createMandate :: B.C f (Maybe Payment.MandateType),
+    mandateMaxAmount :: B.C f (Maybe HighPrecMoney),
+    mandateStartDate :: B.C f (Maybe UTCTime),
+    mandateEndDate :: B.C f (Maybe UTCTime),
+    bankErrorCode :: B.C f (Maybe Text),
+    bankErrorMessage :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -52,6 +67,6 @@ instance B.Table PaymentOrderT where
 
 type PaymentOrder = PaymentOrderT Identity
 
-$(enableKVPG ''PaymentOrderT ['id] [])
+$(enableKVPG ''PaymentOrderT ['id] [['shortId], ['personId]])
 
-$(mkTableInstances ''PaymentOrderT "payment_order")
+$(mkTableInstancesGenericSchema ''PaymentOrderT "payment_order")

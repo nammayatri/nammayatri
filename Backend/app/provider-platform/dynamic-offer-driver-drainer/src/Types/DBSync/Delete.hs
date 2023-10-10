@@ -11,6 +11,8 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
 import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
+import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BecknRequest
@@ -74,6 +76,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport a
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
+import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
@@ -172,6 +175,8 @@ data DeleteModel
   | GoHomeConfigDelete
   | LocationDelete
   | LocationMappingDelete
+  | PaymentOrderDelete
+  | PaymentTransactionDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -256,6 +261,8 @@ getTagDelete DriverHomeLocationDelete = "DriverHomeLocationOptions"
 getTagDelete GoHomeConfigDelete = "GoHomeConfigOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
+getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
+getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -335,6 +342,8 @@ parseTagDelete "DriverHomeLocationOptions" = return DriverHomeLocationDelete
 parseTagDelete "GoHomeConfigOptions" = return GoHomeConfigDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
+parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
+parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -419,6 +428,8 @@ data DBDeleteObject
   | GoHomeConfigDeleteOptions DeleteModel (Where Postgres GoHomeConfig.GoHomeConfigT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
+  | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
+  | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -671,3 +682,9 @@ instance FromJSON DBDeleteObject where
       LocationMappingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ LocationMappingDeleteOptions deleteModel whereClause
+      PaymentOrderDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentOrderDeleteOptions deleteModel whereClause
+      PaymentTransactionDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentTransactionDeleteOptions deleteModel whereClause

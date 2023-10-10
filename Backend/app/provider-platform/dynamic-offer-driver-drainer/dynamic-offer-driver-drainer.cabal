@@ -103,6 +103,7 @@ library
     , juspay-extra
     , lens
     , mobility-core
+    , payment
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield

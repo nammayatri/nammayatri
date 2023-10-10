@@ -34,6 +34,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
+import Storage.Beam.Payment ()
 import Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP

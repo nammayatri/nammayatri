@@ -69,6 +69,14 @@ dependencies:
   - exceptions
   - http-client
   - containers
+  - unordered-containers
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - postgresql-simple
+  - sequelize
+
 
 ghc-options:
   - -fwrite-ide-info
