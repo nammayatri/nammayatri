@@ -13,6 +13,7 @@
 -}
 
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 module SharedLogic.FareCalculator
   ( mkBreakupList,
     fareSum,
@@ -41,6 +42,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Data.Ratio
 -- import Kernel.Utils.Common (Kilometers(getKilometers), Meters (getMeters))
 -- import Extra (intToFloat)
 
@@ -96,7 +98,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
-      _ -> undefined
+      DFParams.RentalSlabDetails det -> mkFPRSlabDetailsBreakupList det
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
@@ -116,7 +118,15 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
           cgstCaption = "CGST"
           mbCgstItem = mkBreakupItem cgstCaption . mkPrice . roundToIntegral <$> det.cgst
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem]
+    mkFPRSlabDetailsBreakupList det = do
+      let extraRentalKmFareCation = "EXTRA_RENTAL_KM_FARE"
+          deadKmFareItem = mkBreakupItem extraRentalKmFareCation (mkPrice det.extraRentalKmFare)
 
+          extraRentalHourFareCaption = "EXTRA_RENTAL_HOUR_FARE"
+          -- mbExtraKmFareRounded = det.extraRentalHourFare -- <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
+          extraRentalHourFareItem =
+            mkBreakupItem extraRentalHourFareCaption (mkPrice det.extraRentalHourFare)
+      catMaybes [Just deadKmFareItem, Just extraRentalHourFareItem]
 -- TODO: make some tests for it
 
 fareSum :: FareParameters -> Money
@@ -204,7 +214,7 @@ calculateFareParameters params = do
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs
-      DFP.RentalSlabsDetails det -> processFPRSlabDetailsSlab params.rideTime params.endRideTime params.distance det
+      DFP.RentalSlabsDetails det -> processFPRSlabDetailsSlab params.rideTime params.endRideTime params.distance $ DFP.findFPRSlabsDetailsSlabByDistance params.distance det.rentalSlabs
     processFPProgressiveDetails DFP.FPProgressiveDetails {..} = do
       let mbExtraDistance =
             params.distance - baseDistance
@@ -245,10 +255,11 @@ calculateFareParameters params = do
               cgst = Nothing
             }
         )
-    processFPRSlabDetailsSlab _ endTime _ DFP.FPRSlabDetails {..} = do
+    processFPRSlabDetailsSlab startTime endTime distanceTravelled req@DFP.FPRSlabDetailsSlab {..} = do
       let (extraTotalRentalHourFare,extraTotalRentalKmFare) = case endTime of
               Nothing  -> ( (0 :: Money),  0 ::  Money)
-              Just _ -> (Money {getMoney=100},Money {getMoney=100})
+              Just endTime' -> calculateRentalExtraFare startTime endTime' distanceTravelled req
+
                 -- let actualDuration = div (fromEnum . nominalDiffTimeToSeconds $ diffUTCTime endTime' startTime) 1000000000000
                 --     actualHours =2
                 --     diffHours = max (0::Int) (actualHours - baseDuration)
@@ -301,7 +312,39 @@ calculateFareParameters params = do
               cgst = Just . realToFrac $ baseFee * platformFeeInfo'.cgst,
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
-      
+
+
+calculateRentalExtraFare ::
+  UTCTime ->
+  UTCTime ->
+  Meters ->
+  FPRSlabDetailsSlab ->
+  (Money,Money)
+calculateRentalExtraFare tripStartTime tripStopTime distance rentalFareSlab = do
+  let tripTime = diffUTCTime tripStopTime tripStartTime
+      tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
+      extraTime = toInteger tripTimeInMinutes - (toInteger rentalFareSlab.baseDuration) * 60
+      extraHours = ceiling $ extraTime % 60
+      distanceInKm = metersToKilometers distance
+      extraDistance = toInteger distanceInKm - toInteger rentalFareSlab.baseDistance - extraHours * (toInteger rentalFareSlab.kmAddedForEveryExtraHour)
+
+  let extraDistanceFare = roundToIntegral $ if extraDistance > 0
+        then realToFrac $ extraDistance * ( toInteger rentalFareSlab.extraRentalKmFare)
+        else 0
+      extraHoursFare = roundToIntegral $ realToFrac $ extraHours * (toInteger rentalFareSlab.extraRentalHoursFare)
+  ( extraHoursFare,extraDistanceFare)
+-- calculateRentalExtraTimeFare ::
+--   FPRSlabDetails ->
+--   TripStartTime ->
+--   TripStopTime ->
+--   Money
+-- calculateRentalExtraTimeFare farePolicy tripStartTime tripStopTime = roundToIntegral $ do
+--   let tripTime = diffUTCTime tripStopTime tripStartTime
+--       tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
+--       extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDuration * 60
+--   if extraTime > 0
+--     then realToFrac (toRational extraTime) * farePolicy.extraMinuteFare
+--     else 0
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money, Money)
 countFullFareOfParamsDetails = \case

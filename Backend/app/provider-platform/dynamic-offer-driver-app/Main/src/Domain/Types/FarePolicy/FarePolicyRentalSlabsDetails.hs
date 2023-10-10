@@ -19,51 +19,43 @@ module Domain.Types.FarePolicy.FarePolicyRentalSlabsDetails
   )
 where
 
+import qualified Data.List.NonEmpty as NE
+import Data.Ord
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
-data FPRSlabDetailsD (s :: UsageSafety) = FPRSlabDetails
-  { 
-    id :: Text,
-    baseDuration :: Int,
-    baseDistance :: Kilometers,
-    baseFare :: Money,
-    kmAddedForEveryExtraHour :: Kilometers,
-    extraRentalKmFare :: Money,
-    extraRentalHoursFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
-    platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+-- import Kernel.Types.Common
+import Domain.Types.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails as Reexport
+
+newtype FPRSlabsDetailsD (s :: UsageSafety) = FPRSlabsDetails
+  { rentalSlabs :: NonEmpty (FPRSlabDetailsSlabD s)
   }
   deriving (Generic, Show, Eq)
 
-type FPRSlabDetails = FPRSlabDetailsD 'Safe
+type FPRSlabsDetails = FPRSlabsDetailsD 'Safe
 
-instance FromJSON (FPRSlabDetailsD 'Unsafe)
+instance FromJSON (FPRSlabsDetailsD 'Unsafe)
 
-instance ToJSON (FPRSlabDetailsD 'Unsafe)
+instance ToJSON (FPRSlabsDetailsD 'Unsafe)
 
+findFPRSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPRSlabDetailsSlabD s) -> FPRSlabDetailsSlabD s
+findFPRSlabsDetailsSlabByDistance dist slabList = do
+  case NE.filter (\slab -> slab.baseDistance <= metersToKilometers dist) $ NE.sortBy (comparing (.baseDistance)) slabList of
+    [] -> error $ "Slab for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
+    a -> last a
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
-data FPRSlabDetailsAPIEntity = FPRSlabDetailsAPIEntity
-  { baseDuration :: Int,
-    baseDistance :: Kilometers,
-    baseFare :: Money,
-    kmAddedForEveryExtraHour :: Kilometers,
-    extraRentalKmFare :: Money,
-    extraRentalHoursFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
-    platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+newtype FPRSlabsDetailsAPIEntity = FPRSlabsDetailsAPIEntity
+  { 
+    rentalSlabs  :: NonEmpty FPRSlabDetailsSlabAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-makeFPRSlabDetailsAPIEntity :: FPRSlabDetails -> FPRSlabDetailsAPIEntity
-makeFPRSlabDetailsAPIEntity FPRSlabDetails {..} =
-  FPRSlabDetailsAPIEntity
-    { ..
+makeFPRSlabsDetailsAPIEntity :: FPRSlabsDetails -> FPRSlabsDetailsAPIEntity
+makeFPRSlabsDetailsAPIEntity FPRSlabsDetails {..} =
+  FPRSlabsDetailsAPIEntity
+    { rentalSlabs = makeFPRSlabDetailsSlabAPIEntity <$> rentalSlabs
     }
