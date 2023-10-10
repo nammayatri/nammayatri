@@ -32,7 +32,7 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (Fn2, runFn3)
 import Data.Generic.Rep (class Generic)
 import Data.Lens ((^.))
 import Data.Lens ((^.))
@@ -71,9 +71,9 @@ import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
 import Services.API (Prediction)
+import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Types.App (GlobalState)
-import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -180,6 +180,8 @@ foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import getMobileNumber :: EffectFn2 String String String
+
+foreign import extractKeyByRegex :: Fn2 String String String
 
 data TimeUnit
   = HOUR

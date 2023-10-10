@@ -505,3 +505,8 @@ export const getMobileNumber = function (signatureAuthData, maskedNumber) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }
+
+export const extractKeyByRegex = (regex, text) => {
+  var matches = text.match(regex);
+  return matches ? matches[0] : "";
+}
