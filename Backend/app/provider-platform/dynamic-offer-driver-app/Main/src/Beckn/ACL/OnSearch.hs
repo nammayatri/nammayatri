@@ -52,10 +52,10 @@ mkOnSearchMessage ::
 mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let startInfo = mkStartInfo res
   let stopInfo = mkStopInfo res
-  let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList) of
-        (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
-        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
-        (_, _) -> map (mkQuoteEntities startInfo stopInfo provider) [] --this won't happen
+  let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList,rentalQuoteList) of
+        (Just estimates, _, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
+        (Nothing, Just quotes, Nothing) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
+        (Nothing, Nothing, Just quotes) -> map (mkQuoteEntitiesRental startInfo provider) quotes
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
   let providerSpec =
@@ -87,15 +87,15 @@ mkStartInfo dReq =
       time = TimeTimestamp dReq.now
     }
 
-mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
+mkStopInfo :: DSearch.DSearchRes -> Maybe OS.StopInfo
 mkStopInfo res =
-  OS.StopInfo
+  res.toLocation <&> (\toLoc -> OS.StopInfo
     { location =
         OS.Location
-          { gps = OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon},
+          { gps = OS.Gps {lat = toLoc.lat, lon = toLoc.lon},
             address = Nothing
           }
-    }
+    })
 
 data QuoteEntities = QuoteEntities
   { fulfillment :: OS.FulfillmentInfo,
@@ -105,7 +105,7 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
+mkQuoteEntities :: OS.StartInfo -> Mybe OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
 mkQuoteEntities start end provider estInfo = do
   let estimate = estInfo.estimate
       variant = Common.castVariant estimate.vehicleVariant
@@ -217,7 +217,61 @@ mkQuoteEntities start end provider estInfo = do
                 ]
             }
 
-mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
+mkQuoteEntitiesRental :: OS.StartInfo -> DM.Merchant -> DSearch.RentalQuoteInfo -> QuoteEntities
+mkQuoteEntitiesRental start provider it = do
+  let variant = Common.castVariant it.vehicleVariant
+      baseFare = OS.DecimalValue $ toRational it.baseFare
+      baseDistance = OS.DecimalValue $ toRational it.baseDistance
+      baseDuration = OS.DecimalValue $ toRational it.baseDuration
+      fulfillment =
+        OS.FulfillmentInfo
+          { start,
+            end = Nothing,
+            id = it.quoteId.getId,
+            _type = OS.RIDE,
+            vehicle = OS.Vehicle {category = variant}
+          }
+      item =
+        OS.Item
+          { id = Common.mkItemId provider.shortId.getShortId it.vehicleVariant,
+            fulfillment_id = fulfillment.id,
+            price =
+              OS.ItemPrice
+                { currency = currency',
+                  value = baseFare,
+                  offered_value = baseFare,
+                  minimum_value = baseFare,
+                  maximum_value = baseFare
+                },
+            tags = Just $ OS.TG [mkRentalTag]
+          }
+  QuoteEntities
+    { fulfillment,
+      item
+    }
+  where
+    mkRentalTag =
+      OS.TagGroup
+        { display = False,
+          code = "general_info",
+          name = "General Information",
+          list =
+            [ OS.Tag
+                { display = Just True,
+                  code = Just "rental_base_duration",
+                  name = Just "Base Duration",
+                  value = Just $ show baseFare.getMoney
+                },
+              OS.Tag
+                { display = Just True,
+                  code = Just "rental_base_distance",
+                  name = Just "Base Distance",
+                  value = Just $ show baseDistance.getKilometers
+                }
+            ]
+        }
+
+mkQuoteEntitiesSpecialZone :: OS.StartInfo -> Maybe OS.StopInfo -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
 mkQuoteEntitiesSpecialZone start end provider it = do
   let variant = Common.castVariant it.vehicleVariant
       estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
