@@ -40,28 +40,26 @@ createDSReq' = createWithKV
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
   case dsReq.tag of
-    "ON_DEMAND" -> do
+    ON_DEMAND -> do
       _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.fromLocation.id) $ do QL.create dsReq.searchRequestDetails.fromLocation
       _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.toLocation.id) $ do QL.create dsReq.searchRequestDetails.toLocation
       pure ()
-    "RENTAL" -> do
+    RENTAL -> do
       _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.rentalFromLocation.id) $ do QL.create dsReq.searchRequestDetails.rentalFromLocation
       pure ()
-    _ -> undefined
   createDSReq' dsReq
 
 createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq searchRequest = do
   let details = searchRequest.searchRequestDetails
   case searchRequest.tag of
-    "ON_DEMAND" -> do
+    ON_DEMAND -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       toLocationMaps <- SLM.buildDropLocationMapping details.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
-    "RENTAL" -> do
+    RENTAL -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> create searchRequest
-    _ -> undefined
 
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
@@ -86,7 +84,7 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     case tag of
-      "ON_DEMAND" -> do
+      ON_DEMAND -> do
         mappings <- QLM.findByEntityId id
         (fl, tl) <-
           if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
@@ -137,7 +135,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 createdAt = createdAt,
                 tag = tag
               }
-      "RENTAL" -> do
+      RENTAL -> do
         mappings <- QLM.findByEntityId id
         fl <-
           if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
@@ -172,14 +170,13 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 createdAt = createdAt,
                 tag = tag
               }
-      _ -> return Nothing
 
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
     let details = searchRequestDetails
     case tag of
-      "ON_DEMAND" ->
+      ON_DEMAND ->
         BeamSR.SearchRequestT
           { BeamSR.id = getId id,
             BeamSR.transactionId = transactionId,
@@ -201,7 +198,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.specialLocationTag = details.specialLocationTag,
             BeamSR.tag = tag
           }
-      "RENTAL" ->
+      RENTAL ->
         BeamSR.SearchRequestT
           { BeamSR.id = getId id,
             BeamSR.transactionId = transactionId,
@@ -223,7 +220,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.specialLocationTag = Nothing,
             BeamSR.tag = tag
           }
-      _ -> undefined
+      --_ -> undefined
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
 buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
