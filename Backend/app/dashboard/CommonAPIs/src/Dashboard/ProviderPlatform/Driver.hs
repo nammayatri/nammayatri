@@ -54,6 +54,7 @@ data DriverEndpoint
   | DeleteRCEndpoint
   | UpdateDriverHomeLocationEndpoint
   | IncrementDriverGoToCountEndPoint
+  | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -819,3 +820,44 @@ type IncrementDriverGoToCountAPI =
 
 ---------------------------------------------------------
 -- Get Route driver ids ---------------------------------------
+
+----------- update driver fees ---------------
+
+type UpdateSubscriptionDriverFeeAndInvoiceAPI =
+  Capture "driverId" (Id Driver)
+    :> "update"
+    :> "driverFeeAndInvoiceInfo"
+    :> ReqBody '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
+    :> Post '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
+
+data SubscriptionDriverFeesAndInvoicesToUpdate = SubscriptionDriverFeesAndInvoicesToUpdate
+  { driverFees :: Maybe [DriverFeeInfoToUpdate],
+    invoices :: Maybe [InvoiceInfoToUpdate],
+    mkDuesToAmount :: Maybe HighPrecMoney,
+    subscribed :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverFeeInfoToUpdate = DriverFeeInfoToUpdate
+  { driverFeeId :: Text,
+    mkManualDue :: Maybe Bool,
+    mkAutoPayDue :: Maybe Bool,
+    mkCleared :: Maybe Bool,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data InvoiceInfoToUpdate = InvoiceInfoToUpdate
+  { invoiceId :: Text,
+    driverFeeId :: Maybe Text,
+    invoiceStatus :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SubscriptionDriverFeesAndInvoicesToUpdate where
+  hideSecrets = identity

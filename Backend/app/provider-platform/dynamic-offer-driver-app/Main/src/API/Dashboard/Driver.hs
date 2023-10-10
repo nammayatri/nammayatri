@@ -66,6 +66,7 @@ type API =
            :<|> Common.IncrementDriverGoToCountAPI
            :<|> DriverPaymentHistoryAPI
            :<|> DriverPaymentHistoryEntityDetailsAPI
+           :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
        )
 
 -- driver cash collection api ----------------------------------------
@@ -199,6 +200,7 @@ handler merchantId =
     :<|> incrementDriverGoToCount merchantId
     :<|> getPaymentHistory merchantId
     :<|> getPaymentHistoryEntityDetails merchantId
+    :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -316,3 +318,6 @@ getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = wit
 getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
   withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId driverId invoiceId
+
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate :: ShortId DM.Merchant -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId driverId req = withFlowHandlerAPI $ DDriver.updateSubscriptionDriverFeeAndInvoice merchantShortId driverId req

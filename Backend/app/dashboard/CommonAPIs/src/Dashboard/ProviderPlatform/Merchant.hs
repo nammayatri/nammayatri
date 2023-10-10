@@ -172,7 +172,9 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     mandateExecutionRescheduleInterval :: Maybe (MandatoryValue NominalDiffTime),
     driverFeeCalculationTime :: Maybe (OptionalValue NominalDiffTime),
     driverFeeCalculatorBatchSize :: Maybe (OptionalValue Int),
-    driverFeeCalculatorBatchGap :: Maybe (OptionalValue NominalDiffTime)
+    driverFeeCalculatorBatchGap :: Maybe (OptionalValue NominalDiffTime),
+    orderAndNotificationStatusCheckTime :: Maybe (OptionalValue NominalDiffTime),
+    orderAndNotificationStatusCheckTimeLimit :: Maybe (OptionalValue NominalDiffTime)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

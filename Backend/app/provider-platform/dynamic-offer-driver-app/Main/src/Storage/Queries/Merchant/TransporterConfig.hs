@@ -84,6 +84,8 @@ update config = do
       Se.Set BeamTC.driverFeeCalculationTime (nominalDiffTimeToSeconds <$> config.driverFeeCalculationTime),
       Se.Set BeamTC.driverFeeCalculatorBatchSize config.driverFeeCalculatorBatchSize,
       Se.Set BeamTC.driverFeeCalculatorBatchGap (nominalDiffTimeToSeconds <$> config.driverFeeCalculatorBatchGap),
+      Se.Set BeamTC.orderAndNotificationStatusCheckTime (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTime),
+      Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
       Se.Set BeamTC.updatedAt now
     ]
     [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]

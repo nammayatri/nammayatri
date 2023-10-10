@@ -191,6 +191,16 @@ updateInvoiceStatusByDriverFeeIds status driverFeeIds = do
     ]
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
+updateStatusAndTypeByMbdriverFeeIdAndInvoiceId :: MonadFlow m => Id Domain.Invoice -> Maybe Domain.InvoiceStatus -> Maybe Domain.InvoicePaymentMode -> Maybe (Id DriverFee) -> m ()
+updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driverFeeId = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamI.updatedAt now]
+        <> [Se.Set BeamI.invoiceStatus (fromJust status) | isJust status]
+        <> [Se.Set BeamI.paymentMode (fromJust paymentMode) | isJust paymentMode]
+    )
+    ([Se.Is BeamI.driverFeeId $ Se.Eq (getId (fromJust driverFeeId)) | isJust driverFeeId] <> [Se.Is BeamI.id $ Se.Eq invoiceId.getId])
+
 updatePendingToFailed :: MonadFlow m => NominalDiffTime -> m ()
 updatePendingToFailed seconds = do
   endTime <- getCurrentTime

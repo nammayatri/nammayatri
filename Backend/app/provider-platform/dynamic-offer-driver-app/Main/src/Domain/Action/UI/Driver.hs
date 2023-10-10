@@ -1683,6 +1683,7 @@ data ManualInvoiceHistory = ManualInvoiceHistory
   { invoiceId :: Text,
     createdAt :: UTCTime,
     rideDays :: Int,
+    rideTakenOn :: Maybe UTCTime,
     amount :: HighPrecMoney,
     feeType :: DDF.FeeType,
     paymentStatus :: INV.InvoiceStatus
@@ -1724,6 +1725,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
           ManualInvoiceHistory
             { invoiceId = manualInvoice.invoiceShortId,
               rideDays = length allDriverFeeForInvoice,
+              rideTakenOn = if length allDriverFeeForInvoice == 1 then listToMaybe allDriverFeeForInvoice <&> (.createdAt) else Nothing,
               amount,
               createdAt = manualInvoice.createdAt,
               feeType = if any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
