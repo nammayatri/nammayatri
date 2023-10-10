@@ -92,6 +92,33 @@ updatePaymentMethods (Id searchReqId) availablePaymentMethods =
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
 
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+
+buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
+buildLocation DSSL.SearchReqLocation {..} = do
+  return $
+    DL.Location
+      { id = cast id,
+        ..
+      }
+
+upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
+upsertFromLocationAndMappingForOldData locationId searchRequestId = do
+  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Search Request Table")
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Search Request Location Table for SearchRequestId : " <> searchRequestId)) buildLocation loc
+  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id searchRequestId DLM.SEARCH_REQUEST
+  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
+  return pickupLoc
+
+upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m (Maybe DL.Location)
+upsertToLocationAndMappingForOldData toLocationId searchReqId = do
+  tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
+  dropLocation <- maybe (pure Nothing) (fmap Just . buildLocation) tl
+  whenJust dropLocation $ \dropLoc -> do
+    toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id searchReqId DLM.SEARCH_REQUEST
+    void $ QL.create dropLoc >> QLM.create toLocationMapping
+  return dropLocation
+
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
@@ -168,30 +195,3 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
         BeamSR.createdAt = createdAt
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
-buildLocation DSSL.SearchReqLocation {..} = do
-  return $
-    DL.Location
-      { id = cast id,
-        ..
-      }
-
-upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
-upsertFromLocationAndMappingForOldData locationId searchRequestId = do
-  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Search Request Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Search Request Location Table for SearchRequestId : " <> searchRequestId)) buildLocation loc
-  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id searchRequestId DLM.SEARCH_REQUEST
-  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
-  return pickupLoc
-
-upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m (Maybe DL.Location)
-upsertToLocationAndMappingForOldData toLocationId searchReqId = do
-  tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
-  dropLocation <- maybe (pure Nothing) (fmap Just . buildLocation) tl
-  whenJust dropLocation $ \dropLoc -> do
-    toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id searchReqId DLM.SEARCH_REQUEST
-    void $ QL.create dropLoc >> QLM.create toLocationMapping
-  return dropLocation

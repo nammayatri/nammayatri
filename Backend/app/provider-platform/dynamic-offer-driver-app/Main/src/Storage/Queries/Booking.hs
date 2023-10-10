@@ -124,6 +124,30 @@ cancelBookings bookingIds now =
 findFareForCancelledBookings :: MonadFlow m => [Id Booking] -> m Money
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
 
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
+buildLocation DBBL.BookingLocation {..} =
+  return $
+    DL.Location
+      { id = cast id,
+        address = mkLocationAddress address,
+        ..
+      }
+
+mkLocationAddress :: DBBL.LocationAddress -> DL.LocationAddress
+mkLocationAddress DBBL.LocationAddress {..} =
+  DL.LocationAddress
+    { fullAddress = Nothing,
+      ..
+    }
+
+upsertLocationForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
+upsertLocationForOldData locationId bookingId = do
+  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "Location Id Not Found in Booking Location Table")
+  location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  void $ QL.create location
+  return location
+
 instance FromTType' BeamB.Booking Booking where
   fromTType' :: MonadFlow m => BeamB.Booking -> m (Maybe Booking)
   fromTType' BeamB.BookingT {..} = do
@@ -227,27 +251,3 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        address = mkLocationAddress address,
-        ..
-      }
-
-mkLocationAddress :: DBBL.LocationAddress -> DL.LocationAddress
-mkLocationAddress DBBL.LocationAddress {..} =
-  DL.LocationAddress
-    { fullAddress = Nothing,
-      ..
-    }
-
-upsertLocationForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
-upsertLocationForOldData locationId bookingId = do
-  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "Location Id Not Found in Booking Location Table")
-  location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
-  void $ QL.create location
-  return location

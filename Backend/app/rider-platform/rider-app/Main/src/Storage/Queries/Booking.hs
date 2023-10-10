@@ -228,6 +228,31 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+
+buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
+buildLocation DBBL.BookingLocation {..} =
+  return $
+    DL.Location
+      { id = cast id,
+        ..
+      }
+
+upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
+upsertFromLocationAndMappingForOldData locationId bookingId = do
+  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING
+  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
+  return pickupLoc
+
+upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m ()
+upsertToLocationAndMappingForOldData toLocationId bookingId = do
+  toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+  dropLoc <- buildLocation toLocation
+  toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING
+  void $ QL.create dropLoc >> QLM.create toLocationMapping
+
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     mappings <- QLM.findByEntityId id
@@ -370,28 +395,3 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        ..
-      }
-
-upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
-upsertFromLocationAndMappingForOldData locationId bookingId = do
-  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
-  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING
-  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
-  return pickupLoc
-
-upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m ()
-upsertToLocationAndMappingForOldData toLocationId bookingId = do
-  toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-  dropLoc <- buildLocation toLocation
-  toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING
-  void $ QL.create dropLoc >> QLM.create toLocationMapping

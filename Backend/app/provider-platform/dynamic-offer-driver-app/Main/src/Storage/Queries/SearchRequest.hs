@@ -67,6 +67,28 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
     [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled]
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
 
+-- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+
+buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
+buildLocation DSSL.SearchReqLocation {..} =
+  return $
+    DL.Location
+      { id = cast id,
+        address =
+          DL.LocationAddress
+            { fullAddress = full_address,
+              ..
+            },
+        ..
+      }
+
+upsertLocationForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
+upsertLocationForOldData locationId searchReqId = do
+  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "LocationId Not Found in Search Request Location Table")
+  location <- maybe (throwError $ InternalError $ "Location not found in SearchRequest for Search Request Id:" <> show searchReqId) buildLocation loc
+  void $ QL.create location
+  return location
+
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     mappings <- QLM.findByEntityId id
@@ -139,25 +161,3 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
-buildLocation DSSL.SearchReqLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        address =
-          DL.LocationAddress
-            { fullAddress = full_address,
-              ..
-            },
-        ..
-      }
-
-upsertLocationForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
-upsertLocationForOldData locationId searchReqId = do
-  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "LocationId Not Found in Search Request Location Table")
-  location <- maybe (throwError $ InternalError $ "Location not found in SearchRequest for Search Request Id:" <> show searchReqId) buildLocation loc
-  void $ QL.create location
-  return location

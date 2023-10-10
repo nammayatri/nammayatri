@@ -40,6 +40,19 @@ findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePara
 findAllIn :: MonadFlow m => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
+findAllLateNightRides :: MonadFlow m => [Id FareParameters] -> m Int
+findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
+
+findDriverSelectedFareEarnings :: MonadFlow m => [Id FareParameters] -> m Int
+findDriverSelectedFareEarnings fareParamIds = do
+  dsEarnings <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (driverSelectedFare <$>)
+  pure $ sum (getMoney <$> catMaybes dsEarnings)
+
+findCustomerExtraFees :: MonadFlow m => [Id FareParameters] -> m Int
+findCustomerExtraFees fareParamIds = do
+  csFees <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (customerExtraFee <$>)
+  pure $ sum (getMoney <$> catMaybes csFees)
+
 instance FromTType' BeamFP.FareParameters FareParameters where
   fromTType' BeamFP.FareParametersT {..} = do
     mFareParametersDetails <-
@@ -86,16 +99,3 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.nightShiftCharge = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
       }
-
-findAllLateNightRides :: MonadFlow m => [Id FareParameters] -> m Int
-findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
-
-findDriverSelectedFareEarnings :: MonadFlow m => [Id FareParameters] -> m Int
-findDriverSelectedFareEarnings fareParamIds = do
-  dsEarnings <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (driverSelectedFare <$>)
-  pure $ sum (getMoney <$> catMaybes dsEarnings)
-
-findCustomerExtraFees :: MonadFlow m => [Id FareParameters] -> m Int
-findCustomerExtraFees fareParamIds = do
-  csFees <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (customerExtraFee <$>)
-  pure $ sum (getMoney <$> catMaybes csFees)

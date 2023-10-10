@@ -70,6 +70,23 @@ findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
       let persons' = filter (\p -> p.id == issue.customerId) persons
        in acc <> ((\p -> (issue, p)) <$> persons')
 
+updateIssueStatus :: MonadFlow m => Text -> IssueStatus -> m ()
+updateIssueStatus ticketId status = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamI.status status, Se.Set BeamI.updatedAt now]
+    [Se.Is BeamI.ticketId (Se.Eq (Just ticketId))]
+
+updateTicketId :: MonadFlow m => Id Issue -> Text -> m ()
+updateTicketId issueId ticketId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamI.ticketId (Just ticketId), Se.Set BeamI.updatedAt now]
+    [Se.Is BeamI.id (Se.Eq $ getId issueId)]
+
+findByTicketId :: MonadFlow m => Text -> m (Maybe Issue)
+findByTicketId ticketId = findOneWithKV [Se.Is BeamI.ticketId $ Se.Eq (Just ticketId)]
+
 instance FromTType' BeamI.Issue Issue where
   fromTType' BeamI.IssueT {..} = do
     pure $
@@ -101,20 +118,3 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }
-
-updateIssueStatus :: MonadFlow m => Text -> IssueStatus -> m ()
-updateIssueStatus ticketId status = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set BeamI.status status, Se.Set BeamI.updatedAt now]
-    [Se.Is BeamI.ticketId (Se.Eq (Just ticketId))]
-
-updateTicketId :: MonadFlow m => Id Issue -> Text -> m ()
-updateTicketId issueId ticketId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set BeamI.ticketId (Just ticketId), Se.Set BeamI.updatedAt now]
-    [Se.Is BeamI.id (Se.Eq $ getId issueId)]
-
-findByTicketId :: MonadFlow m => Text -> m (Maybe Issue)
-findByTicketId ticketId = findOneWithKV [Se.Is BeamI.ticketId $ Se.Eq (Just ticketId)]
