@@ -20,14 +20,13 @@ import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListContro
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array (concatMap, length, nubBy, nubByEq, null, partition, union, (!!))
-import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-), (<))
+import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-), (<), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInvoiceStatus)
@@ -127,16 +126,22 @@ getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
 
 getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
 getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = do
-  let description' = case manualPayInvoice.feeType, (manualPayInvoice.rideDays - 1) of
-                        AUTOPAY_REGISTRATION, 0 -> getString ONE_TIME_REGISTERATION
-                        AUTOPAY_REGISTRATION, _ -> getString CLEARANCE_AND_REGISTERATION
-                        _, _ -> (getString RIDES_TAKEN_ON) <> " "
+  let manualInvoiceItemConfig = getManualDesc ""
   {
     invoiceId : manualPayInvoice.invoiceId,
     paymentStatus : getInvoiceStatus (Mb.Just manualPayInvoice.paymentStatus),
     amount : manualPayInvoice.amount,
-    description : description',
+    description : manualInvoiceItemConfig.description,
     feeType : manualPayInvoice.feeType,
     transactionDate : manualPayInvoice.createdAt,
-    ridesTakenDate : if manualPayInvoice.feeType == AUTOPAY_REGISTRATION then "" else show manualPayInvoice.rideDays <> " " <> getString DAYS
+    ridesTakenDate : manualInvoiceItemConfig.rideDays
   }
+    where 
+      getManualDesc :: String -> {description :: String, rideDays :: String}
+      getManualDesc _ = do
+        let rideDate = Mb.fromMaybe "" manualPayInvoice.rideTakenOn
+            rideDays = if manualPayInvoice.rideDays == 1 && rideDate /= "" then convertUTCtoISC rideDate "Do MMM YYYY" else show manualPayInvoice.rideDays <> " " <> getString DAYS
+        case manualPayInvoice.feeType, manualPayInvoice.rideDays - 1 of
+          AUTOPAY_REGISTRATION, 0 -> {description : getString ONE_TIME_REGISTERATION, rideDays : ""}
+          AUTOPAY_REGISTRATION, _ -> {description : getString CLEARANCE_AND_REGISTERATION, rideDays : ""}
+          _, _ -> {description : (getString RIDES_TAKEN_ON) <> " ", rideDays : rideDays }
