@@ -125,6 +125,9 @@ buildEstimateOrQuoteInfo provider item = do
     OnSearch.RIDE_OTP -> do
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
       pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.RENTAL -> do
+      quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
   where
     castVehicleVariant = \case
       OnSearch.SEDAN -> VehVar.SEDAN
@@ -162,9 +165,9 @@ buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
   m DOnSearch.RentalQuoteDetails
-buildRentalQuoteDetails _ = do
-  baseDistance <- Nothing & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
-  baseDuration <- Nothing & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
+buildRentalQuoteDetails item = do
+  baseDistance <- (getRentalBaseDistance =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
+  baseDuration <- (getRentalBaseDuration =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
   pure DOnSearch.RentalQuoteDetails {..}
 
 validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
@@ -227,6 +230,18 @@ buildWaitingChargeInfo tags = do
 
 buildSpecialLocationTag :: OnSearch.TagGroups -> Maybe Text
 buildSpecialLocationTag = getTag "general_info" "special_location_tag"
+
+getRentalBaseDistance :: OnSearch.TagGroups -> Maybe Kilometers
+getRentalBaseDistance tagGroups = do
+  tagValue <- getTag "general_info" "rental_base_distance" tagGroups
+  baseDistance <- readMaybe $ T.unpack tagValue
+  Just $ Kilometers baseDistance
+
+getRentalBaseDuration :: OnSearch.TagGroups -> Maybe Hours
+getRentalBaseDuration tagGroups = do
+  tagValue <- getTag "general_info" "rental_base_duration" tagGroups
+  baseDistance <- readMaybe $ T.unpack tagValue
+  Just $ Hours baseDistance
 
 getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
 getNightShiftCharge tagGroups = do
