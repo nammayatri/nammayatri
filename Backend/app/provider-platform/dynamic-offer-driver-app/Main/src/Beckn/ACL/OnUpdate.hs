@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import Tools.Error
+import EulerHS.Prelude (undefined)
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq
@@ -264,6 +265,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+        DFParams.Rental -> undefined
         DFParams.Slab ->
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"

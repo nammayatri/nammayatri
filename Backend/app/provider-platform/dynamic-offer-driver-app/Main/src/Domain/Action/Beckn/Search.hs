@@ -258,8 +258,11 @@ handler merchant sReq' =
         for listOfVehicleVariants $ \farePolicy -> do
           buildRentalQuote
             rentalSearchReq
-            farePolicy
+            fareParams
             merchant.id
+            
+            farePolicy.vehicleVariant
+            result.duration
       for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
       return (Just (mkRentalQuoteInfo fromLocation now <$> listOfSpecialZoneQuotes), Nothing)
   where
@@ -479,10 +482,13 @@ buildRentalQuote ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DSRSZ.SearchRequest ->
-  FarePolicy ->
+  FareParameters ->
   Id DM.Merchant ->
+  Meters ->
+  DVeh.Variant ->
+  Seconds ->
   m DQuoteRental.QuoteRental
-buildRentalQuote searchRequest farePolicy merchantId = do
+buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
