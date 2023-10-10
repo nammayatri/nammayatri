@@ -49,4 +49,8 @@
     <string name="tip">Tip</string>
     <string name="merchant_id">for_compilation</string>
     <string name="client_id">for_compilation</string>
+    <string name="qr_for_your_vpa_is_downloaded">QR for your vpa is downloaded!!!</string>
+    <string name="invoice_downloaded">Invoice Downloaded!!!</string>
+    <string name="invoice_for_your_ride_is_downloaded">Invoice for your ride is downloaded!!!</string>
+    <string name="qr_downloaded">QR Downloaded!!!</string>
 </resources>

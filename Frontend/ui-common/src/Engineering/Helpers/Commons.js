@@ -362,7 +362,8 @@ export const getCurrentUTC = function (str) {
 export const convertUTCtoISC = function (str) {
   return function (format) {
     var localTime = new Date(str);
-    localTime = formatDates(localTime, format);
+    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    localTime = formatDates(localTime, format, getFormattedLanguage(language));
     return localTime;
   };
 };

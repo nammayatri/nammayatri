@@ -14,6 +14,9 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -41,6 +44,8 @@ import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -48,6 +53,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -86,7 +93,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.location.LocationManagerCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -132,6 +142,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -207,6 +218,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected  Receivers receivers;
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
+    protected String downloadLayout;
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -1738,59 +1750,135 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 JSONObject jsonObject = new JSONObject(config);
-                Intent sendIntent = new Intent();
-                @SuppressLint("InflateParams") View referralCodeLayout = LayoutInflater.from(bridgeComponents.getContext()).inflate(R.layout.referral_code, null, false);
+                if (bridgeComponents.getActivity() != null && jsonObject.has("viewId") && !jsonObject.getString("viewId").equals("")) {
+                    Intent sendIntent = new Intent();
+                    Context context = bridgeComponents.getContext();
+                    Activity activity = bridgeComponents.getActivity();
+                    @SuppressLint("InflateParams") View layoutToShare ;
+                    boolean isReferral = !jsonObject.has("code") || jsonObject.getBoolean("isReferral");
+                    if (isReferral) {
+                        layoutToShare = LayoutInflater.from(context).inflate(R.layout.referral_code, null, false);
+                        if (jsonObject.has("code")) {
+                            TextView code = layoutToShare.findViewById(R.id.code);
+                            code.setText(jsonObject.getString("code"));
+                        }
 
-                if (jsonObject.has("code")){
-                    TextView code = referralCodeLayout.findViewById(R.id.code);
-                    code.setText(jsonObject.getString("code"));
+                        ImageView code_image = layoutToShare.findViewById(R.id.code_image);
+                        ImageView qr_code_image = bridgeComponents.getActivity().findViewById(Integer.parseInt(jsonObject.getString("viewId")));
+                        code_image.setImageDrawable(qr_code_image.getDrawable());
+
+                        if (jsonObject.has("logoId")) {
+                            ImageView logo_image = layoutToShare.findViewById(R.id.referral_logo);
+                            ImageView logo_image_present = bridgeComponents.getActivity().findViewById(Integer.parseInt(jsonObject.getString("logoId")));
+                            logo_image.setImageDrawable(logo_image_present.getDrawable());
+                        }
+
+                        layoutToShare.measure(360, 440);
+                        layoutToShare.layout(0, 0, layoutToShare.getMeasuredWidth(), layoutToShare.getMeasuredHeight());
+
+                    } else {
+                        layoutToShare = activity.findViewById(Integer.parseInt(jsonObject.getString("viewId")));
+                    }
+
+                    Bitmap bitmap = Bitmap.createBitmap(layoutToShare.getMeasuredWidth(), layoutToShare.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+                    Canvas canvas = new Canvas(bitmap);
+                    layoutToShare.draw(canvas);
+                    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+
+
+                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                    f.setTimeZone(TimeZone.getTimeZone("IST"));
+                    String imageDownloadTime = f.format(new Date());
+
+                    String imageName = "IMG_" + imageDownloadTime;
+                    String imageNameRemovedSpecial = imageName.replaceAll("[^a-zA-Z\\d]", "_");
+
+                    String imagePath = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, imageNameRemovedSpecial + "", null);
+                    Uri uri2 = Uri.parse(imagePath);
+
+                    sendIntent.setAction(Intent.ACTION_SEND);
+                    sendIntent.setType("image/*");
+                    sendIntent.putExtra(Intent.EXTRA_STREAM, uri2);
+                    sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                    sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    Intent shareIntent = Intent.createChooser(sendIntent, null);
+                    shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    bridgeComponents.getContext().startActivity(shareIntent);
                 }
-
-                if (jsonObject.has("viewId")){
-                    ImageView code_image = referralCodeLayout.findViewById(R.id.code_image);
-                    ImageView qr_code_image = bridgeComponents.getActivity().findViewById(Integer.parseInt(jsonObject.getString("viewId")));
-                    code_image.setImageDrawable(qr_code_image.getDrawable());
-                }
-
-                if (jsonObject.has("logoId")){
-                    ImageView logo_image = referralCodeLayout.findViewById(R.id.referral_logo);
-                    ImageView logo_image_present = bridgeComponents.getActivity().findViewById(Integer.parseInt(jsonObject.getString("logoId")));
-                    logo_image.setImageDrawable(logo_image_present.getDrawable());
-                }
-
-                referralCodeLayout.measure(360,440);
-                referralCodeLayout.layout(0,0,referralCodeLayout.getMeasuredWidth(),referralCodeLayout.getMeasuredHeight());
-                Bitmap bitmap2 = Bitmap.createBitmap(referralCodeLayout.getMeasuredWidth(), referralCodeLayout.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-
-                Canvas canvas = new Canvas(bitmap2);
-                referralCodeLayout.draw(canvas);
-                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                bitmap2.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
-
-
-                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                f.setTimeZone(TimeZone.getTimeZone("IST"));
-                String imageDownloadTime = f.format(new Date());
-
-                String imageName = "IMG_" + imageDownloadTime;
-                String imageNameRemovedSpecial = imageName.replaceAll("[^a-zA-Z\\d]", "_");
-
-                String imagePath = MediaStore.Images.Media.insertImage(bridgeComponents.getContext().getContentResolver(), bitmap2, imageNameRemovedSpecial + "", null);
-                Uri uri2 = Uri.parse(imagePath);
-
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.setType("image/*");
-                sendIntent.putExtra(Intent.EXTRA_STREAM, uri2);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-                sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                bridgeComponents.getContext().startActivity(shareIntent);;
             } catch (Exception e) {
                 Toast.makeText(bridgeComponents.getContext(), "Something went wrong. Please try again later!", Toast.LENGTH_SHORT).show();
                 Log.e("IMAGE_TEXT_SHARE", "Error in sharing the message");
                 e.printStackTrace();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void downloadLayoutAsImage(String qr) {
+        downloadLayout = qr;
+        if (bridgeComponents.getActivity() != null && checkAndAskStoragePermission()) {
+            Context context = bridgeComponents.getContext();
+            Activity activity = bridgeComponents.getActivity();
+            View layoutView = activity.findViewById(Integer.parseInt(qr));
+
+            Bitmap bitmap = Bitmap.createBitmap(layoutView.getWidth(), layoutView.getHeight(), Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            layoutView.draw(canvas);
+
+            File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+            File imageFile = new File(directory, "QR.png");
+            Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", imageFile);
+            try {
+                FileOutputStream fos = new FileOutputStream(imageFile);
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                fos.close();
+                downloadLayout = null;
+                showNotificationWithURI(path, activity.getString(R.string.qr_downloaded), context.getString(R.string.qr_for_your_vpa_is_downloaded), "image/png", "QR", "QR Download");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void showNotificationWithURI(Uri path, String toastMessage, String notificationContent, String dataType, String channelId, String channelDesc) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            toast(toastMessage);
+            Context context = bridgeComponents.getContext();
+            JuspayLogger.d(OTHERS, channelDesc + "inside Show Notification");
+            Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
+            pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            pdfOpenintent.setDataAndType(path, dataType);
+            String CHANNEL_ID = channelId;
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, channelDesc, NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription(channelDesc);
+                NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+                AudioAttributes attributes = new AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .build();
+                channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
+                notificationManager.createNotificationChannel(channel);
+            }
+            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+            int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
+            mBuilder.setContentTitle(toastMessage)
+                    .setSmallIcon(launcher)
+                    .setContentText(notificationContent)
+                    .setAutoCancel(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setPriority(NotificationCompat.PRIORITY_MAX);
+            mBuilder.setContentIntent(pendingIntent);
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            JuspayLogger.d(OTHERS, channelDesc + "notification is Created");
+            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                JuspayLogger.d(OTHERS, channelDesc + "Notification permission is not given");
+            } else {
+                notificationManager.notify(234567, mBuilder.build());
+                JuspayLogger.d(OTHERS, channelDesc + "notification is notified");
             }
         });
     }

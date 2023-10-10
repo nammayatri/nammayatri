@@ -94,6 +94,7 @@ import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.AudioRecorder;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
@@ -1147,6 +1148,19 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(OVERRIDE, "Location Permission Granted");
                 } else {
+                    toast("Permission Denied");
+                }
+                break;
+            case STORAGE_PERMISSION:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && downloadLayout != null) {
+                    try {
+                        JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
+                        downloadLayoutAsImage(downloadLayout);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    JuspayLogger.d(OTHERS, "Storage Permission is denied.");
                     toast("Permission Denied");
                 }
                 break;

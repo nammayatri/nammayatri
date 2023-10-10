@@ -81,3 +81,22 @@ export const getMerchantConfig = function (just) {
     }
   }
 }
+
+export const getStringWithVar = function (str) {
+  return function (vals) {
+      try {
+        let currentIndex = 0;
+        
+        const regex = /{}/g;
+    
+        const processedString = str.replace(regex, () => {
+          const currentValue = vals[currentIndex];
+          currentIndex++;
+          return currentValue;
+        });
+        return processedString;
+      } catch (err) {
+        console.log(err);
+      }
+    }
+}

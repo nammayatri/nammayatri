@@ -45,7 +45,16 @@ commonConfig =
         , subscriptionConfig : {
             enableBlocking : false,
             onBoardingSubscription : false,
-            completePaymentPopup : false
+            completePaymentPopup : false,
+            showDUOfferBanner : false,
+            offerBannerValidTill : "",
+            offerBannerDeadline : "",
+            currentPlanCacheExpTime : 3600,
+            lowDuesLimit : 25.0,
+            maxDuesLimit : 100.0,
+            highDueWarningLimit : 75.0,
+            moveDriverToOfflineInHighDueDaily : false,
+            enableSubscriptionPopups : false
         }
         , navigationAppConfig : {
             android : {  

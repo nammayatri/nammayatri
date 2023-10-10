@@ -16,7 +16,7 @@
 module Components.Banner.Controller where
 
 import Styles.Colors as Color
-import PrestoDOM (Length(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Font.Style(Style(..))
 
 
@@ -36,7 +36,18 @@ type Config = {
   isBanner :: Boolean,
   actionTextStyle :: Style,
   titleStyle :: Style,
-  stroke :: String
+  stroke :: String,
+  showActionArrow :: Boolean,
+  alertText :: String,
+  alertTextColor :: String,
+  alertTextStyle :: Style,
+  alertTextVisibility :: Boolean,
+  bannerClickable :: Boolean,
+  padding :: Padding,
+  margin :: Margin,
+  actionTextVisibility :: Boolean,
+  titleTextVisibility :: Boolean,
+  imagePadding :: Padding
 }
 
 config :: Config
@@ -52,5 +63,16 @@ config = {
     isBanner : true,
     actionTextStyle : ParagraphText,
     titleStyle : Body7,
-    stroke : "0,#FFFFFF"
+    stroke : "0,#FFFFFF",
+    showActionArrow : true,
+    alertText : "",
+    alertTextColor : "",
+    alertTextStyle : Tags,
+    alertTextVisibility : false,
+    bannerClickable : true,
+    padding : PaddingTop 0,
+    margin : MarginTop 12,
+    actionTextVisibility : true,
+    titleTextVisibility : true,
+    imagePadding : PaddingVertical 5 5
 }

@@ -28,7 +28,7 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 
 import MerchantConfig.Utils
 
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), fold) as DA
@@ -45,7 +45,7 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
+import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
 import Foreign (Foreign)
@@ -75,8 +75,9 @@ import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (UpiApps(..))
-import Data.Int (fromString, even)
+import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
+import Data.Int (fromString, even, fromNumber)
+import Data.Number.Format (fixed, toStringWith)
 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -131,6 +132,7 @@ foreign import preFetch :: Effect (Array RenewFile)
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
+foreign import  downloadQR  :: String -> Effect Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
@@ -450,3 +452,16 @@ getVariantRideType variant =
                     "SUV"           -> getString SUV
                     "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
                     _               -> variant
+                    
+getStatus :: String -> PaymentStatus
+getStatus status = case status of
+  "Success" -> Success
+  "Pending" -> Pending
+  "Failed" -> Failed
+  "Scheduled" -> Scheduled
+  _ -> Pending
+
+getFixedTwoDecimals :: Number -> String
+getFixedTwoDecimals amount = case (fromNumber amount) of
+                                Just value -> show value
+                                Nothing ->  toStringWith (fixed 2) amount

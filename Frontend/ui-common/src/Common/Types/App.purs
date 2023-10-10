@@ -24,6 +24,7 @@ import Data.Newtype (class Newtype)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
+import Foreign (Foreign)
 import Presto.Core.Types.API (standardEncode,class StandardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode) 
 import Foreign.Generic (class Decode, class Encode)
@@ -218,10 +219,10 @@ type FareList = {
 
 type ClevertapEventParams = {
   key :: String ,
-  value :: String
+  value :: Foreign
 }
 
-data PaymentStatus = Success | Pending | Failed
+data PaymentStatus = Success | Pending | Failed | Scheduled
 
 derive instance genericPaymentStatus :: Generic PaymentStatus _
 instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}
@@ -305,4 +306,5 @@ type ShareImageConfig = {
     viewId :: String
   , code :: String
   , logoId :: String
+  , isReferral :: Boolean
 }

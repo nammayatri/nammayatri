@@ -2,6 +2,7 @@ module Components.RideCompletedCard.Controller where
 
 import Prelude
 
+import Components.Banner as Banner
 import Components.PrimaryButton.Controller as PB
 import Components.SelectListModal.Controller as SL
 import Data.Int (toNumber)
@@ -11,6 +12,10 @@ import Prim.TypeError as String
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
 import Components.PopUpModal as PopUpModal
+import Data.Eq.Generic (genericEq)
+import Foreign.Generic (class Decode, class Encode)
+import Data.Generic.Rep (class Generic)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 data Action = Support
             | RideDetails
@@ -20,6 +25,8 @@ data Action = Support
             | IssueReportPopUpAC SL.Action
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
+            | UpiQrRendered String
+            | BannerAction Banner.Action
             
 type Config = {
   topCard :: TopCard,
@@ -29,9 +36,28 @@ type Config = {
   contactSupportPopUpConfig :: PopUpModal.Config,
   badgeCard :: BadgeCard,
   showContactSupportPopUp :: Boolean,
+  driverUpiQrCard :: DriverUpiQrCard,
+  noVpaCard :: NoVpaCard,
   primaryButtonConfig :: PB.Config,
-  accessibility :: Accessiblity
+  accessibility :: Accessiblity,
+  theme :: Theme,
+  isPrimaryButtonSticky :: Boolean,
+  bannerConfig :: Banner.Config,
+  viewsByOrder :: Array RideCompletedElements
 }
+
+data Theme = DARK | LIGHT
+
+derive instance genericTheme :: Generic Theme _
+instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
+instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
+instance eqTheme :: Eq Theme where eq = genericEq
+
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW
+
+derive instance genericRideCompletedElements :: Generic RideCompletedElements _
+instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
+
 
 config :: Config 
 config = {
@@ -40,6 +66,7 @@ config = {
     finalAmount : 0,
     initalAmount : 0,
     fareUpdatedVisiblity : false,
+    gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
       text : "",
       background : Color.black900,
@@ -96,10 +123,25 @@ config = {
     imageWidth : V 0, 
     imageHeight : V 0
   },
+  driverUpiQrCard : {
+    text : "",
+    id : "",
+    vpa : "",
+    vpaIcon : "",
+    collectCashText : ""
+  },
+  noVpaCard : {
+    title : "",
+    collectCashText : ""
+  },
   contactSupportPopUpConfig : PopUpModal.config,
   showContactSupportPopUp : false,
   primaryButtonConfig : PB.config,
-  accessibility : ENABLE
+  accessibility : ENABLE,
+  theme : DARK,
+  isPrimaryButtonSticky : false,
+  bannerConfig : Banner.config,
+  viewsByOrder : []
 }
 
 type CustomerIssueCard = {
@@ -120,6 +162,7 @@ type TopCard = {
   finalAmount :: Int,
   initalAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
+  gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
   bottomText :: String
@@ -168,6 +211,19 @@ type BadgeCard = {
   image :: String,
   imageWidth :: Length, 
   imageHeight :: Length
+}
+
+type DriverUpiQrCard = {
+  text :: String,
+  id :: String,
+  vpa :: String,
+  vpaIcon :: String,
+  collectCashText :: String
+}
+
+type NoVpaCard = {
+  title :: String,
+  collectCashText :: String
 }
 
 type TopPill = {

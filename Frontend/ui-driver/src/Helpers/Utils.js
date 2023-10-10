@@ -1017,3 +1017,8 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
     sc("FAILURE")();
   }
 }
+
+export const downloadQR = function (id){
+  if (window.JBridge.downloadLayoutAsImage)
+    return window.JBridge.downloadLayoutAsImage(id);
+}
