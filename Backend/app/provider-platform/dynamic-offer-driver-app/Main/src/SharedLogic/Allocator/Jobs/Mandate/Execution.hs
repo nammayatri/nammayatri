@@ -22,6 +22,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI

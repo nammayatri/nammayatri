@@ -10,6 +10,8 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueOption as IssueOption
 import qualified IssueManagement.Storage.Beam.Issue.IssueReport as IssueReport
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as IssueTranslation
 import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
+import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -38,8 +40,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
-import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
-import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
+import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus

@@ -363,6 +363,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.Notification
       Storage.Beam.OnboardingDocumentConfig
+      Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
