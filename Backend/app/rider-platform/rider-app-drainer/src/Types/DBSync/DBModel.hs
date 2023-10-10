@@ -77,7 +77,7 @@ newtype DBModelOptions = DBModelOptions {getDBModelOptions :: DBModel.DBModel}
 instance FromJSON DBModelOptions where
   parseJSON = A.withText "DBModelOptions" $ \options -> case dropSuffix "Options" options of
     Nothing -> fail $ T.unpack ("Expected a DBModelOptions but got '" <> options <> "'")
-    Just model -> parseJSON (A.String model)
+    Just model -> DBModelOptions <$> parseJSON (A.String model)
 
 -- dropSuffix "tableOptions" = Just "table"
 dropSuffix :: Text -> Text -> Maybe Text

@@ -136,7 +136,7 @@ runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetri
       runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
     (Left (ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError ("23505" :: Text) _ errMsg _ _))) _), _) -> do
       EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> dbModel <> ", Error message: " <> errMsg)
-      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate $ dbModel
+      void $ publishDBSyncMetric $ Event.DuplicateEntryCreate dbModel
       -- Is retry delay needed here? :/
       runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
     (Left _, y) | y < maxRetries -> do
