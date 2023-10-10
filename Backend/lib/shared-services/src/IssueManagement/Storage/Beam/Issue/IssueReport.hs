@@ -55,4 +55,4 @@ type IssueReport = IssueReportT Identity
 
 $(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId]])
 
-$(mkTableInstances ''IssueReportT "issue_report")
+$(mkTableInstancesGenericSchema ''IssueReportT "issue_report")

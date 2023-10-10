@@ -45,4 +45,4 @@ type IssueTranslation = IssueTranslationT Identity
 
 $(enableKVPG ''IssueTranslationT ['id] [['language]])
 
-$(mkTableInstances ''IssueTranslationT "issue_translation")
+$(mkTableInstancesGenericSchema ''IssueTranslationT "issue_translation")

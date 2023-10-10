@@ -18,13 +18,13 @@ module IssueManagement.Storage.CachedQueries.Issue.IssueConfig where
 
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueConfig
+import IssueManagement.Storage.BeamFlow (BeamFlow)
 import IssueManagement.Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as Queries
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 
-findIssueConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Identifier -> m (Maybe IssueConfig)
+findIssueConfig :: (CacheFlow m r, BeamFlow m) => Identifier -> m (Maybe IssueConfig)
 findIssueConfig identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueConfigKey identifier) >>= \case
     Just a -> pure a

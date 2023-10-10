@@ -8,6 +8,7 @@ import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.Issue.IssueTranslation as DIT
+import IssueManagement.Storage.BeamFlow (BeamFlow)
 import IssueManagement.Storage.CachedQueries.CacheConfig
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
@@ -21,7 +22,6 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -32,7 +32,7 @@ newtype ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person)
   }
 
-issueCategoryList :: (CacheFlow m r, Esq.EsqDBFlow m r) => ShortId Merchant -> Identifier -> m Common.IssueCategoryListRes
+issueCategoryList :: (CacheFlow m r, BeamFlow m) => ShortId Merchant -> Identifier -> m Common.IssueCategoryListRes
 issueCategoryList _merchantShortId identifier = do
   issueCategoryTranslationList <- CQIC.findAllByLanguage ENGLISH identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -47,8 +47,7 @@ issueCategoryList _merchantShortId identifier = do
 
 issueList ::
   ( CacheFlow m r,
-    Esq.EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    BeamFlow m
   ) =>
   ShortId Merchant ->
   Maybe Int ->
@@ -65,7 +64,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
   issues <- mapM mkIssueReport issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
-    mkIssueReport :: (CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
+    mkIssueReport :: (CacheFlow m r, BeamFlow m) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       pure $
@@ -81,9 +80,8 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
           }
 
 issueInfo ::
-  ( Esq.EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBFlow m r,
+  ( CacheFlow m r,
+    BeamFlow m,
     EncFlow m r
   ) =>
   ShortId Merchant ->
@@ -113,7 +111,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
         createdAt = issueReport.createdAt
       }
   where
-    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, EncFlow m r) => Person -> m Common.PersonDetail
+    mkPersonDetail :: (CacheFlow m r, BeamFlow m, EncFlow m r) => Person -> m Common.PersonDetail
     mkPersonDetail personDetail = do
       mobileNumber <- traverse decrypt personDetail.mobileNumber
       pure $
@@ -141,7 +139,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
 
 issueUpdate ::
   ( CacheFlow m r,
-    Esq.EsqDBFlow m r
+    BeamFlow m
   ) =>
   ShortId Merchant ->
   Id DIR.IssueReport ->
@@ -169,9 +167,8 @@ issueUpdate _merchantShortId issueReportId req = do
             }
 
 issueAddComment ::
-  ( Esq.EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBFlow m r
+  ( CacheFlow m r,
+    BeamFlow m
   ) =>
   ShortId Merchant ->
   Id DIR.IssueReport ->
@@ -199,9 +196,8 @@ issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 
 ticketStatusCallBack ::
-  ( Esq.EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBFlow m r
+  ( CacheFlow m r,
+    BeamFlow m
   ) =>
   ShortId Merchant ->
   Identifier ->

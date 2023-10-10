@@ -45,4 +45,4 @@ type Comment = CommentT Identity
 
 $(enableKVPG ''CommentT ['id] [['issueReportId]])
 
-$(mkTableInstances ''CommentT "comment")
+$(mkTableInstancesGenericSchema ''CommentT "comment")

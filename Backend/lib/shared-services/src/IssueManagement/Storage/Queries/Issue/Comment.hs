@@ -6,19 +6,19 @@ import qualified Data.Time.LocalTime as T
 import IssueManagement.Domain.Types.Issue.Comment as Comment
 import IssueManagement.Domain.Types.Issue.IssueReport (IssueReport)
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
+import IssueManagement.Storage.BeamFlow (BeamFlow)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
 
-create :: MonadFlow m => Comment.Comment -> m ()
+create :: BeamFlow m => Comment.Comment -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Comment -> m (Maybe Comment)
+findById :: BeamFlow m => Id Comment -> m (Maybe Comment)
 findById (Id id) = findOneWithKV [Se.Is BeamC.id $ Se.Eq id]
 
-findAllByIssueReportId :: MonadFlow m => Id IssueReport -> m [Comment]
+findAllByIssueReportId :: BeamFlow m => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
 
 instance FromTType' BeamC.Comment Comment where

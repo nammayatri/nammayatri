@@ -19,27 +19,27 @@ module IssueManagement.Storage.CachedQueries.Issue.IssueCategory where
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueTranslation
+import IssueManagement.Storage.BeamFlow (BeamFlow)
 import IssueManagement.Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as Queries
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 
-findAllByLanguage :: (CacheFlow m r, Esq.EsqDBFlow m r) => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllByLanguage :: (CacheFlow m r, BeamFlow m) => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByLanguageKey language identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheAllIssueCategoryByLanguage language identifier /=<< Queries.findAllByLanguage language
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueCategory -> Identifier -> m (Maybe IssueCategory)
+findById :: (CacheFlow m r, BeamFlow m) => Id IssueCategory -> Identifier -> m (Maybe IssueCategory)
 findById issueCategoryId identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByIdKey issueCategoryId identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheIssueCategoryById issueCategoryId identifier /=<< Queries.findById issueCategoryId
 
-findByIdAndLanguage :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueCategory -> Language -> Identifier -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+findByIdAndLanguage :: (CacheFlow m r, BeamFlow m) => Id IssueCategory -> Language -> Identifier -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier) >>= \case
     Just a -> pure a

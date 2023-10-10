@@ -30,6 +30,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Message.Message as MQ
 import qualified Storage.Queries.Message.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP

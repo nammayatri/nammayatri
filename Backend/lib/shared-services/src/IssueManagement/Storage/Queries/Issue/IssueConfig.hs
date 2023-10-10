@@ -5,13 +5,13 @@ module IssueManagement.Storage.Queries.Issue.IssueConfig where
 
 import IssueManagement.Domain.Types.Issue.IssueConfig
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
+import IssueManagement.Storage.BeamFlow (BeamFlow)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Sequelize as Se
 
-findOne :: MonadFlow m => m (Maybe IssueConfig)
+findOne :: BeamFlow m => m (Maybe IssueConfig)
 findOne = findOneWithKV [Se.Is BeamIC.id $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamIC.IssueConfig IssueConfig where

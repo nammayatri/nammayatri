@@ -45,6 +45,7 @@ library
       IssueManagement.Storage.Beam.Issue.IssueReport
       IssueManagement.Storage.Beam.Issue.IssueTranslation
       IssueManagement.Storage.Beam.MediaFile
+      IssueManagement.Storage.BeamFlow
       IssueManagement.Storage.CachedQueries.CacheConfig
       IssueManagement.Storage.CachedQueries.Issue.IssueCategory
       IssueManagement.Storage.CachedQueries.Issue.IssueConfig

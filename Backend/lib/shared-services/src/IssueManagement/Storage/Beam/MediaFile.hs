@@ -45,4 +45,4 @@ type MediaFile = MediaFileT Identity
 
 $(enableKVPG ''MediaFileT ['id] [])
 
-$(mkTableInstancesWithTModifier ''MediaFileT "media_file" [("fileType", "type")])
+$(mkTableInstancesGenericSchemaWithTModifier ''MediaFileT "media_file" [("fileType", "type")])

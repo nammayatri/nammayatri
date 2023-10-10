@@ -12,22 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module IssueManagement.Tools.UtilsTH (module Reexport, module IssueManagement.Tools.UtilsTH) where
+module IssueManagement.Tools.UtilsTH (module Reexport) where
 
-import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier, schemaName)
-import qualified Kernel.Beam.Lib.UtilsTH as TH
-import Kernel.Prelude hiding (catch)
+import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
-import Language.Haskell.TH
-import System.Environment (getEnv)
-import System.IO.Unsafe (unsafePerformIO)
-
-schemaName :: String
-{-# NOINLINE schemaName #-}
-schemaName = unsafePerformIO (getEnv "SCHEMA_NAME")
-
-mkTableInstances :: Name -> String -> Q [Dec]
-mkTableInstances name table = TH.mkTableInstances name table schemaName
-
-mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
-mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table schemaName

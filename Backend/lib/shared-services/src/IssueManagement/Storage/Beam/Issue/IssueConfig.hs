@@ -46,4 +46,4 @@ instance B.Table IssueConfigT where
 type IssueConfig = IssueConfigT Identity
 
 $(enableKVPG ''IssueConfigT ['id] [])
-$(mkTableInstances ''IssueConfigT "issue_config")
+$(mkTableInstancesGenericSchema ''IssueConfigT "issue_config")

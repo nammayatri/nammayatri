@@ -47,4 +47,4 @@ type IssueMessage = IssueMessageT Identity
 
 $(enableKVPG ''IssueMessageT ['id] [['message]])
 
-$(mkTableInstances ''IssueMessageT "issue_message")
+$(mkTableInstancesGenericSchema ''IssueMessageT "issue_message")

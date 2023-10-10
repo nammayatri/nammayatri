@@ -338,6 +338,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
+      Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfig

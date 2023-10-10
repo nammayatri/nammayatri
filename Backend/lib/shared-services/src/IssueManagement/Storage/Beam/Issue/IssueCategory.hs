@@ -42,4 +42,4 @@ type IssueCategory = IssueCategoryT Identity
 
 $(enableKVPG ''IssueCategoryT ['id] [['category]])
 
-$(mkTableInstances ''IssueCategoryT "issue_category")
+$(mkTableInstancesGenericSchema ''IssueCategoryT "issue_category")

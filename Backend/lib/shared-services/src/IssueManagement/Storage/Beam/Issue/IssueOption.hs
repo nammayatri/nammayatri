@@ -45,4 +45,4 @@ type IssueOption = IssueOptionT Identity
 
 $(enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])
 
-$(mkTableInstances ''IssueOptionT "issue_option")
+$(mkTableInstancesGenericSchema ''IssueOptionT "issue_option")
