@@ -33,7 +33,7 @@ data FarePolicyRentalSlabDetailsT f = FarePolicyRentalSlabDetailsT
   { id :: B.C f Text,
     farePolicyId :: B.C f Text,
     baseDistance :: B.C f Kilometers,
-    baseDuration :: B.C f Int,
+    baseDuration :: B.C f Seconds,
     kmAddedForEveryExtraHour :: B.C f Kilometers,
     extraRentalKmFare :: B.C f Money,
     extraRentalHoursFare :: B.C f Money,
