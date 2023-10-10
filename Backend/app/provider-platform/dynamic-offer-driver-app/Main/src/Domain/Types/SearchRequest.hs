@@ -23,6 +23,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Tools.Maps as Maps
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+
 
 data SearchRequestDetails =
   SearchRequestDetailsOnDemand {
@@ -38,6 +40,12 @@ data SearchRequestDetails =
        }
     deriving (Generic,Show)
 
+data SearchRequestTag = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForEnum ''SearchRequestTag)
+
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
@@ -52,6 +60,6 @@ data SearchRequest = SearchRequest
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     createdAt :: UTCTime,
-    tag :: Text
+    tag :: SearchRequestTag
   }
   deriving (Generic,Show)
