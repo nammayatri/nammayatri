@@ -818,5 +818,12 @@ const tamilStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "அவர்களால் உரையாடலைப் படிக்க முடியாமல் போகலாம். தயவுசெய்து அவர்களை அழைக்கவும்",
   JOIN_A_PLAN_TO_START_EARNING : "சம்பாதிப்பதைத் தொடங்க ஒரு திட்டத்தில் சேரவும்!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள்.\nசவாரி செய்வதற்கான திட்டத்தில் சேரவும்",
-  COMPLETE_PAYMENT_TO_CONTINUE : "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, உங்கள் கட்டணத்தைச் செலுத்தவும்"
+  COMPLETE_PAYMENT_TO_CONTINUE : "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, உங்கள் கட்டணத்தைச் செலுத்தவும்",
+  DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "குறைவு வாகன விருப்பம் எஸிக் வாகன்களுக்கு மட்டும் கிடைக்கின்றது",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "உங்கள் வாகனத்தை தரமிறக்கினால்,",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "சவாரிகள் மற்றும்",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
+  AC_CAB : "ஏசி வண்டி",
+  AC_SUV : "ஏசி எஸ்யூவி",
+  DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்"
 }

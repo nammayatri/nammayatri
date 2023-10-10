@@ -12,7 +12,8 @@ type AppConfig =
     rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
-    rideActionModelConfig :: RideActionModelConfig 
+    rideActionModelConfig :: RideActionModelConfig,
+    profile :: ProfileConfig
   } 
 
 type Language =  {
@@ -37,4 +38,8 @@ type RideActionModelConfig = {
 
 type RideCompletedCardConfig = {
   showSavedCommission :: Boolean
+}
+
+type ProfileConfig = {
+  bookingOptionMenuForTaxi :: Boolean
 }

@@ -4,22 +4,22 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (capitalizeFirstChar, getVehicleType)
+import Helpers.Utils (capitalizeFirstChar, getVehicleType, getAssetStoreLink, getCommonAssetStoreLink, getVariantRideType, getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (<<<), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width)
-import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity, getVehicleImage)
+import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
+import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Data.Array as DA
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -39,33 +39,183 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
-    $ linearLayout
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , onBackPressed push $ const BackPressed
+  , afterRender push $ const AfterRender
+  , background Color.white900
+  , padding $ PaddingBottom 24
+  ] $ [ headerLayout push state
+      , defaultVehicleView push state
+      , if getMerchant FunctionCall == YATRISATHI then downgradeVehicleView push state else downgradeOptionsView push state
+      , linearLayout
         [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , onBackPressed push $ const BackPressed
-        , afterRender push $ const AfterRender
-        , background Color.white900
-        , padding $ PaddingBottom 24
-        ]
-        [ headerLayout push state
+        , width $ V 1
+        , weight 1.0
+        ] []
+      ] <>  if getMerchant FunctionCall == YATRISATHI then [] else [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
+
+downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
+downgradeVehicleView push state =
+  let canDowngrade = not $ DA.null state.data.downgradeOptions
+      downgradeFrom = case state.data.vehicleType of
+                        "SUV" -> getString AC_SUV
+                        _     -> getString AC_CAB
+      downgradeTo = case state.data.vehicleType of
+                      "SUV" -> getString AC_CAB
+                      _     -> getString TAXI
+  in  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin (MarginHorizontal 16 16)
+      , stroke $ "1," <> Color.grey900
+      , cornerRadius 8.0
+      , orientation VERTICAL
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin (Margin 16 16 16 16)
+          ][  textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color $ if canDowngrade then Color.black800 else Color.black600
+              , text $ getString DOWNGRADE_VEHICLE
+              ] <> FontStyle.body4 TypoGraphy
+            , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              ][ toggleView push state.props.downgraded canDowngrade ]
+          ]
         , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , padding $ Padding 16 16 16 16
-            ]
-            [ defaultVehicleView push state
-            ]
-        , downgradeOptionsView push state
+          [ width MATCH_PARENT
+          , height $ V 1
+          , margin (Margin 16 0 16 16)
+          , background Color.grey700
+          ][]
         , linearLayout
-          [ height MATCH_PARENT
-          , width $ V 1
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin (Margin 16 0 16 16)
+          , padding (Padding 16 16 16 16)
+          , orientation HORIZONTAL
+          , background Color.linen
+          , cornerRadius 8.0
+          , visibility if canDowngrade then GONE else VISIBLE
+          ][  imageView
+              [ width $ V 15
+              , height $ V 15
+              , margin (Margin 0 3 8 0)
+              , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
+              ]
+            , textView $
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , text (getString DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES)
+              , color Color.black800
+              ] <> FontStyle.body1 TypoGraphy  
+           ]
+        , textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin (Margin 16 0 16 20)
+          , text $ (getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1) 
+                    <> " " <> downgradeFrom <> " "
+                    <> (getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2)
+                    <> " " <> downgradeTo <> " "
+                    <> (getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3)
+          , color Color.black700
+          , visibility if canDowngrade then VISIBLE else GONE
+          ] <> FontStyle.body1 TypoGraphy 
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin (Margin 12 0 12 16)
+          , visibility if canDowngrade then VISIBLE else GONE
           , weight 1.0
-          ] []
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
-        ]
+          ] $ [  downgradeVehicleCard state.data.vehicleType true
+              ] <>  ( case state.data.downgradeOptions DA.!! 0 of
+                        Just vehicle -> [downgradeVehicleCard vehicle.vehicleVariant state.props.downgraded]
+                        Nothing      -> []
+                    )
+      ]
+
+downgradeVehicleCard :: forall w. String -> Boolean -> PrestoDOM (Effect Unit) w
+downgradeVehicleCard variant enabled =
+  frameLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , weight 1.0
+  , margin (MarginHorizontal 4 4)
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , padding (Padding 12 12 12 12)
+      , margin (Margin 5 5 5 5)
+      , orientation HORIZONTAL
+      , stroke $ "1," <> Color.grey900
+      , cornerRadius 8.0
+      , gravity CENTER_VERTICAL
+      ][  imageView
+          [ imageWithFallback $ getVehicleVariantImage variant
+          , width $ V 35
+          , height $ V 35
+          ]
+        , textView
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , text $ getVariantRideType variant
+          , margin (MarginHorizontal 4 2)
+          , color Color.black800
+          , singleLine true
+          , gravity CENTER
+          ]
+       ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      ][  imageView
+          [ imageWithFallback $ case enabled of
+                                  true  -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
+                                  false -> "ny_ic_cross_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cross_red.png"
+          , width $ V 16
+          , height $ V 16
+          ]
+       ]
+   ]
+
+toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+toggleView push enabled canDowngrade =
+  let backgroundColor = if enabled then Color.blue800 else Color.black600
+      align = if enabled then RIGHT else LEFT
+  in  linearLayout
+      [ width $ V 40
+      , height $ V 22
+      , cornerRadius 100.0
+      , background backgroundColor
+      , stroke $ "1," <> backgroundColor
+      , gravity CENTER_VERTICAL
+      , onClick push (const DowngradeVehicle)
+      , clickable canDowngrade
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity align
+          ][  linearLayout
+              [ width $ V 16
+              , height $ V 16
+              , background Color.white900
+              , cornerRadius 100.0
+              , gravity CENTER_VERTICAL
+              , margin (MarginHorizontal 2 2)
+              ][]
+          ]
+      ]
 
 defaultVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 defaultVehicleView push state =
@@ -75,6 +225,7 @@ defaultVehicleView push state =
     , orientation VERTICAL
     , cornerRadius 8.0
     , padding $ Padding 10 20 10 30
+    , margin $ Margin 16 16 16 16
     , stroke $ "1," <> Color.grey900
     ]
     [ vehicleDetailsView push state
@@ -128,7 +279,7 @@ vehicleLogoAndType push state =
         , height WRAP_CONTENT
         ]
         [ imageView
-            [ imageWithFallback $ getVehicleImage state.data.vehicleType
+            [ imageWithFallback $ getVehicleVariantImage state.data.vehicleType
             , gravity LEFT
             , height $ V 48
             , width $ V 60
@@ -140,7 +291,7 @@ vehicleLogoAndType push state =
             , gravity CENTER_VERTICAL
             , margin $ MarginLeft 7
             ]
-            [ customTV (getVehicleType state.data.vehicleType) FontSize.a_20 FontStyle.h3 Color.black800
+            [ customTV (getVariantRideType state.data.vehicleType) FontSize.a_20 FontStyle.h3 Color.black800
             , customTV (getVehicleCapacity state.data.vehicleType (Just state.data.vehicleCapacity)) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]

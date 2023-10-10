@@ -21,7 +21,7 @@ import Components.PopUpModal as PopUpModal
 import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
-import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
+import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), Accessiblity(..),PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard, accessibilityHint, accessibility )
 import Screens.Types as ST 
 import Screens.Types (PaymentMode(..))
@@ -35,10 +35,11 @@ import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleVariantImage, getVariantRideType)
 import Prelude ((<>), show)
-import Data.Maybe(fromMaybe, isJust)
+import Data.Maybe(fromMaybe, isJust, Maybe(..))
 import Data.String as DS
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -166,40 +167,67 @@ lostAndFoundView push state =
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =
+  let rideType = case state.data.vehicleVariant of
+                    Just variant -> getVariantRideType (show variant)
+                    Nothing      -> getString AC_CAB
+  in
   linearLayout
-  [ orientation VERTICAL
+  [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , visibility if state.data.tripId == "" then GONE else VISIBLE
   , margin (MarginBottom 16)
-  , gravity LEFT
-  ][  textView $
-      [ text (getString RIDE_ID)
-      , accessibilityHint $ "Ride I-D :" <> ( DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.tripId)
-      , accessibility ENABLE
-      , color Color.black700
-      ] <> FontStyle.body1 LanguageStyle
-    , linearLayout
-      [ height WRAP_CONTENT
+  , orientation HORIZONTAL
+  ][  linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
       , width WRAP_CONTENT
-      , orientation HORIZONTAL
-      , onClick push (const Copy)
-      , accessibility DISABLE_DESCENDANT
-      , gravity CENTER_VERTICAL
-      ][ textView $
-          [ text state.data.tripId
+      , visibility if state.data.tripId == "" then GONE else VISIBLE
+      , weight 1.0
+      ][  textView $
+          [ text (getString RIDE_ID)
+          , accessibilityHint $ "Ride I-D :" <> ( DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.tripId)
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , linearLayout
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , color Color.black900
-          ] <> FontStyle.paragraphText LanguageStyle
-        , imageView
-          [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
-          , height (V 13)
-          , width (V 11)
-          , margin (Margin 10 0 0 0)
+          , orientation HORIZONTAL
+          , onClick push (const Copy)
+          , accessibility DISABLE_DESCENDANT
+          , gravity CENTER_VERTICAL
+          ][ textView $
+              [ text state.data.tripId
+              , width WRAP_CONTENT
+              , color Color.black900
+              ] <> FontStyle.paragraphText LanguageStyle
+            , imageView
+              [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
+              , height (V 13)
+              , width (V 11)
+              , margin (MarginLeft 10)
+              ]
           ]
       ]
-
-  ]
+    , linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , weight 1.0
+      , visibility if isJust state.data.vehicleVariant && (getMerchant FunctionCall) == YATRISATHI then VISIBLE else GONE
+      ][  textView $
+          [ text (getString RIDE_TYPE)
+          , accessibilityHint $ "Ride Type :" <> rideType
+          , accessibility ENABLE
+          , color Color.black700
+          ] <> FontStyle.body1 LanguageStyle
+        , textView $
+          [ text $ rideType
+          , width WRAP_CONTENT
+          , color Color.black900
+          , accessibility DISABLE_DESCENDANT
+          ] <> FontStyle.paragraphText LanguageStyle
+      ]
+   ]
 
 lostAndFoundPopUpView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 lostAndFoundPopUpView push state =
@@ -222,7 +250,7 @@ tripDetailsView state =
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           ][  imageView
-              [ margin if (isJust state.data.vehicleVariant) then (MarginLeft 28) else (MarginLeft 0)
+              [ margin $ MarginLeft $ if isJust state.data.vehicleVariant then 24 else 0
               , cornerRadius 18.0
               -- , background Color.grey800
               , width (V 36)
@@ -230,14 +258,9 @@ tripDetailsView state =
               , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]
             , imageView
-              [ imageWithFallback case (fromMaybe ST.AUTO_RICKSHAW state.data.vehicleVariant) of 
-                                      ST.TAXI -> "ic_sedan_non_ac,"<> (getAssetStoreLink FunctionCall) <>"ic_sedan_non_ac.png"
-                                      ST.TAXI_PLUS -> "ic_sedan_ac,"<> (getAssetStoreLink FunctionCall) <>"ic_sedan_ac.png"
-                                      ST.SEDAN -> "ic_sedan,"<> (getAssetStoreLink FunctionCall) <>"ic_sedan.png"
-                                      ST.SUV -> "ic_suv,"<> (getAssetStoreLink FunctionCall) <>"ic_suv.png"
-                                      ST.HATCHBACK -> "ic_hatchback,"<> (getAssetStoreLink FunctionCall) <>"ic_hatchback.png"
-                                      ST.AUTO_RICKSHAW -> "ic_vehicle_side,"<> (getAssetStoreLink FunctionCall) <>"ic_auto_side_view.png"
-                                      _ -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
+              [ imageWithFallback $ case state.data.vehicleVariant of
+                                      Just variant -> getVehicleVariantImage (show variant)
+                                      Nothing      -> "ic_vehicle_side,"<> getAssetStoreLink FunctionCall <>"ic_auto_side_view.png" 
               , width (V 40)
               , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
               , height (V 40)

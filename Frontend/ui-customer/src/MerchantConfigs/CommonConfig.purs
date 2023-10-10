@@ -64,20 +64,18 @@ commonConfig =
             }
           }
         , estimateAndQuoteConfig : 
-            { variants :
-                { acVariant : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV"]
-                , nonAcVariant : ["TAXI"]
-                , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "SUV", "TAXI"]
-                }
+            { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"] ]
+            , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV"]
             }
         , mapConfig : 
             { locateOnMapConfig : 
                 { dottedLineConfig : 
-                    { visible : true
+                    { visible : false
                     , range : 100
                     , color : "#323643"
                     }
                 }
             , animationDuration : 400
             }
+        , enableWhatsappOTP : ["BD"]
         }

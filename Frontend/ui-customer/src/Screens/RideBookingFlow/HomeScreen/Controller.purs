@@ -81,7 +81,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -1877,6 +1877,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
     updateAndExit (updatedState) (GetQuotes updatedState)
 
+eval (ChooseYourRideAction ChooseYourRideController.NoAction) state =
+  continue state{ props{ defaultPickUpPoint = "" } }
+
 eval MapReadyAction state = continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
@@ -2266,7 +2269,7 @@ estimatesFlow estimatedQuotes state = do
 
 specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 specialZoneFlow estimatedQuotes state = do
-  let quoteList = getSpecialZoneQuotes estimatedQuotes
+  let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
@@ -2281,7 +2284,7 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let quoteList = getEstimateList estimates
+  let quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
       estimateFareBreakup =
         if isJust (estimates !! 0) then case (fromMaybe dummyEstimateEntity (estimates !! 0)) ^. _estimateFareBreakup of
@@ -2311,7 +2314,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
     estimates = quotesRes.estimates
     estimatedVarient = filter (\x -> x ^. _vehicleVariant == state.data.selectedEstimatesObject.vehicleVariant) estimates
     estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
-    quoteList = getEstimateList estimatedVarient
+    quoteList = getEstimateList estimatedVarient state.data.config.estimateAndQuoteConfig
     defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   case (null estimatedVarient) of
     true -> do

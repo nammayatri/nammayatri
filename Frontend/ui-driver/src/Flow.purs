@@ -813,9 +813,11 @@ applicationSubmittedFlow screenType = do
 
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
+  config <- getAppConfig Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
+  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{ props{ showBookingOptionForTaxi = config.profile.bookingOptionMenuForTaxi } })
   action <- UI.driverProfileScreen
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
@@ -879,7 +881,14 @@ driverProfileFlow = do
     GO_TO_EDIT_BANK_DETAIL_SCREEN -> editBankDetailsFlow
     NOTIFICATIONS_SCREEN -> notificationFlow
     GO_TO_BOOKING_OPTIONS_SCREEN state-> do
-      modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{data{vehicleType = state.data.driverVehicleType, vehicleNumber = state.data.vehicleRegNumber, vehicleName = state.data.vehicleModelName, vehicleCapacity = state.data.capacity, downgradeOptions = ((downgradeOptionsConfig state.data.vehicleSelected) <$> state.data.downgradeOptions)}})
+      let downgradeOptions = (downgradeOptionsConfig state.data.vehicleSelected) <$> state.data.downgradeOptions
+      modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{  data{ vehicleType = state.data.driverVehicleType
+                                                                                            , vehicleNumber = state.data.vehicleRegNumber
+                                                                                            , vehicleName = state.data.vehicleModelName
+                                                                                            , vehicleCapacity = state.data.capacity
+                                                                                            , downgradeOptions = downgradeOptions}
+                                                                                     , props{ downgraded = not (length (filter (\vehicle -> not vehicle.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) }
+                                                                                     })
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
       res <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq (not state.data.isRCActive) (state.data.rcNumber))
@@ -1255,16 +1264,22 @@ bookingOptionsFlow :: FlowBT String Unit
 bookingOptionsFlow = do
   action <- UI.bookingOptions
   case action of
-    SELECT_CAB state -> do
+    SELECT_CAB state toggleDowngrade -> do
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
       let canDowngradeToSedan = isJust $ (filter (\item -> item.vehicleVariant == "SEDAN" && item.isSelected) state.data.downgradeOptions) !! 0
           canDowngradeToHatchback = isJust $ (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
           canDowngradeToTaxi = isJust $ (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{canDowngradeToSedan = Just canDowngradeToSedan,canDowngradeToHatchback = Just canDowngradeToHatchback,canDowngradeToTaxi = Just canDowngradeToTaxi}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
-      modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> BookingOptionsScreenData.initData{data{ downgradeOptions = state.data.downgradeOptions }})
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ data{ vehicleSelected = transformSelectedVehicles state.data.downgradeOptions} })
-      driverProfileFlow
+      void $ lift $ lift $ toggleLoader false
+      if toggleDowngrade then do
+        modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{ props{ downgraded = not state.props.downgraded } })
+        bookingOptionsFlow
+      else
+        driverProfileFlow
     GO_TO_PROFILE -> driverProfileFlow
 
 helpAndSupportFlow :: FlowBT String Unit

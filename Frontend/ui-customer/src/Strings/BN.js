@@ -590,9 +590,9 @@ const bengaliStrings = {
   "ASKED_FOR_EXTRA_FARE": "বাড়তি ভাড়া চেয়েছেন",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "আপনি আমাদের বলতে চান যে কিছু? (ঐচ্ছিক)",
   "PLEASE_WAIT" : "অনুগ্রহপূর্বক অপেক্ষা করুন",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
   "SGST" : "এসজিএসটি",
   "OTP_EXPIRED" : "OTP মেয়াদ শেষ",
@@ -633,5 +633,8 @@ const bengaliStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "ENABLE_LOCATION_PERMISSION_TO" : "রাইড অনুসন্ধান করার জন্য অবস্থানের অনুমতি সক্ষম করুন",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।",
+  "AC_CAB" : "এসি ক্যাব",
+  "AC_SUV" : "এসি এসইউভি",
+  "RIDE_TYPE" : "রাইড টাইপ"
 }

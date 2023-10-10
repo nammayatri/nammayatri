@@ -84,9 +84,7 @@ public class SheetModel {
         return offeredPrice;
     }
 
-    public int getCustomerTip() {
-        return customerExtraFee;
-    }
+    public int getCustomerTip() {return customerExtraFee;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
 

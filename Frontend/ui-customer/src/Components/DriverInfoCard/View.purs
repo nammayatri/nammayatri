@@ -32,7 +32,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber)
+import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber, getVariantRideType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -840,10 +840,13 @@ driverDetailsView push state =
           , gravity LEFT
           ] <> FontStyle.body7 TypoGraphy
         , textView (
-          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of
-                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
-                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
-                          _ -> "")
+          [ text $ state.data.vehicleDetails <> " " 
+                    <> case getMerchant FunctionCall of
+                          YATRISATHI -> "· " <> getVariantRideType state.data.vehicleVariant
+                          _          -> case state.data.vehicleVariant of
+                                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
+                                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
+                                          _ -> ""
           , color Color.black700
           , accessibility DISABLE
           , width $ V ((screenWidth unit) /2 - 20)
@@ -1221,4 +1224,9 @@ getVehicleImage variant vehicleDetail = do
   if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
   else
     if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
-    else "ic_white_taxi," <> url <> "ic_white_taxi.png"
+    else 
+      case (getMerchant FunctionCall) of
+        YATRISATHI -> case variant of
+                        "SUV" -> "ny_ic_suv_concept," <> url <> "ny_ic_suv_concept.png"
+                        _     -> "ny_ic_sedan_concept," <> url <> "ny_ic_sedan_concept.png"
+        _          -> "ic_white_taxi," <> url <> "ic_white_taxi.png"

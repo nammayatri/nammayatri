@@ -617,5 +617,8 @@ const hindiStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
   "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
   "ENABLE_LOCATION_PERMISSION_TO" : "सवारी खोजने के लिए स्थान अनुमति सक्षम करें",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
+  "AC_CAB" : "एसी कैब",
+  "AC_SUV" : "एसी एसयूवी",
+  "RIDE_TYPE" : "सवारी का प्रकार"
 }

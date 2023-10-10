@@ -33,7 +33,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleVariantImage)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -163,8 +163,7 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback $ if (state.data.vehicleType == "AUTO_RICKSHAW" && getMerchant FunctionCall == YATRI) then "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
-                                else "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
+          [ imageWithFallback $ getVehicleImage state
           , width (V 36)
           , height (V 36)
           ]
@@ -426,3 +425,11 @@ issueReportedView state push =
       , color Color.blackLightGrey
       ] <> FontStyle.body3 TypoGraphy]
   ]
+
+getVehicleImage :: ST.TripDetailsScreenState -> String
+getVehicleImage state = case getMerchant FunctionCall of
+                          YATRI       -> case state.data.vehicleType of
+                                          "AUTO_RICKSHAW" -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+                                          _               -> "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
+                          YATRISATHI -> getVehicleVariantImage state.data.vehicleType
+                          _           -> "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"

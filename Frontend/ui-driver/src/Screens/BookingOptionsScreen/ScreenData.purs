@@ -12,6 +12,7 @@ initData = {
     downgradeOptions : []
   },
   props: { 
-    isBtnActive : false
+    isBtnActive : false,
+    downgraded : false
   }
 }

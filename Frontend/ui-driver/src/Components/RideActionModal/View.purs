@@ -43,7 +43,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
-import Helpers.Utils(getRideTypeColor, getCategorizedVariant)
+import Helpers.Utils(getRideTypeColor, getVariantRideType)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -224,7 +224,9 @@ rideTypeView push config =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ getCategorizedVariant config.requestedVehicleVariant
+          , text $ case config.requestedVehicleVariant of
+                      Maybe.Just variant -> getVariantRideType variant
+                      Maybe.Nothing      -> ""
           , margin $ MarginLeft 8
           , color $ getRideTypeColor config.requestedVehicleVariant
           ] <> FontStyle.body1 TypoGraphy

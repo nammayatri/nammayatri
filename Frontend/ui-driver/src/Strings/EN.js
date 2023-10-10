@@ -353,7 +353,7 @@ const englishStrings = {
   SHARE_OPTIONS: "Share Options",
   ENTER_PASSWORD: "Enter Password",
   YOUR_VEHICLE: "Your Vehicle",
-  BOOKING_OPTIONS: "Booking Options",
+  BOOKING_OPTIONS: "Booking Option",
   CONFIRM_AND_CHANGE: "Confirm & Change",
   OTP_: "OTP",
   MAKE_YOURSELF_AVAILABLE_FOR : "Make Yourself Available for",
@@ -849,5 +849,12 @@ const englishStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "They might not be able to read the chats. Please consider calling them",
   JOIN_A_PLAN_TO_START_EARNING : "Join a Plan to Start Earning!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
-  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment"
+  COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment",
+  DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "Downgrade vehicle option is only available for AC vehicles",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Downgrading your vehicle will allow you to take both",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "rides and",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "rides",
+  AC_CAB : "AC Cab",
+  AC_SUV : "AC SUV",
+  DOWNGRADE_VEHICLE : "Downgrade Vehicle"
 } 

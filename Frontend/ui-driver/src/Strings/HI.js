@@ -848,5 +848,12 @@ const hindiStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "हो सकता है कि वे चैट पढ़ने मे सक्षम न हो. कृपया उन्हें कॉल करने पर विचार करें",
   JOIN_A_PLAN_TO_START_EARNING : "कमाई शुरू करने के लिए एक योजना में शामिल हों!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
-  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें"
+  COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
+  DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "गाड़ी को डाउनग्रेड करने का विकल्प केवल एसी वाहनों के लिए है",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "अपने वाहन को अपग्रेड करने से आप",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "की सवारी और",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "की सवारी दोनों ले सकेंगे",
+  AC_CAB : "एसी कैब",
+  AC_SUV : "एसी एसयूवी",
+  DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन"
 }
