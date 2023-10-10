@@ -61,4 +61,7 @@ commonConfig =
         , mapConfig : 
             { animationDuration : 400
             }
+        , profile :
+            { bookingOptionMenuForTaxi : false
+            }
         }

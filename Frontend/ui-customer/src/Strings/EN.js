@@ -617,5 +617,8 @@ const englishStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "OTP Sent via Whatsapp", 
   "SENT_OTP_VIA_SMS" : "OTP Sent via SMS",
   "ENABLE_LOCATION_PERMISSION_TO" : "Enable Location Permission to Search for Rides", 
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
+  "AC_CAB" : "AC Cab",
+  "AC_SUV" : "AC SUV",
+  "RIDE_TYPE" : "Ride Type"
 }

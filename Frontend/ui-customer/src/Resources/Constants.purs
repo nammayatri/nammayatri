@@ -22,7 +22,7 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (getAssetStoreLink, parseFloat, toString)
+import Helpers.Utils (parseFloat, toString)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -257,41 +257,21 @@ getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = case getMerchant FunctionCall of 
-  YATRISATHI -> case variant of  
-      "TAXI" -> Just ST.TAXI 
-      _      -> Just ST.TAXI_PLUS
-  _ -> case variant of 
-      "SUV" -> Just ST.SUV
-      "SEDAN" -> Just ST.SEDAN
-      "HATCHBACK" -> Just ST.HATCHBACK
-      "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-      "TAXI" -> Just ST.TAXI 
-      "TAXI_PLUS" -> Just ST.TAXI_PLUS
-      _ -> Nothing
-
-getVehicleImage :: String -> String
-getVehicleImage variant = do
-        let url = (getAssetStoreLink FunctionCall)
-        case fetchVehicleVariant variant of 
-          Just ST.TAXI -> "ic_sedan,"<> url <>"ic_sedan.png"
-          Just ST.TAXI_PLUS -> "ic_sedan_ac,"<> url <>"ic_sedan_ac.png"
-          Just ST.SEDAN -> "ic_sedan,"<> url <>"ic_sedan.png"
-          Just ST.SUV -> "ic_suv,"<> url <>"ic_suv.png"
-          Just ST.HATCHBACK -> "ic_hatchback,"<> url <>"ic_hatchback.png"
-          Just ST.AUTO_RICKSHAW -> "ny_ic_auto_quote_list,"<> url <>"ic_auto_side_view.png"
-          _ -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
+fetchVehicleVariant variant = case variant of 
+                                "SUV" -> Just ST.SUV
+                                "SEDAN" -> Just ST.SEDAN
+                                "HATCHBACK" -> Just ST.HATCHBACK
+                                "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+                                "TAXI" -> Just ST.TAXI 
+                                "TAXI_PLUS" -> Just ST.TAXI_PLUS
+                                _ -> Nothing
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = case getMerchant FunctionCall of
   YATRISATHI -> case fetchVehicleVariant variant of
-          Just ST.TAXI -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          Just ST.TAXI_PLUS -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          Just ST.SEDAN -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          Just ST.SUV -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          Just ST.HATCHBACK -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          Just ST.AUTO_RICKSHAW -> ""
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          Just ST.TAXI -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
+          Just ST.SUV  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
+          _            -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
   YATRI -> case fetchVehicleVariant variant of
           Just ST.SUV -> "6 " <> (getString SEATS)
           Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)

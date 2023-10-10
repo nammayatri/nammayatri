@@ -126,6 +126,7 @@ quoteListView push config =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 16
+    , afterRender push (const NoAction)
     ]
     [ scrollView
       [ height $ getQuoteListViewHeight config
@@ -143,18 +144,18 @@ quoteListView push config =
 getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config =
     let len = length config.quoteList
-        height = getHeightOfEstimateItem config
-    in V $ if len >= 4 then 3 * height else len * height
+        quoteHeight = getHeightOfEstimateItem config
+        height = if quoteHeight == 0 then 87 else quoteHeight
+    in V $ (if len >= 4 then 3 * height else len * height) + 5
 
 getHeightOfEstimateItem :: Config -> Int
-getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height + 5
+getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
     { text = (getString CONFIRM_AND_BOOK)
     , color = Color.yellow900
-
     }
   , id = "ConfirmAndBookButton"
   , background = Color.black900

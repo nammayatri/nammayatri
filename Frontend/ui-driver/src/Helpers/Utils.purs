@@ -237,11 +237,16 @@ capitalizeFirstChar inputStr =
     in DS.joinWith " " output
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions vehicleType = case vehicleType of
-  "SEDAN" -> ["HATCHBACK"]
-  "SUV" -> ["HATCHBACK", "SEDAN"]
-  "TAXI_PLUS" -> ["TAXI"]
-  _ -> []
+getDowngradeOptions variant = case getMerchant FunctionCall of
+                                YATRISATHI -> case variant of
+                                                "TAXI" -> []
+                                                "SUV"  -> ["HATCHBACK", "SEDAN"]
+                                                _      -> ["TAXI"]
+                                _          -> case variant of
+                                                "SEDAN" -> ["HATCHBACK"]
+                                                "SUV" -> ["HATCHBACK", "SEDAN"]
+                                                "TAXI_PLUS" -> ["TAXI"]
+                                                _ -> []
 
 getVehicleType :: String -> String
 getVehicleType vehicleType =
@@ -372,9 +377,9 @@ getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
 
 getRideTypeColor :: Maybe String -> String
 getRideTypeColor variant = case getCategorizedVariant variant of
-    "AC Taxi" -> Color.blue800
-    "Non AC" -> Color.orange900
-    _ -> Color.black800
+                              "AC Taxi" -> Color.blue800
+                              "Non AC"  -> Color.orange900
+                              _         -> Color.black800
 
 getCategorizedVariant :: Maybe String -> String
 getCategorizedVariant variant = case variant of
@@ -412,3 +417,36 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
                                                                               even onBoardingSubscriptionViewCount && 
                                                                               onBoardingSubscriptionViewCount <5 && 
                                                                               isOnFreeTrial FunctionCall
+
+getVehicleVariantImage :: String -> String
+getVehicleVariantImage variant =
+  let url = getAssetStoreLink FunctionCall
+      commonUrl = getCommonAssetStoreLink FunctionCall
+  in case getMerchant FunctionCall of
+        YATRISATHI -> case variant of
+                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
+                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+        _          -> case variant of
+                        "SEDAN"     -> "ic_sedan," <> url <> "ic_sedan.png"
+                        "SUV"       -> "ic_suv," <> url <> "ic_suv.png"
+                        "HATCHBACK" -> "ic_hatchback," <> url <> "ic_hatchback.png"
+                        "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
+                        "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
+                        _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
+
+getVariantRideType :: String -> String
+getVariantRideType variant =
+  case getMerchant FunctionCall of
+    YATRISATHI -> case variant of
+                    "TAXI" -> getString TAXI
+                    "SUV"  -> getString AC_SUV
+                    _      -> getString AC_CAB
+    _          -> case variant of
+                    "TAXI"          -> getString TAXI
+                    "SEDAN"         -> getString SEDAN
+                    "HATCHBACK"     -> getString HATCHBACK
+                    "TAXI_PLUS"     -> getString TAXI_PLUS
+                    "SUV"           -> getString SUV
+                    "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
+                    _               -> variant

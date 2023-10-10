@@ -15,7 +15,7 @@ bookingOptions = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
   case action of
-    SelectCab updatedState -> do
+    SelectCab updatedState toggleDowngrade -> do
       _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState toggleDowngrade)
     GoBack -> App.BackT $ pure App.GoBack

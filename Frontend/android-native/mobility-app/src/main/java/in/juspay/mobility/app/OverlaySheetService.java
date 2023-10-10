@@ -9,6 +9,8 @@
 
 package in.juspay.mobility.app;
 
+import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
+
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
@@ -119,13 +121,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @SuppressLint("SetTextI18n")
     private void updateTipView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag()) {
+            String variant = model.getRequestedVehicleVariant();
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
                 if (model.getDisabilityTag()) {
                     holder.accessibilityTag.setVisibility(View.VISIBLE);
                     holder.accessibilityTagText.setText(getString(R.string.assistance_required));
                 }  else{
                     holder.accessibilityTag.setVisibility(View.GONE);
+                }
+
+                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
+                    if (getVariantType(variant).equals(VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
                 }
                 
                 if(model.getCustomerTip() > 0){
@@ -877,8 +892,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         } else {
                             vehicleVariantList.get(i).setTextColor(getColor(R.color.Black800));
                         }
+                        vehicleVariantList.get(i).setText(variant);
                     }
-                    vehicleVariantList.get(i).setText(variant);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
@@ -973,5 +988,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     }
 
+    private VariantType getVariantType(String variant) {
+        if (variant.equals("Non AC Taxi")) {
+            return VariantType.NON_AC;
+        }
+        return VariantType.AC;
+    }
+
+    private enum VariantType { AC, NON_AC }
 
 }

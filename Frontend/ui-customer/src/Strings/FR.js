@@ -490,8 +490,8 @@ export function getStringValue(key) {
     "CALL_EMERGENCY_CENTRE": "Appeler le centre d'urgence",
     "DIAL_112": "Composez le 112 ?",
     "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "Vous êtes sur le point d'appeler le centre d'urgence le plus proche. Voulez-vous poursuivre?",
-    "AC_TAXI" : "AC Taxi",
-    "NON_AC_TAXI" : "Taxi non climatisé",
+    "AC_TAXI" : "AC Taxi",
+    "NON_AC_TAXI" : "Taxi non climatisé",
     "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
     "OR" : "ou",
     "HELPS_DRIVER_CONFIRM_ITS_YOU": "(Aide le conducteur à confirmer qu'il s'agit bien de vous)",
@@ -504,5 +504,8 @@ export function getStringValue(key) {
     "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
     "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
     "ENABLE_LOCATION_PERMISSION_TO": "Activer l'autorisation de localisation pour rechercher des courses",
-   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets."
+   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets.",
+   "AC_CAB" : "Cabine AC",
+   "AC_SUV" : "SUV climatisé",
+   "RIDE_TYPE" : "Type de trajet"
   }

@@ -34,8 +34,7 @@ import Data.String as DS
 import Components.MobileNumberEditor.CountryCodeConfig (getCountryCodesObj)
 import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
-import Types.App (defaultGlobalState, FlowBT, ScreenType(..)) 
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Common.Animation.Config (listExpandingAnimationConfig)
 

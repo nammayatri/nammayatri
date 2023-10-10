@@ -353,7 +353,8 @@ type DriverProfileScreenProps = {
   callDriver :: Boolean,
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean
+  btnActive :: Boolean,
+  showBookingOptionForTaxi :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1461,7 +1462,8 @@ type BookingOptionsScreenData = {
 }
 
 type BookingOptionsScreenProps = {
-  isBtnActive :: Boolean
+  isBtnActive :: Boolean,
+  downgraded :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly

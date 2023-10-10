@@ -792,5 +792,12 @@ const mlStrings = {
   PURPLE_RIDE_CHAMPION : "പർപ്പിൾ റൈഡ് ചാമ്പ്യൻ",
   PURPLE_RIDE : "പർപ്പിൾ റൈഡ്",
   PROCEED_TO_CHAT : "ചാറ്റുമായി മുന്നോട്ട് പോകൂ",
-  PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക"
+  PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക",
+  DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "ഡൌൺഗ്രേഡ് വാഹന ഓപ്ഷനുകൾ കേവലായത് ഏസി വാഹനങ്ങൾക്ക് മാത്രമേ ലഭ്യമാകുക",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "നിങ്ങളുടെ വാഹനം തരംതാഴ്ത്തുന്നത്",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "റൈഡുകളും",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "റൈഡുകളും എടുക്കാൻ നിങ്ങളെ അനുവദിക്കും",
+  AC_CAB : "എസി ക്യാബ്",
+  AC_SUV : "എസി എസ്‌യുവി",
+  DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക"
 }

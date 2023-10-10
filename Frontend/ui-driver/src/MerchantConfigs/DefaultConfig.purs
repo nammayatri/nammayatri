@@ -30,4 +30,7 @@ config =
   rideActionModelConfig : {
     showVehicleVariant : true
   }
+  , profile :
+      { bookingOptionMenuForTaxi : false
+      }
   }

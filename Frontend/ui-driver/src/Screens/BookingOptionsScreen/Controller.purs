@@ -11,6 +11,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Helpers.Utils (getVehicleVariantImage)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -24,8 +26,9 @@ data Action = BackPressed
             | AfterRender
             | ChooseVehicleAC ChooseVehicle.Action
             | PrimaryButtonAC PrimaryButton.Action
+            | DowngradeVehicle
 
-data ScreenOutput = GoBack | SelectCab BookingOptionsScreenState
+data ScreenOutput = GoBack | SelectCab BookingOptionsScreenState Boolean
 
 eval :: Action -> BookingOptionsScreenState -> Eval Action ScreenOutput BookingOptionsScreenState
 eval BackPressed state = exit GoBack
@@ -33,13 +36,20 @@ eval (ChooseVehicleAC (ChooseVehicle.OnSelect config)) state = do
   let updatedConfig = map (\item -> item{isSelected = if item.vehicleVariant == config.vehicleVariant then (not item.isSelected) else item.isSelected}) state.data.downgradeOptions
       -- btnActive = length (filter (\item -> item.isSelected) updatedConfig) > 0
   continue state{data{downgradeOptions = updatedConfig}, props {isBtnActive = true}}
-eval (PrimaryButtonAC PrimaryButton.OnClick) state = exit $ SelectCab state
+eval (PrimaryButtonAC PrimaryButton.OnClick) state = exit $ SelectCab state false
+
+eval DowngradeVehicle state = do
+  let downgraded = not state.props.downgraded
+      updatedDowngradeOptions = map (\item -> item{isSelected = downgraded}) state.data.downgradeOptions
+  exit $ SelectCab state{ data{ downgradeOptions = updatedDowngradeOptions } } true
+
 eval _ state = continue state
+
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config
 downgradeOptionsConfig vehicles vehicleType =
   ChooseVehicle.config
-    { vehicleImage = getVehicleImage vehicleType
+    { vehicleImage = getVehicleVariantImage vehicleType
     , isCheckBox = true
     , vehicleVariant = vehicleType
     , isBookingOption = true
@@ -55,15 +65,6 @@ getVehicleCapacity vehicleType capacity = case vehicleType of
   "TAXI_PLUS" -> "Comfy, upto " <>  (show (fromMaybe 4 capacity)) <> " people"
   "TAXI" -> "Economical, upto " <> (show (fromMaybe 4 capacity)) <> " people"
   _ -> "Comfy, upto " <> (show (fromMaybe 4 capacity)) <> " people"
-
-getVehicleImage :: String -> String
-getVehicleImage vehicleType = case vehicleType of
-  "SEDAN" -> "ic_sedan," <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan.png"
-  "SUV" -> "ic_suv," <> (getCommonAssetStoreLink FunctionCall) <> "ic_suv.png"
-  "HATCHBACK" -> "ic_hatchback," <> (getCommonAssetStoreLink FunctionCall) <> "ic_hatchback.png"
-  "TAXI" -> "ic_sedan_non_ac," <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
-  "TAXI_PLUS" -> "ic_sedan_ac," <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan_ac.png"
-  _ -> "ic_sedan_ac," <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan_ac.png"
 
 dummyVehicleP :: VehicleP
 dummyVehicleP = {

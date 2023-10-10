@@ -820,5 +820,12 @@ const kannadaStrings = {
   PLEASE_CONSIDER_CALLING_THEM : "ಅವರು ಚಾಟ್‌ಗಳನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗದೇ ಇರಬಹುದು. ದಯವಿಟ್ಟು ಅವರಿಗೆ ಕರೆ ಮಾಡಲು ಪರಿಗಣಿಸಿ",
   JOIN_A_PLAN_TO_START_EARNING : "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿ!",
   GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
-  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+  COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ",
+  DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "ವಾಹನ ಅಪಗ್ರೇಡ್ ಆಯ್ಕೆ ಕೇವಲ ಏಸಿ ವಾಹನಗಳಿಗೆ ಮಾತ್ರ ಲಭ್ಯವಿದೆ",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "ನಿಮ್ಮ ವಾಹನವನ್ನು ಡೌನ್‌ಗ್ರೇಡ್ ಮಾಡುವುದರಿಂದ",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "ಸವಾರಿಗಳು ಮತ್ತು",
+	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿಸುತ್ತದೆ",
+  AC_CAB : "ಎಸಿ ಕ್ಯಾಬ್",
+  AC_SUV : "ಎಸಿ ಎಸ್ಯುವಿ",
+  DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ"
 }

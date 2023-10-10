@@ -11,6 +11,7 @@ import Common.Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Commons as EHC
 import Debug
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -70,15 +71,19 @@ vehicleDetailsView push config =
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text
-              $ case config.vehicleVariant of
-                  "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                  "TAXI" -> "Non-AC Taxi"
-                  "TAXI_PLUS" -> "AC Taxi"
-                  "SEDAN" -> "Sedan"
-                  "SUV" -> "SUV"
-                  "HATCHBACK" -> "Hatchback"
-                  _ -> "Non-AC Taxi"
+          , text $ case (getMerchant FunctionCall) of
+                      YATRISATHI -> case config.vehicleVariant of
+                                      "TAXI" -> "Non AC Taxi"
+                                      "SUV"  -> "AC SUV"
+                                      _      -> "AC Cab"
+                      _          -> case config.vehicleVariant of
+                                      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                                      "TAXI" -> "Non-AC Taxi"
+                                      "TAXI_PLUS" -> "AC Taxi"
+                                      "SEDAN" -> "Sedan"
+                                      "SUV" -> "SUV"
+                                      "HATCHBACK" -> "Hatchback"
+                                      _ -> "Non-AC Taxi"
           , color Color.black800
           ]
         <> FontStyle.subHeading1 TypoGraphy

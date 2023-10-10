@@ -56,6 +56,7 @@ type AppConfig =
   , showDisabilityBanner :: Boolean
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
+  , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -151,4 +152,9 @@ type TerminateBtnConfig = {
     visibility :: Boolean, 
     title :: String,
     imageUrl :: String
+}
+
+type EstimateAndQuoteConfig = {
+  variantTypes :: Array (Array String),
+  variantOrder :: Array String
 }

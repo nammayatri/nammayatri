@@ -75,6 +75,8 @@ import Types.App (GlobalState(..))
 import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -504,3 +506,30 @@ fetchDefaultPickupPoint locations lati longi =
   case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
     [foundLocation] -> foundLocation.place
     _ -> ""
+
+getVehicleVariantImage :: String -> String
+getVehicleVariantImage variant =
+  let url = getAssetStoreLink FunctionCall
+      commonUrl = getCommonAssetStoreLink FunctionCall
+  in case getMerchant FunctionCall of
+        YATRISATHI -> case variant of
+                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
+                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+        _          -> case variant of
+                        "TAXI"          -> "ic_sedan,"<> url <>"ic_sedan.png"
+                        "TAXI_PLUS"     -> "ic_sedan_ac,"<> url <>"ic_sedan_ac.png"
+                        "SEDAN"         -> "ic_sedan,"<> url <>"ic_sedan.png"
+                        "SUV"           -> "ic_suv,"<> url <>"ic_suv.png"
+                        "HATCHBACK"     -> "ic_hatchback,"<> url <>"ic_hatchback.png"
+                        "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,"<> url <>"ic_auto_side_view.png"
+                        _               -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
+
+getVariantRideType :: String -> String
+getVariantRideType variant =
+  case getMerchant FunctionCall of
+    YATRISATHI -> case variant of
+                    "TAXI" -> getString NON_AC_TAXI
+                    "SUV"  -> getString AC_SUV
+                    _      -> getString AC_CAB
+    _          -> getString AC_CAB

@@ -21,28 +21,17 @@ import Screens.DriverProfileScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.CheckListView.View as CheckListView
-import Components.CheckListView.View as CheckListView
-import Components.GenericHeader.View as GenericHeader
 import Components.GenericHeader.View as GenericHeader
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
-import Components.PopUpModal as PopUpModal
-import Components.PopUpModal as PopUpModal
-import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.View as PrimaryEditText
-import Components.PrimaryEditText.View as PrimaryEditText
-import Control.Applicative (unless)
 import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -51,11 +40,6 @@ import Data.Array (length, mapWithIndex, null, any, (!!), take)
 import Data.Either (Either(..))
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Maybe (Maybe(..), isJust)
-import Data.Maybe (fromMaybe)
-import Debug (spy)
-import Debug (spy)
-import Debug (spy)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -65,9 +49,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Helpers.Utils (getVehicleType)
-import Helpers.Utils (getVehicleType)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -75,32 +57,18 @@ import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens as ScreenNames
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import Screens.Types as ST
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
 import Services.Backend as Remote
-import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
-import Storage (isLocalStageOn)
-import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
@@ -973,66 +941,69 @@ settingsView state push =
 
 profileOptionsLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 profileOptionsLayout state push =
- scrollView
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- ][ linearLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , padding $ Padding 0 10 0 5
-    ] (mapWithIndex
-        (\index optionItem ->
-            linearLayout
-            ([ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation VERTICAL
-            , gravity CENTER_VERTICAL
-            , onClick push $ const $ OptionClick optionItem.menuOptions
-            ] <> if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions) then [alpha 0.5
-            ,clickable false] else [])[ linearLayout
-              [ width MATCH_PARENT
+  scrollView
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , orientation VERTICAL
+      , padding $ PaddingVertical 10 5
+      ] (mapWithIndex
+          (\index optionItem ->
+              linearLayout
+              ([ width MATCH_PARENT
               , height WRAP_CONTENT
-              , orientation HORIZONTAL
+              , orientation VERTICAL
               , gravity CENTER_VERTICAL
-              , padding (Padding 15 20 15 0)
-              ][  imageView
-                  [ width $ V 20
-                  , height $ V 20
-                  , imageWithFallback optionItem.icon
-                  ]
-                  , textView (
-                  [ height WRAP_CONTENT
-                  , weight 1.0
-                  , text $ getTitle optionItem.menuOptions
-                  , margin $ MarginLeft 10
-                  , color Color.black900
-                  ] <> FontStyle.subHeading2 TypoGraphy
-                  )
-                  , linearLayout
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , orientation HORIZONTAL
-                  , gravity CENTER_VERTICAL
-                  ][ textView $
-                      [ width WRAP_CONTENT
-                      , height WRAP_CONTENT
-                      , text $ "V " <> (getValueToLocalStore VERSION_NAME)
-                      , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
-                      , margin (MarginRight 5)
-                      ] <> FontStyle.paragraphText TypoGraphy
-                    , imageView
-                      [ width $ V 18
-                      , height $ V 18
-                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
-                      ]
-                  ]
+              , onClick push $ const $ OptionClick optionItem.menuOptions
+              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) then 
+                      [ alpha 0.5
+                      , clickable false] 
+                    else [])
+              [ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation HORIZONTAL
+                , gravity CENTER_VERTICAL
+                , padding (Padding 15 20 15 0)
+                ][  imageView
+                    [ width $ V 20
+                    , height $ V 20
+                    , imageWithFallback optionItem.icon
+                    ]
+                    , textView (
+                    [ height WRAP_CONTENT
+                    , weight 1.0
+                    , text $ getTitle optionItem.menuOptions
+                    , margin $ MarginLeft 10
+                    , color Color.black900
+                    ] <> FontStyle.subHeading2 TypoGraphy
+                    )
+                    , linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , orientation HORIZONTAL
+                    , gravity CENTER_VERTICAL
+                    ][ textView $
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , text $ "V " <> (getValueToLocalStore VERSION_NAME)
+                        , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
+                        , margin (MarginRight 5)
+                        ] <> FontStyle.paragraphText TypoGraphy
+                      , imageView
+                        [ width $ V 18
+                        , height $ V 18
+                        , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                        ]
+                    ]
+                ]
+                , if (index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
               ]
-              , if (index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
-            ]
-          ) (optionList "")
-    )
- ]
+            ) (optionList "")
+      )
+  ]
 
 
 ----------------------------------------------- UPDATE LANGUAGE VIEW ------------------------------------------------------------------
