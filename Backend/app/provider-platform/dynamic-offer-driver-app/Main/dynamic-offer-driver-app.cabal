@@ -362,7 +362,6 @@ library
       Storage.Beam.Issue.IssueTranslation
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
-      Storage.Beam.LeaderBoardConfig
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
@@ -384,7 +383,6 @@ library
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.MetaData
       Storage.Beam.Notification
-      Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -415,7 +413,6 @@ library
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
-      Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
@@ -491,7 +488,6 @@ library
       Storage.Queries.Issue.IssueTranslation
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
-      Storage.Queries.LeaderBoardConfig
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate

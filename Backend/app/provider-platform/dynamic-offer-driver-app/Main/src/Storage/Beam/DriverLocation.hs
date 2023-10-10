@@ -29,6 +29,7 @@ import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Schema
 import Sequelize
+import qualified Storage.DBModel as DBModel
 import qualified Tools.Beam.UtilsTH as TH
 
 data DriverLocationT f = DriverLocationT
@@ -109,5 +110,8 @@ toRowExpression personId latLong updateTime now merchantId =
 instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"
+
+instance TH.IsDBTable DBModel.DriverApp DriverLocationT where -- different schema
+  getDBModel _ _ = TH.DriverLocation
 
 $(TH.enableKVPG ''DriverLocationT ['driverId] [])

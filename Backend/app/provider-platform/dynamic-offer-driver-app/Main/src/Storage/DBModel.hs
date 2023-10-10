@@ -39,7 +39,6 @@ data DBModel
   | DriverPoolConfig
   | DriverQuote
   | DriverRCAssociation
-  | DriverRcAssociation
   | DriverReferral
   | DriverStats
   | Estimate
@@ -50,7 +49,6 @@ data DBModel
   | FarePolicy
   | FarePolicyProgressiveDetails
   | FarePolicyProgressiveDetailsPerExtraKmRateSection
-  | FarePolicySlabDetailsSlab
   | FarePolicySlabsDetailsSlab
   | FareProduct
   | Feedback
@@ -67,16 +65,13 @@ data DBModel
   | IssueTranslation
   | KioskLocation
   | KioskLocationTranslation
-  | LeaderBoardConfig
   | LeaderBoardConfigs
   | Location
   | LocationMapping
   | Mandate
   | MediaFile
   | Merchant
-  | MerchantLeaderBoardConfig
   | MerchantMessage
-  | MerchantOnboardingDocumentConfig
   | MerchantPaymentMethod
   | MerchantServiceConfig
   | MerchantServiceUsageConfig

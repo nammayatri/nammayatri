@@ -93,6 +93,7 @@ dependencies:
   - warp
   - warp-tls
   - cereal
+  - template-haskell
 
 ghc-options:
   - -fwrite-ide-info

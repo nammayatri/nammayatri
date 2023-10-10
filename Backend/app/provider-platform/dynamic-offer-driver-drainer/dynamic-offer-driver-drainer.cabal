@@ -31,6 +31,7 @@ library
       Types.Config
       Types.DBSync
       Types.DBSync.Create
+      Types.DBSync.DBModel
       Types.DBSync.Delete
       Types.DBSync.Update
       Types.Event
@@ -38,6 +39,7 @@ library
       Utils.Event
       Utils.Parse
       Utils.Redis
+      Utils.TH
       Utils.Utils
   other-modules:
       Paths_dynamic_offer_driver_drainer
@@ -108,6 +110,7 @@ library
     , record-hasfield
     , sequelize
     , servant-server
+    , template-haskell
     , text
     , time
     , tinylog
@@ -196,6 +199,7 @@ executable dynamic-offer-driver-drainer-exe
     , record-hasfield
     , sequelize
     , servant-server
+    , template-haskell
     , text
     , time
     , tinylog
