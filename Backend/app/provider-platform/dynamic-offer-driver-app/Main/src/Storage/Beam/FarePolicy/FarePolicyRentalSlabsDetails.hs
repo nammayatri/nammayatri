@@ -13,20 +13,20 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Storage.Beam.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetailsSlab where
+module Storage.Beam.FarePolicy.FarePolicyRentalSlabsDetails where
 
-import Data.Serialize
+-- import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+-- import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
-import Lib.Utils ()
-import Sequelize as Se
+-- import Lib.Utils ()
+-- import Sequelize as Se
 import Tools.Beam.UtilsTH
 
 data FarePolicyRentalSlabDetailsT f = FarePolicyRentalSlabDetailsT
@@ -55,7 +55,7 @@ instance B.Table FarePolicyRentalSlabDetailsT where
 
 type FarePolicyRentalSlabDetails = FarePolicyRentalSlabDetailsT Identity
 
-type FullFarePolicyRentalSlabDetails = (KTI.Id Domain.FarePolicy, Domain.FPRSlabDetails)
+type FullFarePolicyRentalSlabDetails = (KTI.Id Domain.FarePolicy, Domain.FPRSlabDetailsSlab)
 
 $(enableKVPG ''FarePolicyRentalSlabDetailsT ['id] [['farePolicyId]])
 

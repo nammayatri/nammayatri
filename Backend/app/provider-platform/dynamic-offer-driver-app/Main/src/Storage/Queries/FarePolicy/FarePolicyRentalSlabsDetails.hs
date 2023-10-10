@@ -13,7 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.FarePolicy.FarePolicyRentalSlabDetails where
+module Storage.Queries.FarePolicy.FarePolicyRentalSlabsDetails where
 
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
@@ -22,7 +22,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
 import qualified Sequelize as Se
-import qualified Storage.Beam.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetailsSlab as BeamFPRSS
+import qualified Storage.Beam.FarePolicy.FarePolicyRentalSlabsDetails as BeamFPRSS
 
 findAll' ::
   MonadFlow m =>
@@ -44,8 +44,9 @@ instance FromTType' BeamFPRSS.FarePolicyRentalSlabDetails BeamFPRSS.FullFarePoli
     pure $
       Just
         ( KTI.Id farePolicyId,
-          DFP.FPRSlabDetails
+          DFP.FPRSlabDetailsSlab
             { 
+              id = id,
               baseDistance = baseDistance,
               baseDuration = baseDuration,
               kmAddedForEveryExtraHour = kmAddedForEveryExtraHour,
@@ -70,10 +71,10 @@ instance FromTType' BeamFPRSS.FarePolicyRentalSlabDetails BeamFPRSS.FullFarePoli
         )
 
 instance ToTType' BeamFPRSS.FarePolicyRentalSlabDetails BeamFPRSS.FullFarePolicyRentalSlabDetails where
-  toTType' (KTI.Id farePolicyId, DFP.FPRSlabDetails {..}) =
+  toTType' (KTI.Id farePolicyId, DFP.FPRSlabDetailsSlab {..}) =
     BeamFPRSS.FarePolicyRentalSlabDetailsT
       { 
-        -- id = id,
+        id = id,
         farePolicyId = farePolicyId,
         baseDistance = baseDistance,
         baseDuration = baseDuration,
