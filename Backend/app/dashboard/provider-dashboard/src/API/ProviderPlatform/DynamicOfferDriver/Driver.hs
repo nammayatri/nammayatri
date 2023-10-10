@@ -83,6 +83,7 @@ type API =
            :<|> IncrementDriverGoToCountAPI
            :<|> DriverPaymentHistoryAPI
            :<|> DriverPaymentHistoryEntityDetailsAPI
+           :<|> DriverSubscriptionDriverFeeAndInvoiceUpdateAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -237,6 +238,10 @@ type DriverPaymentHistoryEntityDetailsAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY_ENTITY_DETAILS
     :> ADDriver.DriverPaymentHistoryEntityDetailsAPI
 
+type DriverSubscriptionDriverFeeAndInvoiceUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DRIVER_SUBSCRIPTION_DRIVER_FEE_AND_INVOICE_UPDATE
+    :> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -277,6 +282,7 @@ handler merchantId =
     :<|> incrementDriverGoToCount merchantId
     :<|> getPaymentHistory merchantId
     :<|> getPaymentHistoryEntityDetails merchantId
+    :<|> updateSubscriptionDriverFeeAndInvoice merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -536,3 +542,10 @@ getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> ApiTokenInfo -> Id Comm
 getPaymentHistoryEntityDetails merchantShortId apiTokenInfo driverId invoiceId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.getPaymentHistoryEntityDetails) driverId invoiceId
+
+updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
+updateSubscriptionDriverFeeAndInvoice merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateSubscriptionDriverFeeAndInvoiceEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.updateSubscriptionDriverFeeAndInvoice) driverId req

@@ -172,6 +172,7 @@ data UserActionType
   | LIST_OVERLAY
   | OVERLAY_INFO
   | SCHEDULE_OVERLAY
+  | DRIVER_SUBSCRIPTION_DRIVER_FEE_AND_INVOICE_UPDATE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

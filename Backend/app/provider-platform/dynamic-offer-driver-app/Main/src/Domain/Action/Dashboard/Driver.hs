@@ -51,6 +51,7 @@ module Domain.Action.Dashboard.Driver
     fleetUnlinkVehicle,
     fleetRemoveVehicle,
     fleetStats,
+    updateSubscriptionDriverFeeAndInvoice,
   )
 where
 
@@ -59,6 +60,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Com
 import Data.Coerce
 import Data.List (zipWith4)
 import Data.List.NonEmpty (nonEmpty)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
@@ -908,6 +910,81 @@ getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId.getId
+
+updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> Flow Common.SubscriptionDriverFeesAndInvoicesToUpdate
+updateSubscriptionDriverFeeAndInvoice merchantShortId driverId Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
+  dueDriverFee <- QDF.findAllPendingAndDueDriverFeeByDriverId personId
+  let invoicesDataToUpdate =
+        maybe
+          []
+          ( map
+              ( \invData -> do
+                  let mbInvoiceStatus = (\invs -> readMaybe (T.unpack invs) :: (Maybe INV.InvoiceStatus)) =<< invData.invoiceStatus
+                  InvoiceInfoToUpdateAfterParse
+                    { invoiceId = cast (Id invData.invoiceId),
+                      driverFeeId = cast . Id <$> invData.driverFeeId,
+                      invoiceStatus = mbInvoiceStatus
+                    }
+              )
+          )
+          invoices
+  mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
+  allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
+  if isJust mkDuesToAmount
+    then do
+      let amount = maybe 0 (/ (fromIntegral $ length dueDriverFee)) mkDuesToAmount
+      mapM_ (\feeId -> QDF.resetFee feeId 0 amount 0 0 now) (dueDriverFee <&> (.id))
+      return $ mkResponse dueDriverFee
+    else do
+      maybe
+        (pure ())
+        ( mapM_
+            ( \fee -> do
+                let id = cast (Id fee.driverFeeId)
+                    platFormFee = fromMaybe 0 (fee.platformFee)
+                    sgst = fromMaybe 0 (fee.sgst)
+                    cgst = fromMaybe 0 (fee.cgst)
+                QDF.resetFee id 0 platFormFee sgst cgst now
+                when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
+                when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
+            )
+        )
+        driverFees
+      return $ mkResponse allDriverFeeByIds
+  where
+    mkResponse driverFees' =
+      Common.SubscriptionDriverFeesAndInvoicesToUpdate
+        { driverFees =
+            Just $
+              map
+                ( \dfee ->
+                    Common.DriverFeeInfoToUpdate
+                      { driverFeeId = dfee.id.getId,
+                        mkManualDue = Nothing,
+                        mkAutoPayDue = Nothing,
+                        mkCleared = Nothing,
+                        platformFee = Just $ dfee.platformFee.fee,
+                        cgst = Just dfee.platformFee.cgst,
+                        sgst = Just dfee.platformFee.sgst
+                      }
+                )
+                driverFees',
+          invoices = Nothing,
+          mkDuesToAmount = Nothing,
+          subscribed = Nothing
+        }
+
+data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
+  { invoiceId :: Id INV.Invoice,
+    driverFeeId :: Maybe (Id DriverFee),
+    invoiceStatus :: Maybe INV.InvoiceStatus
+  }
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
