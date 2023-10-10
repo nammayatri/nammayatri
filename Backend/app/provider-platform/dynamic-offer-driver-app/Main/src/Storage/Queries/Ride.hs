@@ -16,6 +16,7 @@
 
 module Storage.Queries.Ride where
 
+import Control.Monad.Extra hiding (fromMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Either
 import qualified Data.HashMap.Strict as HashMap
@@ -188,6 +189,18 @@ getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
 getActiveByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
 getActiveByDriverId (Id personId) =
   findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+
+getActiveBookingAndRideByDriverId :: MonadFlow m => Id Person -> m [(Ride, Booking)]
+getActiveBookingAndRideByDriverId (Id personId) = do
+  maybeM
+    (return [])
+    ( \ride ->
+        maybeM
+          (return [])
+          (\booking -> return [(ride, booking)])
+          (QBooking.findById ride.bookingId)
+    )
+    (findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]])
 
 updateStatus :: MonadFlow m => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
