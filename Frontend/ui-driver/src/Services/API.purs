@@ -2719,7 +2719,8 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
   rideDays :: Int,
   amount :: Number,
   feeType :: FeeType,
-  paymentStatus :: InvoiceStatus
+  paymentStatus :: InvoiceStatus,
+  rideTakenOn :: Maybe String
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
