@@ -35,7 +35,14 @@ data FareParameters = FareParameters
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalSlabDetails FParamsRentalSlabDetails
+  deriving (Generic, Show, Eq, PrettyShow)
+
+data FParamsRentalSlabDetails = FParamsRentalSlabDetails
+  {
+    extraRentalKmFare :: Money,
+    extraRentalHourFare :: Money
+  }
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails

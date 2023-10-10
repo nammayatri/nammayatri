@@ -227,7 +227,7 @@ handler merchant sReq' =
             for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
             return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
           DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
-          DFareProduct.RENTAL -> throwError "RentalRequest is not allowed in rental"
+          DFareProduct.RENTAL -> throwError "RentalRequest is not allowed in onDemand"
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
@@ -256,25 +256,10 @@ handler merchant sReq' =
       let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
       listOfRentalQuotes <- do
         for listOfVehicleVariants $ \farePolicy -> do
-          fareParams <-
-            calculateFareParameters
-              CalculateFareParametersParams
-                { farePolicy = farePolicy,
-                  distance = result.distance,
-                  rideTime = sReq.pickupTime,
-                  waitingTime = Nothing,
-                  driverSelectedFare = Nothing,
-                  customerExtraFee = Nothing,
-                  nightShiftCharge = Nothing
-                }
           buildRentalQuote
             rentalSearchReq
-            fareParams
+            farePolicy
             merchant.id
-            result.distance
-            farePolicy.vehicleVariant
-            result.duration
-            allFarePoliciesProduct.specialLocationTag
       for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
       return (Just (mkRentalQuoteInfo fromLocation now <$> listOfSpecialZoneQuotes), Nothing)
   where
@@ -493,21 +478,18 @@ buildRentalQuote ::
   ( EsqDBFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
-  DSRSZ.SearchRequestSpecialZone ->
-  FareParameters ->
+  DSRSZ.SearchRequest ->
+  FarePolicy ->
   Id DM.Merchant ->
-  Meters ->
-  DVeh.Variant ->
-  Seconds ->
-  Maybe Text ->
   m DQuoteRental.QuoteRental
-buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
+buildRentalQuote searchRequest farePolicy merchantId = do
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
       estimatedFinishTime = fromIntegral duration `addUTCTime` now
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
+  
   pure
     DQuoteRental.QuoteRental
       { id = quoteId,
@@ -515,6 +497,7 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
         providerId = transporterId,
         createdAt = now,
         updatedAt = now,
+
         ..
       }
 
