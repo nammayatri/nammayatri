@@ -52,18 +52,18 @@ runCreateInKafkaAndDb ::
   Text ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateInKafkaAndDb dbConf streamKey' object = do
+runCreateInKafkaAndDb dbConf streamKey object = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runCreate dbConf streamKey' object
+    then runCreate dbConf object
     else
       if null object
         then pure [Right []]
         else do
           let entryIds = object <&> (.entryId)
-          kResults <- runCreateInKafka dbConf streamKey' object
+          kResults <- runCreateInKafka dbConf streamKey object
           case kResults of
-            [Right _] -> runCreate dbConf streamKey' object
+            [Right _] -> runCreate dbConf object
             _ -> pure [Left entryIds]
 
 -- | If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
@@ -74,10 +74,10 @@ runCreateInKafka ::
   Text ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreateInKafka dbConf streamKey' object = do
+runCreateInKafka dbConf streamKey object = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runCreate dbConf streamKey' object -- why both runCreateInKafkaAndDb and runCreateInKafka call runCreate?
+    then runCreate dbConf object -- why both runCreateInKafkaAndDb and runCreateInKafka call runCreate?
     else
       if null object
         then pure [Right []]
@@ -85,7 +85,7 @@ runCreateInKafka dbConf streamKey' object = do
           let dataObjects = object <&> (.kafkaObject)
               entryIds = object <&> (.entryId)
           Env {..} <- ask
-          res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection dataObjects streamKey'
+          res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection dataObjects streamKey
           either
             ( \_ -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -99,10 +99,9 @@ runCreate ::
   forall (table :: (Type -> Type) -> Type) b.
   (Show b, IsDBTable DBModel.RiderApp table) =>
   DBConfig Pg ->
-  Text ->
   [CreateObject b table] ->
   ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
-runCreate dbConf _ object = do
+runCreate dbConf object = do
   let dbObjects = object <&> (.dbObject)
       byteStream = object <&> (.bts)
       entryIds = object <&> (.entryId)
@@ -110,7 +109,7 @@ runCreate dbConf _ object = do
   Env {..} <- ask
   maxRetries <- EL.runIO getMaxRetries
   let dbModel = showDBModel (Proxy @table)
-  if null object || dbModel `elem` _dontEnableDbTables  then pure [Right []] else runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
+  if null object || dbModel `elem` _dontEnableDbTables then pure [Right []] else runCreateWithRecursion dbConf dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
 runCreateWithRecursion ::
   forall (table :: (Type -> Type) -> Type) b.

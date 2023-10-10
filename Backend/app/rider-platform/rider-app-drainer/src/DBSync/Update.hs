@@ -88,7 +88,7 @@ runUpdateCommands (cmd, val) streamKey = do
   let UpdateDBCommand id _ tag _ _ dbUpdateObject = cmd
   withDBObjectContent dbUpdateObject $ \(DBUpdateObjectContent (setClauses :: [Set Postgres table]) whereClause) -> do
     case getDBModel (Proxy @DBModel.RiderApp) (Proxy @table) of
-      DBModel.BecknRequest -> runUpdate id val streamKey setClauses whereClause =<< dbConf
+      DBModel.BecknRequest -> runUpdate id val setClauses whereClause =<< dbConf
       _ -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause =<< dbConf
 
 -- Updates entry in DB if KAFKA_PUSH key is set to false. Else Updates in both.
@@ -102,13 +102,13 @@ runUpdateInKafkaAndDb ::
   Where Postgres table ->
   DBConfig Pg ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdateInKafkaAndDb id value dbStreamKey' setClause tag whereClause dbConf = do
+runUpdateInKafkaAndDb id value dbStreamKey setClause tag whereClause dbConf = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runUpdate id value dbStreamKey' setClause whereClause dbConf
+    then runUpdate id value setClause whereClause dbConf
     else do
-      res <- runUpdateInKafka id value dbStreamKey' setClause whereClause dbConf tag
-      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value dbStreamKey' setClause whereClause dbConf) res
+      res <- runUpdateInKafka id value dbStreamKey setClause whereClause dbConf tag
+      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value setClause whereClause dbConf) res
 
 -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
 runUpdateInKafka ::
@@ -122,18 +122,18 @@ runUpdateInKafka ::
   DBConfig Pg ->
   Text ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdateInKafka id value dbStreamKey' setClause whereClause dbConf tag = do
+runUpdateInKafka id value dbStreamKey setClause whereClause dbConf tag = do
   let dbModel = showDBModel (Proxy @table)
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runUpdate id value dbStreamKey' setClause whereClause dbConf
+    then runUpdate id value setClause whereClause dbConf
     else do
       res <- getUpdatedValue tag whereClause
       case res of
         Right dataObj -> do
           Env {..} <- ask
           let updatedJSON = getDbUpdateDataJson dbModel dataObj
-          res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+          res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey
           either
             ( \_ -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -145,7 +145,7 @@ runUpdateInKafka id value dbStreamKey' setClause whereClause dbConf tag = do
         Left _ -> do
           let updatedJSON = getDbUpdateDataJson dbModel $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
           Env {..} <- ask
-          res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+          res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey
           either
             ( \_ -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -160,12 +160,11 @@ runUpdate ::
   IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
-  Text ->
   [Set Postgres table] ->
   Where Postgres table ->
   DBConfig Pg ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runUpdate id value _ setClause whereClause dbConf = do
+runUpdate id value setClause whereClause dbConf = do
   maxRetries <- EL.runIO getMaxRetries
   Env {..} <- ask
   let dbModel = showDBModel (Proxy @table)

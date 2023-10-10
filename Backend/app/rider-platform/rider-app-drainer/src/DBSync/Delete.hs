@@ -47,10 +47,10 @@ runDeleteInKafkaAndDb ::
 runDeleteInKafkaAndDb id value dbStreamKey whereClause dbConf = do
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runDelete id value dbStreamKey whereClause dbConf
+    then runDelete id value whereClause dbConf
     else do
       res <- runDeleteInKafka id value dbStreamKey whereClause dbConf
-      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbStreamKey whereClause dbConf) res
+      either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value whereClause dbConf) res
 
 -- If KAFKA_PUSH is false then entry will be there in DB Else Delete entry in Kafka only.
 runDeleteInKafka ::
@@ -66,7 +66,7 @@ runDeleteInKafka id value dbStreamKey whereClause dbConf = do
   let dbModel = showDBModel (Proxy @table)
   isPushToKafka' <- EL.runIO isPushToKafka
   if not isPushToKafka'
-    then runDelete id value dbStreamKey whereClause dbConf
+    then runDelete id value whereClause dbConf
     else do
       Env {..} <- ask
       res <- EL.runIO $ streamRiderDrainerDeletes _kafkaConnection (getDbDeleteDataJson dbModel whereClause) dbStreamKey
@@ -84,11 +84,10 @@ runDelete ::
   IsDBTable DBModel.RiderApp table =>
   EL.KVDBStreamEntryID ->
   ByteString ->
-  Text ->
   Where Postgres table ->
   DBConfig Pg ->
   ReaderT Env EL.Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
-runDelete id value _ whereClause dbConf = do
+runDelete id value whereClause dbConf = do
   maxRetries <- EL.runIO getMaxRetries
   Env {..} <- ask
   let dbModel = showDBModel (Proxy @table)
