@@ -108,33 +108,23 @@ cardView push =
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , cornerRadii $ Corners 7.0 true true false false
       , orientation VERTICAL
-      , PrestoList.backgroundHolder "specialZoneLayoutBackground"
+      , background Color.blue800
+      , cornerRadii $ Corners 7.0 true true false false
       , padding $ PaddingVertical 5 5
       , PrestoList.visibilityHolder "metroTagVisibility"
       , gravity CENTER
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER
-          ][ imageView
-              [ width $ V 18
-              , height $ V 18
-              , PrestoList.imageUrlHolder "specialZoneImage"
-              ]
-            , textView 
-              [ width WRAP_CONTENT
-              , height MATCH_PARENT
-              , PrestoList.textHolder "specialZoneText"
-              , gravity CENTER_VERTICAL
-              , color Color.white900
-              , margin $ MarginLeft 5
-              , textSize FontSize.a_12
-              , fontStyle $ FontStyle.medium TypoGraphy
-              ]
-          ]
-        ]
+      ][ specialZoneView push]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , background Color.purple
+      , padding $ PaddingVertical 5 5
+      , cornerRadii $ Corners 7.0 true true false false
+      , PrestoList.visibilityHolder "accessibilityTagVisibility"
+      , gravity CENTER
+      ][ specialZoneView push]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -146,6 +136,28 @@ cardView push =
         , distanceAndCustomerName
       ]
    ]
+
+
+specialZoneView :: forall w. (RideHistoryScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+specialZoneView push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  ][ imageView
+      [ width $ V 18
+      , height $ V 18
+      , PrestoList.imageUrlHolder "specialZoneImage"
+      ]
+    , textView $
+      [ width WRAP_CONTENT
+      , height MATCH_PARENT
+      , PrestoList.textHolder "specialZoneText"
+      , gravity CENTER_VERTICAL
+      , color Color.white900
+      , margin $ MarginLeft 5
+      ] <> FontStyle.tags TypoGraphy
+  ]
 
 selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 selectCardView push =
