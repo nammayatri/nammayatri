@@ -42,14 +42,18 @@ issueCategoryList _merchantShortId = do
 toDomainIssueStatus :: Common.IssueStatus -> DIR.IssueStatus
 toDomainIssueStatus = \case
   Common.OPEN -> DIR.OPEN
-  Common.PENDING -> DIR.PENDING
+  Common.PENDING_INTERNAL -> DIR.PENDING_INTERNAL
+  Common.PENDING_EXTERNAL -> DIR.PENDING_EXTERNAL
   Common.RESOLVED -> DIR.RESOLVED
+  Common.CLOSED -> DIR.CLOSED
 
 toCommonIssueStatus :: DIR.IssueStatus -> Common.IssueStatus
 toCommonIssueStatus = \case
   DIR.OPEN -> Common.OPEN
-  DIR.PENDING -> Common.PENDING
+  DIR.PENDING_INTERNAL -> Common.PENDING_INTERNAL
+  DIR.PENDING_EXTERNAL -> Common.PENDING_EXTERNAL
   DIR.RESOLVED -> Common.RESOLVED
+  DIR.CLOSED -> Common.CLOSED
 
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do

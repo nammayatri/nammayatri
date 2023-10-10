@@ -46,8 +46,10 @@ import Tools.Ticket
 toCommonIssueStatus :: D.IssueStatus -> Common.IssueStatus
 toCommonIssueStatus = \case
   D.OPEN -> Common.OPEN
-  D.PENDING -> Common.PENDING
+  D.PENDING_INTERNAL -> Common.PENDING_INTERNAL
+  D.PENDING_EXTERNAL -> Common.PENDING_EXTERNAL
   D.RESOLVED -> Common.RESOLVED
+  D.CLOSED -> Common.CLOSED
 
 getLanguage :: Id SP.Person -> Maybe Language -> Flow Language
 getLanguage driverId mbLanguage = do
