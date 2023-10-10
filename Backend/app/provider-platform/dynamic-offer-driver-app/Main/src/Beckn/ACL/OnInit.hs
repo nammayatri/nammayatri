@@ -23,6 +23,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import SharedLogic.FareCalculator
+import EulerHS.Prelude (undefined)
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
@@ -142,6 +143,7 @@ mkOnInitMessage res = do
     buildFulfillmentType = \case
       DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+      DRB.RentalBooking -> OnInit.RENTAL
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
@@ -153,6 +155,7 @@ mkOnInitMessage res = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+        DFParams.RENTAL -> undefined
         DFParams.Slab ->
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"

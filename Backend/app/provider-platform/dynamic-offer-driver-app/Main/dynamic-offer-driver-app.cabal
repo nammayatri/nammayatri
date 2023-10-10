@@ -204,6 +204,7 @@ library
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FarePolicy.FarePolicyRentalSlabsDetails
       Domain.Types.FareProduct
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm

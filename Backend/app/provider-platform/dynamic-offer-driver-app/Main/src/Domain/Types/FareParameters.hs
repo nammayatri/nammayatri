@@ -61,7 +61,8 @@ data FParamsSlabDetails = FParamsSlabDetails
 
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 
-data FareParametersType = Progressive | Slab
+data FareParametersType = Progressive | Slab | Rental
+ 
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -71,3 +72,4 @@ getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of
   ProgressiveDetails _ -> Progressive
   SlabDetails _ -> Slab
+  RentalSlabDetails _ -> Rental

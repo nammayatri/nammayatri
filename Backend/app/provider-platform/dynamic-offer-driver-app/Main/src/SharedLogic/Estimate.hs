@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.Estimate
   ( module DEst,
@@ -46,6 +47,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
         { farePolicy = farePolicy,
           distance = dist,
           rideTime = startTime,
+          endRideTime = Nothing,
           waitingTime = Nothing,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
@@ -89,6 +91,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
       let waitingChargeInfo = case farePolicy.farePolicyDetails of
             SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
             ProgressiveDetails det -> det.waitingChargeInfo
+            _ -> undefined
       let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
             Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
@@ -103,7 +106,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
-
+        _ -> undefined
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
@@ -121,7 +124,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
-
+        _ -> undefined
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
   let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
@@ -143,7 +146,7 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
     processAdditionalDetails = \case
       DFP.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       DFP.SlabsDetails det -> mkAdditionalSlabBreakups $ DFP.findFPSlabsDetailsSlabByDistance distance det.slabs
-
+      _ -> undefined
     mkAdditionalProgressiveBreakups det = do
       let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"

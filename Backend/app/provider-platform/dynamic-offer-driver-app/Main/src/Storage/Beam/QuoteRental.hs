@@ -34,7 +34,6 @@ data QuoteRentalT f = QuoteRentalT
     baseFare :: B.C f Money,
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime
-    
   }
   deriving (Generic, B.Beamable)
 

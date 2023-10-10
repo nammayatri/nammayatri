@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.Queries.FarePolicy
   {-# WARNING
@@ -70,6 +71,7 @@ update farePolicy = do
     SlabsDetails (FPSlabsDetails slabs) -> do
       _ <- QueriesFPSDS.deleteAll' farePolicy.id
       mapM_ (create'' farePolicy.id) slabs
+    RentalSlabsDetails _-> undefined
   where
     create'' :: MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
@@ -107,6 +109,7 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
           case nonEmpty slabs of
             Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
             Nothing -> return Nothing
+        RentalSlabs -> undefined
     case mFarePolicyDetails of
       Just farePolicyDetails -> do
         return $
