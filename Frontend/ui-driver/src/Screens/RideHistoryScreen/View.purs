@@ -438,6 +438,7 @@ shimmerData i = {
   amountColor: toPropValue "",
   riderName : toPropValue "",
   metroTagVisibility : toPropValue "",
+  accessibilityTagVisibility : toPropValue "",
   specialZoneText : toPropValue "",
   specialZoneImage : toPropValue "",
   specialZoneLayoutBackground : toPropValue ""

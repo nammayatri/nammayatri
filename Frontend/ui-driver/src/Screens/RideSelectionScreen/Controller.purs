@@ -186,6 +186,7 @@ rideHistoryListTransformer list categoryAction =
     , driverSelectedFare : toPropValue ride.driverSelectedFare
     , riderName : toPropValue $ fromMaybe "" ride.riderName
     , metroTagVisibility : toPropValue  "gone"
+    , accessibilityTagVisibility : toPropValue "gone"
     , specialZoneText : toPropValue ""
     , specialZoneImage : toPropValue ""
     , specialZoneLayoutBackground : toPropValue $ ""
