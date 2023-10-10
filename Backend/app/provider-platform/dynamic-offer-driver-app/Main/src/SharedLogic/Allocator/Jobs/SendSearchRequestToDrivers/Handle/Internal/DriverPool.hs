@@ -188,21 +188,24 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool = do
-          calculateGoHomeDriverPool $
-            CalculateGoHomeDriverPoolReq
-              { poolStage = DriverSelection,
-                driverPoolCfg = driverPoolCfg,
-                goHomeCfg = goHomeConfig,
-                variant = Just searchTry.vehicleVariant,
-                fromLocation = searchReq.fromLocation,
-                toLocation = searchReq.toLocation, -- last or all ?
-                merchantId = searchReq.providerId
-              }
+          case searchReq.tag of
+            DSR.ON_DEMAND ->
+              calculateGoHomeDriverPool $
+                CalculateGoHomeDriverPoolReq
+                  { poolStage = DriverSelection,
+                    driverPoolCfg = driverPoolCfg,
+                    goHomeCfg = goHomeConfig,
+                    variant = Just searchTry.vehicleVariant,
+                    fromLocation = searchReq.searchRequestDetails.fromLocation,
+                    toLocation = searchReq.searchRequestDetails.toLocation,
+                    merchantId = searchReq.providerId
+                  }
+            DSR.RENTAL -> pure []  -- RENTAL
 
         calcDriverPool radiusStep = do
           let vehicleVariant = searchTry.vehicleVariant
               merchantId = searchReq.providerId
-          let pickupLoc = searchReq.fromLocation
+          let pickupLoc = searchReq.searchRequestDetails.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
         calcDriverCurrentlyOnRidePool radiusStep transporterConfig = do
@@ -210,7 +213,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
               let vehicleVariant = searchTry.vehicleVariant
-              let pickupLoc = searchReq.fromLocation
+              let pickupLoc = searchReq.searchRequestDetails.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1)
             else pure []
