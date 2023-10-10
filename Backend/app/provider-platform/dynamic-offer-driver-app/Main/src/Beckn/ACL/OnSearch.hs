@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import Beckn.Types.Core.Taxi.OnSelect (TimeTimestamp(..))
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -82,7 +83,8 @@ mkStartInfo dReq =
         OS.Location
           { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
             address = Nothing
-          }
+          },
+      time = TimeTimestamp dReq.now
     }
 
 mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
