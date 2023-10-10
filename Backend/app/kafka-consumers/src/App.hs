@@ -24,6 +24,7 @@ import qualified Kafka.Consumer as Consumer
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Beam.BecknRequest as BR
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
@@ -57,8 +58,25 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
       )
     CF.runConsumer flowRt appEnv consumerType kafkaConsumer
   where
-    newKafkaConsumer =
+    newKafkaConsumer = case appEnv.consumerType of
+      RIDER_BECKN_REQUEST -> becknRequestConsumer
+      DRIVER_BECKN_REQUEST -> becknRequestConsumer
+      _ ->
+        either (error . ("Unable to open a kafka consumer: " <>) . show) id
+          <$> Consumer.newConsumer
+            (kafkaConsumerCfg.consumerProperties)
+            (Consumer.topics kafkaConsumerCfg.topicNames)
+
+    becknRequestConsumer = do
+      now <- getCurrentTime
+      let currentTopicNumber = BR.countTopicNumber now
+      let topicNumbers = filter (/= currentTopicNumber) [0 .. 23 :: Int]
+      let topicNameTemplate = case kafkaConsumerCfg.topicNames of
+            [tn] -> tn
+            _ -> error "Should be exactly one topic name"
+      let topicNames = Consumer.TopicName . ((Consumer.unTopicName topicNameTemplate <> "_") <>) . show <$> topicNumbers
+
       either (error . ("Unable to open a kafka consumer: " <>) . show) id
         <$> Consumer.newConsumer
           (kafkaConsumerCfg.consumerProperties)
-          (Consumer.topics kafkaConsumerCfg.topicNames)
+          (Consumer.topics topicNames <> Consumer.offsetReset Consumer.Earliest)

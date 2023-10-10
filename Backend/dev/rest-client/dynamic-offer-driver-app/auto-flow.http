@@ -31,7 +31,7 @@ content-type: application/json
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode=ONLINE
 content-type: application/json
 token: {{token1}}
 

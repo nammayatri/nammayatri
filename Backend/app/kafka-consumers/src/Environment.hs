@@ -14,6 +14,7 @@
 
 module Environment where
 
+import AWS.S3
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
@@ -63,7 +64,13 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read)
+data ConsumerType
+  = AVAILABILITY_TIME
+  | BROADCAST_MESSAGE
+  | PERSON_STATS
+  | RIDER_BECKN_REQUEST
+  | DRIVER_BECKN_REQUEST
+  deriving (Generic, FromDhall, Read)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -71,6 +78,8 @@ instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
+  show RIDER_BECKN_REQUEST = "rider-beckn-request"
+  show DRIVER_BECKN_REQUEST = "driver-beckn-request"
 
 type Seconds = Integer
 
@@ -95,7 +104,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    tables :: Tables
+    tables :: Tables,
+    s3Config :: S3Config
   }
   deriving (Generic, FromDhall)
 
@@ -122,7 +132,8 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    s3Env :: S3Env Flow
   }
   deriving (Generic)
 
@@ -144,4 +155,5 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  let s3Env = buildS3Env s3Config
   pure $ AppEnv {..}

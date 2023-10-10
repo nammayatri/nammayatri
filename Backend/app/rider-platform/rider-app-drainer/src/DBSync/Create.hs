@@ -73,7 +73,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkBecknRequestTopicName obj, val, entryId, BR.mkBecknRequestKafka obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put BecknRequestKafka to Kafka, not DBCreateObject
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBooking" :: Text) [(obj, val, entryId, TicketBookingObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingObject obj), val) <- cmds]
@@ -84,15 +84,15 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("TicketPlace" :: Text) [(obj, val, entryId, TicketPlaceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketPlaceObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
-      let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
-          byteStream = map (\(_, bts, _, _) -> bts) object
-          entryIds = map (\(_, _, entryId, _) -> entryId) object
+      let dbObjects = map (\(dbObject, _, _, _, _) -> dbObject) object
+          byteStream = map (\(_, _, bts, _, _) -> bts) object
+          entryIds = map (\(_, _, _, entryId, _) -> entryId) object
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       Env {..} <- ask
       maxRetries <- EL.runIO getMaxRetries
       if null object || model `elem` _dontEnableDbTables then pure [Right entryIds] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
     -- If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
-    runCreateInKafka dbConf streamKey' model object = do
+    runCreateInKafkaWithTopicName dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runCreate dbConf streamKey' model object
@@ -114,8 +114,7 @@ runCreateCommands cmds streamKey = do
                 )
                 (\_ -> pure [Right entryIds])
                 res
-    -- Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
-    runCreateInKafkaAndDb dbConf streamKey' model object = do
+    runCreateInKafkaWithTopicNameAndDb dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runCreate dbConf streamKey' model object
@@ -123,11 +122,15 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let entryIds = map (\(_, _, entryId, _) -> entryId) object
-              kResults <- runCreateInKafka dbConf streamKey' model object
+              let entryIds = map (\(_, _, _, entryId, _) -> entryId) object
+              kResults <- runCreateInKafkaWithTopicName dbConf streamKey' model object
               case kResults of
                 [Right _] -> runCreate dbConf streamKey' model object
                 _ -> pure [Left entryIds]
+    -- Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
+    runCreateInKafkaAndDb dbConf streamKey' model objects =
+      runCreateInKafkaWithTopicNameAndDb dbConf streamKey' model $
+        objects <&> (\(obj, val, entryId, dbCreateObj) -> (obj, riderDrainerTopicName, val, entryId, dbCreateObj))
 
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
       res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
@@ -157,10 +160,17 @@ streamRiderDrainerCreates producer dbObject streamKey model = do
   result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
   if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message topicName event =
+    message (event, topicName) =
       ProducerRecord
-        { prTopic = TopicName topicName,
+        { prTopic = topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
           prValue = Just . LBS.toStrict $ encode event
         }
+
+riderDrainerTopicName :: TopicName
+riderDrainerTopicName = TopicName "rider-drainer"
+
+mkBecknRequestTopicName :: BR.BecknRequest -> TopicName
+mkBecknRequestTopicName becknRequest = do
+  TopicName $ "rider-beckn-request" <> "_" <> show (BR.countTopicNumber becknRequest.timeStamp)
