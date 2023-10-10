@@ -113,5 +113,7 @@ ticketStatusCallBack _ req = do
 toDomainIssueStatus :: Common.IssueStatus -> DI.IssueStatus
 toDomainIssueStatus = \case
   Common.OPEN -> DI.OPEN
-  Common.PENDING -> DI.PENDING
+  Common.PENDING_INTERNAL -> DI.PENDING_INTERNAL
+  Common.PENDING_EXTERNAL -> DI.PENDING_EXTERNAL
   Common.RESOLVED -> DI.RESOLVED
+  Common.CLOSED -> DI.CLOSED

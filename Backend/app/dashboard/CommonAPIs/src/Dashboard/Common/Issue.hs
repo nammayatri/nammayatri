@@ -79,7 +79,7 @@ data IssueReportListItem = IssueReportListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IssueStatus = OPEN | PENDING | RESOLVED
+data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

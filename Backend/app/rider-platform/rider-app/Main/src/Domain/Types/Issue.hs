@@ -23,8 +23,10 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data IssueStatus
   = OPEN
-  | PENDING
+  | PENDING_INTERNAL
+  | PENDING_EXTERNAL
   | RESOLVED
+  | CLOSED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnum ''IssueStatus)
