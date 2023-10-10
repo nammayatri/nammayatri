@@ -36,6 +36,8 @@ import qualified Kernel.Types.Beckn.ReqTypes as API
 import Kernel.Utils.Example (Example (example))
 import qualified Kernel.Utils.SignatureAuth as S
 import System.Directory (removeFile)
+import Data.Time (localTimeToUTC, utc)
+
 
 data RequestForLoadTest = RequestForLoadTest
   { rawRequest :: !Text,
@@ -83,6 +85,7 @@ runK6Script url filePath nmbOfReq = do
 
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
+  currentTime <- L.getCurrentTimeUTC
   txnId <- L.generateGUID
   let context = example @API.Context & #message_id .~ txnId
   let intent =
@@ -97,9 +100,10 @@ generateSearchRequest = do
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
-                                  }
+                                  },
+                                  time = API.TimeTimestamp $ localTimeToUTC utc currentTime
                             },
-                        end =
+                        end = Just $
                           API.StopInfo
                             { location =
                                 API.Location

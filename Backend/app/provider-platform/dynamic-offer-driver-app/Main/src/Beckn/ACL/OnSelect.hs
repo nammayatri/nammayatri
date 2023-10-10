@@ -76,7 +76,8 @@ mkFulfillment dReq quote = do
     { id = quote.estimateId.getId,
       start =
         OS.StartInfo
-          { location = makeLocation fromLocation
+          { location = makeLocation fromLocation,
+            time = OS.TimeTimestamp dReq.now
           },
       end =
         OS.StopInfo
