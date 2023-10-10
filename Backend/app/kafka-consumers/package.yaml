@@ -90,6 +90,7 @@ dependencies:
   - beam-postgres
   - postgresql-simple
   - sequelize
+  - beckn-services
 
 ghc-options:
   - -Wall

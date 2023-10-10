@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/rider-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "atlas_app"
       , connectionPoolCount = +25
       }
 
@@ -19,7 +19,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
-      , connectionPoolCount = esqDBCfg.connectionPoolCount
+      , connectionPoolCount = +25
       }
 
 let hedisCfg =
@@ -43,26 +43,32 @@ let hedisClusterCfg =
       }
 
 let consumerProperties =
-      { groupId = "broadcast-messages-compute"
+      { groupId = "rider-beckn-request-compute"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "broadcast-messages" ], consumerProperties }
+      { topicNames = [ "rider-beckn-request" ], consumerProperties }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let tables =
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
+      }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
@@ -74,10 +80,11 @@ in  { hedisCfg
     , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
-            , logRawSql = True
+        //  { logFilePath = "/tmp/kafka-consumers-rider-beckn-request.log"
+            , logRawSql = False
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , tables
     , s3Config = common.s3Config
     }

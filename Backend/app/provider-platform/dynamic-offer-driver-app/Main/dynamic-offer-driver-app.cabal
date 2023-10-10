@@ -255,7 +255,6 @@ library
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
-      Lib.Mesh
       Lib.Schema
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
