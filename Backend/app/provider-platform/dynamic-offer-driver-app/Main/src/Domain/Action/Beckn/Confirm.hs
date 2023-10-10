@@ -84,7 +84,7 @@ data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
     fromLocation :: DL.Location,
-    toLocation :: DL.Location,
+    toLocation :: Maybe DL.Location,
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,

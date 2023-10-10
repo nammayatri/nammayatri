@@ -105,7 +105,7 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> Mybe OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
+mkQuoteEntities :: OS.StartInfo -> Maybe OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
 mkQuoteEntities start end provider estInfo = do
   let estimate = estInfo.estimate
       variant = Common.castVariant estimate.vehicleVariant
