@@ -52,10 +52,10 @@ mkOnSearchMessage ::
 mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let startInfo = mkStartInfo res
   let stopInfo = mkStopInfo res
-  let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList,rentalQuoteList) of
-        (Just estimates, _, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
-        (Nothing, Just quotes, Nothing) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
-        (Nothing, Nothing, Just quotes) -> map (mkQuoteEntitiesRental startInfo provider) quotes
+  let (quoteEntitiesList :: [QuoteEntities]) =
+        maybe [] (map (mkQuoteEntities startInfo stopInfo provider)) estimateList
+        <> maybe [] (map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider)) specialQuoteList
+        <> maybe [] (map (mkQuoteEntitiesRental startInfo provider)) rentalQuoteList
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
   let providerSpec =
@@ -221,8 +221,8 @@ mkQuoteEntitiesRental :: OS.StartInfo -> DM.Merchant -> DSearch.RentalQuoteInfo 
 mkQuoteEntitiesRental start provider it = do
   let variant = Common.castVariant it.vehicleVariant
       baseFare = OS.DecimalValue $ toRational it.baseFare
-      baseDistance = OS.DecimalValue $ toRational it.baseDistance
-      baseDuration = OS.DecimalValue $ toRational it.baseDuration
+      baseDistance = it.baseDistance
+      baseDuration = it.baseDuration
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -243,14 +243,14 @@ mkQuoteEntitiesRental start provider it = do
                   minimum_value = baseFare,
                   maximum_value = baseFare
                 },
-            tags = Just $ OS.TG [mkRentalTag]
+            tags = Just $ OS.TG [mkRentalTag baseDistance baseDuration]
           }
   QuoteEntities
     { fulfillment,
       item
     }
   where
-    mkRentalTag =
+    mkRentalTag baseDistance baseDuration =
       OS.TagGroup
         { display = False,
           code = "general_info",
@@ -260,7 +260,7 @@ mkQuoteEntitiesRental start provider it = do
                 { display = Just True,
                   code = Just "rental_base_duration",
                   name = Just "Base Duration",
-                  value = Just $ show baseFare.getMoney
+                  value = Just $ show baseDuration.getHours
                 },
               OS.Tag
                 { display = Just True,
