@@ -84,7 +84,7 @@ createRide' = createWithKV
 create :: MonadFlow m => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
+  _ <- Kernel.Prelude.whenJust ride.toLocation $ \toLoc -> whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
   createRide' ride
 
 createRide :: MonadFlow m => Ride -> m ()
@@ -522,6 +522,7 @@ instance FromTType' BeamR.Ride Ride where
             fareParametersId = Id <$> fareParametersId,
             driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
             trackingUrl = tUrl,
+            toLocation = Just toLocation,
             ..
           }
 
