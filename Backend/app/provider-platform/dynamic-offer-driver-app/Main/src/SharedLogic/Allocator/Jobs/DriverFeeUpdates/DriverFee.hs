@@ -47,7 +47,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (roundToHalf)
+import SharedLogic.DriverFee (calculatePlatformFeeAttr, roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Storage.Queries.DriverFee as QDF
@@ -236,13 +236,6 @@ processRestFee paymentMode DriverFee {..} = do
   QDF.create driverFee
   processDriverFee paymentMode driverFee
   updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
-
-calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
-calculatePlatformFeeAttr totalFee plan = do
-  let platformFee = totalFee / HighPrecMoney (toRational $ 1 + plan.cgstPercentage + plan.sgstPercentage) -- this should be changed to HighPrecMoney
-      cgst = HighPrecMoney (toRational plan.cgstPercentage) * platformFee
-      sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
-  (platformFee, cgst, sgst)
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do

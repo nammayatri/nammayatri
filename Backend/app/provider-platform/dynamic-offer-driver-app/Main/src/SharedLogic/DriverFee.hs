@@ -19,6 +19,7 @@ import qualified Data.List as DL
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
+import Domain.Types.Plan (Plan)
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.Beam.Functions
@@ -153,3 +154,10 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDr
 
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
+
+calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
+calculatePlatformFeeAttr totalFee plan = do
+  let platformFee = totalFee / HighPrecMoney (toRational $ 1 + plan.cgstPercentage + plan.sgstPercentage) -- this should be changed to HighPrecMoney
+      cgst = HighPrecMoney (toRational plan.cgstPercentage) * platformFee
+      sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
+  (platformFee, cgst, sgst)
