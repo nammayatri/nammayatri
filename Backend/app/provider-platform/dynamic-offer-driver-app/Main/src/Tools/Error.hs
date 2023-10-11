@@ -24,8 +24,6 @@ data RatingError
   = InvalidRatingValue
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''RatingError
-
 instance IsBaseError RatingError
 
 instance IsHTTPError RatingError where
@@ -33,6 +31,8 @@ instance IsHTTPError RatingError where
   toHttpCode InvalidRatingValue = E400
 
 instance IsAPIError RatingError
+
+instanceExceptionWithParent 'HTTPException ''RatingError
 
 data FarePolicyError
   = NoFarePolicy
