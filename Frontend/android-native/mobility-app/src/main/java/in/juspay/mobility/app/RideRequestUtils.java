@@ -317,13 +317,6 @@ public class RideRequestUtils {
     public static void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
         try{
             JSONObject zoneConfig = getZoneConfig(specialLocationTag,context);
-            holder.specialLocationTag.setCardBackgroundColor(Color.parseColor(zoneConfig.get("backgroundColor").toString()));
-            holder.zoneDot.setCardBackgroundColor(Color.parseColor(zoneConfig.get("textColor").toString()));
-            holder.zoneText.setText(zoneConfig.get("text").toString());
-            holder.zoneText.setTextColor(Color.parseColor(zoneConfig.get("textColor").toString()));
-            holder.fixedFareText.setText("No Cancellation");
-            holder.fixedFareText.setTextColor(Color.parseColor(zoneConfig.get("textColor").toString()));
-            holder.specialLocationTag.setVisibility(View.VISIBLE);
             holder.assetZonePickup.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
             holder.assetZoneDrop.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
             holder.assetZonePickup.setVisibility(zoneConfig.getInt("assetZonePickupVisibility"));

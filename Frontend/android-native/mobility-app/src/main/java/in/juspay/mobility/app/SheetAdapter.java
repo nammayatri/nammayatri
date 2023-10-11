@@ -66,11 +66,10 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, zoneText, fixedFareText, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        MaterialCardView specialLocationTag, zoneDot;
         LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag;
 
         public SheetViewHolder(@NonNull View itemView) {
@@ -83,6 +82,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             destinationArea = itemView.findViewById(R.id.destinationArea);
             destinationAddress = itemView.findViewById(R.id.journeyDestination);
             distanceToBeCovered = itemView.findViewById(R.id.distanceToBeCovered);
+            durationToPickup = itemView.findViewById(R.id.durationToPickup);
             acceptRejTimer = itemView.findViewById(R.id.acceptRejTimer);
             reqButton = itemView.findViewById(R.id.reqButton);
             rejectButton = itemView.findViewById(R.id.rejButton);
@@ -95,10 +95,6 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             customerTipText = itemView.findViewById(R.id.tip_text);
             accessibilityTagText = itemView.findViewById(R.id.accessibilityTagText);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
-            specialLocationTag = itemView.findViewById(R.id.specialLocationTag);
-            zoneText = itemView.findViewById(R.id.zoneText);
-            fixedFareText = itemView.findViewById(R.id.fixedFareText);
-            zoneDot = itemView.findViewById(R.id.zoneDot);
             assetZoneDrop = itemView.findViewById(R.id.assetZoneDrop);
             assetZonePickup = itemView.findViewById(R.id.assetZonePickup);
             sourcePinCode = itemView.findViewById(R.id.sourcePinCode);
@@ -108,6 +104,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rideTypeTag = itemView.findViewById(R.id.rideTypeTag);
             rideTypeText = itemView.findViewById(R.id.rideTypeText);
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);
+            durationToPickupImage = itemView.findViewById(R.id.durationToPickupImage);
         }
     }
 

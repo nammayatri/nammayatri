@@ -122,42 +122,6 @@
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
                                         android:orientation="horizontal">
-
-                                        <TextView
-                                            android:id="@+id/zoneText"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:textSize="11dp"
-                                            android:layout_marginLeft="5dp"
-                                            android:gravity="center"
-                                            android:textColor="#0066FF"
-                                            android:textFontWeight="600"
-                                            android:fontFamily="@font/plus_jakartasans_semibold"
-                                            android:text="Metro Ride "/>
-
-                                        <com.google.android.material.card.MaterialCardView
-                                            android:id="@+id/zoneDot"
-                                            android:layout_width="4dp"
-                                            android:layout_height="4dp"
-                                            android:layout_gravity="center"
-                                            app:cardBackgroundColor="#0066FF"
-                                            android:theme="@style/Theme.MaterialComponents.Light"
-                                            app:cardCornerRadius="10dp"
-                                            app:cardElevation="0dp"
-                                            android:layout_marginLeft="5dp"/>
-
-                                        <TextView
-                                            android:id="@+id/fixedFareText"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:textSize="11dp"
-                                            android:layout_marginLeft="5dp"
-                                            android:textColor="#0066FF"
-                                            android:gravity="center"
-                                            android:singleLine="false"
-                                            android:textFontWeight="600"
-                                            android:fontFamily="@font/plus_jakartasans_semibold"
-                                            android:text="No Cancellation"/>
                                     </LinearLayout>
 
                                 </com.google.android.material.card.MaterialCardView>
