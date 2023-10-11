@@ -662,5 +662,9 @@ const frenchStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "",
   AC_CAB : "Cabine AC",
   AC_SUV : "SUV climatisé",
-  DOWNGRADE_VEHICLE : "véhicule déclassé"
+  DOWNGRADE_VEHICLE : "véhicule déclassé",
+  ECONOMICAL : "Économique",
+	SPACIOUS : "Spacieux",
+	COMFY : "Confortable",
+	PEOPLE : "personnes"
 }

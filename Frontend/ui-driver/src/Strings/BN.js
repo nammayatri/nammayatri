@@ -843,5 +843,9 @@ const bengaliStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "রাইড উভয়ই নিতে পারবেন",
 	AC_CAB : "এসি ক্যাব",
   	AC_SUV : "এসি এসইউভি",
-	DOWNGRADE_VEHICLE : "ডাউনগ্রেড যানবাহন"
+	DOWNGRADE_VEHICLE : "ডাউনগ্রেড যানবাহন",
+	ECONOMICAL : "অর্থনৈতিক",
+	SPACIOUS : "প্রশস্ত",
+	COMFY : "আরামদায়ক",
+	PEOPLE : "মানুষ"
 }

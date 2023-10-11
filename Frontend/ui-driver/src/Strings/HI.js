@@ -855,5 +855,9 @@ const hindiStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "की सवारी दोनों ले सकेंगे",
   AC_CAB : "एसी कैब",
   AC_SUV : "एसी एसयूवी",
-  DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन"
+  DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन",
+  ECONOMICAL : "किफ़ायती",
+	SPACIOUS : "विशाल",
+	COMFY : "आरामदायक",
+	PEOPLE : "लोग"
 }

@@ -856,5 +856,9 @@ const englishStrings = {
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "rides",
   AC_CAB : "AC Cab",
   AC_SUV : "AC SUV",
-  DOWNGRADE_VEHICLE : "Downgrade Vehicle"
+  DOWNGRADE_VEHICLE : "Downgrade Vehicle",
+  ECONOMICAL : "Economical",
+  SPACIOUS : "Spacious",
+  COMFY : "Comfy",
+  PEOPLE : "people"
 } 

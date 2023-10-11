@@ -870,7 +870,10 @@ data STR = LETS_GET_STARTED
         | AC_CAB
         | AC_SUV
         | DOWNGRADE_VEHICLE
-
+        | ECONOMICAL
+        | SPACIOUS
+        | COMFY
+        | PEOPLE
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1729,3 +1732,7 @@ getStringFromEnum key = case key of
     AC_CAB -> "AC_CAB"
     AC_SUV -> "AC_SUV"
     DOWNGRADE_VEHICLE -> "DOWNGRADE_VEHICLE"
+    ECONOMICAL -> "ECONOMICAL"
+    SPACIOUS -> "SPACIOUS"
+    COMFY -> "COMFY"
+    PEOPLE -> "PEOPLE"
