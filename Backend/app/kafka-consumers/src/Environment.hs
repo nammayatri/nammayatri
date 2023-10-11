@@ -19,11 +19,13 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer hiding (OffsetReset (..), offsetReset)
 import qualified Kafka.Consumer as Consumer
+import qualified Kernel.Prelude as P (maybe, throwIO)
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Tables)
+import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -81,7 +83,7 @@ data ConsumerType
   | PERSON_STATS
   | RIDER_BECKN_REQUEST
   | DRIVER_BECKN_REQUEST
-  deriving (Generic, FromDhall, Read)
+  deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -116,7 +118,7 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     tables :: Tables,
-    s3Config :: S3Config
+    s3Config :: Maybe S3Config
   }
   deriving (Generic, FromDhall)
 
@@ -166,5 +168,16 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  let s3Env = buildS3Env s3Config
+  s3Env <-
+    if consumerType `elem` [RIDER_BECKN_REQUEST, DRIVER_BECKN_REQUEST]
+      then do
+        P.maybe (P.throwIO $ InternalError "s3Config required for this consumer type") (pure . buildS3Env) s3Config
+      else do
+        whenJust s3Config $ const (P.throwIO $ InternalError "s3Config not required for this consumer type")
+        pure
+          S3Env
+            { pathPrefix = "",
+              getH = \_ -> P.throwIO $ InternalError "s3Config not provided for this consumer type",
+              putH = \_ _ -> P.throwIO $ InternalError "s3Config not provided for this consumer type"
+            }
   pure $ AppEnv {..}
