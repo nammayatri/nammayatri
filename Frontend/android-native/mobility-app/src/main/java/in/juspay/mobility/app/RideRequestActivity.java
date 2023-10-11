@@ -56,6 +56,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private SharedPreferences sharedPref;
+    private String key = "";
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -65,6 +66,7 @@ public class RideRequestActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         instance = this;
+        key = getApplicationContext().getResources().getString(R.string.service);
         setContentView(R.layout.activity_ride_request);
         viewPager2 = findViewById(R.id.viewPager);
         sheetAdapter.setViewPager(viewPager2);
@@ -85,6 +87,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
             float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
             float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+            String durationToPickup = rideRequestBundle.getString("durationToPickup");
             DecimalFormat df = new DecimalFormat();
             df.setMaximumFractionDigits(2);
             @SuppressLint("SimpleDateFormat") final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
@@ -98,6 +101,7 @@ public class RideRequestActivity extends AppCompatActivity {
             int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     (df.format(distanceTobeCovered / 1000)),
+                    (df.format(Integer.parseInt(durationToPickup)/ 60)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
                     rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
@@ -146,6 +150,14 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+            if( key.equals("yatrisathiprovider") ){
+                holder.durationToPickup.setVisibility(View.VISIBLE);
+                holder.durationToPickupImage.setVisibility(View.VISIBLE);
+                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+            } else {
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE);
+            }
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -166,7 +178,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.destinationAddress.setMaxLines(2);
                 holder.destinationPinCode.setVisibility(View.GONE);
             }
-            if (holder.specialLocationTag != null){
+            if (model.getspecialLocationTag() != null){
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
             }
             if (model.getDriverMaxExtraFee() == 0) {
