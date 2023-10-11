@@ -169,6 +169,7 @@ joinPlanButtonConfig state = let
       , height = (V 48)
       , cornerRadius = 8.0
       , id = "JoinPlanPrimaryButton"
+      , visibility = GONE
       , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
       , margin = (MarginBottom 16)
       }

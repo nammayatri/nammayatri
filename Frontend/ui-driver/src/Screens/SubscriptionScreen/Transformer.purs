@@ -19,6 +19,7 @@ module Screens.SubscriptionScreen.Transformer where
 
 import Prelude
 
+import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Data.Array (cons, (!!), length)
 import Data.Array as DA
@@ -26,10 +27,11 @@ import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
+import Helpers.Utils (getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (KeyValType, PromoConfig, SubscriptionScreenState, PlanCardConfig)
-import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
+import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 
 type PlanData = {
@@ -64,11 +66,7 @@ myPlanListTransformer planEntity isLocalized' = do
 
 planListTransformer :: UiPlansResp -> Array PlanCardConfig
 planListTransformer (UiPlansResp planResp) =
-    let planEntityArray = planResp.list
-        plansplit = DA.partition (\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray
-        sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
-        isLocalized = fromMaybe false planResp.isLocalized 
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized ) sortedPlanEntityList
+    [dummyIntroductoryConfig Language]
 
 decodeOfferDescription :: String -> String
 decodeOfferDescription str = do
@@ -192,3 +190,28 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized =
             freeRideCount : planEntity.freeRideCount,
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
+
+dummyIntroductoryConfig :: LazyCheck -> PlanCardConfig
+dummyIntroductoryConfig lazy =  {
+    id : "dummy",
+    title : getString DAILY_PER_RIDE,
+    description : "",
+    isSelected : true,
+    frequency : "PER_RIDE",
+    freeRideCount : 0,
+    offers : [introductoryOfferConfig Language],
+    priceBreakup : [PaymentBreakUp{amount: 10.0, component: "FINAL_FEE"}],
+    showOffer : true
+} 
+
+introductoryOfferConfig :: LazyCheck -> PromoConfig
+introductoryOfferConfig lazy = 
+    {  
+    title : Just $ getString INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON,
+    isGradient : true,
+    gradient : [Color.blue600, Color.blue600],
+    hasImage : true,
+    imageURL : "ny_ic_discount," <> (getAssetStoreLink FunctionCall) <> "ny_ic_discount.png",
+    offerDescription : Just $ getString NO_CHARGES_TILL,
+    addedFromUI : false
+    }

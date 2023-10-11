@@ -831,5 +831,11 @@ const kannadaStrings = {
   ECONOMICAL : "ಆರ್ಥಿಕ",
 	SPACIOUS : "ವಿಶಾಲವಾದ",
 	COMFY : "ಆರಾಮದಾಯಕ",
-	PEOPLE : "ಜನರು"
+	PEOPLE : "ಜನರು",
+  WHAT_ARE_PURPLE_RIDES : "ಪರ್ಪಲ್ ರೈಡ್ಸ್ ಎಂದರೇನು?",
+  GET_READY_FOR_YS_SUBSCRIPTION : "ಯಾತ್ರಿ ಸತಿ ಯೋಜನೆಗಳಿಗೆ ಸಿದ್ಧರಾಗಿ!",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "ವಿಶೇಷ ಕೊಡುಗೆಗಳಿಗಾಗಿ ಮುಂಚಿತವಾಗಿ ಸೈನ್ ಅಪ್ ಮಾಡಿ",
+  GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
+  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
 }

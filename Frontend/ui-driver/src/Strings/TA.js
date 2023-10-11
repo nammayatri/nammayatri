@@ -829,5 +829,11 @@ const tamilStrings = {
   ECONOMICAL: "பொருளாதாரம்",
   SPACIOUS: "விசாலமான",
   COMFY: "வசதியான",
-  PEOPLE: "மக்கள்"
+  PEOPLE: "மக்கள்",
+  WHAT_ARE_PURPLE_RIDES : "பர்பிள் சவாரிகள் என்றால் என்ன?",
+  GET_READY_FOR_YS_SUBSCRIPTION : "யாத்ரி சதி திட்டங்களுக்கு தயாராகுங்கள்!",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "சிறப்புச் சலுகைகளுக்கு முன்கூட்டியே பதிவுசெய்க",
+  GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
+  NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
 }

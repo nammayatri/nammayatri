@@ -1,6 +1,7 @@
 module Screens.SubscriptionScreen.Controller where
 
 import Debug
+
 import Common.Types.App (APIPaymentStatus, LazyCheck(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.OptionsMenu as OptionsMenu
@@ -30,7 +31,7 @@ import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, dummyIntroductoryConfig, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), KioskLocationRes(..))
 import Services.Backend (getCorrespondingErrorMessage)
@@ -64,7 +65,7 @@ data Action = BackPressed
             | CancelAutoPayAC
             | ViewAutopayDetails
             | ResumeAutoPay PrimaryButton.Action
-            | LoadPlans UiPlansResp
+            | LoadPlans
             | LoadHelpCentre Number Number (Array KioskLocationRes)
             | LoadMyPlans GetCurrentPlanResp
             | ShowError ErrorResponse
@@ -108,7 +109,6 @@ eval BackPressed state =
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
-  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -206,8 +206,6 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   let newState = state{props{optionsMenuState = ALL_COLLAPSED}}
   _ <- pure $ spy "screeen" screen
   if screen == "Join" then continue state
-  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
-    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
             "Rides" -> exit $ RideHistory newState
@@ -230,14 +228,10 @@ eval (OpenGoogleMap dstLt dstLn) state = updateAndExit state { props{showShimmer
 
 eval RefreshPage state = exit $ Refresh
 
-eval (LoadPlans plans) state = do
-  let (UiPlansResp planResp) = plans
-  _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
+eval (LoadPlans) state = do
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans,
-                            subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
-      props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans else state.props.joinPlanProps.selectedPlanItem}} }
+      data{ joinPlanData {allPlans = [dummyIntroductoryConfig Language]}},
+      props{showShimmer = false, subView = JoinPlan}} 
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -296,7 +290,7 @@ eval (RetryPaymentAC PrimaryButton.OnClick) state = if state.data.myPlanData.pla
   updateAndExit state $ RetryPayment state state.data.myPlanData.planEntity.id
 
 eval CallSupport state = do
-  _ <- pure $ showDialer "08069490091" false
+  _ <- pure $ showDialer "033-44400030" false
   continue state
 
 eval (CallHelpCenter phone) state = do

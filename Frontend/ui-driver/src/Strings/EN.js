@@ -657,7 +657,7 @@ const englishStrings = {
   CANCEL_AUTOPAY_STR : "Cancel Autopay",
   WE_MIGHT_BE_LOST : "Uh oh! We might be lost",
   EXEPERIENCING_ERROR : "Experiencing error",
-  ENJOY_THESE_BENEFITS : "Enjoy these benefits ",
+  ENJOY_THESE_BENEFITS : "Your joining benefits",
   CHOOSE_YOUR_PLAN : "Choose a Plan Now!",
   SKIP_FOR_NOW : "Skip For Now",
 	NAMMAYATRI_PLANS  : "Namma Yatri Plans",
@@ -733,7 +733,7 @@ const englishStrings = {
   REFRESH_STR : "Check Status",
   TRANSACTION_DETAILS : "Transaction Details",
   RIDE_DETAILS : "Ride Details",
-  NAMMA_YATRI_PLANS : "Namma Yatri Plans",
+  NAMMA_YATRI_PLANS : "Yatri Sathi Plans",
   SWITCH_TO : "Switch to",
   PLEASE_TRY_AGAIN : "Please try again",
   PLAN_NOT_FOUND : "Plan not found",
@@ -860,5 +860,10 @@ const englishStrings = {
   ECONOMICAL : "Economical",
   SPACIOUS : "Spacious",
   COMFY : "Comfy",
-  PEOPLE : "people"
+  PEOPLE : "people",
+  GET_READY_FOR_YS_SUBSCRIPTION : "Get ready for\nYatri Sathi Plans!",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "Signup early for special offers",
+  GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
+  NO_CHARGES_TILL : "No charges till Dec 31"
 } 
