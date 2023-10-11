@@ -182,8 +182,12 @@ createIssueReport (driverId, merchantId) Common.IssueReportReq {..} = do
   _ <- QIR.create issueReport
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   ticket <- buildTicket issueReport category mbOption mbRide merchant.shortId mediaFileUrls
-  ticketResponse <- createTicket merchantId ticket
-  QIR.updateTicketId issueReport.id ticketResponse.ticketId
+  ticketResponse <- try @_ @SomeException (createTicket merchantId ticket)
+  case ticketResponse of
+    Right ticketResponse' -> do
+      QIR.updateTicketId issueReport.id ticketResponse'.ticketId
+    Left err -> do
+      logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = cast issueReport.id}
   where
     mkIssueReport = do
