@@ -50,7 +50,10 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "rider-app-events-updates" ], consumerProperties }
+      { topicNames = [ "rider-app-events-updates" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Default
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }

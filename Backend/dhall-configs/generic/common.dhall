@@ -42,6 +42,8 @@ let eventStreamNameType =
 let streamConfig =
       < KafkaStream : kafkaConfig | LogStream : Text | PrometheusStream : Text >
 
+let kafkaOffsetResetConfig = < Earliest | Latest | Default >
+
 let eventType =
       < RideCreated
       | RideStarted
@@ -90,4 +92,5 @@ in  { smsSessionConfig
     , eventStreamNameType
     , eventType
     , schedulerType = SchedulerType
+    , kafkaOffsetResetConfig
     }

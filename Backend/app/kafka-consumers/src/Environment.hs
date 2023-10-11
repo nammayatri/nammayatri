@@ -17,7 +17,8 @@ module Environment where
 import AWS.S3
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
-import Kafka.Consumer
+import Kafka.Consumer hiding (OffsetReset (..), offsetReset)
+import qualified Kafka.Consumer as Consumer
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
@@ -35,15 +36,25 @@ import System.Environment (lookupEnv)
 import Prelude (show)
 
 data ConsumerConfig = ConsumerConfig
-  { topicNames :: [TopicName],
-    consumerProperties :: !ConsumerProperties
+  { topicNames :: [Consumer.TopicName],
+    offsetReset :: !(Maybe Consumer.OffsetReset),
+    consumerProperties :: !Consumer.ConsumerProperties
   }
+
+data OffsetResetConfig = Earliest | Latest | Default
+  deriving (Generic, FromDhall)
+
+castOffsetReset :: OffsetResetConfig -> Maybe Consumer.OffsetReset
+castOffsetReset Earliest = Just Consumer.Earliest
+castOffsetReset Latest = Just Consumer.Latest
+castOffsetReset Default = Nothing
 
 instance FromDhall ConsumerConfig where
   autoWith _ =
     record
       ( ConsumerConfig
           <$> field "topicNames" (map TopicName <$> list strictText)
+          <*> field "offsetReset" (castOffsetReset <$> auto @OffsetResetConfig)
           <*> field "consumerProperties" customeDecoder
       )
     where

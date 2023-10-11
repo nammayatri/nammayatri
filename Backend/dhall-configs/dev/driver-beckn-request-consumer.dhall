@@ -50,7 +50,10 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "driver-beckn-request" ], consumerProperties }
+      { topicNames = [ "driver-beckn-request" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Earliest
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }

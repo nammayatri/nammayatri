@@ -33,7 +33,7 @@ import System.Environment (lookupEnv)
 startKafkaConsumer :: IO ()
 startKafkaConsumer = do
   consumerType :: ConsumerType <- read . fromMaybe "AVAILABILITY_TIME" <$> lookupEnv "CONSUMER_TYPE"
-  configFile <- CF.getConfigNameFromConsumertype consumerType
+  configFile <- CF.getConfigNameFromConsumerType consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
   startConsumerWithEnv appCfg appEnv
@@ -58,25 +58,21 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
       )
     CF.runConsumer flowRt appEnv consumerType kafkaConsumer
   where
-    newKafkaConsumer = case appEnv.consumerType of
-      RIDER_BECKN_REQUEST -> becknRequestConsumer
-      DRIVER_BECKN_REQUEST -> becknRequestConsumer
-      _ ->
-        either (error . ("Unable to open a kafka consumer: " <>) . show) id
-          <$> Consumer.newConsumer
-            (kafkaConsumerCfg.consumerProperties)
-            (Consumer.topics kafkaConsumerCfg.topicNames)
+    newKafkaConsumer = do
+      consumerTopicNames <- case appEnv.consumerType of
+        RIDER_BECKN_REQUEST -> buildBecknRequestConsumerTopics
+        DRIVER_BECKN_REQUEST -> buildBecknRequestConsumerTopics
+        _ -> pure kafkaConsumerCfg.topicNames
+      either (error . ("Unable to open a kafka consumer: " <>) . show) id
+        <$> Consumer.newConsumer
+          (kafkaConsumerCfg.consumerProperties)
+          (Consumer.topics consumerTopicNames <> maybe mempty Consumer.offsetReset kafkaConsumerCfg.offsetReset)
 
-    becknRequestConsumer = do
+    buildBecknRequestConsumerTopics = do
       now <- getCurrentTime
       let currentTopicNumber = BR.countTopicNumber now
       let topicNumbers = filter (/= currentTopicNumber) [0 .. 23 :: Int]
       let topicNameTemplate = case kafkaConsumerCfg.topicNames of
             [tn] -> tn
             _ -> error "Should be exactly one topic name"
-      let topicNames = Consumer.TopicName . ((Consumer.unTopicName topicNameTemplate <> "_") <>) . show <$> topicNumbers
-
-      either (error . ("Unable to open a kafka consumer: " <>) . show) id
-        <$> Consumer.newConsumer
-          (kafkaConsumerCfg.consumerProperties)
-          (Consumer.topics topicNames <> Consumer.offsetReset Consumer.Earliest)
+      pure $ Consumer.TopicName . ((Consumer.unTopicName topicNameTemplate <> "_") <>) . show <$> topicNumbers
