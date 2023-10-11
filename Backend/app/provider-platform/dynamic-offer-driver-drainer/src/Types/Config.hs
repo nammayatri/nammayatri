@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
+
 module Types.Config where
 
 import EulerHS.Extra.Aeson
