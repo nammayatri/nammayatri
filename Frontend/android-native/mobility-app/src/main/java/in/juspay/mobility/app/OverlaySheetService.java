@@ -204,6 +204,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
+
+            if( key.equals("yatrisathiprovider") ){
+                holder.durationToPickup.setVisibility(View.VISIBLE);
+                holder.durationToPickupImage.setVisibility(View.VISIBLE);
+                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+            } else {
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE);
+            }
+
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -224,7 +234,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.destinationAddress.setMaxLines(2);
                 holder.destinationPinCode.setVisibility(View.GONE);
             }
-            if (holder.specialLocationTag != null && model.getspecialLocationTag() != null) {
+            if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
             if (model.getDriverMaxExtraFee() == 0) {
@@ -489,6 +499,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String sourceArea = rideRequestBundle.getString("sourceArea");
                     String destinationArea = rideRequestBundle.getString("destinationArea");
                     int driverMaxExtraFee = rideRequestBundle.getInt("driverMaxExtraFee");
+                    String durationToPickup = rideRequestBundle.getString("durationToPickup");
                     int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
                     int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
                     String specialLocationTag = rideRequestBundle.getString("specialLocationTag");
@@ -512,6 +523,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             (df.format(distanceTobeCovered / 1000)),
+                            (df.format(Integer.parseInt(durationToPickup)/ 60)),
                             addressPickUp,
                             addressDrop,
                             baseFare,
