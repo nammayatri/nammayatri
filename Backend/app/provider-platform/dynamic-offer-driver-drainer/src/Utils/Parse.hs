@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
+
 module Utils.Parse where
 
 import Data.Aeson as A
