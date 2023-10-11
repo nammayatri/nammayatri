@@ -332,7 +332,7 @@ disabilityBannerConfig state =
       , titleColor = Color.purple
       , actionText = (getString UPDATE_PROFILE)
       , actionTextColor = Color.purple
-      , imageUrl = "ny_ic_accessibility_banner_img,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_accessibility_banner_img.png"
+      , imageUrl = "ny_ic_accessibility_banner_img,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_accessibility_banner_img.png"
       , stroke = "1,"<> Color.fadedPurple
       }
   in config'
