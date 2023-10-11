@@ -237,7 +237,7 @@ updateProfile (GetProfileRes profile) state = do
                                               , selectedDisability = disability
                                               , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
-  continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email
+  continue state { data { name = name, editedName = name, gender = gender,editedGender = gender, emailId = profile.email
                         , hasDisability = hasDisability
                         , disabilityType = disability
                         , editedDisabilityOptions = disabilityOptions

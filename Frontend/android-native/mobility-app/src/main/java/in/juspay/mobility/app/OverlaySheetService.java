@@ -881,7 +881,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (i < sheetArrayList.size()) {
                     vehicleVariantList.get(i).setVisibility(View.VISIBLE);
                     String variant = sheetArrayList.get(i).getRequestedVehicleVariant();
-                    if (variant == NotificationUtils.NO_VARIANT){
+                    if (variant == NotificationUtils.NO_VARIANT || key.equals("yatrisathiprovider")){
                         vehicleVariantList.get(i).setVisibility(View.GONE);
                     }else {
                         vehicleVariantList.get(i).setText(variant);
