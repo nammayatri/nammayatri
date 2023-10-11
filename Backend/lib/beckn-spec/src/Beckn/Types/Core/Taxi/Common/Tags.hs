@@ -18,8 +18,9 @@ module Beckn.Types.Core.Taxi.Common.Tags
 where
 
 import Data.Aeson
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Char (isDigit)
-import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -57,10 +58,10 @@ data Tag = Tag
 newtype TagGroups = TG [TagGroup] deriving (Show, Generic, ToSchema)
 
 instance ToJSON TagGroups where
-  toJSON (TG abc) = Object $ HashMap.fromList $ map convertKey (convertToList abc)
+  toJSON (TG abc) = Object $ AKM.fromList $ map convertKey (convertToList abc)
     where
-      convertKey :: (String, Value) -> (T.Text, Value)
-      convertKey (key, value) = (T.pack key, value)
+      convertKey :: (String, Value) -> (AesonKey.Key, Value)
+      convertKey (key, value) = (AesonKey.fromText $ T.pack key, value)
 
 instance FromJSON TagGroups where
   parseJSON (Object obj) = return $ extractTagGroups obj
@@ -102,7 +103,7 @@ extractTagGroups obj =
    in TG $ map (extractTagGroup obj) groupIndices
 
 getGroupIndices :: Object -> [Int]
-getGroupIndices = nub . mapMaybe extractInteger . HashMap.keys
+getGroupIndices = nub . mapMaybe extractInteger . map AesonKey.toText . AKM.keys
   where
     extractInteger :: T.Text -> Maybe Int
     extractInteger key =
@@ -133,7 +134,7 @@ extractTagList obj groupIndex =
 getTagListIndices :: Object -> Int -> [Int]
 getTagListIndices obj groupIndex =
   let listKey = "groups/" ++ show groupIndex ++ "/list"
-      indices = mapMaybe extractInteger (HashMap.keys obj)
+      indices = mapMaybe extractInteger . map AesonKey.toText . AKM.keys $ obj
    in filter (isTagListIndex obj (T.pack listKey)) indices
   where
     extractInteger :: T.Text -> Maybe Int
@@ -146,10 +147,10 @@ getTagListIndices obj groupIndex =
 isTagListIndex :: Object -> T.Text -> Int -> Bool
 isTagListIndex obj listKey idx =
   let listIdxKey = listKey <> "/" <> T.pack (show idx)
-      hasDisplay = HashMap.member (listIdxKey <> "/display") obj
-      hasCode = HashMap.member (listIdxKey <> "/code") obj
-      hasName = HashMap.member (listIdxKey <> "/name") obj
-      hasValue = HashMap.member (listIdxKey <> "/value") obj
+      hasDisplay = AKM.member (AesonKey.fromText (listIdxKey <> "/display")) obj
+      hasCode = AKM.member (AesonKey.fromText (listIdxKey <> "/code")) obj
+      hasName = AKM.member (AesonKey.fromText (listIdxKey <> "/name")) obj
+      hasValue = AKM.member (AesonKey.fromText (listIdxKey <> "/value")) obj
    in hasDisplay && hasCode && hasName && hasValue
 
 extractTag :: Object -> T.Text -> Int -> Tag
@@ -168,7 +169,7 @@ extractTag obj listKey listIndex =
 
 extractStringValue :: Object -> String -> String
 extractStringValue obj key =
-  case HashMap.lookup (T.pack key) obj of
+  case AKM.lookup (AesonKey.fromText $ T.pack key) obj of
     Just (String value) -> T.unpack value
     _ -> ""
 

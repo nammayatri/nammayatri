@@ -5,10 +5,11 @@ module DBSync.Update where
 
 import Config.Env
 import Data.Aeson as A
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
-import Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
 import Data.Text as T
@@ -218,7 +219,7 @@ getDbUpdateDataJson model a =
     ]
 
 updValToJSON :: [(Text, A.Value)] -> A.Value
-updValToJSON keyValuePairs = A.Object $ HM.fromList keyValuePairs
+updValToJSON keyValuePairs = A.Object $ AKM.fromList . map (first AesonKey.fromText) $ keyValuePairs
 
 getPKeyandValuesList :: Text -> [(Text, A.Value)]
 getPKeyandValuesList pKeyAndValue = go (splitOn "_" pKeyTrimmed) []
