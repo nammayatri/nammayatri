@@ -20,10 +20,11 @@ module Lib.Scheduler.JobStorageType.Redis.Queries where
 
 import Control.Concurrent (myThreadId)
 import qualified Data.Aeson as A
-import qualified Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.Aeson.Key as AesonKey
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict as HM hiding (map)
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import Data.Text.Encoding as DT
 import qualified EulerHS.Language as L
@@ -89,7 +90,7 @@ getReadyTasks _ = do
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
-  let parsedJobs = map (DA.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
+  let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
   case sequence parsedJobs of
     Right jobs -> return $ zip jobs recordIds
     Left err -> do
@@ -142,11 +143,11 @@ markAsFailed _ = pure ()
 updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
 updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
 
-updateKey :: Text -> Text -> Value -> Value
+updateKey :: AesonKey.Key -> Text -> Value -> Value
 updateKey key newString (A.Object obj) =
   let updateKey' (A.String _) = A.String newString
       updateKey' other = other
-   in A.Object $ HM.adjust updateKey' key obj
+   in A.Object $ AKM.fromHashMap . HMS.adjust updateKey' key . AKM.toHashMap $ obj
 updateKey _ _ other = other
 
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
