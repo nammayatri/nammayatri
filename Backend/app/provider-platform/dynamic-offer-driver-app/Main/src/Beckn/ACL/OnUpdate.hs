@@ -140,32 +140,65 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
           { _type = "OTP",
             token = ride.otp
           }
-  pure $
-    RideAssignedOU.FulfillmentInfo
-      { id = ride.id.getId,
-        start =
-          RideAssignedOU.StartInfo
-            { authorization =
-                case booking.bookingType of
-                  DRB.SpecialZoneBooking -> Just authorization
-                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
-              location =
-                RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-                  }
-            },
-        end =
-          RideAssignedOU.EndInfo
-            { location =
-                RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon} -- assuming locations will always be in correct order in list
-                  }
-            },
-        agent,
-        _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
-        vehicle = veh,
-        ..
-      }
+  case booking.bookingDetails of
+        DRB.BookingDetailsOnDemand {..} ->
+          pure $
+            RideAssignedOU.FulfillmentInfo
+              { id = ride.id.getId,
+                start =
+                  RideAssignedOU.StartInfo
+                    { authorization =
+                        case booking.bookingType of
+                          DRB.SpecialZoneBooking -> Just authorization
+                          DRB.NormalBooking -> Just authorization -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+                          DRB.RentalBooking -> Just authorization,
+                      location =
+                        RideAssignedOU.Location
+                          { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                          }
+                    },
+                end =
+                  Just $ RideAssignedOU.EndInfo
+                    { location =
+                        RideAssignedOU.Location
+                          { gps = RideAssignedOU.Gps {lat = toLocation.lat, lon = toLocation.lon} -- assuming locations will always be in correct order in list
+                          }
+                    },
+                agent,
+                _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
+                vehicle = veh,
+                ..
+              }
+        DRB.BookingDetailsRental {..} ->
+          pure $ RideAssignedOU.FulfillmentInfo
+              { id = ride.id.getId,
+                start =
+                  RideAssignedOU.StartInfo
+                    { authorization =
+                        case booking.bookingType of
+                          DRB.SpecialZoneBooking -> Just authorization
+                          DRB.NormalBooking -> Just authorization -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+                          DRB.RentalBooking -> Just authorization,
+                      location =
+                        RideAssignedOU.Location
+                          { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                          }
+                    },
+                end = rentalToLocation <&> (\toLoc ->
+                  RideAssignedOU.EndInfo
+                    { location =
+                        RideAssignedOU.Location
+                          { gps = RideAssignedOU.Gps {lat = toLoc.lat, lon = toLoc.lon} -- assuming locations will always be in correct order in list
+                          }
+                    }),
+                agent,
+                _type = case booking.bookingType of
+                            DRB.NormalBooking -> RideAssignedOU.RIDE
+                            DRB.SpecialZoneBooking -> RideAssignedOU.RIDE_OTP
+                            DRB.RentalBooking -> RideAssignedOU.RENTAL,
+                vehicle = veh,
+                ..
+              }
 
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
