@@ -15,6 +15,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Person as QP
 
 type API = IMD.DashboardIssueAPI

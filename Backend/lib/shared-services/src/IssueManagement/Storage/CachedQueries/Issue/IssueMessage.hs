@@ -27,6 +27,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 
 findById :: (CacheFlow m r, BeamFlow m) => Id IssueMessage -> Identifier -> m (Maybe IssueMessage)
 findById issueMessageId identifier =

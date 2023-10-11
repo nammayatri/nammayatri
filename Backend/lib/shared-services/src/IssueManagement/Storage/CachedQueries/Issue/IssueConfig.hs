@@ -22,6 +22,7 @@ import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as Queries
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Utils.Common (CacheFlow)
 
 findIssueConfig :: (CacheFlow m r, BeamFlow m) => Identifier -> m (Maybe IssueConfig)
 findIssueConfig identifier =

@@ -26,7 +26,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (CacheFlow, fromMaybeM, throwError)
 
 newtype ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person)
@@ -65,7 +65,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
   issues <- mapM mkIssueReport issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
-    mkIssueReport :: (CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
+    mkIssueReport :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       pure $
@@ -113,7 +113,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
         createdAt = issueReport.createdAt
       }
   where
-    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, EncFlow m r) => Person -> m Common.PersonDetail
+    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, BeamFlow m) => Person -> m Common.PersonDetail
     mkPersonDetail personDetail = do
       mobileNumber <- traverse decrypt personDetail.mobileNumber
       pure $
@@ -194,7 +194,7 @@ issueAddComment _merchantShortId issueReportId req = do
             createdAt = now
           }
 
-issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m) => ShortId Merchant -> Text -> m Text
+issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m) => ShortId Merchant -> Text -> m Text
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 

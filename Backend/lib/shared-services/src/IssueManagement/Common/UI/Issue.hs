@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Common.UI.Issue
   ( module IssueManagement.Common.UI.Issue,
@@ -8,7 +7,7 @@ module IssueManagement.Common.UI.Issue
 where
 
 import Data.Aeson
-import Data.OpenApi (ToParamSchema, ToSchema)
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
@@ -22,9 +21,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant hiding (Summary)
-import SharedService.Common as Reexport
 import Text.Read (read)
 
 type IssueCreateAPI =

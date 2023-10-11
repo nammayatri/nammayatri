@@ -16,12 +16,11 @@
 
 module IssueManagement.Storage.Beam.MediaFile where
 
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import Kernel.Prelude
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import IssueManagement.Tools.UtilsTH hiding (Generic)
+import Kernel.Prelude
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,

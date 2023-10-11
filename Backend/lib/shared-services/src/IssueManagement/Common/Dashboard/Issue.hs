@@ -21,7 +21,6 @@ import Kernel.Types.CacheFlow as Reexport
 import Kernel.Types.Common
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Types.Id
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

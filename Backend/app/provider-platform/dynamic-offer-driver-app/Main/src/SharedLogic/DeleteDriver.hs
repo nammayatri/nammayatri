@@ -23,6 +23,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation

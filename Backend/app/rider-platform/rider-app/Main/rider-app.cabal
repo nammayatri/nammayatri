@@ -244,9 +244,9 @@ library
       Storage.Beam.Geometry
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.IssueManagement
       Storage.Beam.Location
       Storage.Beam.LocationMapping
-      Storage.Beam.IssueManagement
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage

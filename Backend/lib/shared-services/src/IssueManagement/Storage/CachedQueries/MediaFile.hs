@@ -20,11 +20,11 @@ import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueReport (IssueReport)
 import IssueManagement.Domain.Types.MediaFile
 import IssueManagement.Storage.BeamFlow
-import IssueManagement.Storage.CachedQueries.CacheConfig
 import qualified IssueManagement.Storage.Queries.MediaFile as Queries
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 findById :: (CacheFlow m r, BeamFlow m) => Id MediaFile -> Identifier -> m (Maybe MediaFile)
 findById mediaFileId identifier =

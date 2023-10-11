@@ -34,8 +34,9 @@ data IssueReportT f = IssueReportT
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
-    createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime,
+    chats :: B.C f [Domain.Chat]
   }
   deriving (Generic, B.Beamable)
 

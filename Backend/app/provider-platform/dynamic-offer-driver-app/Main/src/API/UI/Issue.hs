@@ -22,6 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.External.LocationTrackingService.Types
+import Storage.Beam.IssueManagement ()
 import Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QP

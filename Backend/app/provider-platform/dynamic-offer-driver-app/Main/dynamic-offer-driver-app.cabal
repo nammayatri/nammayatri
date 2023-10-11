@@ -347,6 +347,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
+      Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfig
@@ -466,7 +467,6 @@ library
       Storage.Queries.Instances.DriverInformation
       Storage.Queries.Instances.Person
       Storage.Queries.Invoice
-      Storage.Queries.IssueManagement
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfig
