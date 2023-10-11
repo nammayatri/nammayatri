@@ -37,7 +37,8 @@ type SubscriptionConfig =  {
   lowDuesLimit :: Number,
   maxDuesLimit :: Number,
   highDueWarningLimit :: Number,
-  moveDriverToOfflineInHighDueDaily :: Boolean
+  moveDriverToOfflineInHighDueDaily :: Boolean,
+  enableSubscriptionPopups :: Boolean
  }
 
 type RideActionModelConfig = {

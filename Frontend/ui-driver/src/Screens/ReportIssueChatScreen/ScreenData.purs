@@ -51,7 +51,8 @@ initData = {
       isReversedFlow: false,
       showRecordModel: false,
       showViewImageModel: false,
-      isPopupModelOpen: false
+      isPopupModelOpen: false,
+      submitIsInProgress: false
     }
 }
 

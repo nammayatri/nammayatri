@@ -54,6 +54,9 @@ view push state =
     [ onClick push (const NoAction)
     , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
     , id (getNewIDWithTag "view_image_model_image")
+    , width MATCH_PARENT
+    , height MATCH_PARENT
+    , gravity CENTER
     ][ progressBar
        [ width WRAP_CONTENT
        , height WRAP_CONTENT

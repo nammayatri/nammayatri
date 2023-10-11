@@ -457,6 +457,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
     let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
     exit exitState
+eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
@@ -699,7 +700,7 @@ eval (SwitchDriverStatus status) state =
   else if state.props.driverStatusSet == status then continue state
     else
       case status of
-        ST.Online -> if state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit then continue state { props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} else exit (DriverAvailabilityStatus state status)
+        ST.Online -> if state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit then continue state { props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} else exit (DriverAvailabilityStatus state status)
         ST.Silent -> exit (DriverAvailabilityStatus state status)
         ST.Offline ->
           do
