@@ -191,8 +191,8 @@ readMessages kafkaConsumer = do
     removeMaybeFromTuple (mbMessage, (mbMessageKey, cr)) =
       (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey
 
-getConfigNameFromConsumertype :: ConsumerType -> IO String
-getConfigNameFromConsumertype = \case
+getConfigNameFromConsumerType :: ConsumerType -> IO String
+getConfigNameFromConsumerType = \case
   AVAILABILITY_TIME -> pure "driver-availability-calculator"
   BROADCAST_MESSAGE -> pure "broadcast-message"
   PERSON_STATS -> pure "person-stats"

@@ -50,7 +50,10 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "broadcast-messages" ], consumerProperties }
+      { topicNames = [ "broadcast-messages" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Default
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }

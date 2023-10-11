@@ -50,7 +50,10 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "location-updates" ], consumerProperties }
+      { topicNames = [ "location-updates" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Default
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
