@@ -393,6 +393,8 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_coin_flag" : true,
+      "ny_ic_yatri_coin" : true
    }
 }

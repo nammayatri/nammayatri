@@ -851,5 +851,9 @@ const englishStrings = {
   GO_ONLINE_PROMPT_SUBSCRIBE : "You are currently offline.\nJoin a plan to take rides",
   COMPLETE_PAYMENT_TO_CONTINUE : "To continue using Yatri Sathi, please complete your payment",
 	EARNINGS : "Earnings",
-  YATRI_COINS : "Yatri Coins"
+  YATRI_COINS : "Yatri Coins",
+  TODAY_EARNINGS : "Today's earnings",
+  TRIP_EARNINGS : "Trip earnings",
+  EXTRA_EARNINGS : "Extra earnings",
+  VIEW_MORE : "View more"
 } 

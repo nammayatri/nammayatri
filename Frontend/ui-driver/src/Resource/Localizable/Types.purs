@@ -865,6 +865,10 @@ data STR = LETS_GET_STARTED
         | COMPLETE_PAYMENT_TO_CONTINUE
         | EARNINGS
         | YATRI_COINS
+        | TODAY_EARNINGS
+        | TRIP_EARNINGS
+        | EXTRA_EARNINGS
+        | VIEW_MORE
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1718,3 +1722,7 @@ getStringFromEnum key = case key of
     COMPLETE_PAYMENT_TO_CONTINUE -> "COMPLETE_PAYMENT_TO_CONTINUE"
     EARNINGS -> "EARNINGS"
     YATRI_COINS -> "YATRI_COINS"
+    TODAY_EARNINGS -> "TODAY_EARNINGS"
+    TRIP_EARNINGS -> "TRIP_EARNINGS"
+    EXTRA_EARNINGS -> "EXTRA_EARNINGS"
+    VIEW_MORE -> "VIEW_MORE"

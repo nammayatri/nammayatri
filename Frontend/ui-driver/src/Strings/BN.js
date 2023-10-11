@@ -838,5 +838,9 @@ const bengaliStrings = {
 	PLEASE_CONSIDER_CALLING_THEM : "তারা চ্যাট পড়তে সক্ষম নাও হতে পারে. তাদের কল করুন",
 	COMPLETE_PAYMENT_TO_CONTINUE : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
 	EARNINGS : "উপার্জন",
-	YATRI_COINS : "ইয়াত্রি কয়েন"
+	YATRI_COINS : "ইয়াত্রি কয়েন",
+	TODAY_EARNINGS : "আজকের উপার্জন",
+	TRIP_EARNINGS : "ট্রিপ আয়",
+	EXTRA_EARNINGS : "অতিরিক্ত উপার্জন",
+	VIEW_MORE : "আরো দেখুন"
 }

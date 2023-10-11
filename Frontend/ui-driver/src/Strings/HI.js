@@ -850,5 +850,9 @@ const hindiStrings = {
   GO_ONLINE_PROMPT_SUBSCRIBE : "आप वर्तमान में ऑफ़लाइन हैं.\nसवारी लेने की योजना में शामिल हों",
   COMPLETE_PAYMENT_TO_CONTINUE : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
 	EARNINGS : "आय",
-  YATRI_COINS : "यात्री सिक्के"
+  YATRI_COINS : "यात्री सिक्के",
+  TODAY_EARNINGS : "आज की कमाई",
+  TRIP_EARNINGS : "यात्रा आय",
+  EXTRA_EARNINGS : "अतिरिक्त कमाई",
+  VIEW_MORE : "और देखें"
 }

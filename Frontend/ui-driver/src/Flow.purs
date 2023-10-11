@@ -156,6 +156,9 @@ baseAppFlow baseFlow event = do
       setValueToLocalStore BUNDLE_TIME_OUT "500"
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
+      when ((getValueToLocalStore EARNINGS_VISITED_COUNT == "__failed") || (getValueToLocalStore EARNINGS_VISITED_COUNT == "(null)")) $ do
+        setValueToLocalStore SESSION_ID (generateSessionId unit)
+
       if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
         else void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
       void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)

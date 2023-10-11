@@ -657,5 +657,9 @@ const frenchStrings = {
   PROCEED_TO_CHAT : "Passer au chat",
   PLEASE_CONSIDER_CALLING_THEM : "Ils ne pourront peut-être pas lire les discussions. Pensez à les appeler",
   EARNINGS : "Gains",
-  YATRI_COINS : "Coins yatri"
+  YATRI_COINS : "Coins yatri",
+  TODAY_EARNINGS : "Gains du jour",
+  TRIP_EARNINGS : "Revenus du voyage",
+  EXTRA_EARNINGS : "Gains supplémentaires",
+  VIEW_MORE : "Voir plus"
 }
