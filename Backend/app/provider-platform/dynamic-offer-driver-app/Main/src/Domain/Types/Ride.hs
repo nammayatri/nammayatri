@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Ride where
 
@@ -41,12 +42,30 @@ $(mkBeamInstancesForEnum ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 
-data RideDetails
-  = RideDetailsDemand {toLocation :: DL.Location, driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)}
-  | RideDetailsRental {odoMeterStartReading :: Meters, odoMeterEndReading :: Meters}
+data SpecificRideDetails
+  = RideDetailsOnDemand
+     {
+        toLocation :: DL.Location
+      , driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+      , driverDeviatedFromRoute :: Maybe Bool
+      , numberOfSnapToRoadCalls :: Maybe Int
+      , numberOfDeviation :: Maybe Bool
+      , uiDistanceCalculationWithAccuracy :: Maybe Int
+      , uiDistanceCalculationWithoutAccuracy :: Maybe Int
+    }
+  | RideDetailsRental
+    {
+        rentalToLocation :: Maybe DL.Location,
+        odoMeterStartReading :: Maybe Meters,
+        odoMeterEndReading :: Maybe Meters
+    }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data RideType = ONDEMAND | RENTAL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, BP.ToParamSchema)
+data RideType = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForEnum ''RideType)
 
 data Ride = Ride
   { id :: Id Ride,
@@ -71,12 +90,7 @@ data Ride = Ride
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    rideDetails :: RideDetails,
-    rideTypes :: RideType,
-    driverDeviatedFromRoute :: Maybe Bool,
-    numberOfSnapToRoadCalls :: Maybe Int,
-    numberOfDeviation :: Maybe Bool,
-    uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int
+    rideDetails :: SpecificRideDetails,
+    rideType :: RideType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

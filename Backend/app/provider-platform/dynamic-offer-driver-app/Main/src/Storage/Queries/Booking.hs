@@ -172,6 +172,9 @@ instance FromTType' BeamB.Booking Booking where
                     bookingDetails = bookingDetails,
                     disabilityTag = disabilityTag,
                     estimatedFare = estimatedFare,
+                    estimatedDistance = estimatedDistance,
+                    maxEstimatedDistance = maxEstimatedDistance,
+                    estimatedDuration = estimatedDuration,
                     area = area,
                     providerId = Id providerId,
                     primaryExophone = primaryExophone,
@@ -221,10 +224,7 @@ instance FromTType' BeamB.Booking Booking where
         let bookingDetails = BookingDetailsOnDemand {
           specialLocationTag = specialLocationTag,
           specialZoneOtpCode = specialZoneOtpCode,
-          toLocation = tl,
-          estimatedDistance = estimatedDistance,
-          maxEstimatedDistance = maxEstimatedDistance,
-          estimatedDuration = estimatedDuration
+          toLocation = tl
          }
         if isJust fp
           then
@@ -242,6 +242,9 @@ instance FromTType' BeamB.Booking Booking where
                     providerId = Id providerId,
                     primaryExophone = primaryExophone,
                     estimatedFare = estimatedFare,
+                    estimatedDistance = estimatedDistance,
+                    maxEstimatedDistance = maxEstimatedDistance,
+                    estimatedDuration = estimatedDuration,
                     bapId = bapId,
                     bapUri = pUrl,
                     bapCity = bapCity,
@@ -319,7 +322,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.fromLocationId = Just $ getId fromLocation.id,
             BeamB.toLocationId = rentalToLocation <&> (\loc -> getId loc.id),
             BeamB.vehicleVariant = vehicleVariant,
-            BeamB.estimatedDistance = 0,
+            BeamB.estimatedDistance = 0, --TODO : RENTAL
             BeamB.maxEstimatedDistance = Nothing,
             BeamB.estimatedFare = estimatedFare,
             BeamB.estimatedDuration = 0,

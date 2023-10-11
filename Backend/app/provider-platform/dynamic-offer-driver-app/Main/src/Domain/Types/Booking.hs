@@ -45,10 +45,7 @@ $(mkHttpInstancesForEnum ''BookingStatus)
 data BookingDetails = BookingDetailsOnDemand {
   specialZoneOtpCode :: Maybe Text,
   specialLocationTag :: Maybe Text,
-  toLocation :: DLoc.Location,
-  estimatedDistance :: Meters,
-  maxEstimatedDistance :: Maybe HighPrecMeters,
-  estimatedDuration :: Seconds
+  toLocation :: DLoc.Location
  } | BookingDetailsRental {
   rentalToLocation :: Maybe DLoc.Location
  } deriving (Generic)
@@ -65,6 +62,9 @@ data Booking = Booking
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
     estimatedFare :: Money,
+    estimatedDistance :: Meters,
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    estimatedDuration :: Seconds,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,
