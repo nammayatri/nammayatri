@@ -268,7 +268,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do
       now <- getCurrentTime
-      logPretty DEBUG "on_select: searchRequest" searchRequest
+      --logPretty DEBUG "on_select: searchRequest" searchRequest
       logPretty DEBUG "on_select: quotes" quotes
       let transporterInfo =
             ACL.TransporterInfo
