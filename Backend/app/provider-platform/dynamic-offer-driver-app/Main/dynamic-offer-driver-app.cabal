@@ -349,7 +349,6 @@ library
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
-      Storage.Beam.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails
       Storage.Beam.FarePolicy.FarePolicyRentalSlabsDetails
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
