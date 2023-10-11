@@ -876,5 +876,9 @@ const mlStrings = {
   AC_CAB : "എസി ക്യാബ്",
   AC_SUV : "എസി എസ്‌യുവി",
   DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക",
-  WHAT_ARE_PURPLE_RIDES : "എന്താണ് പർപ്പിൾ റൈഡുകൾ?"
+  WHAT_ARE_PURPLE_RIDES : "എന്താണ് പർപ്പിൾ റൈഡുകൾ?",
+  ECONOMICAL : "സാമ്പത്തിക",
+	SPACIOUS : "വിശാലമായത്",
+	COMFY : "സുഖപ്രദമായ",
+	PEOPLE : "പേർ"
 }

@@ -949,6 +949,10 @@ data STR = LETS_GET_STARTED
         | DAYS
         | ACTIVE_PLAN
         | WHAT_ARE_PURPLE_RIDES
+        | ECONOMICAL
+        | SPACIOUS
+        | COMFY
+        | PEOPLE
 
 
 getStringFromEnum :: STR -> String
@@ -1892,3 +1896,7 @@ getStringFromEnum key = case key of
     DAYS -> "DAYS"
     ACTIVE_PLAN -> "ACTIVE_PLAN"
     WHAT_ARE_PURPLE_RIDES -> "WHAT_ARE_PURPLE_RIDES"
+    ECONOMICAL -> "ECONOMICAL"
+    SPACIOUS -> "SPACIOUS"
+    COMFY -> "COMFY"
+    PEOPLE -> "PEOPLE"

@@ -936,5 +936,9 @@ const englishStrings = {
   AC_CAB : "AC Cab",
   AC_SUV : "AC SUV",
   DOWNGRADE_VEHICLE : "Downgrade Vehicle",
-  WHAT_ARE_PURPLE_RIDES : "What are Purple Rides?"
+  WHAT_ARE_PURPLE_RIDES : "What are Purple Rides?",
+  ECONOMICAL : "Economical",
+  SPACIOUS : "Spacious",
+  COMFY : "Comfy",
+  PEOPLE : "people"
 } 

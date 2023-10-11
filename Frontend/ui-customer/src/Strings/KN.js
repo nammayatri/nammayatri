@@ -618,5 +618,6 @@ const kannadaStrings = {
   "AC_SUV" : "ಎಸಿ ಎಸ್ಯುವಿ",
   "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ",
   "ERNAKULAM_LIMIT_CHARGE": "ಪಿಕಪ್ ಅಥವಾ ಗಮ್ಯಸ್ಥಾನವು ಎರ್ನಾಕುಲಂ ಕಾರ್ಪೊರೇಷನ್ ಮಿತಿಯಿಂದ ಹೊರಗಿದ್ದರೆ ದರವು 1.5x ಆಗಿರುತ್ತದೆ",
-  "SELECT_LOCATION_ON_MAP" : "ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+  "SELECT_LOCATION_ON_MAP" : "ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  "SPACIOUS" : "ವಿಶಾಲವಾದ"
 }
