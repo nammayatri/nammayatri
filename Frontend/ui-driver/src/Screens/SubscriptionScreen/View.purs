@@ -75,10 +75,9 @@ screen initialState globalState =
   , view
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
-      void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre ShowError initialState globalState
-      case initialState.data.orderId of 
-        Just id -> void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling id 7 2 1 initialState push PaymentStatusAction
-        Mb.Nothing -> pure unit
+      void $ launchAff $ flowRunner defaultGlobalState $ do
+          doAff do liftEffect $ push $ LoadPlans
+
       pure (pure unit)
     )]
   , eval:
@@ -213,7 +212,7 @@ joinPlanView push state visibility' =
           [ width $ V 116
           , height $ V 368
           , margin $ MarginTop 20
-          , imageWithFallback "ny_ic_ny_driver,"
+          , imageWithFallback $ "ny_ic_ny_driver," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_ny_driver.png"
           ]
         , enjoyBenefitsView push state
         , plansBottomView push state
@@ -233,7 +232,8 @@ enjoyBenefitsView push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][ commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.subHeading2 TypoGraphy) 0 LEFT
+        ][ commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT 
+          , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT 
           , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -259,15 +259,9 @@ enjoyBenefitsView push state =
                           ] <> FontStyle.body1 TypoGraphy
                       ]
                 )
-              [(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW), (getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS]
+              [(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW), (getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString GUARANTEED_FIXED_PRICE]
             ) 
-            , textView [
-            text $ getString VALID_ONLY_IF_PAYMENT
-            , textSize if state.props.isSelectedLangTamil then FontSize.a_8 else FontSize.a_10
-            , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.black700
-            , margin $ Margin 22 3 0 0
-          ]
+            
         ]
         
     ]
@@ -353,7 +347,7 @@ plansBottomView push state =
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 20.0 true true false false
   , background Color.white900
-  , padding $ Padding 20 20 20 0
+  , padding $ Padding 20 20 20 16
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -366,7 +360,7 @@ plansBottomView push state =
               [ weight 1.0
               , height WRAP_CONTENT
               , width $ V $ getWidthFromPercent 70
-              , text (getString CHOOSE_YOUR_PLAN)
+              , text $ (getString COMING_SOON ) <> "!"
               , color Color.black800
               ] <> FontStyle.body8 TypoGraphy
           , linearLayout
@@ -379,43 +373,6 @@ plansBottomView push state =
                 , imageWithFallback "ny_ic_upi_autopay,"
                 ]
             ]
-          ]
-        , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER_VERTICAL
-          , onClick (\action -> do
-                        _ <- push action
-                        _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- pure $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
-                                          "KN_IN" -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
-                                          _ -> "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK"
-                        pure unit
-                        ) (const NoAction)
-          ][ textView $
-              [ height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 70
-              , gravity LEFT
-              , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
-              , color Color.black800
-              , visibility GONE
-              ] <> FontStyle.body1 TypoGraphy 
-            , imageView [
-                imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
-                , height $ V 16
-                , width $ V 16
-                , margin $ Margin 0 3 6 0
-            ]
-            , textView $
-              [ weight 1.0
-              , height WRAP_CONTENT
-              , gravity LEFT
-              , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
-              , color Color.blue900
-              ] <> FontStyle.body1 TypoGraphy
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -1133,8 +1090,8 @@ planCardView push state isSelected clickable' action isSelectedLangTamil =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , background if isSelected then Color.blue600 else Color.white900
-  , stroke $ "1," <> (if isSelected then Color.blue800 else Color.grey900)
+  , background Color.white900
+  , stroke $ "1," <> ( Color.blue900)
   , padding $ Padding 16 12 16 12
   , cornerRadius 8.0
   , orientation VERTICAL
@@ -1150,30 +1107,17 @@ planCardView push state isSelected clickable' action isSelectedLangTamil =
         [ text state.title
         , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
         , weight 1.0
-        , fontStyle $ (if isSelected then FontStyle.bold else FontStyle.semiBold) LanguageStyle
-        , color if isSelected then Color.blue900 else Color.black700
+        , fontStyle $ (FontStyle.bold) LanguageStyle
+        , color Color.blue900 
         ]
       , planPriceView state.priceBreakup state.frequency isSelectedLangTamil
       ]
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity CENTER_VERTICAL
-      ][ textView
-         [ text state.description
-         , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-         , fontStyle $ FontStyle.medium LanguageStyle
-         , color Color.black600
-         , weight 1.0
-         ]
-       , if state.showOffer then offerCountView (DA.length state.offers) isSelected else linearLayout[visibility GONE][]
-       ]
+
     , horizontalScrollView 
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarX false
       , margin $ MarginVertical 8 8
-      , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -1184,18 +1128,17 @@ planCardView push state isSelected clickable' action isSelectedLangTamil =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ](map (\item ->
           linearLayout
             ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
-            , margin $ MarginTop if isSelected then 0 else 8
-            , background Color.white900
+            , margin $ MarginTop 10
+            , background Color.grey700
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
-                  Mb.Just desc -> [text desc, visibility if isSelected then VISIBLE else GONE]
+                  Mb.Just desc -> [text desc]
                   Mb.Nothing -> [visibility GONE])
             [ textView
               [ textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
@@ -1479,24 +1422,33 @@ sfl height' =
 
 planPriceView :: forall w. Array PaymentBreakUp -> String -> Boolean -> PrestoDOM (Effect Unit) w
 planPriceView fares frequency isSelectedLangTamil =
+  let finalFee = "₹" <> (getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+                                                                    "PER_RIDE" -> getString RIDE
+                                                                    "DAILY" -> getString DAY
+                                                                    _ -> getString DAY
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
+  , gravity CENTER_VERTICAL
   ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</strike>"
      , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
    , textView
-      [ text $ "₹" <> (getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
-                                                                    "PER_RIDE" -> getString RIDE
-                                                                    "DAILY" -> getString DAY
-                                                                    _ -> getString DAY
+      [ textFromHtml $ "<strike>" <> finalFee <> "</strike>"
       , textSize if isSelectedLangTamil then FontSize.a_14 else FontSize.a_16
       , fontStyle $ FontStyle.bold LanguageStyle
       , margin $ MarginLeft 3
-      , color Color.black800
+      , color Color.black600
       ]
+   , imageView 
+     [ imageWithFallback $ "ny_ic_discount," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_discount.png" 
+     , height $ V 16  
+     , width $ V 16
+     , margin $ Margin 4 2 0 0
+     ]
    ]
 
 findHelpCentreView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -1706,7 +1658,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall), lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP"}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall), lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = true}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT
@@ -1719,4 +1671,5 @@ lottieJsonAccordingToLang isOnFreeTrial = (getAssetsBaseUrl FunctionCall) <>
     "HI_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" else "lottie/ny_ic_subscription_info_hindi_02.json"
     "KN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" else "lottie/ny_ic_subscription_info_kannada_02.json"
     "TA_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" else "lottie/ny_ic_subscription_info_tamil_02.json"
+    "BN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" else "lottie/ny_ic_subscription_info_bengali_02.json"
     _ -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" else "lottie/ny_ic_subscription_info_02.json"

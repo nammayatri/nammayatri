@@ -43,8 +43,8 @@ navData screenName = {
     }] <>
     (if (getMerchant FunctionCall == NAMMAYATRI) then [
     {
-      activeIcon: "ny_ic_join_active,https://assets.juspay.in/nammayatri/images/driver/ic_profile_active.png",
-      defaultIcon: "ny_ic_join_inactive,https://assets.juspay.in/nammayatri/images/driver/ic_profile_inactive.png",
+      activeIcon: "ny_ic_join_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_active.png",
+      defaultIcon: "ny_ic_join_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_inactive.png",
       text: "Join"
     },
     {
@@ -52,6 +52,11 @@ navData screenName = {
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
       text: "Rankings"
     }] else [
+      {
+      activeIcon: "ny_ic_join_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_active.png",
+      defaultIcon: "ny_ic_join_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_inactive.png",
+      text: "Join"
+    },
     {
       activeIcon: "ic_referral_active," <> (getAssetStoreLink FunctionCall) <> "ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
@@ -70,7 +75,7 @@ getActiveIndex :: ScreenNames.ScreenName -> Int
 getActiveIndex screenName = case screenName of
   ScreenNames.HOME_SCREEN -> 0
   ScreenNames.RIDE_HISTORY_SCREEN -> 1
-  ScreenNames.SUBSCRIPTION_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else -1
+  ScreenNames.SUBSCRIPTION_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else 2
   ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 
                                  else if ( getMerchant FunctionCall == YATRI || getMerchant FunctionCall == YATRISATHI) then 2 
                                  else -1

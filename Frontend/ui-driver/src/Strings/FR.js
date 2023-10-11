@@ -666,5 +666,10 @@ const frenchStrings = {
   ECONOMICAL : "Économique",
 	SPACIOUS : "Spacieux",
 	COMFY : "Confortable",
-	PEOPLE : "personnes"
+	PEOPLE : "personnes",
+  GET_READY_FOR_YS_SUBSCRIPTION : "Préparez-vous pour les plans Yatri Sathi !",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "Inscrivez-vous tôt pour bénéficier d'offres spéciales",
+  GUARANTEED_FIXED_PRICE : "Prix fixe garanti jusqu'au 1er janvier 2025",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "L'offre de lancement sera bientôt annoncée !",
+  NO_CHARGES_TILL : "Aucun frais jusqu'au 31 décembre",
 }
