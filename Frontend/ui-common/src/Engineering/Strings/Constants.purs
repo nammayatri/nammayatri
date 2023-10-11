@@ -28,3 +28,6 @@ dotJS = ".js"
 
 dotJSON :: String
 dotJSON = ".json"
+
+defaultDensity :: Number
+defaultDensity = 160.0

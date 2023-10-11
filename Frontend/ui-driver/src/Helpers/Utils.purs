@@ -77,7 +77,7 @@ import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (UpiApps(..))
 import Data.Int (fromString, even)
-
+import Data.Function.Uncurried (Fn1)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -116,7 +116,8 @@ foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
-
+foreign import getPixels :: Fn1 String Number
+foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 
 -- -- ####### MAP FFI ######## -----
