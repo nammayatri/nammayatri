@@ -88,5 +88,5 @@ in  { hedisCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , tables
-    , s3Config = common.s3Config
+    , s3Config = None common.S3ConfigType
     }

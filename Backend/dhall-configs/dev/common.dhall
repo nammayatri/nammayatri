@@ -51,4 +51,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , kafkaOffsetResetConfig = globalCommon.kafkaOffsetResetConfig
+    , S3ConfigType = globalCommon.S3Config
     }
