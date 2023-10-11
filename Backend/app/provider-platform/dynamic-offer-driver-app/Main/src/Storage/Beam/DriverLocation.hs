@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=missing-signatures #-}
 
 module Storage.Beam.DriverLocation where
 
