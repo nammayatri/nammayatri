@@ -33,7 +33,8 @@ config =
     lowDuesLimit : 25.0,
     maxDuesLimit : 100.0,
     highDueWarningLimit : 75.0,
-    moveDriverToOfflineInHighDueDaily : false
+    moveDriverToOfflineInHighDueDaily : false,
+    enableSubscriptionPopups : false
   },
   rideActionModelConfig : {
     showVehicleVariant : true

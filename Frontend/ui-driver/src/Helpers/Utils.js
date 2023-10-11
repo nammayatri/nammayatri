@@ -1022,3 +1022,20 @@ export const downloadQR = function (id){
   if (window.JBridge.downloadLayoutAsImage)
     return window.JBridge.downloadLayoutAsImage(id);
 }
+
+
+export const getPixels = function (){
+  if (window.parent.devicePixelRatio) {
+    return window.parent.devicePixelRatio;
+  } else {
+    return window.JBridge.getPixels();
+  }
+}
+export const getDeviceDefaultDensity = function (){
+  if (window.JBridge.getSessionInfo) {
+    let sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
+    return sessionInfo.screen_ppi;
+  } else {
+    return window.JBridge.getDensity() * 160;
+  }
+}

@@ -85,6 +85,7 @@ import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Constants (defaultDensity)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -519,7 +520,7 @@ recenterBtnView state push =
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
-  let showGoInYellow = state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.config.subscriptionConfig.highDueWarningLimit)
+  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.config.subscriptionConfig.highDueWarningLimit)
   in
   linearLayout
   [ width MATCH_PARENT
@@ -1167,9 +1168,13 @@ rideActionModelView push state =
 getPeekHeight :: HomeScreenState -> Int
 getPeekHeight state = 
   let headerLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionHeaderLayout"
-      labelLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLabelLayout"
+      labelLayout =  runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLabelLayout"
       contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLayout"
-    in headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
+      pixels = runFn1 HU.getPixels ""
+      density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
+      currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
+      requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
+    in if requiredPeekHeight == 0 then if state.data.activeRide.isDriverArrived then 518 else 470 else requiredPeekHeight
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =

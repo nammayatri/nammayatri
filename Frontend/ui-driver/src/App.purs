@@ -102,7 +102,7 @@ newtype GlobalState = GlobalState {
   }
 
 defaultGlobalState :: GlobalState
-defaultGlobalState = GlobalState{
+defaultGlobalState = GlobalState {
   splashScreen : {data : { message : "WeDontTalkAnymore"}}
 , chooseLanguageScreen : ChooseLanguageScreenData.initData
 , driverProfileScreen : DriverProfileScreenData.initData
@@ -148,6 +148,7 @@ defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   aadhaarVerificationRequired : false,
   driverInformation : DriverProfileScreenData.dummyDriverInfo,
+  driverRideStats : HomeScreenData.dummyDriverRideStats,
   callScreen : ScreenNames.HOME_SCREEN
 }
 

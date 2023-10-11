@@ -630,10 +630,7 @@ rideEndBannerView config push =
     [ height MATCH_PARENT
     , width  MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
     , visibility if config.isBanner then VISIBLE else GONE
-    , gravity BOTTOM
-    , weight 1.0
     ][
         Banner.view (push <<< BannerAction) (config)
     ]

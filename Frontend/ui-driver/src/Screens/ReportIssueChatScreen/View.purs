@@ -26,11 +26,11 @@ import Font.Style (bold)
 import Helpers.Utils (getCurrentUTC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||))
+import Prelude (Unit, bind, const, not, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||))
 import PrestoDOM (linearLayout)
 import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width)
+import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
@@ -291,9 +291,10 @@ submitView push state =
     , cornerRadius 32.0
     , padding (PaddingVertical 12 12)
     , orientation HORIZONTAL
-    , alpha if (STR.length (STR.trim state.data.messageToBeSent) > 0) || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds > 0) then 1.0 else 0.5
-    , onClick push (if (STR.length (STR.trim state.data.messageToBeSent) > 0) || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds > 0) then (const SubmitIssue) else (const NoAction))
+    , alpha if shouldEnableSubmitBtn state then 1.0 else 0.5
+    , onClick push $ const SubmitIssue
     , gravity CENTER
+    , clickable (shouldEnableSubmitBtn state)
     ][ textView
      [ color Color.white900
      , textSize FontSize.a_16
@@ -310,6 +311,8 @@ submitView push state =
      ]
     ]
   ]
+shouldEnableSubmitBtn :: ReportIssueChatScreenState -> Boolean
+shouldEnableSubmitBtn state = (not state.props.submitIsInProgress) && (STR.length (STR.trim state.data.messageToBeSent) > 0) || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds > 0)
 
 helperView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 helperView push state =

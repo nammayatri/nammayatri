@@ -47,7 +47,7 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Types.Core (class Loggable, Eval)
-import PrestoDOM.Utils (continue, continueWithCmd, exit)
+import PrestoDOM.Utils (continue, continueWithCmd, exit, updateAndExit)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
@@ -148,8 +148,9 @@ eval BackPressed state =
 eval AfterRender state =
   continue state
 
-eval SubmitIssue state =
-  exit $ UploadIssue state
+eval SubmitIssue state = if state.props.submitIsInProgress then continue state else do
+  let newState = state{props{submitIsInProgress = true}}
+  updateAndExit newState $ UploadIssue newState
 
 eval ShowOptions state = do
   let options'  = map (\x -> x.option) state.data.options

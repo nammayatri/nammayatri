@@ -36,7 +36,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status)
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
 import Styles.Types (FontSize)
 
 type EditTextInLabelState =
@@ -769,7 +769,8 @@ type HomeScreenData =  {
   paymentState :: PaymentState,
   profileImg :: Maybe String, 
   endRideData :: EndRideData,
-  config :: AppConfig
+  config :: AppConfig,
+  triggerPatchCounter :: Int
 }
 
 type EndRideData = {
@@ -1098,7 +1099,8 @@ type ReportIssueChatScreenProps = {
   showCallCustomerModel :: Boolean,
   isReversedFlow :: Boolean,
   showViewImageModel :: Boolean,
-  isPopupModelOpen :: Boolean
+  isPopupModelOpen :: Boolean,
+  submitIsInProgress :: Boolean
 }
 
 type IssueInfo = {
@@ -1565,6 +1567,7 @@ instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
   driverInformation :: GetDriverInfoResp,
+  driverRideStats :: DriverProfileStatsResp,
   callScreen :: ScreenName
 }
 

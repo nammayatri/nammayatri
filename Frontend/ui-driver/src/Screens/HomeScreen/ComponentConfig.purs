@@ -969,16 +969,18 @@ getRideCompletedConfig state = let
   autoPayStatus = state.data.paymentState.autoPayStatus
   payerVpa = state.data.endRideData.payerVpa
   disability = state.data.endRideData.disability /= Nothing
+  showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
                       {condition : not (autoPayStatus == ACTIVE_AUTOPAY), elementView :  RideCompletedCard.NO_VPA_VIEW },
                       {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
-                      {condition : disability, elementView :  RideCompletedCard.BADGE_CARD }
+                      {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },
+                      {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW}
                     ]
   config' = config{
     primaryButtonConfig {
       width = MATCH_PARENT,
-      margin = Margin 0 0 0 0,
+      margin = MarginTop 0,
       textConfig {
         text = getString FARE_COLLECTED
       }
@@ -1009,8 +1011,8 @@ getRideCompletedConfig state = let
       bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
-      visible = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip,
-      savedMoney = if state.data.config.rideCompletedCardConfig.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else [] <> (case state.data.endRideData.tip of 
+      visible = showDriverBottomCard,
+      savedMoney = (if state.data.config.rideCompletedCardConfig.showSavedCommission then [{amount  : (state.data.endRideData.finalAmount * 18) / 100 , reason : getString SAVED_DUE_TO_ZERO_COMMISSION}] else []) <> (case state.data.endRideData.tip of 
                             Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
                             Nothing -> [])
     },

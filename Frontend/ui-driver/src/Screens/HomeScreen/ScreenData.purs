@@ -17,7 +17,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API(Status(..))
+import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
@@ -111,6 +111,7 @@ initData = {
           autoPayStatus : NO_AUTOPAY
         },
         profileImg : Nothing,
+        triggerPatchCounter : 0,
         endRideData : {
           rideId : "",
           zeroCommision : 0,
@@ -141,8 +142,8 @@ initData = {
         routeVisible : false,
         otpAttemptsExceeded : false,
         refreshAnimation : false,
-        showDottedRoute : true,
-        currentStage : HomeScreen ,
+        showDottedRoute : false,
+        currentStage : HomeScreen,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,
@@ -171,3 +172,11 @@ initData = {
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP
     }
 }
+
+dummyDriverRideStats :: DriverProfileStatsResp
+dummyDriverRideStats = DriverProfileStatsResp
+    {
+      totalRidesOfDay : 0
+    , totalEarningsOfDay : 0
+    , bonusEarning : 0
+    }
