@@ -77,8 +77,12 @@ sendIssue personId request = do
   Queries.insertIssue newIssue
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  ticketResponse <- createTicket person.merchantId (mkTicket newIssue person phoneNumber)
-  Queries.updateTicketId newIssue.id ticketResponse.ticketId
+  ticketResponse <- try @_ @SomeException (createTicket person.merchantId (mkTicket newIssue person phoneNumber))
+  case ticketResponse of
+    Right ticketResponse' -> do
+      Queries.updateTicketId newIssue.id ticketResponse'.ticketId
+    Left err -> do
+      logTagInfo "Create Ticket API failed - " $ show err
   return Success
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
