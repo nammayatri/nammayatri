@@ -772,7 +772,8 @@ type HomeScreenData =  {
   paymentState :: PaymentState,
   profileImg :: Maybe String, 
   endRideData :: EndRideData,
-  config :: AppConfig
+  config :: AppConfig,
+  triggerPatchCounter :: Int
  }
 
 type EndRideData = {
