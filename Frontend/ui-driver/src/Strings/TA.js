@@ -907,5 +907,9 @@ const tamilStrings = {
   AC_CAB : "ஏசி வண்டி",
   AC_SUV : "ஏசி எஸ்யூவி",
   DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்",
-  WHAT_ARE_PURPLE_RIDES : "பர்பிள் சவாரிகள் என்றால் என்ன?"
+  WHAT_ARE_PURPLE_RIDES : "பர்பிள் சவாரிகள் என்றால் என்ன?",
+  ECONOMICAL: "பொருளாதாரம்",
+  SPACIOUS: "விசாலமான",
+  COMFY: "வசதியான",
+  PEOPLE: "மக்கள்"
 }
