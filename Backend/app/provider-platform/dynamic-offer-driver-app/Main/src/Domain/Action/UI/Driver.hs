@@ -1708,13 +1708,13 @@ getDriverPaymentsHistoryV2 (driverId, merchantId) mPaymentMode mbLimit mbOffset 
         autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
         return ([], autoPayInvoices)
       _ -> do
-        manualPayInvoices_ <- mapMaybeM (`mkManualPaymentEntity` mapDriverFeeByDriverFeeId) invoices
+        manualPayInvoices_ <- mapMaybeM (\manualInvoice -> mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId transporterConfig) invoices
         return (manualPayInvoices_, [])
 
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
-mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> m (Maybe ManualInvoiceHistory)
-mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
+mkManualPaymentEntity :: MonadFlow m => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> m (Maybe ManualInvoiceHistory)
+mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig = do
   allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
   let amount = sum $ mapToAmount allDriverFeeForInvoice
@@ -1725,7 +1725,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' = do
           ManualInvoiceHistory
             { invoiceId = manualInvoice.invoiceShortId,
               rideDays = length allDriverFeeForInvoice,
-              rideTakenOn = if length allDriverFeeForInvoice == 1 then listToMaybe allDriverFeeForInvoice <&> (.createdAt) else Nothing,
+              rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
               amount,
               createdAt = manualInvoice.createdAt,
               feeType = if any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
@@ -1747,7 +1747,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
               amount = sum $ mapToAmount [dfee],
               executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
               autoPayStage = dfee.autopayPaymentStage,
-              rideTakenOn = dfee.createdAt
+              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt
             }
     Nothing -> return Nothing
   where
