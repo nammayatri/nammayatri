@@ -162,3 +162,6 @@ greenOpacity16 = "#2953BB6F"
 
 redOpacity16 :: Color
 redOpacity16 = "#29E55454"
+
+fadedPurple :: Color 
+fadedPurple = "#339747FF"

@@ -17,7 +17,7 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), YoutubeData)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
@@ -182,9 +182,21 @@ accessbilityBannerConfig state =
         actionTextColor = Color.purple,
         imageUrl = "ny_ic_purple_badge,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_purple_badge.png",
         isBanner = true,
-        stroke = "1,"<>"#339747FF"
+        stroke = "1,"<>Color.fadedPurple
       }
   in config'
+
+youtubeData :: ST.HomeScreenState -> String -> YoutubeData
+youtubeData state mediaType =
+  { videoTitle: "title"
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: HU.getVideoID "https://youtu.be/5s21p2rI58c"
+  , videoType: "PortraitVideoLink"
+  }
+
 
 ------------------------------------ linkAadhaarPopupConfig -----------------------------
 linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
