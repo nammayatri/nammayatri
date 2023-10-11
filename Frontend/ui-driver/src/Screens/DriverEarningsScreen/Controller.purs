@@ -17,7 +17,7 @@ module Screens.DriverEarningsScreen.Controller where
 
 import Effect.Unsafe
 import Prelude
-import Screens.Types (DriverEarningsScreenState, DriverEarningsSubView(..), AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
+import Screens.Types (DriverEarningsScreenState, DriverEarningsSubView(..), AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..),  FaqQuestions(..))
 import Log
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.DatePickerModel as DatePickerModel
@@ -50,6 +50,7 @@ import Screens.Types
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -113,6 +114,9 @@ data Action = Dummy
             | BarViewSelected Int 
             -- | PaymentHistoryModelAC PaymentHistoryModel.Action
             -- | OpenPaymentHistory
+            -- | FaqScreen Boolean
+            | NoAction
+            | FaqQuestionView FaqQuestions
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 -- eval AfterRender state = continue state
@@ -211,8 +215,17 @@ eval (PlanCount shouldIncrease) state = do
   let quantity = if shouldIncrease then state.props.selectedPlanQuantity + 1 else state.props.selectedPlanQuantity - 1
   continue state {props{selectedPlanQuantity = quantity}}
 
-eval _ state = continue state
 
+
+-- eval (FaqScreen index) state = do 
+--   if index 
+--     then continue state{props{subView = FAQ_VIEW}}
+--     else continue state
+
+eval (FaqQuestionView faqQuestion) state = do
+  continue state{props{subView = spy "FAQ_QUESTON_VIEW" FAQ_QUESTON_VIEW, individualQuestion = faqQuestion}}
+
+eval _ state = continue state
 
 coinHistoryItemsListTransformer :: Array RidesInfo -> Array CoinHistoryItem
 coinHistoryItemsListTransformer list = (map (\(RidesInfo ride) -> {

@@ -19,7 +19,7 @@ import Data.Maybe
 import Foreign.Object (empty)
 import Prelude ((-), negate)
 import Resource.Constants (tripDatesCount)
-import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..))
+import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..), FaqQuestions(..) )
 
 initData :: DriverEarningsScreenState
 initData = {
@@ -101,7 +101,10 @@ initData = {
   , props : {
     subView : EARNINGS_VIEW,
     selectedPlanIndex : 0,
-    selectedPlanQuantity : 0
+    selectedPlanQuantity : 0,
+    individualQuestion : { question: ""
+                , videoLink: ""
+                , answer: []}
   }
   , datePickerState : {
     activeIndex : tripDatesCount - 1 -- based on no of dates we are showing

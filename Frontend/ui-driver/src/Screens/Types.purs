@@ -321,6 +321,12 @@ type Badge =  {
   , subText :: String
   }
 
+type FaqQuestions = {
+  question :: String,
+  videoLink :: String,
+  answer :: Array String
+}
+
 type VehicleP = {
   vehicleName :: String,
   isSelected :: Boolean
@@ -1757,10 +1763,11 @@ type DriverEarningsScreenData = {
 type DriverEarningsScreenProps = {
   subView :: DriverEarningsSubView,
   selectedPlanIndex :: Int,
-  selectedPlanQuantity :: Int
+  selectedPlanQuantity :: Int,
+  individualQuestion :: FaqQuestions
 }
 
-data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW
 
 derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
 instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow

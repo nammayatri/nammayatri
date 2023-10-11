@@ -282,6 +282,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
         if (bridgeComponents.getActivity() != null) {
             videoDuration = 0;
+            System.out.println("Inside setYoutubePLayer" + rawJson);
+            System.out.println("Inside setYoutubePlayer " + playerId);
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     if (videoStatus.equals("PAUSE")) {
@@ -356,6 +358,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         youTubePlayerView.initialize(youTubePlayerListener, options);
                     }
                 } catch (Exception e) {
+                    e.printStackTrace();
                     Log.e("exception in setYoutubePlayer", String.valueOf(e));
                 }
             });
