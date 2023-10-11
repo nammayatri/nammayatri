@@ -276,6 +276,8 @@ data Action = NoAction
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
+            | ExpandEarnings Boolean
+            | GoToEarnings
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState

@@ -20,6 +20,8 @@ import Screens.HomeScreen.ComponentConfig
 import Animation (scaleYAnimWithDuration)
 import Animation as Anim
 import Animation.Config as AnimConfig
+import Animation.Config (translateFullYAnimWithDurationConfig)
+import Animation (translateYAnimFromTop)
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
 import Components.Banner.Controller as BannerConfig
@@ -41,9 +43,10 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
+import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
-import Data.Int (ceil, toNumber)
+import Data.Int (ceil, toNumber, fromString)
 import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
@@ -54,7 +57,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
@@ -287,32 +290,41 @@ driverMapsHeaderView push state =
                   , orientation VERTICAL
                   , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                   , background $ Color.white900
-                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
+                --  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
-                    , driverActivityStatus state
-                    , statsModel push state
+                  --  , driverActivityStatus state
+                    , earningDetails state push
+                    , driverEarnings state push
+                    , updateLocationAndLastUpdatedView state push
+                    --, statsModel push state
                   ]
+              -- , linearLayout
+              --   [ width MATCH_PARENT
+              --   , height WRAP_CONTENT
+              --   , cornerRadius 24.0
+              --   ][]
+              --, driverEarnings state push
               , linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , gravity RIGHT
                 , orientation VERTICAL
                 , weight 1.0
-                ][  if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
-                  , linearLayout [
+                ][  --if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
+                   linearLayout [
                     height WRAP_CONTENT
                     , width MATCH_PARENT
                     , gravity RIGHT
                   ][
-                    if (state.props.autoPayBanner && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
-                    , viewRecenterAndSupport state push
+               --     if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                     viewRecenterAndSupport state push
                   ]
                 ]
               ]
             , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && not state.props.autoPayBanner) then genderBannerView state push else linearLayout[][]
+         --   , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push else linearLayout[][]
             , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
+          --  , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false else dummyTextView
             ]
         ]
         , bottomNavBar push state
@@ -746,14 +758,179 @@ updateLocationAndLastUpdatedView state push =
   [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
   linearLayout
   [ width MATCH_PARENT
-  , padding (Padding 16 8 16 8)
-  , margin (Margin 16 16 16 0)
+  , padding (Padding 8 16 16 8)
+  , margin (Margin 16 0 24 6)
   , cornerRadius 7.0
   , orientation HORIZONTAL
   , background Color.white900
+  , visibility if state.props.expandEarnings then GONE else VISIBLE
   ][ locationLastUpdatedTextAndTimeView push state
     , updateButtonIconAndText push state
   ]
+
+driverEarnings :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverEarnings state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 9.0
+  , padding $ Padding 8 8 8 8
+  , margin $ Margin 16 6 16 0
+  --, cornerRadius 7.0
+  , orientation HORIZONTAL
+  , background Color.blue600
+  , visibility if state.props.expandEarnings then GONE else VISIBLE
+  ][ textView [
+      text $ getString TODAY_EARNINGS
+      , margin $ MarginLeft 10
+    ]
+    ,textView $ [
+      text "₹2,745"
+      , color Color.black900
+      , margin $ Margin 30 3 0 0
+    ] <> FontStyle.body10 TypoGraphy
+    , imageView 
+        [ height $ V 9
+          , width $ V 9
+          , gravity CENTER
+          , imageWithFallback $ "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+          , margin $ Margin 6 15 0 0
+          , onClick push (const (ExpandEarnings if state.props.expandEarnings then false else true))
+        ]
+    , frameLayout
+      [  height $ V 36
+      , width $ V 72
+      , margin $ MarginLeft 24
+      , stroke  $ "1," <> Color.blue800
+      , cornerRadius 6.0
+      ][  imageView
+            [ height $ V 23
+            , width $ V 23
+            , imageWithFallback $ "ny_ic_coin_flag," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_coin_flag.png"
+            , visibility if fromMaybe 0 (fromString (getValueToLocalStore EARNINGS_VISITED_COUNT)) > 3 then GONE else VISIBLE
+            ]   
+          , imageView
+            [ height $ V 16
+            , width $ V 16
+            , margin $ Margin 12 9 0 0 
+           -- , margin $ Margin 1 6 0 0
+            , imageWithFallback $ "ny_ic_yatri_coin," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_yatri_coin.png"
+            ] 
+          , textView $
+            [ text "458"
+            -- , margin $ MarginLeft 9
+            -- , margin $ MarginTop 4
+            , margin $ Margin 30 5 0 6 
+            , color Color.black900     
+            ] <> FontStyle.subHeading2 TypoGraphy
+        ]
+  ]  
+
+earningDetails :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+earningDetails state push =
+  PrestoAnim.animationSet [
+  translateYAnimFromTop $ translateFullYAnimWithDurationConfig 550] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 9.0
+  , padding $ Padding 8 8 8 8
+  , margin $ Margin 16 6 16 0
+  --, cornerRadius 7.0
+  , orientation VERTICAL
+  --, background Color.blue600
+  , visibility if state.props.expandEarnings then VISIBLE else GONE
+  , stroke  ("1," <> Color.grey700)
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginBottom 9
+      ][ textView 
+          [ text $ getString TODAY_EARNINGS
+        --  , margin $ MarginLeft 10
+          , gravity RIGHT
+          ]
+        , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
+        , textView $ 
+          [ text "₹2,745"
+            , color Color.black900
+            , gravity RIGHT
+          ] <> FontStyle.body10 TypoGraphy
+        , imageView 
+          [ height $ V 9
+            , width $ V 9
+            , gravity CENTER
+            , imageWithFallback $ "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png"
+            , margin $ Margin 6 9 12 0
+            , onClick push (const (ExpandEarnings if state.props.expandEarnings then false else true))
+          ]
+        ]
+    , linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      ](replicate 20 horizontalDotedLine)
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 9
+      ][ textView 
+          [ text $ getString TRIP_EARNINGS
+        --  , margin $ MarginLeft 10
+          , gravity RIGHT
+          ]
+        , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
+        , textView $ 
+          [ text "₹2,000"
+            , color Color.black900
+            , gravity RIGHT
+            , margin $ MarginRight 12
+          ] <> FontStyle.body13 TypoGraphy
+        ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ Margin 0 9 0 9
+      ][ textView 
+          [ text $ getString EXTRA_EARNINGS
+        --  , margin $ MarginLeft 10
+          , gravity RIGHT
+          ]
+        , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
+        , textView $ 
+          [ text "₹745"
+            , color Color.green900
+            , gravity RIGHT
+            , margin $ MarginRight 12
+          ] <> FontStyle.body13 TypoGraphy
+        ]
+    , driverActivityStatus state
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ Margin 0 12 0 9
+      ][ textView 
+          [ text $ "12" <> getString TRIPS
+        --  , margin $ MarginLeft 10
+          , gravity RIGHT
+          ]
+        , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
+        , textView 
+          [ text $ getString VIEW_MORE
+            , color Color.blue800
+            , gravity RIGHT
+            , margin $ MarginRight 12
+            , onClick push $ const GoToEarnings
+          ]
+        ]                      
+    ]
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 statsModel push state =
@@ -1304,4 +1481,13 @@ launchMaps push action = do
 genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+
+horizontalDotedLine :: forall w. PrestoDOM (Effect Unit) w
+horizontalDotedLine =
+  linearLayout[
+    width $ V $ (screenWidth unit) / 36
+  , height $ V 1
+  , background Color.grey900
+  , margin $ MarginRight 6
+  ][]
 

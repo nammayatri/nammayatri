@@ -794,5 +794,9 @@ const mlStrings = {
   PROCEED_TO_CHAT : "ചാറ്റുമായി മുന്നോട്ട് പോകൂ",
   PLEASE_CONSIDER_CALLING_THEM : "കസ്റ്റമറിനു ചാറ്റ് വായിക്കാൻ കഴിഞ്ഞേക്കില്ല. അവരെ വിളിക്കുന്നത് പരിഗണിക്കുക",
   EARNINGS : "വരുമാനം",
-  YATRI_COINS : "യാത്രി നാണയങ്ങൾ"
+  YATRI_COINS : "യാത്രി നാണയങ്ങൾ",
+  TODAY_EARNINGS : "ഇന്നത്തെ വരുമാനം",
+  TRIP_EARNINGS : "ട്രിപ്പ് വരുമാനം",
+  EXTRA_EARNINGS : "അധിക വരുമാനം",
+  VIEW_MORE : "കൂടുതൽ കാണുക"
 }
