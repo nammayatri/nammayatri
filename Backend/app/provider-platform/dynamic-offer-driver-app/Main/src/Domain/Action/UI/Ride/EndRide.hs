@@ -348,6 +348,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
       oldDistance = booking.estimatedDistance
 
   -- maybe compare only distance fare?
+  now <- getCurrentTime
   let estimatedFare = Fare.fareSum booking.fareParams
   farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
   fareParams <-
@@ -356,6 +357,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
         { farePolicy = farePolicy,
           distance = recalcDistance,
           rideTime = booking.startTime,
+          endRideTime = Just now,
           waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
           driverSelectedFare = booking.fareParams.driverSelectedFare,
           customerExtraFee = booking.fareParams.customerExtraFee,

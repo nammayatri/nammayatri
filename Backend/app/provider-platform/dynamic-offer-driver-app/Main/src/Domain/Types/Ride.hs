@@ -41,6 +41,13 @@ $(mkBeamInstancesForEnum ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 
+data RideDetails
+  = RideDetailsDemand {toLocation :: DL.Location, driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)}
+  | RideDetailsRental {odoMeterStartReading :: Meters, odoMeterEndReading :: Meters}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideType = ONDEMAND | RENTAL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, BP.ToParamSchema)
+
 data Ride = Ride
   { id :: Id Ride,
     bookingId :: Id DRB.Booking,
@@ -59,17 +66,17 @@ data Ride = Ride
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
     fromLocation :: DL.Location,
-    toLocation :: DL.Location,
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    rideDetails :: RideDetails,
+    rideTypes :: RideType,
     driverDeviatedFromRoute :: Maybe Bool,
     numberOfSnapToRoadCalls :: Maybe Int,
     numberOfDeviation :: Maybe Bool,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

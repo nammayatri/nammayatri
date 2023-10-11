@@ -76,7 +76,7 @@ data DConfirmReq = DConfirmReq
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
-    toAddress :: DL.LocationAddress,
+    toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text
   }
 
@@ -158,7 +158,11 @@ handler transporter req quote = do
           QRB.updateRiderId booking.id riderDetails.id
           QRideD.create rideDetails
           QL.updateAddress booking.fromLocation.id req.fromAddress
-          QL.updateAddress booking.toLocation.id req.toAddress
+          case booking.bookingDetails of
+            DRB.BookingDetailsOnDemand {..} -> do
+              whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
+            _ -> do
+              throwError $ InvalidRequest ""
           QDQ.setInactiveBySTId driverQuote.searchTryId
           QSRD.setInactiveBySTId driverQuote.searchTryId
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
@@ -188,7 +192,7 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation,
+                toLocation = Just uBooking.toLocation,
                 driverId = Just driver.id.getId,
                 driverName = Just driver.firstName,
                 vehicleVariant = req.vehicleVariant
@@ -203,7 +207,11 @@ handler transporter req quote = do
           when isNewRider $ QRD.create riderDetails
           QRB.updateRiderId booking.id riderDetails.id
           QL.updateAddress booking.fromLocation.id req.fromAddress
-          QL.updateAddress booking.toLocation.id req.toAddress
+          case booking.bookingDetails of
+            DRB.BookingDetailsOnDemand {..} -> do
+              whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
+            _ -> do
+              throwError $ InvalidRequest ""
           whenJust req.mbRiderName $ QRB.updateRiderName booking.id
           QBE.logRideConfirmedEvent booking.id
 
@@ -219,11 +227,13 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation,
+                toLocation = Just uBooking.toLocation,
                 driverId = Nothing,
                 driverName = Nothing,
                 vehicleVariant = req.vehicleVariant
               }
+    DRB.RentalBooking -> do
+      undefined
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
