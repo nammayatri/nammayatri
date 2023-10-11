@@ -429,6 +429,9 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ic_arrow" : true,
+      "ic_clock" : true,
+      "ic_elipse" : true
    }
 }

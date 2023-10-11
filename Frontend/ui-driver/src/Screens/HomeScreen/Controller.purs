@@ -224,6 +224,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
                     | ClearPendingDues ST.HomeScreenState
+                    | GoToDriverRentalScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -290,6 +291,7 @@ data Action = NoAction
             | PaymentPendingPopupAC PopUpModal.Action
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
+            | GoToRental
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -715,6 +717,8 @@ eval GoToProfile state =  do
   _ <- pure $ hideKeyboardOnNavigation true
   exit $ GoToProfileScreen state
 
+eval GoToRental state = do
+  exit $ GoToDriverRentalScreen state
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then
       exit $ AadhaarVerificationFlow state

@@ -1836,3 +1836,31 @@ type UpiApps
     , appName :: String
     }
 
+---------------------------------------------------- DriverRentalScreen ----------------------------------
+
+type DriverRentalScreenState = {
+    data :: DriverRentalScreenStateData
+  , props :: DriverRentalScreenStateProps
+}
+
+
+type DriverRentalScreenStateData = {
+    rentalRequestDetails :: Array RentalRequestDetial
+    ,screenName :: String
+}
+
+type DriverRentalScreenStateProps = {
+     isRentalAccepted :: Boolean
+}
+
+type RentalRequestDetial = {
+  sourceArea :: String,
+  sourceAddress :: String,
+  sourcePincode :: String,
+  time :: String,
+  distance :: String,
+  baseFare :: String,
+  pickupDistance :: String,
+  pickupTime ::  String
+
+}

@@ -444,3 +444,7 @@ peacoat = "#33394A"
 
 mangolia :: Color 
 mangolia = "#F4ECFF"
+mangolia = "#F4ECFF"
+
+lightGradientPurple :: Color
+lightGradientPurple = "#09C3C6"

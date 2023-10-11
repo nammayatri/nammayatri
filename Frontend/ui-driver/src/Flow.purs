@@ -80,6 +80,7 @@ import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
 import Screens.Handlers (homeScreen)
 import Screens.Handlers as UI
+import Screens.DriverRentalScreen.Handler as UII
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
@@ -94,7 +95,11 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
+<<<<<<< HEAD
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
+=======
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..) ,RentalRequestDetial(..) , DriverRentalScreenState(..)  )
+>>>>>>> d30a7979e (First half for driver's Rental Feature)
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..))
 import Services.Accessor (_lat, _lon, _id,_orderId)
@@ -106,6 +111,7 @@ import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Debug
+
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
@@ -1013,6 +1019,14 @@ driverProfileFlow = do
       driverProfileFlow
 
 
+driverRentalFlow :: FlowBT String Unit
+driverRentalFlow = do
+  action <- UI.rentalScreen
+  case action of 
+    _ -> homeScreenFlow
+
+     
+
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do
   action <- UI.driverDetailsScreen
@@ -1600,6 +1614,57 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
         Nothing -> onBoardingSubscriptionScreenFlow (state.props.screenCount-1)
   pure unit
 
+rentalRideRequest :: Array RentalRequestDetial
+rentalRideRequest =
+    [ {     sourceArea : "Dakshineshwar kalibari",
+            sourceAddress : "daskhineshwar, kolkata , west Bengal",
+            sourcePincode : "700076",
+            time : "8 hr",
+            distance : "80 km",
+            baseFare : "₹ 800",
+            pickupDistance : "600m",
+            pickupTime :  "12:30 PM"
+        },
+         {  sourceArea : "Maidan",
+            sourceAddress : "H82W+248, Maidan, Kolkata, West Bengal",
+            sourcePincode : "700076",
+            time : "4",
+            distance : "40 km",
+            baseFare : "₹ 1600",
+            pickupDistance : "600m",
+            pickupTime :  "12:30 PM"
+        }
+        ,
+         {  sourceArea : "Maidan",
+            sourceAddress : "H82W+248, Maidan, Kolkata, West Bengal",
+            sourcePincode : "700076",
+            time : "8 hr",
+            distance : "80 km",
+            baseFare : "₹ 1600",
+            pickupDistance : "600m",
+            pickupTime :  "12:30 PM"
+        },
+        {   sourceArea : "Maidan",
+            sourceAddress : "H82W+248, Maidan, Kolkata, West Bengal",
+            sourcePincode : "700076",
+            time : "8 hr",
+            distance : "80 km",
+            baseFare : "₹ 1600",
+            pickupDistance : "600m",
+            pickupTime :  "12:30 PM"
+        },
+         {  sourceArea : "Maidan",
+            sourceAddress : "H82W+248, Maidan, Kolkata, West Bengal",
+            sourcePincode : "700076",
+            time : "8 hr",
+            distance : "80 km",
+            baseFare : "₹ 1600",
+            pickupDistance : "600m",
+            pickupTime :  "12:30 PM"
+        }
+
+    ]
+
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
@@ -1893,7 +1958,14 @@ homeScreenFlow = do
       _ <- updateStage $ HomeScreenStage HomeScreen
       updateDriverDataToStates
       homeScreenFlow
+<<<<<<< HEAD
     CLEAR_PENDING_DUES -> clearPendingDuesFlow
+=======
+    GO_TO_RENTAL_SCREEN  -> do
+      _ <- pure $ printLog "state inside GO TO RENTAL SCREEN FROM HOME SCREEN FLOW" rentalRideRequest
+      modifyScreenState $ DriverRentalScreenStateType (\rentalScreen -> rentalScreen {data { rentalRequestDetails = rentalRideRequest , screenName = "rentalScreen11"}})
+      driverRentalFlow
+>>>>>>> d30a7979e (First half for driver's Rental Feature)
   pure unit
 
 clearPendingDuesFlow :: FlowBT String Unit

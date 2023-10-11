@@ -315,6 +315,16 @@ driverMapsHeaderView push state =
                     , viewRecenterAndSupport state push
                   ]
                 ]
+              , linearLayout
+                [
+                  width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity RIGHT
+                , orientation VERTICAL
+                , weight 1.0
+                ][
+                  rentalRidesView state push
+                ]
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
@@ -785,6 +795,115 @@ updateLocationAndLastUpdatedView state push =
     , updateButtonIconAndText push state
   ]
 
+rentalRidesView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalRidesView state push =
+  PrestoAnim.animationSet
+  [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding (Padding 16 0 0 0)
+  , margin (Margin 16 16 16 0)
+  , cornerRadius 8.0
+  , orientation HORIZONTAL
+  , background Color.white900
+  ][
+    linearLayout[
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , padding $ PaddingTop 8
+    , padding $ PaddingBottom 16
+    , weight 1.0 
+    ][
+    linearLayout
+      [ width $ V 40
+      , height $ V 40
+      , orientation VERTICAL
+      , cornerRadius 60.0
+      , background Color.lightGradientPurple
+      ]
+      [
+        textView $
+          [
+            text $ "12"
+          , color Color.white900
+          , gravity CENTER
+          , textSize FontSize.a_18
+          , padding $ PaddingLeft 12
+          , padding $ PaddingTop 16
+          , fontStyle $ FontStyle.bold LanguageStyle
+          ]
+      ]
+    , 
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , padding $ PaddingLeft 8
+      , orientation VERTICAL
+      , onClick push $ const GoToRental
+      ][
+        textView $
+          [
+            text $ "Rental Rides"
+          , color Color.lightGradientPurple
+          , textSize FontSize.a_16
+          , fontStyle $ FontStyle.bold LanguageStyle
+          ],
+          linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          ]
+          [
+              textView $
+              [
+                text $ "View All Requests"
+              , color Color.lightGradientPurple
+              , textSize FontSize.a_12
+              ]
+              , 
+              imageView
+                [ width (V 10)
+                , height (V 8)
+                , padding $ PaddingTop 3
+                , gravity CENTER
+                , imageWithFallback $ "ic_arrow," <> (getAssetStoreLink FunctionCall) <> "ic_arrow.png"
+                ]
+          ]
+      ]
+    ]
+      ,
+      linearLayout
+      [ width  WRAP_CONTENT
+      , height  WRAP_CONTENT
+      , cornerRadius 120.0
+      , gravity RIGHT
+      ]
+      [
+        imageView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , gravity RIGHT
+                , imageWithFallback $ "ic_suv_ac," <> (getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
+                ]
+      ]
+  ]
+
+--  textView $
+--     [ text $ (getString UPDATED_AT) <> ": "
+--     , lineHeight "15"
+--     , color Color.brownishGrey
+--     , gravity LEFT
+--     , height WRAP_CONTENT
+--     ] <> FontStyle.paragraphText TypoGraphy
+--     , textView $
+--       [  width WRAP_CONTENT
+--         , height WRAP_CONTENT
+--         , ellipsize true
+--         , singleLine true
+--         , gravity CENTER_VERTICAL
+--         , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
+--       ] <> FontStyle.body4 TypoGraphy
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 statsModel push state =
     linearLayout
