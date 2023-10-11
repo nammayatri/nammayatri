@@ -1,6 +1,6 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
-      "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION"],
+      "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "ACCESSIBILITY_TEXT"],
       "isReferralEnabled": "true",
       "showBookingPreference": "true",
       "showRateCard": "true",
