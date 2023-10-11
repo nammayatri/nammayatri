@@ -93,7 +93,7 @@ window.getMerchantConfig = function () {
       "maxDuesLimit" : 100.0,
       "highDueWarningLimit" : 75.0,
       "moveDriverToOfflineInHighDueDaily" : true,
-      "enableSubscriptionPopups" : false
+      "enableSubscriptionPopups" : true
     }
     , "rideActionModelConfig" : {
         "showVehicleVariant" : false
