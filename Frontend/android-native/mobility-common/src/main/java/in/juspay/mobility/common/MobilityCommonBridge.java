@@ -614,8 +614,9 @@ public class MobilityCommonBridge extends HyperBridge {
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
             setKeysInSharedPrefs("MAPS_OPENED", "true");
-            String query = "google.navigation:q=" + dlat + "," + dlong;
-            Uri mapsURI = Uri.parse(query);
+            String query = "google.navigation:q=%f,%f";
+            String mapsQuery = String.format(Locale.ENGLISH, query, dlat, dlong);
+            Uri mapsURI = Uri.parse(mapsQuery);
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
             mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             mapIntent.setPackage("com.google.android.apps.maps");
@@ -629,7 +630,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void openNavigationWithQuery(double lat, double lon, String query, String packageName) {
         try {
             setKeysInSharedPrefs("MAPS_OPENED", "true");
-            String mapsQuery = String.format(query, lat, lon);
+            String mapsQuery = String.format(Locale.ENGLISH, query, lat, lon);
             Uri mapsURI = Uri.parse(mapsQuery);
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
             mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

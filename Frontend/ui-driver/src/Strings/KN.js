@@ -827,5 +827,9 @@ const kannadaStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿಸುತ್ತದೆ",
   AC_CAB : "ಎಸಿ ಕ್ಯಾಬ್",
   AC_SUV : "ಎಸಿ ಎಸ್ಯುವಿ",
-  DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ"
+  DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ",
+  ECONOMICAL : "ಆರ್ಥಿಕ",
+	SPACIOUS : "ವಿಶಾಲವಾದ",
+	COMFY : "ಆರಾಮದಾಯಕ",
+	PEOPLE : "ಜನರು"
 }

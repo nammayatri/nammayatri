@@ -825,5 +825,9 @@ const tamilStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
   AC_CAB : "ஏசி வண்டி",
   AC_SUV : "ஏசி எஸ்யூவி",
-  DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்"
+  DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்",
+  ECONOMICAL: "பொருளாதாரம்",
+  SPACIOUS: "விசாலமான",
+  COMFY: "வசதியான",
+  PEOPLE: "மக்கள்"
 }

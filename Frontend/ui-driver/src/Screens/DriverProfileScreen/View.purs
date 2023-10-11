@@ -957,7 +957,7 @@ profileOptionsLayout state push =
               , orientation VERTICAL
               , gravity CENTER_VERTICAL
               , onClick push $ const $ OptionClick optionItem.menuOptions
-              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) then 
+              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && ((null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) || not state.data.activeRCData.rcStatus) then 
                       [ alpha 0.5
                       , clickable false] 
                     else [])

@@ -799,5 +799,9 @@ const mlStrings = {
 	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "റൈഡുകളും എടുക്കാൻ നിങ്ങളെ അനുവദിക്കും",
   AC_CAB : "എസി ക്യാബ്",
   AC_SUV : "എസി എസ്‌യുവി",
-  DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക"
+  DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക",
+  ECONOMICAL : "സാമ്പത്തിക",
+	SPACIOUS : "വിശാലമായത്",
+	COMFY : "സുഖപ്രദമായ",
+	PEOPLE : "പേർ"
 }
