@@ -47,10 +47,6 @@ data DriverOnboardingError
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
-
-$(mkBeamInstancesForEnum ''DriverOnboardingError)
-
 instance IsBaseError DriverOnboardingError where
   toMessage = \case
     ImageValidationExceedLimit id_ -> Just $ "Number of validation try exceed for person \"" <> id_ <> "\"."
@@ -128,3 +124,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
 
 instance IsAPIError DriverOnboardingError
+
+instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
+
+$(mkBeamInstancesForEnum ''DriverOnboardingError)
