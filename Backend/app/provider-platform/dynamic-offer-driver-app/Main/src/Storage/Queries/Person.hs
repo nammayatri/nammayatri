@@ -499,3 +499,12 @@ findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is Be
 
 updateMediaId :: MonadFlow m => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateTotalEarnedCoins :: MonadFlow m => Id Person -> Int -> m ()
+updateTotalEarnedCoins (Id driverId) coinValue = updateWithKV [Se.Set BeamP.totalEarnedCoins coinValue] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateUsedCoins :: MonadFlow m => Id Person -> Int -> m ()
+updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoins usedCoinValue] [Se.Is BeamP.id $ Se.Eq driverId]
+
+getTotalEarnedAndUsedCoins :: MonadFlow m => Id Person -> m (Maybe Person)
+getTotalEarnedAndUsedCoins (Id driverId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq driverId]

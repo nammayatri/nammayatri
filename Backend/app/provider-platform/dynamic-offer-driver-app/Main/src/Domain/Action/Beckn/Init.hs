@@ -137,7 +137,7 @@ handler merchantId req eitherReq = do
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag (Just driverQuote.distanceToPickup)
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
@@ -146,7 +146,7 @@ handler merchantId req eitherReq = do
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
+          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing Nothing
           _ <- QRB.createBooking booking
           -- moving route from search request id to booking id
           routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
@@ -182,8 +182,9 @@ handler merchantId req eitherReq = do
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Text ->
+      Maybe Meters ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag distanceToPickup = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -215,6 +216,7 @@ handler merchantId req eitherReq = do
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            distanceToPickup = distanceToPickup,
             ..
           }
 

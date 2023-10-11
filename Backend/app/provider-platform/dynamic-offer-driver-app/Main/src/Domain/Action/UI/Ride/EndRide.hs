@@ -56,6 +56,8 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
@@ -151,7 +153,18 @@ buildEndRideHandle merchantId = do
         uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
 
-type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type EndRideFlow m r =
+  ( MonadFlow m,
+    CoreMetrics m,
+    MonadReader r m,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    LT.HasLocationService m r,
+    HasField
+      "minTripDistanceForReferralCfg"
+      r
+      (Maybe HighPrecMeters)
+  )
 
 driverEndRide ::
   (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -332,6 +345,9 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           let requestor = callBasedEndRideReq.requestor
           sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
         _ -> pure ()
+
+    logDebug "RideCompleted Coin Event"
+    fork "DriverRideCompletedCoin Event : " $ DC.driverCoinsEvent driverId booking.providerId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where

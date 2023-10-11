@@ -91,7 +91,8 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
     ratingAsDecimal :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    coinFeature :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

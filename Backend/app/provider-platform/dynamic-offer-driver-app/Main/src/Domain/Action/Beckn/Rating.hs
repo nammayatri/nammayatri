@@ -26,6 +26,8 @@ import Kernel.Beam.Functions as B
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -56,6 +58,8 @@ handler merchantId req ride = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+      logDebug "Driver Rating Coin Event"
+      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::

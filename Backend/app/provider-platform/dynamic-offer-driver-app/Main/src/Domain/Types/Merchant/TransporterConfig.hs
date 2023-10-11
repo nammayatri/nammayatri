@@ -97,7 +97,8 @@ data TransporterConfigD u = TransporterConfig
     openMarketUnBlocked :: Bool,
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
-    ratingAsDecimal :: Bool
+    ratingAsDecimal :: Bool,
+    coinFeature :: Bool
   }
   deriving (Generic, Show)
 

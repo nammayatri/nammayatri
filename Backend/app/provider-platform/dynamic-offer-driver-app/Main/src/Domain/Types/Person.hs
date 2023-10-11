@@ -92,7 +92,9 @@ data PersonE e = Person
     clientVersion :: Maybe Version,
     unencryptedAlternateMobileNumber :: Maybe Text,
     alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
-    faceImageId :: Maybe (Id M.MediaFile)
+    faceImageId :: Maybe (Id M.MediaFile),
+    totalEarnedCoins :: Int,
+    usedCoins :: Int
   }
   deriving (Generic)
 

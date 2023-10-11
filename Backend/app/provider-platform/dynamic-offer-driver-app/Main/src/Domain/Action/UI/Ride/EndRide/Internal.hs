@@ -62,6 +62,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -137,7 +139,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
 
-  sendReferralFCM ride mbRiderDetailsId
+  sendReferralFCM ride merchantId mbRiderDetailsId
   updateLeaderboardZScore merchantId ride
   DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
 
@@ -148,9 +150,10 @@ sendReferralFCM ::
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   Ride.Ride ->
+  Id Merchant ->
   Maybe (Id RD.RiderDetails) ->
   m ()
-sendReferralFCM ride mbRiderDetailsId = do
+sendReferralFCM ride merchantId mbRiderDetailsId = do
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
@@ -167,6 +170,8 @@ sendReferralFCM ride mbRiderDetailsId = do
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+            logDebug "Driver Referral Coin Event"
+            fork "DriverReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId (DCT.Referral "DriverReferral" ride.chargeableDistance)
           Nothing -> pure ()
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Ride.Ride -> m ()

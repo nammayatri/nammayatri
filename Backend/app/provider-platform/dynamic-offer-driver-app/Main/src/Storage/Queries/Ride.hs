@@ -45,7 +45,7 @@ import EulerHS.Prelude hiding (id, null, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
-import Kernel.Prelude hiding (foldl', map)
+import Kernel.Prelude hiding (foldl', length, map)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -489,6 +489,19 @@ createMapping bookingId rideId = do
 
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]
+
+findTotalRidesInDay :: MonadFlow m => Id Person -> m [DRide.Ride]
+findTotalRidesInDay (Id driverId) = do
+  now <- getCurrentTime
+  let todayStart = UTCTime (utctDay now) 0
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamR.status $ Se.Eq Ride.COMPLETED,
+          Se.Is BeamR.createdAt $ Se.GreaterThanOrEq todayStart,
+          Se.Is BeamR.createdAt $ Se.LessThanOrEq now,
+          Se.Is BeamR.driverId $ Se.Eq driverId
+        ]
+    ]
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do

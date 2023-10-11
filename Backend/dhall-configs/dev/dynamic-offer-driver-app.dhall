@@ -28,7 +28,7 @@ let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5454
+      , connectPort = 5434
       , connectUser = esqLocationDBCfg.connectUser
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase

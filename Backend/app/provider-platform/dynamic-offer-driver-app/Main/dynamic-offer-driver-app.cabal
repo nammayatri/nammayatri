@@ -56,6 +56,7 @@ library
       API.UI.Call
       API.UI.CancellationReason
       API.UI.Driver
+      API.UI.DriverCoins
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
@@ -129,6 +130,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
@@ -173,6 +175,10 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
+      Domain.Types.Coins.CoinHistory
+      Domain.Types.Coins.CoinPlan
+      Domain.Types.Coins.DriverCoins
+      Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
@@ -259,6 +265,8 @@ library
       Domain.Types.Vehicle.Variant
       Domain.Types.Volunteer
       Environment
+      Lib.DriverCoins.Coins
+      Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
@@ -316,6 +324,10 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.Coins.CoinHistory
+      Storage.Beam.Coins.CoinPlan
+      Storage.Beam.Coins.DriverCoins
+      Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
       Storage.Beam.Driver.DriverFlowStatus
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
@@ -440,6 +452,10 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.Coins.CoinHistory
+      Storage.Queries.Coins.CoinPlan
+      Storage.Queries.Coins.DriverCoins
+      Storage.Queries.Coins.PurchaseHistory
       Storage.Queries.Driver.DriverFlowStatus
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal

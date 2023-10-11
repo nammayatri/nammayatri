@@ -119,6 +119,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             updateOrderStatusBatchSize,
             orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
+            coinFeature = coinFeature,
             ..
           }
     where
@@ -199,5 +200,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
-        BeamTC.ratingAsDecimal = ratingAsDecimal
+        BeamTC.ratingAsDecimal = ratingAsDecimal,
+        BeamTC.coinFeature = coinFeature
       }

@@ -187,7 +187,8 @@ instance FromTType' BeamB.Booking Booking where
                 riderName = riderName,
                 paymentUrl = paymentUrl,
                 createdAt = createdAt,
-                updatedAt = updatedAt
+                updatedAt = updatedAt,
+                distanceToPickup = distanceToPickup
               }
       else do
         logError $ "FareParameters not found for booking: " <> show id
@@ -225,7 +226,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.paymentUrl = paymentUrl,
         BeamB.riderName = riderName,
         BeamB.createdAt = createdAt,
-        BeamB.updatedAt = updatedAt
+        BeamB.updatedAt = updatedAt,
+        BeamB.distanceToPickup = distanceToPickup
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
