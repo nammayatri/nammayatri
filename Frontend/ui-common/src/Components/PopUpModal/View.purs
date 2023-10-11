@@ -137,6 +137,7 @@ view push state =
                 ] <> (FontStyle.h2 LanguageStyle)
                 , linearLayout[
                     height state.coverVideoConfig.height
+                , visibility state.coverVideoConfig.visibility 
                 , width MATCH_PARENT
                 , gravity CENTER
                 ][PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $ linearLayout

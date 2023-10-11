@@ -298,17 +298,17 @@ eval AfterRender state = do
   continue state{props{mapRendered= true}}
 eval BackPressed state = do
   if state.props.showGenericAccessibilityPopUp then continue state{props{showGenericAccessibilityPopUp = false}}
-    else if state.props.enterOtpModal then do
+    else if state.props.enterOtpModal then
       continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
       else if (state.props.currentStage == ST.ChatWithCustomer) then do
         _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
         continue state{props{currentStage = ST.RideAccepted}}
-        else if state.props.cancelRideModalShow then do
+        else if state.props.cancelRideModalShow then
           continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
             else if state.props.cancelConfirmationPopup then do
               _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
               continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
-                else if state.props.showBonusInfo then do
+                else if state.props.showBonusInfo then
                   continue state { props { showBonusInfo = false } }
                     else if state.data.paymentState.showRateCard then
                       continue state { data { paymentState{ showRateCard = false } } }

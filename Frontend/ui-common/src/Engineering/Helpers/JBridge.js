@@ -1951,7 +1951,7 @@ export const setYoutubePlayer = function (json) {
             console.log("Inside setYoutubePlayer ------------");
             return JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
           } catch (err) {
-            console.log("error in setYoutubePlayer");
+            console.log("error in setYoutubePlayer " + err);
           }
         }
     };
