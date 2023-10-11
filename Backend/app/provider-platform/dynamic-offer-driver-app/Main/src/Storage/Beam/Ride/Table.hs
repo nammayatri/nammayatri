@@ -50,7 +50,10 @@ data RideT f = RideT
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
-    driverGoHomeRequestId :: B.C f (Maybe Text)
+    driverGoHomeRequestId :: B.C f (Maybe Text),
+    odoMeterStartReading :: B.C f (Maybe Meters),
+    odoMeterEndReading :: B.C f (Maybe Meters),
+    rideType :: B.C f Domain.RideType
   }
   deriving (Generic, B.Beamable)
 

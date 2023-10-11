@@ -84,14 +84,20 @@ createRide' = createWithKV
 create :: MonadFlow m => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- Kernel.Prelude.whenJust ride.toLocation $ \toLoc -> whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
+  case ride.rideDetails of
+    RideDetailsOnDemand {toLocation} -> do
+      whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
+    RideDetailsRental {} -> pure ()
   createRide' ride
 
 createRide :: MonadFlow m => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
+  case ride.rideDetails of
+    RideDetailsOnDemand {toLocation} -> do
+      toLocationMaps <- SLM.buildDropLocationMapping toLocation.id ride.id.getId DLM.RIDE
+      QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
+    RideDetailsRental {} -> pure ()
 
 findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
@@ -217,6 +223,16 @@ updateUiDistanceCalculation rideId dist1 dist2 = do
   updateOneWithKV
     [ Se.Set BeamR.uiDistanceCalculationWithAccuracy dist1,
       Se.Set BeamR.uiDistanceCalculationWithoutAccuracy dist2,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateOdometerEndReading rideId meters = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [
+      Se.Set BeamR.odoMeterEndReading (Meters <$> meters),
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -499,63 +515,139 @@ instance FromTType' BeamR.Ride Ride where
           void $ QBooking.findById (Id bookingId)
           createMapping bookingId id
         else return mappings
-    let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
-        toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
+    case rideType of
+      ON_DEMAND -> do
+        let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
+            toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
 
-    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
+        fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+        fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
+        when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+        let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+        toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
+        tUrl <- parseBaseUrl trackingUrl
+        let details = RideDetailsOnDemand {
+           toLocation = toLocation,
+           driverDeviatedFromRoute = driverDeviatedFromRoute,
+           numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
+           numberOfDeviation = numberOfDeviation,
+           uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
+           uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
+           driverGoHomeRequestId = Id <$> driverGoHomeRequestId
+        }
+        pure $
+          Just
+            Ride
+              { id = Id id,
+                bookingId = Id bookingId,
+                shortId = ShortId shortId,
+                merchantId = Id <$> merchantId,
+                driverId = Id driverId,
+                tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
+                tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
+                fareParametersId = Id <$> fareParametersId,
+                trackingUrl = tUrl,
+                rideDetails = details,
+                ..
+              }
+      RENTAL -> do
+        let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
 
-    when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-    toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
-    tUrl <- parseBaseUrl trackingUrl
-    pure $
-      Just
-        Ride
-          { id = Id id,
-            bookingId = Id bookingId,
-            shortId = ShortId shortId,
-            merchantId = Id <$> merchantId,
-            driverId = Id driverId,
-            tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
-            tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
-            fareParametersId = Id <$> fareParametersId,
-            driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
-            trackingUrl = tUrl,
-            toLocation = Just toLocation,
-            ..
-          }
+        fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+        fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
+        tUrl <- parseBaseUrl trackingUrl
+        let details = RideDetailsRental {
+           DRide.rentalToLocation = Nothing,
+           odoMeterStartReading = odoMeterStartReading,
+           odoMeterEndReading = odoMeterEndReading
+        }
+        pure $
+          Just
+            Ride
+              { id = Id id,
+                bookingId = Id bookingId,
+                shortId = ShortId shortId,
+                merchantId = Id <$> merchantId,
+                driverId = Id driverId,
+                tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
+                tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
+                fareParametersId = Id <$> fareParametersId,
+                trackingUrl = tUrl,
+                rideDetails = details,
+                ..
+              }
+
 
 instance ToTType' BeamR.Ride Ride where
   toTType' Ride {..} =
-    BeamR.RideT
-      { BeamR.id = getId id,
-        BeamR.bookingId = getId bookingId,
-        BeamR.shortId = getShortId shortId,
-        BeamR.merchantId = getId <$> merchantId,
-        BeamR.status = status,
-        BeamR.driverId = getId driverId,
-        BeamR.otp = otp,
-        BeamR.trackingUrl = showBaseUrl trackingUrl,
-        BeamR.fare = fare,
-        BeamR.traveledDistance = traveledDistance,
-        BeamR.chargeableDistance = chargeableDistance,
-        BeamR.driverArrivalTime = driverArrivalTime,
-        BeamR.tripStartTime = tripStartTime,
-        BeamR.tripEndTime = tripEndTime,
-        BeamR.tripStartLat = lat <$> tripStartPos,
-        BeamR.tripEndLat = lat <$> tripEndPos,
-        BeamR.tripStartLon = lon <$> tripStartPos,
-        BeamR.tripEndLon = lon <$> tripEndPos,
-        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-        BeamR.fareParametersId = getId <$> fareParametersId,
-        BeamR.distanceCalculationFailed = distanceCalculationFailed,
-        BeamR.createdAt = createdAt,
-        BeamR.updatedAt = updatedAt,
-        BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
-        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-        BeamR.numberOfDeviation = numberOfDeviation,
-        BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
-        BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
-      }
+    case rideDetails of
+      RideDetailsOnDemand {..} ->
+        BeamR.RideT
+          { BeamR.id = getId id,
+            BeamR.bookingId = getId bookingId,
+            BeamR.shortId = getShortId shortId,
+            BeamR.merchantId = getId <$> merchantId,
+            BeamR.status = status,
+            BeamR.driverId = getId driverId,
+            BeamR.otp = otp,
+            BeamR.trackingUrl = showBaseUrl trackingUrl,
+            BeamR.fare = fare,
+            BeamR.traveledDistance = traveledDistance,
+            BeamR.chargeableDistance = chargeableDistance,
+            BeamR.driverArrivalTime = driverArrivalTime,
+            BeamR.tripStartTime = tripStartTime,
+            BeamR.tripEndTime = tripEndTime,
+            BeamR.tripStartLat = lat <$> tripStartPos,
+            BeamR.tripEndLat = lat <$> tripEndPos,
+            BeamR.tripStartLon = lon <$> tripStartPos,
+            BeamR.tripEndLon = lon <$> tripEndPos,
+            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+            BeamR.fareParametersId = getId <$> fareParametersId,
+            BeamR.distanceCalculationFailed = distanceCalculationFailed,
+            BeamR.createdAt = createdAt,
+            BeamR.updatedAt = updatedAt,
+            BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
+            BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
+            BeamR.numberOfDeviation = numberOfDeviation,
+            BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
+            BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
+            BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
+            BeamR.odoMeterStartReading = Nothing,
+            BeamR.odoMeterEndReading = Nothing,
+            BeamR.rideType = rideType
+          }
+      RideDetailsRental {..} -> do
+        BeamR.RideT
+          { BeamR.id = getId id,
+            BeamR.bookingId = getId bookingId,
+            BeamR.shortId = getShortId shortId,
+            BeamR.merchantId = getId <$> merchantId,
+            BeamR.status = status,
+            BeamR.driverId = getId driverId,
+            BeamR.otp = otp,
+            BeamR.trackingUrl = showBaseUrl trackingUrl,
+            BeamR.fare = fare,
+            BeamR.traveledDistance = traveledDistance,
+            BeamR.chargeableDistance = chargeableDistance,
+            BeamR.driverArrivalTime = driverArrivalTime,
+            BeamR.tripStartTime = tripStartTime,
+            BeamR.tripEndTime = tripEndTime,
+            BeamR.tripStartLat = lat <$> tripStartPos,
+            BeamR.tripEndLat = lat <$> tripEndPos,
+            BeamR.tripStartLon = lon <$> tripStartPos,
+            BeamR.tripEndLon = lon <$> tripEndPos,
+            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+            BeamR.fareParametersId = getId <$> fareParametersId,
+            BeamR.distanceCalculationFailed = distanceCalculationFailed,
+            BeamR.createdAt = createdAt,
+            BeamR.updatedAt = updatedAt,
+            BeamR.driverDeviatedFromRoute = Nothing,
+            BeamR.numberOfSnapToRoadCalls = Nothing,
+            BeamR.numberOfDeviation = Nothing,
+            BeamR.uiDistanceCalculationWithAccuracy = Nothing,
+            BeamR.uiDistanceCalculationWithoutAccuracy = Nothing,
+            BeamR.driverGoHomeRequestId = Nothing,
+            BeamR.odoMeterStartReading = odoMeterStartReading,
+            BeamR.odoMeterEndReading = odoMeterEndReading,
+            BeamR.rideType = rideType
+          }
