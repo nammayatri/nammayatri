@@ -329,7 +329,7 @@ planSuspend isDashboard (driverId, _merchantId, merchantOpCityId) = do
 planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
 planResume (driverId, _merchantId, _merchantOpCityId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  unless (driverInfo.autoPayStatus == Just DI.SUSPENDED) $ throwError InvalidAutoPayStatus
+  unless (driverInfo.autoPayStatus `elem` [Just DI.SUSPENDED, Just DI.RESUME_PENDING]) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateInActiveMandateExists driverId driverPlan
   Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
@@ -352,7 +352,7 @@ validateActiveMandateExists driverId driverPlan = do
       unless (mandate.status == DM.ACTIVE) $ throwError (ActiveMandateDoNotExist driverId.getId)
       return mandate
 
-validateInActiveMandateExists :: Id SP.Person -> DriverPlan -> Flow DM.Mandate
+validateInActiveMandateExists :: (MonadFlow m, MonadThrow m) => Id SP.Person -> DriverPlan -> m DM.Mandate
 validateInActiveMandateExists driverId driverPlan = do
   case driverPlan.mandateId of
     Nothing -> throwError $ InActiveMandateDoNotExist driverId.getId

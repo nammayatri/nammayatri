@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
   )
 where
 
+import qualified Domain.Action.UI.Plan as DPlan
 import Domain.Action.UI.Ride.EndRide.Internal
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
@@ -167,10 +168,11 @@ juspayWebhookHandler merchantShortId authData value = do
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> m ()
+processPayment :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, MonadThrow m) => Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> m ()
 processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let invoice = listToMaybe invoices
@@ -180,6 +182,7 @@ processPayment merchantId driverId orderId sendNotification = do
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
+    when (driverInfo.autoPayStatus == Just DI.RESUME_PENDING) (void $ DPlan.planResume (driverId, merchantId))
     updatePaymentStatus driverId merchantId
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 

@@ -83,8 +83,8 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerA
   driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   if driverInfo.autoPayStatus == Just DI.SUSPENDED
     then do
-      void $ DPlan.planResume (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId)
+      void $ DI.updateAutoPayStatusAndPayerVpa (Just DI.RESUME_PENDING) Nothing (cast personId)
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId)
       return $ DPlan.PlanSubscribeRes {..}
     else do DPlan.planSubscribe planId False (personId, merchantId, merchantOpCityId) driverInfo
 
