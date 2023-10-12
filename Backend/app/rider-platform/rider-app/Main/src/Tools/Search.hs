@@ -14,21 +14,22 @@
 
 module Tools.Search where
 
+import qualified Data.List as DL
 import EulerHS.Prelude
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
 findMaxWeightedInfoIdx :: Float -> Float -> [(Maybe Float, Maybe Float)] -> Int
 findMaxWeightedInfoIdx distanceWeight durationWeight infoArr =
-  fst $ maximumBy (comparing snd) indexedScores
+  fst $ DL.maximumBy (comparing snd) indexedScores
   where
     indexedScores = zip [0 ..] (map (\(dis, dur) -> calculateWeightedScore distanceWeight durationWeight (dis, dur)) infoArr)
 
 minDistance :: [Maps.RouteInfo] -> Meters
-minDistance = minimum . mapMaybe (.distance)
+minDistance = DL.minimum . mapMaybe (.distance)
 
 minDuration :: [Maps.RouteInfo] -> Seconds
-minDuration = minimum . mapMaybe (.duration)
+minDuration = DL.minimum . mapMaybe (.duration)
 
 normalizeArr :: Maybe Meters -> Maybe Seconds -> [Maps.RouteInfo] -> [(Maybe Float, Maybe Float)]
 normalizeArr minD minDur infoArr =
