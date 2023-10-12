@@ -81,6 +81,7 @@ data KeyStore
   | DISABILITY_POPUP_TRIGGERED
   | BUNDLE_TIME_OUT
 
+
 derive instance genericKeyStore :: Generic KeyStore _
 
 instance showKeyStore :: Show KeyStore where

@@ -161,6 +161,7 @@ initData = {
         showContackSupportPopUp : false,
         showChatBlockerPopUp : false,
         driverBlocked : false,
-        showBlockingPopup : false
+        showBlockingPopup : false,
+        expandEarnings : false
     }
 }

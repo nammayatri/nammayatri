@@ -43,7 +43,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
-import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
+import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC, toString)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
@@ -276,6 +276,8 @@ data Action = NoAction
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
+            | ExpandEarnings Boolean
+            | GoToEarnings
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -335,6 +337,15 @@ eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }
 
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+
+eval (ExpandEarnings status) state = do
+  continue state { props = state.props{ expandEarnings = status}}
+
+eval GoToEarnings state = do
+--  void $ continue state { props {earningsVisitedCount = 4 }}
+  let earningsVisitedCounte = fromMaybe 0 (fromString (getValueToLocalStore EARNINGS_VISITED_COUNT))
+  _ <- pure $ setValueToLocalStore EARNINGS_VISITED_COUNT (toString $ earningsVisitedCounte+1)
+  exit $ GoToEarningsScreen state
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state

@@ -822,5 +822,9 @@ const kannadaStrings = {
   GO_ONLINE_PROMPT_SUBSCRIBE : "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ.\nಸವಾರಿ ಮಾಡಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ",
   COMPLETE_PAYMENT_TO_CONTINUE : "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ",
 	EARNINGS : "ಗಳಿಕೆ",
-  YATRI_COINS : "ಯಾತ್ರಿ ನಾಣ್ಯಗಳು"
+  YATRI_COINS : "ಯಾತ್ರಿ ನಾಣ್ಯಗಳು",
+  TODAY_EARNINGS : "ಇಂದಿನ ಗಳಿಕೆ",
+  TRIP_EARNINGS : "ಟ್ರಿಪ್ ಗಳಿಕೆಗಳು",
+  EXTRA_EARNINGS : "ಹೆಚ್ಚುವರಿ ಗಳಿಕೆಗಳು",
+  VIEW_MORE : "ಇನ್ನಷ್ಟು ವೀಕ್ಷಿಸಿ"
 }

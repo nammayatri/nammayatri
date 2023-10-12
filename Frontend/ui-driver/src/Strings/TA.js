@@ -820,5 +820,9 @@ const tamilStrings = {
   GO_ONLINE_PROMPT_SUBSCRIBE : "நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள்.\nசவாரி செய்வதற்கான திட்டத்தில் சேரவும்",
   COMPLETE_PAYMENT_TO_CONTINUE : "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, உங்கள் கட்டணத்தைச் செலுத்தவும்",
 	EARNINGS : "வருவாய்",
-  YATRI_COINS : "யாத்திரி நாணயங்கள்"
+  YATRI_COINS : "யாத்திரி நாணயங்கள்",
+  TODAY_EARNINGS : "இன்றைய வருவாய்",
+  TRIP_EARNINGS : "பயண வருவாய்",
+  EXTRA_EARNINGS : "கூடுதல் வருவாய்",
+  VIEW_MORE : "மேலும் காண்க"
 }
