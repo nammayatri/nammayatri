@@ -81,6 +81,7 @@ import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
@@ -116,7 +117,7 @@ import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (groupBy, id, state)
 import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
