@@ -23,6 +23,7 @@ module Domain.Action.UI.Ride.StartRide
   )
 where
 
+import Data.Maybe (listToMaybe)
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DDrLoc

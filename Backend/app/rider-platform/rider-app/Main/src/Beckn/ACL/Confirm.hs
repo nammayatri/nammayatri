@@ -16,13 +16,14 @@
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)

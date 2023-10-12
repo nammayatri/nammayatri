@@ -25,10 +25,9 @@ import Data.ByteString as DB
 import Data.ByteString.Char8 as DBC
 import Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI (foldedCase)
-import qualified Data.HashMap.Internal as HMap
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
 import Data.Map
-import qualified Data.HashMap.Strict as HMS
 import Data.Text.Encoding as DTE
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R

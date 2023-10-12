@@ -15,7 +15,6 @@
 module Mobility.ARDU.SuccessFlow where
 
 import Common
-import Data.Maybe (fromJust)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
 import EulerHS.Prelude
