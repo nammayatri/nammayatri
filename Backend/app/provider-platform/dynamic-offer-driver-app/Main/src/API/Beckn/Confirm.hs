@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module API.Beckn.Confirm (API, handler) where
 
@@ -81,7 +82,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-            
+            DBooking.RentalBooking -> undefined
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc
