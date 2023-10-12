@@ -258,6 +258,7 @@ handler merchant sReq' =
           )
           rentalFareProducts.fareProducts
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
+      _<- QSR.create rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
       (quotes, mbEstimateInfos) <- do

@@ -48,7 +48,7 @@ buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.Init
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails _ -> (Init.RENTAL, Nothing, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
