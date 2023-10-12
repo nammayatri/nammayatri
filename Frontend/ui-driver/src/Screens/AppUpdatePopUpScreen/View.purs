@@ -17,7 +17,7 @@ module Screens.AppUpdatePopUpScreen.View where
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Prelude (Unit, bind, const, pure, unit, ($), (<>), (<<<), (==))
+import Prelude (Unit, bind, const, pure, unit, ($), (<>), (<<<), (==),(/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), onBackPressed, Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender, imageWithFallback)
 import Screens.Types as ST
 import Screens.Types (UpdatePopupType(..))
@@ -40,6 +40,10 @@ import JBridge(dateCallback)
 import Data.Function.Uncurried(runFn2)
 import Debug
 import MerchantConfig.Utils (getValueFromConfig)
+import Components.PopUpModal as PopUpModal
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Helpers.Utils (getAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
@@ -66,6 +70,7 @@ view push state =
     , clickable true
   ]
   [ if (state.updatePopup == AppVersion) then  updateRequiredView push state
+    else if (state.updatePopup == AppUpdated) then appUpdatedView push state
     else inaccurateDateAndTimeView push state 
   ] 
 
@@ -237,3 +242,52 @@ updateRequiredView push state =
         ]
       ]
   ]
+
+appUpdatedView :: forall w. (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
+appUpdatedView push state = 
+  linearLayout [
+    width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , clickable true
+    , background "#99000000"
+    , gravity CENTER_VERTICAL
+    , afterRender push (const AfterRender)
+  ][
+   PrestoAnim.animationSet [
+      Anim.translateYAnim $ AnimConfig.translateYAnimConfigUpdatePopUp
+    ] $ PopUpModal.view (push <<< AppUpdatedModelAction) (appUpdatedModelConfig state) 
+  ]
+
+appUpdatedModelConfig :: ST.AppUpdatePopUpScreenState -> PopUpModal.Config
+appUpdatedModelConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = (Corners 15.0 true true true true)
+  , margin = (Margin 16 0 16 0)
+  , padding = (Padding 0 5 0 0)
+  , topTitle {visibility = GONE}
+  , primaryText {
+      text = state.appUpdatedView.primaryText
+    }
+  , secondaryText {
+      text =state.appUpdatedView.secondaryText
+    }
+    , option1 {
+     visibility = false
+    }
+  , option2 {
+      text =  state.appUpdatedView.optionTwoText,
+      padding = (Padding 16 0 16 0),
+      margin = (Margin 12 0 12 16)
+    }
+  , coverImageConfig {
+      imageUrl = state.appUpdatedView.coverImageUrl <> "," <> (getAssetStoreLink FunctionCall) <> state.appUpdatedView.coverImageUrl <> ".png"
+    , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE
+    , height = V 178
+    , width = V 204
+    }
+  }
+  in popUpConfig'

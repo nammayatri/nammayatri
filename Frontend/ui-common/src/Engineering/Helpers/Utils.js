@@ -35,3 +35,6 @@ export const fetchFromLocalStoreImpl = function(key) {
       };
     };
 }
+export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+
+export const showSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()

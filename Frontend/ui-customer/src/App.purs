@@ -41,6 +41,7 @@ import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenDat
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage)
+import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
 
@@ -88,7 +89,7 @@ defaultGlobalState = GlobalState {
   , myProfileScreen : MyProfileScreenData.initData
   , savedLocationScreen : SavedLocationScreenData.initData
   , addNewAddressScreen : AddNewAddressScreenData.initData
-  , appUpdatePopUpScreen : {version : 1 , logField : empty}
+  , appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData
   , referralScreen : ReferralScreenData.initData
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
@@ -179,6 +180,8 @@ data REFERRAL_SCREEN_OUPUT = UPDATE_REFERRAL String | BACK_TO_HOME
 
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
+data APP_UPDATE_POPUP = Later | UpdateNow
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -197,3 +200,4 @@ data ScreenType =
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
+  | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)

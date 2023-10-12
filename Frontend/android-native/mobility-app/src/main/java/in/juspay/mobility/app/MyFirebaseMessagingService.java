@@ -10,6 +10,8 @@
 package in.juspay.mobility.app;
 
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -25,7 +27,6 @@ import androidx.annotation.NonNull;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.pushnotification.NotificationInfo;
 import com.clevertap.android.sdk.pushnotification.fcm.CTFcmMessageHandler;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -47,7 +48,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -354,6 +354,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             bundle.putExtra("merchantType",merchantType);
                             startService(bundle);
                             break;
+                        case NotificationTypes.FCM_UPDATE_BUNDLE :
+                            if(remoteMessage.getData().containsKey("bundle_payload")){
+                                try {
+                                    Intent fcmBundle = new Intent(this,RemoteAssetsDownloader.class);
+                                    fcmBundle.putExtra("merchantType",merchantType);
+                                    fcmBundle.putExtra("bundleType","FCM");
+                                    fcmBundle.putExtra("payload",remoteMessage.getData().get("bundle_payload"));
+                                    startService(fcmBundle);
+                                }catch (Exception e){
+                                    startFCMBundleUpdateService(remoteMessage, merchantType);
+                                }
+                            }
+                            break;
 
                         default:
                             if (payload.get("show_notification").equals("true")) {
@@ -365,6 +378,29 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
         } catch (Exception e) {
             firebaseLogEventWithParams("exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
+        }
+    }
+
+    public void startFCMBundleUpdateService(RemoteMessage remoteMessage, String merchantType) {
+        try {
+            Context context = getApplicationContext();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                Intent alarmIntent = new Intent(context, FCMBundleUpdateBroadcastReceiver.class);
+                alarmIntent.putExtra("payload",remoteMessage.getData().get("bundle_payload"));
+                alarmIntent.putExtra("merchantType",merchantType);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+                manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            } else {
+                RemoteAssetsDownloader remoteAssetsDownloader = new RemoteAssetsDownloader();
+                String payload = remoteMessage.getData().get("bundle_payload");
+                if(payload==null){
+                    payload = "";
+                }
+                remoteAssetsDownloader.updateBundle(null, new JSONObject(payload), getApplicationContext());
+            }
+        } catch (Exception e) {
+            Log.e("FCMBundleUpdateService", "Failed to start BundleUpdateService : " + e);
         }
     }
 
@@ -551,5 +587,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
+        private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
     }
 }
