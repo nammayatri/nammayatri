@@ -110,6 +110,7 @@ data Action = Dummy
             -- | ScrollStateChanged ScrollState
             -- | DatePickerAC DatePickerModel.Action
             | SelectPlan Int
+            -- | GenericHeaderAC GenericHeader.Action
             | GenericHeaderAC GenericHeader.Action
             | BarViewSelected Int 
             -- | PaymentHistoryModelAC PaymentHistoryModel.Action
@@ -127,8 +128,6 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = con
 eval (ChangeTab subView') state = continue state{props{subView = subView'}}
 
 eval (BarViewSelected index) state = continue state{data{selectedBarIndex = index}}
-
-
 
 
 -- eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else
@@ -199,7 +198,14 @@ eval (RideHistoryAPIResponseAction rideList) state = do
 
 -- eval OpenPaymentHistory state = exit $ OpenPaymentHistoryScreen state
 
-eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continue state{props{subView = YATRI_COINS_VIEW}}
+-- eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continue state{props{subView = YATRI_COINS_VIEW}}
+eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = do
+  case state.props.subView of
+    USE_COINS_VIEW -> continue state{props{subView = YATRI_COINS_VIEW}}
+    FAQ_VIEW -> continue state{props{subView = USE_COINS_VIEW}}
+    FAQ_QUESTON_VIEW -> continue state{props{subView = FAQ_VIEW}}
+    _ -> continue state
+  -- continue state{props{subView = state.props.previousSubView}}
 
 -- eval (PaymentHistoryModelAC (PaymentHistoryModel.ErrorModalActionController (ErrorModalController.PrimaryButtonActionController PrimaryButton.OnClick))) state = continue state{props{showPaymentHistory = false}}
 

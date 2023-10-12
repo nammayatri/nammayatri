@@ -51,18 +51,19 @@ primaryButtonConfig isActive isVisible = let
       }
   in primaryButtonConfig'
 
-genericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
-genericHeaderConfig state = let
+genericHeaderConfig :: ST.DriverEarningsScreenState -> String -> GenericHeaderConfig.Config
+genericHeaderConfig state title= let
   config = GenericHeaderConfig.config
   genericHeaderConfig' = config 
     { height = WRAP_CONTENT
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = "Use Coins"
+        text = title
       , color = Color.darkCharcoal }
     , prefixImageConfig {
         height = V 25
       , width = V 25
+      , padding = PaddingTop 2
       , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
     , suffixImageConfig {

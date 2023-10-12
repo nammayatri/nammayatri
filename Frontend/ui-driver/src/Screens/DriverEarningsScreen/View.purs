@@ -40,7 +40,7 @@ import Data.Array as DA
 import Data.Function.Uncurried (runFn1)
 import Data.Int (ceil, floor)
 import Data.Maybe 
-import Data.Tuple as DT
+import Data.Tuple
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -126,32 +126,29 @@ view push state =
             , width MATCH_PARENT
             , orientation VERTICAL
             ][ tabView push state
-              , if (state.props.subView == ST.USE_COINS_VIEW) || (state.props.subView == ST.FAQ_VIEW) || (state.props.subView == ST.FAQ_QUESTON_VIEW) then GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) else linearLayout[][]
+              , case state.props.subView of
+                  ST.USE_COINS_VIEW -> do
+                    linearLayout 
+                      [ width MATCH_PARENT
+                      , gravity CENTER_VERTICAL
+                      , padding $ PaddingRight 16
+                      ] [ linearLayout 
+                          [ width WRAP_CONTENT
+                          ][  GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state "Use Coins") 
+                          ]
+                        , helpButton push
+                        ]
+                  ST.FAQ_VIEW -> GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state "Yatri Coins FAQs") 
+                  ST.FAQ_QUESTON_VIEW -> GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state "") 
+                  _ -> linearLayout[][]
+              , if (state.props.subView == ST.USE_COINS_VIEW) || (state.props.subView == ST.FAQ_VIEW) || (state.props.subView == ST.FAQ_QUESTON_VIEW) 
+                  then horizontalLine 
+                  else linearLayout [][]
               , earningsTab (spy "subview " state.props.subView) push state
             ]
           ]
         , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN)
-        -- , faqQuestionView push state
-        -- , faqVid push state
-    --     ,  linearLayout
-    --           [ width MATCH_PARENT
-    --           , height $ V 400
-    --           , background Color.red600 
-    --           , gravity CENTER
-    --           , id (getNewIDWithTag "faqVideo")
-    --           , afterRender
-    --               ( \action -> do
-    --                   let
-    --                     id = (getNewIDWithTag "faqVideo")
-
-    --                     url = "" --state.props.individualQuestion.videoLink
-                      
-    --                   pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
-                        
-    --               )
-    --               (const NoAction)
-    --           ][]
-    ]
+    ] 
 
 
 earningsTab :: forall w . ST.DriverEarningsSubView -> (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
@@ -160,19 +157,20 @@ earningsTab subView push state = scrollView [      -- linearlayout
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , if (subView == ST.FAQ_VIEW) || (subView == ST.FAQ_QUESTON_VIEW) then background Color.mint else background Color.blue600
-                ][linearLayout [                  height WRAP_CONTENT
+                ][Keyed.relativeLayout [                  
+                  height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL] $[
-                  -- --    earningsView push state
-                  -- -- ,  yatriCoinsView push state
-                  -- -- ,  useCoinsView push state
-                  -- -- ,  faqView push state
-                  --  faqQuestionView push state
-                ] <> (if subView == ST.EARNINGS_VIEW then [earningsView push state] else [])
-                  <>  (if subView ==  ST.YATRI_COINS_VIEW then [yatriCoinsView push state] else [])
-                  <>  (if subView ==  ST.USE_COINS_VIEW then [useCoinsView push state] else [])
-                  <>  (if subView == ST.FAQ_VIEW then [faqView push state] else [])
-                  <>  (if subView == ST.FAQ_QUESTON_VIEW then [faqQuestionView push state] else [])]
+                  --    Tuple "Earnings" $ earningsView push state
+                  -- ,  Tuple "YatriCoins" $ yatriCoinsView push state
+                  -- ,  Tuple "UseCoins" $ useCoinsView push state
+                  -- ,  Tuple "FAQView" $ faqView push state
+                  -- , Tuple "faqQuestionView" $ faqQuestionView push state]]
+                ] <> (if subView == ST.EARNINGS_VIEW then [Tuple "Earnings" $ earningsView push state] else [])
+                  <>  (if subView ==  ST.YATRI_COINS_VIEW then [Tuple "YatriCoins" $ yatriCoinsView push state] else [])
+                  <>  (if subView ==  ST.USE_COINS_VIEW then [Tuple "UseCoins" $ useCoinsView push state] else [])
+                  <>  (if subView == ST.FAQ_VIEW then [Tuple "FAQView" $ faqView push state] else [])
+                  <>  (if subView == ST.FAQ_QUESTON_VIEW then [Tuple "faqQuestionView" $ faqQuestionView push state] else [])]
 tabView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state = 
   linearLayout
@@ -215,7 +213,6 @@ earningsView push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
-    -- , visibility if state.props.subView == ST.EARNINGS_VIEW then VISIBLE else GONE
     ] [ totalEarningsView push state
       , transactionView push state
     ]
@@ -227,7 +224,6 @@ yatriCoinsView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
-    -- , visibility if state.props.subView == ST.YATRI_COINS_VIEW then VISIBLE else GONE
     ] [ balanceView push state
       , insightView push state
       , transactionView push state
@@ -407,8 +403,6 @@ balanceView push state =
             ] <> FontStyle.paragraphText TypoGraphy
             , textView $ [
                 text "1200"
-                -- textFromHtml "<span style="background-image: linear-gradient(to right, red, yellow, green); background-clip: text; color: transparent; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"> inline gradient text
-        -- </span>"
               , color "#FCC32C"
             ] <> FontStyle.priceFont TypoGraphy
           ]
@@ -733,17 +727,15 @@ useCoinsView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
-    -- , visibility if state.props.subView == ST.USE_COINS_VIEW then VISIBLE else GONE
     ] [  somethingExcitingView push state
         , purchaseView push state
         , usageHistoryView push state
-        , dummyView push state
     ]
 
 dummyQuestions :: Array ST.FaqQuestions
 dummyQuestions = [
                   { question: "What are Yatri Coins?"
-                  , videoLink: "https://youtu.be/dNi__BckudQ?si=L8t-7AZfhUva2Fg6"
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
                   , answer: [ "Yatri Coins are the rewards you earn on day-to-day activities on Namma Yatri like rides, referrals, good ratings, etc."
                             , "The earned coins can be used to avail benefits like purchasing subscription plans with coins only."
                             , "New benefits will be added in the future."
@@ -755,13 +747,13 @@ dummyQuestions = [
                             ]
                   },
                   { question: "How can I earn Yatri Coins?"
-                  , videoLink: "link"
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
                   , answer: [ "Coins are earned through day-to-day activities on the app like taking rides, referring customers. You don’t need to do anything different."
                             , "You can earn more coins by exhibiting good behavior like low cancellations, getting good ratings from customers, etc."
                             ]
                   },
                   { question: "How can I use the Yatri Coins I earned?"
-                  , videoLink: "link"
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
                   , answer: [ "You can use the earned coins to purchase subscription plans free-of-cost within the validity period."
                             , "In the future, more options will be added for using Yatri Coins."
                             ]
@@ -794,13 +786,11 @@ faqView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.blue600
-    -- , background $ Color.white900
-    -- , visibility if state.props.subView == ST.FAQ_VIEW then VISIBLE else GONE
     ][  textView $ [
         text "Learn about Yatri Coins"
       , color Color.black700
       , margin $ Margin 16 12 0 12
-      ] <> FontStyle.subHeading1 TypoGraphy
+      ] <> FontStyle.subHeading2 TypoGraphy
       , questionsListView push dummyQuestions state
     ]
 
@@ -838,7 +828,7 @@ individualQuestionListView push faqQuestion state =
                     , text faqQuestion.question
                     , padding (PaddingVertical 20 20)
                     , color Color.black900
-                    , margin $ MarginRight 10
+                    , margin $ MarginRight 16
                     ] <> FontStyle.subHeading2 TypoGraphy)
                 ]
               , linearLayout
@@ -865,56 +855,39 @@ faqQuestionView push state =
     , orientation VERTICAL
     , background Color.white900
     , padding (Padding 16 16 16 16)
-    -- , onClick push $ const $ Question index
-    -- , visibility if state.props.subView == ST.FAQ_QUESTON_VIEW then VISIBLE else GONE
     ][ textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        -- , text state.props.individualQuestion.question
-        , text "question"
+        , text state.props.individualQuestion.question
         , color Color.black900
-        ] <> FontStyle.h2 TypoGraphy)
-        -- ,  linearLayout
-        --       [ width MATCH_PARENT
-        --       , height $ V 400
-        --       , background Color.red600 
-        --       , gravity CENTER
-        --       , id (getNewIDWithTag "faqVideo")
-        --       , afterRender
-        --           ( \action -> do
-        --               let
-        --                 id = (getNewIDWithTag "faqVideo")
-
-        --                 url = "" --state.props.individualQuestion.videoLink
-                      
-        --               pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
-                        
-        --           )
-        --           (const NoAction)
-        --       ][]
+        , margin $ MarginBottom 20
+        ] <> FontStyle.h1 TypoGraphy)
         , answersListView push state.props.individualQuestion.answer state
     ]
 
 faqVid :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 faqVid push state = 
-  linearLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , background Color.red600 
-    , gravity CENTER
-    , id (getNewIDWithTag "faqVideo")
-    , afterRender
-        ( \action -> do
-            let
-              id = (getNewIDWithTag "faqVideo")
+  if state.props.individualQuestion.videoLink /= ""
+    then linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.red600 
+          , gravity CENTER
+          , margin $ MarginBottom 4
+          , id (getNewIDWithTag "faqVideo")
+          , afterRender
+              ( \action -> do
+                  let
+                    id = (getNewIDWithTag "faqVideo")
 
-              _ = spy "zxc " "setYoutubePlayer" --state.props.individualQuestion.videoLink
-            
-            pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
-              
-        )
-        (const NoAction)
-    ][]
+                    _ = spy "zxc " "setYoutubePlayer" --state.props.individualQuestion.videoLink
+                  
+                  pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
+                    
+              )
+              (const NoAction)
+          ][]
+      else linearLayout [][]
 
 youtubeData :: ST.DriverEarningsScreenState -> String -> ST.YoutubeData
 youtubeData state mediaType =
@@ -923,7 +896,8 @@ youtubeData state mediaType =
   , showMenuButton: false
   , showDuration: true
   , showSeekBar: true
-  , videoId: "dNi__BckudQ"
+  -- , videoId: "dNi__BckudQ"
+  , videoId: getVideoID state.props.individualQuestion.videoLink
   , videoType: "VIDEO"
   }
 
@@ -933,82 +907,78 @@ answersListView push answersList state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    -- , id (getNewIDWithTag "faqVideo")
-    -- , background $ Color.white900
-    --     , afterRender
-    --     ( \action -> do
-    --         let
-    --           id = (getNewIDWithTag "faqVideo")
-
-    --           _ = spy "zxc " "setYoutubePlayer" --state.props.individualQuestion.videoLink
-            
-    --         pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
-              
-    --     )
-    --     (const NoAction)
     ] $ [faqVid push state] <> if length answersList > 1 
-        then (map (\item -> linearLayout 
-                              [ height MATCH_PARENT
-                              , width MATCH_PARENT
-                              , orientation HORIZONTAL
-                              , padding (PaddingVertical 12 12)
-                              ][ textView (
-                                  [ height WRAP_CONTENT
-                                  , width WRAP_CONTENT
-                                  , text "•"
-                                  , margin $ MarginRight 8
-                                  , color Color.black900
-                                  ] <> FontStyle.subHeading2 TypoGraphy),
-                                  textView (
-                                  [ height WRAP_CONTENT
-                                  , width WRAP_CONTENT
-                                  , text item
-                                  , color Color.black900
-                                  -- , margin (Margin 0 0 0 9)
-                                  ] <> FontStyle.subHeading2 TypoGraphy)
-                              ]) answersList)
-        else (map (\item -> linearLayout 
-                              [ height MATCH_PARENT
-                              , width MATCH_PARENT
-                              , orientation HORIZONTAL
-                              , padding (PaddingVertical 12 12)
-                              ][ textView (
-                                  [ height WRAP_CONTENT
-                                  , width WRAP_CONTENT
-                                  , text item
-                                  , color Color.black900
-                                  -- , margin (Margin 0 0 0 9)
-                                  ] <> FontStyle.subHeading2 TypoGraphy)
-                              ]) answersList)
+        then (map (\item -> 
+          linearLayout 
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , padding (PaddingVertical 10 10)
+            ][ textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text "•"
+                , margin $ MarginRight 8
+                , color Color.black900
+                ] <> FontStyle.subHeading2 TypoGraphy),
+                textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text item
+                , color Color.black900
+                ] <> FontStyle.subHeading2 TypoGraphy)
+            ]) answersList)
+        else (map (\item -> 
+          linearLayout 
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , padding (PaddingVertical 12 12)
+            ][ textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text item
+                , color Color.black900
+                -- , margin (Margin 0 0 0 9)
+                ] <> FontStyle.subHeading2 TypoGraphy)
+            ]) answersList)
 
 
 
-dummyView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w  
-dummyView push state = 
-  linearLayout
-  [
-     height $ V 100
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ MarginTop 24
-    , background $ Color.green900
-    -- , onClick push (const $ PlanCount true)
-    , onClick push $ const $ ChangeTab ST.FAQ_VIEW
 
-  ][
-
-  ]
 
 horizontalLine :: forall w. PrestoDOM (Effect Unit) w 
 horizontalLine = 
   linearLayout
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background Color.grey900
-          -- , margin $ Margin 12 8 12 8 
-          ,gravity CENTER
-          ][] 
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    -- , margin $ Margin 12 8 12 8 
+    ,gravity CENTER
+    ][] 
 
+helpButton :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+helpButton push = 
+  linearLayout
+    [ gravity RIGHT
+    , weight 1.0
+    , width WRAP_CONTENT
+    ][  imageView $
+        [ width (V 22)
+        , height (V 22)
+        , imageWithFallback $ "ic_help_circle_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_help_circle_blue.png"
+        , padding $ Padding 0 2 4 0 
+        , gravity CENTER_VERTICAL
+        , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+        ]
+      , textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "Help"
+        , color $ Color.blue900
+        , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+        ] <> FontStyle.subHeading2 TypoGraphy
+    ]
 somethingExcitingView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w  
 somethingExcitingView push state = 
   linearLayout
