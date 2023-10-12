@@ -323,3 +323,25 @@ type FCMBundleUpdate = {
   description :: String,
   image :: String
 }
+
+type CalendarModalDateObject = 
+  { date :: Int
+  , isInRange :: Boolean
+  , isStart :: Boolean
+  , isEnd :: Boolean
+  , utcDate :: String
+  , shortMonth :: String
+  , year :: Int
+  , intMonth :: Int
+  }
+
+type CalendarModalWeekObject = {
+  week :: Array CalendarModalDateObject
+}
+
+type ModifiedCalendarObject = {
+  selectedTimeSpan :: CalendarModalDateObject,
+  weeks :: Array CalendarModalWeekObject,
+  startDate :: Maybe CalendarModalDateObject,
+  endDate :: Maybe CalendarModalDateObject
+}
