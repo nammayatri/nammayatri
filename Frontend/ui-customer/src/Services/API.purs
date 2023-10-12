@@ -1992,3 +1992,49 @@ instance showGetDisabilityListResp :: Show GetDisabilityListResp where show = ge
 instance decodeGetDisabilityListResp :: Decode GetDisabilityListResp where decode = defaultDecode
 instance encodeGetDisabilityListResp  :: Encode GetDisabilityListResp where encode = defaultEncode
 
+data PersonStatsReq = PersonStatsReq
+
+newtype PersonStatsRes = PersonStatsRes
+  {
+    userCategory :: String
+  , lastRideTaken :: Maybe String
+  , frequencyCategory :: String
+  , commonAppUseCase :: String
+  , offPeakRidesRate :: Maybe Number
+  , email :: Maybe String
+  , weekdayEveningPeakRidesRate :: Maybe Number
+  , weekendPeakRideRate :: Maybe Number
+  , latestSearch :: Maybe String
+  , userCancellationRate :: Maybe Number
+  , weekdayRidesRate :: Maybe Number
+  , weekdayMorningPeakRidesRate :: Maybe Number
+  , lifetimeRides :: Int
+  , signupDate :: String
+  , isBlocked :: Boolean
+  , isChurnedUser :: Boolean
+  , latestSearchFrom :: Maybe LatLong
+  , isWhatsAppOptInStatus :: Boolean
+  , emergencyContactsNum :: Int
+  , weekendRidesRate :: Maybe Number
+  , favoriteLocationsNum :: Int
+  , overalCancellationRate :: Maybe Number
+  , riderId :: String
+  , status :: Maybe String
+  }
+
+instance personStatsReq :: RestEndpoint PersonStatsReq PersonStatsRes where
+ makeRequest reqBody headers = defaultMakeRequest GET (EP.personStats "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericPersonStatsReq :: Generic PersonStatsReq _
+instance standardEncodePersonStatsReq :: StandardEncode PersonStatsReq where standardEncode (PersonStatsReq) = standardEncode {}
+instance decodePersonStatsReq :: Decode PersonStatsReq where decode = defaultDecode
+instance encodePersonStatsReq :: Encode PersonStatsReq where encode = defaultEncode
+
+derive instance genericPersonStatsRes:: Generic PersonStatsRes _
+derive instance newtypePersonStatsRes :: Newtype PersonStatsRes _
+instance standardEncodePersonStatsRes :: StandardEncode PersonStatsRes where standardEncode (PersonStatsRes id) = standardEncode id
+instance showPersonStatsRes:: Show PersonStatsRes where show = genericShow
+instance decodePersonStatsRes :: Decode PersonStatsRes where decode = defaultDecode
+instance encodeSPersonStatsRes :: Encode PersonStatsRes where encode = defaultEncode

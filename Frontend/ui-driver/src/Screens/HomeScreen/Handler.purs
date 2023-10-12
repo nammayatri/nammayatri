@@ -76,7 +76,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
     SelectListModal updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode})
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode}updatedState)
     Refresh updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure REFRESH_HOME_SCREEN_FLOW

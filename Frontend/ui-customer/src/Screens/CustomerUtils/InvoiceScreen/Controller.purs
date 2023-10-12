@@ -15,7 +15,7 @@
 
 module Screens.InvoiceScreen.Controller where
 
-import Prelude (class Show, bind, pure, unit, ($), discard)
+import Prelude (class Show, bind, pure, unit, ($), discard, void)
 import Screens.Types (InvoiceScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, exit, continue, continueWithCmd)
@@ -27,6 +27,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppS
 import Screens (ScreenName(..), getScreen)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
+import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -70,7 +71,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = contin
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continueWithCmd state
     [ do
-        let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : unsafeToForeign state.data.selectedItem.baseFare},
+        void $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : unsafeToForeign state.data.selectedItem.baseFare},
                                                                                                                     { key : "Distance", value : unsafeToForeign state.data.selectedItem.baseDistance},
                                                                                                                     { key : "Driver pickup charges", value : unsafeToForeign "₹ 10"},
                                                                                                                     { key : "Total fare", value : unsafeToForeign state.data.selectedItem.totalAmount},

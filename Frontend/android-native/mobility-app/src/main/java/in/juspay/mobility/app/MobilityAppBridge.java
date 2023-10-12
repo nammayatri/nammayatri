@@ -468,14 +468,36 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void setCleverTapUserProp(String key, String value) {
-        HashMap<String, Object> profileUpdate = new HashMap<>();
+        HashMap<String, Object> propertiesUpdate = new HashMap<>();
         try {
-            profileUpdate.put(key, value);
+            propertiesUpdate.put(key, value);
         } catch (Exception e) {
             Log.e(UTILS, "Error sending user data: " + e);
         }
         if (clevertapDefaultInstance != null)
-            clevertapDefaultInstance.pushProfile(profileUpdate);
+            clevertapDefaultInstance.pushProfile(propertiesUpdate);
+    }
+
+    @JavascriptInterface
+    public void setCleverTapUserMultipleProp(String arr) {
+        if (clevertapDefaultInstance == null)
+            clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+
+        Map<String, Object> propertiesUpdate = new HashMap<>();
+        try {
+            JSONArray jsonArray = new JSONArray(arr);
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                String key = jsonObject.getString("key");
+                Object value = jsonObject.get("value");
+                propertiesUpdate.put(key, value);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return;
+        }
+        clevertapDefaultInstance.pushProfile(propertiesUpdate);
     }
 
 

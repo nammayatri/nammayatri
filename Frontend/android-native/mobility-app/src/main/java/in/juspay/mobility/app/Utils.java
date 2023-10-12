@@ -161,4 +161,16 @@ public class Utils {
             Log.e(UTILS, "Error in logEventWithParams " + e);
         }
     }
+
+    public static void setCleverTapUserProp(String key, String value, Context context) {
+        try {
+            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+            HashMap<String, Object> profileUpdate = new HashMap<>();
+            profileUpdate.put(key, value);
+            if (clevertapDefaultInstance != null)
+                clevertapDefaultInstance.pushProfile(profileUpdate);
+        } catch (Exception e) {
+            Log.e(UTILS, "Error sending user data: " + e);
+        }
+    }
 }
