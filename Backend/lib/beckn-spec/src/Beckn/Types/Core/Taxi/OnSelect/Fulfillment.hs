@@ -32,7 +32,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
-    end :: StopInfo,
+    end :: Maybe StopInfo,
     vehicle :: Vehicle,
     _type :: FulfillmentType,
     agent :: Agent

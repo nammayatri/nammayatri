@@ -124,7 +124,7 @@ confirm DConfirmReq {..} = do
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
 
-  -- DB.runTransaction $ do
+  -- DB.runTransaction $ do 
   _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
@@ -157,6 +157,7 @@ confirm DConfirmReq {..} = do
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
+
 
 buildBooking ::
   MonadFlow m =>

@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.Queries.FareParameters where
 
@@ -33,7 +35,7 @@ create fareParameters = do
   case fareParameters.fareParametersDetails of
     ProgressiveDetails fppdt -> QFPPD.create (fareParameters.id, fppdt)
     SlabDetails fpsdt -> QFPSD.create (fareParameters.id, fpsdt)
-
+    _ -> undefined
 findById :: MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
@@ -54,6 +56,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           case mFullFPSD of
             Just (_, fPSD) -> return (Just $ SlabDetails fPSD)
             Nothing -> return Nothing
+        _ -> undefined
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $

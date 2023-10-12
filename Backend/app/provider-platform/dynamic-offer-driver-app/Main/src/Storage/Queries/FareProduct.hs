@@ -38,6 +38,13 @@ findAllFareProductForVariants ::
   m [Domain.FareProduct]
 findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
 
+findAllFareProductForFlow ::
+  MonadFlow m =>
+  Id Merchant ->
+  Domain.FlowType ->
+  m [Domain.FareProduct]
+findAllFareProductForFlow (Id merchantId) flow = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.flow $ Se.Eq flow]]
+
 findByMerchantVariantArea ::
   MonadFlow m =>
   Id Merchant ->

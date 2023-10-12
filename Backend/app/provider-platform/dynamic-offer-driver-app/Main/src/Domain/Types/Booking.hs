@@ -42,18 +42,29 @@ $(mkBeamInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 
+data BookingDetails = BookingDetailsOnDemand {
+  specialZoneOtpCode :: Maybe Text,
+  specialLocationTag :: Maybe Text,
+  toLocation :: DLoc.Location
+ } | BookingDetailsRental {
+  rentalToLocation :: Maybe DLoc.Location
+ } deriving (Generic)
+
 data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
     quoteId :: Text,
     status :: BookingStatus,
     bookingType :: BookingType,
-    specialZoneOtpCode :: Maybe Text,
-    specialLocationTag :: Maybe Text,
+    bookingDetails :: BookingDetails,
     disabilityTag :: Maybe Text,
     area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
+    estimatedFare :: Money,
+    estimatedDistance :: Meters,
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    estimatedDuration :: Seconds,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,
@@ -61,12 +72,7 @@ data Booking = Booking
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
     vehicleVariant :: DVeh.Variant,
-    estimatedDistance :: Meters,
-    maxEstimatedDistance :: Maybe HighPrecMeters,
-    estimatedFare :: Money,
-    estimatedDuration :: Seconds,
     fareParams :: FareParameters,
     riderName :: Maybe Text,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
@@ -76,7 +82,7 @@ data Booking = Booking
   }
   deriving (Generic)
 
-data BookingType = SpecialZoneBooking | NormalBooking
+data BookingType = SpecialZoneBooking | NormalBooking |  RentalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BookingType)

@@ -54,13 +54,14 @@ instance ToJSON Authorization where
 data FulfillmentType
   = RIDE
   | RIDE_OTP
+  | RENTAL
   deriving
     (Generic, ToSchema, Show, FromJSON, ToJSON, Read)
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
-    end :: EndInfo,
+    end :: Maybe EndInfo,
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,

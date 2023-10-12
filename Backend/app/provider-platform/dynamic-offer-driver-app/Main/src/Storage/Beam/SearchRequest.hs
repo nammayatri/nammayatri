@@ -22,6 +22,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 import qualified Tools.Maps as Maps
+import qualified Domain.Types.SearchRequest as Domain
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
@@ -41,7 +42,8 @@ data SearchRequestT f = SearchRequestT
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    tag :: B.C f Domain.SearchRequestTag
   }
   deriving (Generic, B.Beamable)
 

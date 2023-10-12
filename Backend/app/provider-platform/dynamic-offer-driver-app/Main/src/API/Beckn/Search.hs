@@ -50,10 +50,10 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq subscriber req
-    Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+    Redis.whenWithLockRedis (searchLockKey (ACL.getSearchReqMessageId dSearchReq) transporterId.getId) 60 $ do
       merchant <- DSearch.validateRequest transporterId dSearchReq
       fork "search request processing" $
-        Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+        Redis.whenWithLockRedis (searchProcessingLockKey (ACL.getSearchReqMessageId dSearchReq) transporterId.getId) 60 $ do
           dSearchRes <- DSearch.handler merchant dSearchReq
           let context = req.context
           let callbackUrl = gateway.subscriber_url

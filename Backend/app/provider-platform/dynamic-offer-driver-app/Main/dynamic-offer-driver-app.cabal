@@ -202,6 +202,8 @@ library
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails
+      Domain.Types.FarePolicy.FarePolicyRentalSlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
@@ -242,6 +244,7 @@ library
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.QuoteRental
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -346,6 +349,7 @@ library
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Beam.FarePolicy.FarePolicyRentalSlabsDetails
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.FareProduct
@@ -388,6 +392,7 @@ library
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
+      Storage.Beam.QuoteRental
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -473,6 +478,7 @@ library
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.FarePolicy.FarePolicyRentalSlabsDetails
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
       Storage.Queries.Feedback.Feedback
@@ -519,6 +525,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.QuoteRental
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken

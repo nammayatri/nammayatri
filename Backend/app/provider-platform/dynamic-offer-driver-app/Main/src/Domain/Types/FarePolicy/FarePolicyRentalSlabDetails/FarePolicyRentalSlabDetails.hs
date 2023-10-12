@@ -11,11 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
-module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-  ( module Reexport,
-    module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab,
+module Domain.Types.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails
+  ( 
+    module Reexport,
+    module Domain.Types.FarePolicy.FarePolicyRentalSlabDetails.FarePolicyRentalSlabDetails,
   )
 where
 
@@ -24,36 +24,46 @@ import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
-data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
-  { startDistance :: Meters,
+data FPRSlabDetailsSlabD (s :: UsageSafety) = FPRSlabDetailsSlab
+  { 
+    id :: Text,
+    baseDuration :: Seconds,
+    baseDistance :: Kilometers,
     baseFare :: Money,
+    kmAddedForEveryExtraHour :: Kilometers,
+    extraRentalKmFare :: Money,
+    extraRentalHoursFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
 
-type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
+type FPRSlabDetailsSlab = FPRSlabDetailsSlabD 'Safe
 
-instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
+instance FromJSON (FPRSlabDetailsSlabD 'Unsafe)
 
-instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
+instance ToJSON (FPRSlabDetailsSlabD 'Unsafe)
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
-data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
-  { startDistance :: Meters,
+data FPRSlabDetailsSlabAPIEntity = FPRSlabDetailsSlabAPIEntity
+  { baseDuration :: Seconds,
+    baseDistance :: Kilometers,
     baseFare :: Money,
+    kmAddedForEveryExtraHour :: Kilometers,
+    extraRentalKmFare :: Money,
+    extraRentalHoursFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
-makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
-  FPSlabsDetailsSlabAPIEntity
+makeFPRSlabDetailsSlabAPIEntity :: FPRSlabDetailsSlab -> FPRSlabDetailsSlabAPIEntity
+makeFPRSlabDetailsSlabAPIEntity FPRSlabDetailsSlab {..} =
+  FPRSlabDetailsSlabAPIEntity
     { ..
     }

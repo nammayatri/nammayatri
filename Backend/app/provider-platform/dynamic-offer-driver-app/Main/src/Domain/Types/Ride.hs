@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Ride where
 
@@ -41,6 +42,31 @@ $(mkBeamInstancesForEnum ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 
+data SpecificRideDetails
+  = RideDetailsOnDemand
+     {
+        toLocation :: DL.Location
+      , driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+      , driverDeviatedFromRoute :: Maybe Bool
+      , numberOfSnapToRoadCalls :: Maybe Int
+      , numberOfDeviation :: Maybe Bool
+      , uiDistanceCalculationWithAccuracy :: Maybe Int
+      , uiDistanceCalculationWithoutAccuracy :: Maybe Int
+    }
+  | RideDetailsRental
+    {
+        rentalToLocation :: Maybe DL.Location,
+        odoMeterStartReading :: Maybe Meters,
+        odoMeterEndReading :: Maybe Meters
+    }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideType = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForEnum ''RideType)
+
 data Ride = Ride
   { id :: Id Ride,
     bookingId :: Id DRB.Booking,
@@ -59,17 +85,12 @@ data Ride = Ride
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
     fromLocation :: DL.Location,
-    toLocation :: DL.Location,
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    driverDeviatedFromRoute :: Maybe Bool,
-    numberOfSnapToRoadCalls :: Maybe Int,
-    numberOfDeviation :: Maybe Bool,
-    uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    rideDetails :: SpecificRideDetails,
+    rideType :: RideType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

@@ -33,7 +33,7 @@ data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
     _type :: FulfillmentType,
-    end :: StopInfo,
+    end :: Maybe StopInfo,
     vehicle :: Vehicle
   }
   deriving (Generic, Show)

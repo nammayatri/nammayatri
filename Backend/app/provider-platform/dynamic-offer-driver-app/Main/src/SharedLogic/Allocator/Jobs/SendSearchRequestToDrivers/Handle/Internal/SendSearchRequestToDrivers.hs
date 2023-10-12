@@ -178,13 +178,27 @@ translateSearchReq ::
   DSR.SearchRequest ->
   Maps.Language ->
   m DSR.SearchRequest
-translateSearchReq DSR.SearchRequest {..} language = do
-  from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
-  pure
+translateSearchReq req@DSR.SearchRequest {..} language = do
+  searchRequestDetails' <- case req.searchRequestDetails of
+    DSR.SearchRequestDetailsOnDemand {..} -> do
+      from <- buildTranslatedSearchReqLocation fromLocation (Just language)
+      to <- buildTranslatedSearchReqLocation toLocation (Just language)
+      pure $
+        DSR.SearchRequestDetailsOnDemand
+          { fromLocation = from,
+            toLocation = to,
+            ..
+          }
+    DSR.SearchRequestDetailsRental {..} -> do
+      from <- buildTranslatedSearchReqLocation rentalFromLocation (Just language)
+      pure
+        DSR.SearchRequestDetailsRental
+          { rentalFromLocation = from,
+            ..
+          }
+  pure $
     DSR.SearchRequest
-      { fromLocation = from,
-        toLocation = to,
+      { searchRequestDetails = searchRequestDetails',
         ..
       }
 

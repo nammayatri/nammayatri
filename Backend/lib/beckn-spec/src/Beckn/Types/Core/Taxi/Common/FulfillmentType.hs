@@ -19,6 +19,7 @@ import Kernel.Prelude hiding (show)
 data FulfillmentType
   = RIDE
   | RIDE_OTP
+  | RENTAL
   deriving
     ( Eq,
       Ord,

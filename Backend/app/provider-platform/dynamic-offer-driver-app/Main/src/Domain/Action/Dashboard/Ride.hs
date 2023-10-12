@@ -69,6 +69,7 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
 import Tools.Error
+import qualified Domain.Types.Booking as DBooking
 
 ---------------------------------------------------------------------
 rideList ::
@@ -261,7 +262,9 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = case booking.bookingDetails of
+          DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
+          DBooking.BookingDetailsRental {} -> Nothing,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,

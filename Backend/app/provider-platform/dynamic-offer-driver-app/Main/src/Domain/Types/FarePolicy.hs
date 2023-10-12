@@ -19,6 +19,7 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
+import Domain.Types.FarePolicy.FarePolicyRentalSlabsDetails as Reexport
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
 import Kernel.Prelude
@@ -46,7 +47,7 @@ instance FromJSON (FarePolicyD 'Unsafe)
 
 instance ToJSON (FarePolicyD 'Unsafe)
 
-data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s)
+data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalSlabsDetails (FPRSlabsDetailsD s)
   deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'Safe
@@ -67,7 +68,7 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs
+data FarePolicyType = Progressive | Slabs | RentalSlabs
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -77,6 +78,7 @@ getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   ProgressiveDetails _ -> Progressive
   SlabsDetails _ -> Slabs
+  RentalSlabsDetails _ -> RentalSlabs
 
 data FullFarePolicy = FullFarePolicy
   { id :: Id FarePolicy,

@@ -94,9 +94,9 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     fromLocation :: DSSL.SearchReqLocation,
-    toLocation :: DSSL.SearchReqLocation,
+    toLocation :: Maybe DSSL.SearchReqLocation,
     newFromLocation :: DLoc.Location,
-    newToLocation :: DLoc.Location, -- we need to show all requests or last one ?
+    newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
@@ -112,36 +112,69 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant =
-  SearchRequestForDriverAPIEntity
-    { searchRequestId = nearbyReq.searchTryId,
-      searchTryId = nearbyReq.searchTryId,
-      bapName = bapMetadata <&> (.name),
-      bapLogo = bapMetadata <&> (.logoUrl),
-      startTime = nearbyReq.startTime,
-      searchRequestValidTill = nearbyReq.searchRequestValidTill,
-      distanceToPickup = nearbyReq.actualDistanceToPickup,
-      durationToPickup = nearbyReq.durationToPickup,
-      baseFare = searchTry.baseFare,
-      customerExtraFee = searchTry.customerExtraFee,
-      fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType searchRequest.toLocation,
-      newFromLocation = searchRequest.fromLocation,
-      newToLocation = searchRequest.toLocation,
-      distance = searchRequest.estimatedDistance,
-      driverLatLong =
-        LatLong
-          { lat = fromMaybe 0.0 nearbyReq.lat,
-            lon = fromMaybe 0.0 nearbyReq.lon
-          },
-      driverMinExtraFee = nearbyReq.driverMinExtraFee,
-      driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-      rideRequestPopupDelayDuration = delayDuration,
-      specialLocationTag = searchRequest.specialLocationTag,
-      disabilityTag = searchRequest.disabilityTag,
-      keepHiddenForSeconds = keepHiddenForSeconds,
-      goHomeRequestId = nearbyReq.goHomeRequestId,
-      ..
-    }
+  case searchRequest.tag of
+    DSR.ON_DEMAND ->
+      SearchRequestForDriverAPIEntity
+        { searchRequestId = nearbyReq.searchTryId,
+          searchTryId = nearbyReq.searchTryId,
+          bapName = bapMetadata <&> (.name),
+          bapLogo = bapMetadata <&> (.logoUrl),
+          startTime = nearbyReq.startTime,
+          searchRequestValidTill = nearbyReq.searchRequestValidTill,
+          distanceToPickup = nearbyReq.actualDistanceToPickup,
+          durationToPickup = nearbyReq.durationToPickup,
+          baseFare = searchTry.baseFare,
+          customerExtraFee = searchTry.customerExtraFee,
+          fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
+          toLocation = Just $ convertDomainType searchRequest.searchRequestDetails.toLocation,
+          newFromLocation = searchRequest.searchRequestDetails.fromLocation,
+          newToLocation = Just $ searchRequest.searchRequestDetails.toLocation,
+          distance = searchRequest.searchRequestDetails.estimatedDistance,
+          driverLatLong =
+            LatLong
+              { lat = fromMaybe 0.0 nearbyReq.lat,
+                lon = fromMaybe 0.0 nearbyReq.lon
+              },
+          driverMinExtraFee = nearbyReq.driverMinExtraFee,
+          driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+          rideRequestPopupDelayDuration = delayDuration,
+          specialLocationTag = searchRequest.searchRequestDetails.specialLocationTag,
+          disabilityTag = searchRequest.disabilityTag,
+          keepHiddenForSeconds = keepHiddenForSeconds,
+          goHomeRequestId = nearbyReq.goHomeRequestId,
+          ..
+        }
+    DSR.RENTAL ->
+        SearchRequestForDriverAPIEntity
+        { searchRequestId = nearbyReq.searchTryId,
+          searchTryId = nearbyReq.searchTryId,
+          bapName = bapMetadata <&> (.name),
+          bapLogo = bapMetadata <&> (.logoUrl),
+          startTime = nearbyReq.startTime,
+          searchRequestValidTill = nearbyReq.searchRequestValidTill,
+          distanceToPickup = nearbyReq.actualDistanceToPickup,
+          durationToPickup = nearbyReq.durationToPickup,
+          baseFare = searchTry.baseFare,
+          customerExtraFee = searchTry.customerExtraFee,
+          fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
+          toLocation = Nothing,
+          newFromLocation = searchRequest.searchRequestDetails.fromLocation,
+          newToLocation = Nothing,
+          distance = 0, --HARDCODED
+          driverLatLong =
+            LatLong
+              { lat = fromMaybe 0.0 nearbyReq.lat,
+                lon = fromMaybe 0.0 nearbyReq.lon
+              },
+          driverMinExtraFee = nearbyReq.driverMinExtraFee,
+          driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+          rideRequestPopupDelayDuration = delayDuration,
+          specialLocationTag = Nothing,
+          disabilityTag = searchRequest.disabilityTag,
+          keepHiddenForSeconds = keepHiddenForSeconds,
+          goHomeRequestId = nearbyReq.goHomeRequestId,
+          ..
+        }
 
 convertDomainType :: DLoc.Location -> DSSL.SearchReqLocation
 convertDomainType DLoc.Location {..} =

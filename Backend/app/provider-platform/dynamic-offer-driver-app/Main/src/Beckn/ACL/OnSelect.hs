@@ -21,6 +21,7 @@ import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import SharedLogic.FareCalculator (mkBreakupList)
@@ -70,30 +71,56 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
 
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
-  let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation -- have to take last or all ?
-  OS.FulfillmentInfo
-    { id = quote.estimateId.getId,
-      start =
-        OS.StartInfo
-          { location = makeLocation fromLocation
-          },
-      end =
-        OS.StopInfo
-          { location = makeLocation toLocation
-          },
-      vehicle =
-        OS.Vehicle
-          { category = castVariant quote.vehicleVariant
-          },
-      _type = OS.RIDE,
-      agent =
-        OS.Agent
-          { name = Just quote.driverName,
-            rateable = Just True,
-            tags = OS.TG [mkAgentTags]
-          }
-    }
+  let searchDetails = dReq.searchRequest.searchRequestDetails
+  case dReq.searchRequest.tag of
+    DSR.ON_DEMAND -> do
+      let fromLocation = searchDetails.fromLocation
+      let toLocation = searchDetails.toLocation -- have to take last or all ?
+      OS.FulfillmentInfo
+        { id = quote.estimateId.getId,
+          start =
+            OS.StartInfo
+              { location = makeLocation fromLocation,
+                time = OS.TimeTimestamp dReq.now
+              },
+          end =
+            Just $ OS.StopInfo
+              { location = makeLocation toLocation
+              },
+          vehicle =
+            OS.Vehicle
+              { category = castVariant quote.vehicleVariant
+              },
+          _type = OS.RIDE,
+          agent =
+            OS.Agent
+              { name = Just quote.driverName,
+                rateable = Just True,
+                tags = OS.TG [mkAgentTags]
+              }
+        }
+    DSR.RENTAL -> do
+      let fromLocation = searchDetails.rentalFromLocation
+      OS.FulfillmentInfo
+        { id = quote.estimateId.getId,
+          start =
+            OS.StartInfo
+              { location = makeLocation fromLocation,
+                time = OS.TimeTimestamp dReq.now
+              },
+          end = Nothing,
+          vehicle =
+            OS.Vehicle
+              { category = castVariant quote.vehicleVariant
+              },
+          _type = OS.RIDE,
+          agent =
+            OS.Agent
+              { name = Just quote.driverName,
+                rateable = Just True,
+                tags = OS.TG [mkAgentTags]
+              }
+        }
   where
     mkAgentTags =
       OS.TagGroup
