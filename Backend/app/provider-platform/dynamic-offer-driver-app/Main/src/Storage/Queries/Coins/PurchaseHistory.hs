@@ -24,11 +24,26 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.PurchaseHistory as BeamDC
 
-getPurchasedHistory :: MonadFlow m => Id SP.Person -> m [PurchaseHistory]
-getPurchasedHistory (Id driverId) = findAllWithKV [Se.Is BeamDC.driverId $ Se.Eq driverId]
+getPurchasedHistory :: MonadFlow m => Id SP.Person -> Maybe Int -> Maybe Int -> Bool -> m [PurchaseHistory]
+getPurchasedHistory (Id driverId) mbLimit mbOffset hasQuatityLeft = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is BeamDC.driverId $ Se.Eq driverId]
+            <> [Se.Is BeamDC.quantityLeft $ Se.GreaterThan 0 | hasQuatityLeft]
+        )
+    ]
+    (Se.Asc BeamDC.createdAt)
+    mbLimit
+    mbOffset
 
 createPurchaseHistory :: MonadFlow m => PurchaseHistory -> m ()
 createPurchaseHistory = createWithKV
+
+updateQuantityLeft :: MonadFlow m => Id PurchaseHistory -> Int -> m ()
+updateQuantityLeft purchaseId quantityLeft = do
+  updateWithKV
+    [Se.Set BeamDC.quantityLeft quantityLeft]
+    [Se.Is BeamDC.id $ Se.Eq purchaseId.getId]
 
 instance FromTType' BeamDC.PurchaseHistory PurchaseHistory where
   fromTType' BeamDC.PurchaseHistoryT {..} = do

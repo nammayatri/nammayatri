@@ -13,28 +13,27 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Coins.CoinPlan where
+module Storage.Queries.Coins.CoinPlan
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Domain.Types.Coins.CoinPlan
+import qualified Domain.Types.Merchant as DM
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinPlan as BeamDC
 
-getCoinPlans :: MonadFlow m => m [CoinPlan]
-getCoinPlans = findAllWithKV [Se.Is BeamDC.id $ Se.Not $ Se.Eq ""]
+getCoinPlans :: MonadFlow m => Id DM.Merchant -> m [CoinPlan]
+getCoinPlans (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
-getCoinPlanName :: MonadFlow m => Text -> m Text
-getCoinPlanName coinPlanId = do
-  result <- findOneWithKV [Se.Is BeamDC.id $ Se.Eq coinPlanId]
-  case result of
-    Just coinPlan -> return (coinPlanName coinPlan)
-    Nothing -> error "CoinPlan not found"
-
-getCoinPlanDetails :: MonadFlow m => Text -> m CoinPlan
-getCoinPlanDetails coinPlanId = findOneWithKV [Se.Is BeamDC.id $ Se.Eq coinPlanId] >>= fromMaybeM (InternalError "Error")
+getCoinPlanDetails :: MonadFlow m => Text -> m (Maybe CoinPlan)
+getCoinPlanDetails coinPlanId = findOneWithKV [Se.Is BeamDC.id $ Se.Eq coinPlanId]
 
 instance FromTType' BeamDC.CoinPlan CoinPlan where
   fromTType' BeamDC.CoinPlanT {..} = do

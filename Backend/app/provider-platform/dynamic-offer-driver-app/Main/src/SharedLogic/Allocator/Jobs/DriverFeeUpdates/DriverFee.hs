@@ -26,6 +26,7 @@ import qualified Data.Map as M
 import Data.Ord
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPlan, mkDriverFeeBillNumberKey)
+import Domain.Types.Coins.PurchaseHistory (PurchaseHistory)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
@@ -51,6 +52,7 @@ import SharedLogic.Allocator
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.Coins.PurchaseHistory as QCPH
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
@@ -123,6 +125,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
+      isCoinsEnabled = transporterConfig.coinFeature
   driverFeesToProccess <-
     mapMaybeM
       ( \driverFee -> do
@@ -172,8 +175,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
+          mbCoinPlan <- checkIfCoinsApplicable isCoinsEnabled totalFee paymentMode driverFee
           unless (totalFee == 0) $ do
-            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now
+            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinPlan now
             updatePendingPayment True (cast driverFee.driverId)
 
           -- blocking
@@ -187,7 +191,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               updateSubscription False (cast driverFee.driverId)
               QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
             else do
-              unless (totalFee == 0) $ processDriverFee paymentMode driverFee
+              unless (totalFee == 0) $ processDriverFee paymentMode driverFee mbCoinPlan
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
@@ -213,18 +217,25 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           numOfRides
         }
 
-processDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
-processDriverFee paymentMode driverFee = do
+processDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> Maybe PurchaseHistory -> m ()
+processDriverFee paymentMode driverFee mbPurchaseHistory = do
   now <- getCurrentTime
-  case paymentMode of
-    MANUAL -> do
+  case (paymentMode, mbPurchaseHistory) of
+    (MANUAL, _) -> do
       updateAutoPayToManual driverFee.id
-    AUTOPAY -> do
+    (AUTOPAY, Nothing) -> do
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
-      invoice <- mkInvoiceAgainstDriverFee driverFee
+      invoice <- mkInvoiceAgainstDriverFee driverFee INV.ACTIVE_INVOICE
       QINV.create invoice
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+    (AUTOPAY, Just purchaseHistory) -> do
+      QCPH.updateQuantityLeft (Id purchaseHistory.id) (purchaseHistory.quantityLeft - 1)
+      updateStatus CLEARED_BY_YATRI_COINS driverFee.id now
+      updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
+      invoice <- mkInvoiceAgainstDriverFee driverFee INV.SUCCESS
+      QINV.create invoice
+      QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) driverFee.id
 
 processRestFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
 processRestFee paymentMode DriverFee {..} = do
@@ -237,7 +248,7 @@ processRestFee paymentMode DriverFee {..} = do
             ..
           }
   QDF.create driverFee
-  processDriverFee paymentMode driverFee
+  processDriverFee paymentMode driverFee Nothing
   updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
 calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
@@ -306,15 +317,21 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
-driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now = do
+driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> Maybe PurchaseHistory -> UTCTime -> m ()
+driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId coinPlan now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
-  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee (roundToHalf <$> (mandate <&> (.maxAmount)))
+  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee $ if isJust coinPlan then Nothing else roundToHalf <$> (mandate <&> (.maxAmount))
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
       mapM_ (processRestFee paymentMode) restFees
+
+checkIfCoinsApplicable :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Bool -> HighPrecMoney -> PaymentMode -> DriverFee -> m (Maybe PurchaseHistory)
+checkIfCoinsApplicable isCoinEnabled totalFee paymentMode driverFee = do
+  activeCoinPlan <- QCPH.getPurchasedHistory driverFee.driverId (Just 1) Nothing True
+  let applyCoins = not $ null activeCoinPlan && paymentMode == AUTOPAY && isCoinEnabled && totalFee > 0
+  if applyCoins then return $ listToMaybe activeCoinPlan else return Nothing
 
 unsubscribeDriverForPaymentOverdue ::
   ( CacheFlow m r,
@@ -373,8 +390,9 @@ mkInvoiceAgainstDriverFee ::
   ( MonadFlow m
   ) =>
   DriverFee ->
+  INV.InvoiceStatus ->
   m INV.Invoice
-mkInvoiceAgainstDriverFee driverFee = do
+mkInvoiceAgainstDriverFee driverFee status = do
   invoiceId <- generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -383,7 +401,7 @@ mkInvoiceAgainstDriverFee driverFee = do
       { id = Id invoiceId,
         invoiceShortId = shortId.getShortId,
         driverFeeId = driverFee.id,
-        invoiceStatus = INV.ACTIVE_INVOICE,
+        invoiceStatus = status,
         paymentMode = INV.AUTOPAY_INVOICE,
         bankErrorCode = Nothing,
         bankErrorMessage = Nothing,

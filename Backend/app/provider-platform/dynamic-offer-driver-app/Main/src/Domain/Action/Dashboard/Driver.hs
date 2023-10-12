@@ -270,6 +270,7 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
       EXEMPTED -> Common.EXEMPTED
       COLLECTED_CASH -> Common.COLLECTED_CASH
       INACTIVE -> Common.INACTIVE
+      CLEARED_BY_YATRI_COINS -> Common.CLEARED
 
 ---------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes

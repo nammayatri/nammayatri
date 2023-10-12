@@ -415,6 +415,7 @@ library
       Storage.Beam.Vehicle
       Storage.Beam.Volunteer
       Storage.CachedQueries.BapMetadata
+      Storage.CachedQueries.Coins.CoinPlan
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason

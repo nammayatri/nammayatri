@@ -37,9 +37,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.Types as DCT
+import Storage.CachedQueries.Coins.CoinPlan as CoinPlan
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
-import Storage.Queries.Coins.CoinPlan as CoinPlan
 import qualified Storage.Queries.Coins.DriverCoins as DCQ
 import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.Person as Person
@@ -157,8 +157,8 @@ getCoinUsageSummary (driverId, merchantId) = do
   unless (transporterConfig.coinFeature) $
     throwError $ InvalidRequest "Coin Service for this merchant is not available"
   coinBalance_ <- getCoinsByDriveId driverId
-  purchaseSummary <- PHistory.getPurchasedHistory driverId
-  coinPlans <- CoinPlan.getCoinPlans
+  purchaseSummary <- PHistory.getPurchasedHistory driverId Nothing Nothing False
+  coinPlans <- CoinPlan.fetchAllCoinPlan merchantId
   coinUsageHistory <- mapM toUsageHistoryItem purchaseSummary
   let coinPlansList = map toCoinPlanListItem coinPlans
 
@@ -169,13 +169,13 @@ getCoinUsageSummary (driverId, merchantId) = do
         coinPlanList = coinPlansList
       }
   where
-    toUsageHistoryItem :: MonadFlow m => PurchaseHistory -> m CoinUsageHistoryItem
+    toUsageHistoryItem :: (MonadFlow m, CacheFlow m r) => PurchaseHistory -> m CoinUsageHistoryItem
     toUsageHistoryItem historyItem = do
-      coinPlanName <- CoinPlan.getCoinPlanName (historyItem.coinPlanId)
+      coinPlan <- CoinPlan.getCoinPlanDetails (historyItem.coinPlanId) >>= fromMaybeM (InternalError $ "plan details not found" <> historyItem.coinPlanId)
       pure
         CoinUsageHistoryItem
           { numCoins = historyItem.numCoins,
-            coinPlanName = coinPlanName,
+            coinPlanName = coinPlan.coinPlanName,
             createdAt = historyItem.createdAt,
             quantity = historyItem.quantity
           }
@@ -211,7 +211,7 @@ useCoinsHandler (driverId, merchantId) PurchasePlanRequest {..} = do
     throwError $ InvalidRequest "Coin Service for this merchant is not available"
   now <- getCurrentTime
   uuid <- generateGUIDText
-  coinPlan <- CoinPlan.getCoinPlanDetails coinPlanId
+  coinPlan <- CoinPlan.getCoinPlanDetails coinPlanId >>= fromMaybeM (InternalError $ "plan details not found" <> coinPlanId)
   coinBalance <- getCoinsByDriveId driverId
   let amount = coinPlan.requiredCoins * planQuantity
   let currentDate = show $ utctDay now
