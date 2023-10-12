@@ -92,6 +92,9 @@ export const getStringWithVar = function (str) {
         const processedString = str.replace(regex, () => {
           const currentValue = vals[currentIndex];
           currentIndex++;
+          if (!currentValue) {
+            return "";
+          }
           return currentValue;
         });
         return processedString;
