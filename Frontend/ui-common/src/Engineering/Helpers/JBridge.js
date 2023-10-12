@@ -1012,15 +1012,20 @@ export const translateStringWithTimeout = function (cb){
     return function (delay){
       return function (value){
         return function () {
-          var callbackFallback = function (){
-            cb(action(value))();
-          };
-          var timer = setTimeout(callbackFallback, delay);
-          var callback = callbackMapper.map(function (value) {
-            clearTimeout(timer);
-            cb(action(value))();
-          });
-          window.JBridge.translateString(callback, value);
+          // if(window.JBridge.translateString){ TODO:: Need to perform testing and handle edge cases. Pushing the code for the release for now
+          //   var callbackFallback = function (){
+          //     cb(action(value))();
+          //   };
+          //   var timer = setTimeout(callbackFallback, delay);
+          //   var callback = callbackMapper.map(function (value) {
+          //     clearTimeout(timer);
+          //     cb(action(value))();
+          //   });
+          //   window.JBridge.translateString(callback, value);
+          // } else{
+          //   cb(action(value))();
+          // }
+          cb(action(value))();
         }
       }
     }
@@ -1214,9 +1219,6 @@ export const getKeyInNativeSharedPrefKeys = function (key) {
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
-    if (key == "LANGUAGE_KEY"){
-      JBridge.setInSharedPrefs("LAST_LANG", JBridge.getFromSharedPrefs("LANGUAGE_KEY"));
-    }
     return JBridge.setInSharedPrefs(key, value);
   };
 };

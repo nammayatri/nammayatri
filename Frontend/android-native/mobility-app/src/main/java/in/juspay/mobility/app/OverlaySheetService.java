@@ -249,8 +249,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
 
-            updateViewFromMlTranslation(holder, model);
-
+            sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", null);
+            if (useMLKit != null && useMLKit.equals("true")) updateViewFromMlTranslation(holder, model);
             updateTipView(holder, model);
 
             if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
@@ -392,9 +393,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder,  SheetModel model) {
 
         String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-        String lastLang = sharedPref.getString("LAST_LANG", "ENGLISH");
-
-        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this, lastLang);
+        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this);
 
         translate.translateStringInTextView(model.getSourceArea(), holder.sourceArea);
         translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
@@ -544,9 +543,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         calculatedTime -= rideRequestedBuffer;
 
                     }
-
-
-
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             (df.format(distanceTobeCovered / 1000)),
                             (df.format(Integer.parseInt(durationToPickup)/ 60)),
