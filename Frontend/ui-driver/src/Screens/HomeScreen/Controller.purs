@@ -163,6 +163,7 @@ instance loggableAction :: Loggable Action where
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
     ScrollToBottom -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_to_bottom"
+    KeyboardCallback status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
     ChatViewActionController act -> pure unit -- case act of
       -- ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
       -- ChatView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
@@ -280,6 +281,7 @@ data Action = NoAction
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
+            | KeyboardCallback String
             | OfferPopupAC PopUpModal.Action
             | FreeTrialEndingAC PopUpModal.Action 
             | GetCurrentDuesAction GetCurrentPlanResp
@@ -329,6 +331,17 @@ eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
+
+eval (KeyboardCallback keyBoardState) state = do 
+  let isOpen = case keyBoardState of
+                    "onKeyboardOpen" -> true
+                    "onKeyboardClose" -> false
+                    _ -> false 
+  if state.props.currentStage == ST.ChatWithCustomer && isOpen then
+    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
+  else pure unit
+  continue state
+
 -- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
 --   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
 --         continueWithCmd state [ do

@@ -296,12 +296,24 @@ public class ChatService extends Service {
                 } else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
                     for (ShowNotificationCallBack inAppCallBack : inAppCallBacks) {
-                        inAppCallBack.showInAppNotification(_sentBy, _message, MobilityAppBridge.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, context);
+                        inAppCallBack.showInAppNotification("From " + getCustomerApp(appName) + " " +  _sentBy, message, MobilityAppBridge.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, context);
                     }
                 }
             }
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in handleMessage : " + e);
+        }
+    }
+
+    private String getCustomerApp(String driverApp) {
+        switch (driverApp) {
+            case "Yatri Driver" :
+                return "Yatri";
+            case "Yatri Sathi Driver" :
+                return "Yatri Sathi";
+            case "Namma Yatri Partner":
+                return "Namma Yatri";
+            default: return "";
         }
     }
 

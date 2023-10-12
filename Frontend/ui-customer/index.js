@@ -230,6 +230,8 @@ window["onEvent'"] = function (event, args) {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   }else if(event == "onBundleUpdated"){
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
+  } else if ((event == "onKeyboardOpen" || event == "onKeyboardClose") && window.keyBoardCallback) {
+      window.keyBoardCallback(event);
   }
   purescript.onEvent(event)();
 }

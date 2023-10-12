@@ -219,16 +219,17 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  }else if(event == "onBundleUpdated"){
+  } else if(event == "onBundleUpdated"){
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
-  }
   // else if (event == "onTimeChanged") {
   //   if(window.dateCallback != undefined) {
   //     window.dateCallback();
   //   } else {
   //     purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-  //   }
-  // }   -- Need To Refactor 
+  //   }  -- Need To Refactor 
+  } else if ((event == "onKeyboardOpen" || event == "onKeyboardClose") && window.keyBoardCallback) {
+      window.keyBoardCallback(event);
+  }
 }
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
