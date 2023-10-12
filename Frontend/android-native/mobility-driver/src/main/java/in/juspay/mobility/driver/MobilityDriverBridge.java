@@ -155,8 +155,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void translateString(String callback, String toTranslate)
     {
         String lang = getKeysInSharedPref("LANGUAGE_KEY");
-        String lastLang = getKeysInSharedPref("LAST_LANG");
-        TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext(), lastLang);
+        TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext());
         translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
     }
 

@@ -1489,10 +1489,10 @@ currentRideFlow = do
   if not (null activeRideResponse.list) then do
     case (activeRideResponse.list !! 0 ) of
       Just (RidesInfo ride) -> do
-        let x = decodeAddress ride.fromLocation true 
-            y = decodeAddress ride.toLocation true
-        sourceMod <- translateString x 500
-        destinationMod <- translateString y 500
+        let decodedSource = decodeAddress ride.fromLocation true 
+            decodedDestination = decodeAddress ride.toLocation true
+        sourceMod <- translateString decodedSource 500
+        destinationMod <- translateString decodedDestination 500
         let state = allState.homeScreen
             activeRide = (activeRideDetail state (RidesInfo ride))
             stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)

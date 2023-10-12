@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             if (key != null && key.equals("LANGUAGE_KEY")) {
-                TranslatorMLKit translator = new TranslatorMLKit("en",sharedPreferences.getString(key, "null"),MainActivity.this, sharedPreferences.getString("LAST_LANG", "ENGLISH"));
+                new TranslatorMLKit("en",sharedPreferences.getString(key, "null"),MainActivity.this);
                 Utils.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
             }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
