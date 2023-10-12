@@ -17,6 +17,7 @@ module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import Control.Lens ((%~))
 import Data.Aeson (encode)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -26,7 +27,7 @@ import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
-import EulerHS.Prelude hiding (state)
+import EulerHS.Prelude hiding (state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common

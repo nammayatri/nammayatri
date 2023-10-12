@@ -23,7 +23,7 @@ import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (find, id, map, state, unpack)
+import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
 import GHC.Float (int2Double)
 -- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude

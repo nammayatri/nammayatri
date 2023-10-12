@@ -11,11 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module SharedLogic.DriverFee where
 
 import Data.List ((\\))
 import qualified Data.List as DL
+import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
