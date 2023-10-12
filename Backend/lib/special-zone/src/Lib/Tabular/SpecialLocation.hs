@@ -25,7 +25,6 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation as Domain
 
-deriving instance Read LatLong
 deriving instance Read Domain.GatesInfo
 
 derivePersistField "LatLong"
