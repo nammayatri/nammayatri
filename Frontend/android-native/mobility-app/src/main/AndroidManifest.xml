@@ -101,6 +101,10 @@
             android:enabled="true"
             android:exported="false" />
         <receiver
+            android:name=".FCMBundleUpdateBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        <receiver
             android:name=".GPSBroadcastReceiver"
             android:enabled="true"
             android:exported="false"/>

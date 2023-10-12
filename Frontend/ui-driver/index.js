@@ -219,7 +219,9 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  } 
+  }else if(event == "onBundleUpdated"){
+    purescript.onBundleUpdatedEvent(JSON.parse(args))();
+  }
   // else if (event == "onTimeChanged") {
   //   if(window.dateCallback != undefined) {
   //     window.dateCallback();

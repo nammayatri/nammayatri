@@ -129,6 +129,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 public void inAppCallBack(String onTapAction) {
                     Log.i(CALLBACK, "No Required");
                 }
+
+                @Override
+                public void bundleUpdatedCallBack(String event, JSONObject desc) {
+                    Log.i(CALLBACK, "No Required");
+                }
             };
             NotificationUtils.registerCallback(callBack);
         }

@@ -1,5 +1,7 @@
 package in.juspay.mobility.app.callbacks;
 
+import org.json.JSONObject;
+
 public interface CallBack {
     void customerCallBack(String notificationType);
 
@@ -10,4 +12,5 @@ public interface CallBack {
     void chatCallBack(String message, String sentBy, String time, String len);
 
     void inAppCallBack(String onTapAction);
+    void bundleUpdatedCallBack(String event, JSONObject description);
 }

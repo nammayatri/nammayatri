@@ -28,7 +28,7 @@ import Log
 import Presto.Core.Types.Language.Flow (throwErr)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
-import Common.Types.App (GlobalPayload, Event)
+import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
 import Types.App (defaultGlobalState)
 import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
@@ -101,6 +101,14 @@ onConnectivityEvent triggertype = do
       _ -> Flow.baseAppFlow false Nothing
     pure unit
   JBridge.storeMainFiberOb mainFiber
+  pure unit
+
+onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
+onBundleUpdatedEvent description= do 
+  _ <- launchAff $ flowRunner defaultGlobalState $ do
+    _ ← runExceptT $ runBackT $ do
+      Flow.appUpdatedFlow description
+    pure unit
   pure unit
 
 onNewIntent :: Event -> Effect Unit

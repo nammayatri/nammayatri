@@ -26,6 +26,8 @@ import Log (trackAppActionClick, trackAppScreenRender, trackAppEndScreen)
 import Screens (getScreen, ScreenName(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
+import Components.PopUpModal as PopUpModal
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -39,12 +41,14 @@ instance loggableAction :: Loggable Action where
     OnCloseClick -> do
         trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "decline_update"
         -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
+    AppUpdatedModelAction action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_popupmodal_click"
 
 data ScreenOutput = Decline | Accept 
 
 data Action = OnCloseClick
             | OnAccept
             | AfterRender
+            | AppUpdatedModelAction PopUpModal.Action
 
 eval :: Action -> AppUpdatePopUpState -> Eval Action ScreenOutput AppUpdatePopUpState
 eval OnCloseClick state = do
@@ -52,8 +56,10 @@ eval OnCloseClick state = do
 eval OnAccept state = do 
   let _ = unsafePerformEffect $ logEvent state.logField "ny_user_update_popup_click"
   exit Accept
-
+eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
+eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval AfterRender state = continue state
+eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpState -> Props (Effect Unit)
 overrides _ push state = [] 

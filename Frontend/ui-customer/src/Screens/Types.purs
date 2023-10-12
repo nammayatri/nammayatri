@@ -1124,9 +1124,26 @@ type AddNewAddressScreenProps =
 
 type AppUpdatePopUpState =
  { version :: Int ,
-   logField :: Object Foreign
+   logField :: Object Foreign,
+   updatePopup :: UpdatePopupType,
+   appUpdatedView :: AppUpdatedViewState
  }
 
+type AppUpdatedViewState = {
+  primaryText :: String,
+  secondaryText :: String,
+  optionTwoText :: String,
+  coverImageUrl :: String
+}
+
+data UpdatePopupType =  AppVersion
+                      | DateAndTime
+                      | NoUpdatePopup
+                      | AppUpdated
+
+derive instance genericUpdatePopupType :: Generic UpdatePopupType _
+instance showUpdatePopupType :: Show UpdatePopupType where show = genericShow
+instance eqUpdatePopupType :: Eq UpdatePopupType where eq = genericEq
 
 data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED
 

@@ -20,7 +20,7 @@ import Screens.SubscriptionScreen.Controller
 
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Event, LazyCheck(..), PaymentStatus(..), Version(..))
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Constants as Constants
@@ -57,7 +57,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
@@ -173,6 +173,17 @@ checkVersion versioncode = do
     case fl of
       UpdateNow -> checkVersion versioncode
       Later -> pure unit
+
+appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
+appUpdatedFlow payload = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  fl <- UI.handleAppUpdatePopUp
+  case fl of
+    UpdateNow -> do 
+      lift $ lift $ doAff do liftEffect showSplash
+      lift $ lift $ doAff do liftEffect reboot
+    Later -> pure unit
 
 checkDateAndTime :: FlowBT String Unit
 checkDateAndTime = do

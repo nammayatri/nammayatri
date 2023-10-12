@@ -228,6 +228,8 @@ window["onEvent'"] = function (event, args) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
   } else if (event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
+  }else if(event == "onBundleUpdated"){
+    purescript.onBundleUpdatedEvent(JSON.parse(args))();
   }
   purescript.onEvent(event)();
 }

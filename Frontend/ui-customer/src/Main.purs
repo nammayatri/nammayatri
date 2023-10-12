@@ -14,7 +14,7 @@
 -}
 module Main where
 
-import Common.Types.App (GlobalPayload)
+import Common.Types.App (GlobalPayload, FCMBundleUpdate)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -108,3 +108,11 @@ updateEventData event = do
       "CHAT_MESSAGE" -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
       _ -> pure unit            
+
+onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
+onBundleUpdatedEvent description= do 
+  _ <- launchAff $ flowRunner defaultGlobalState $ do
+    _ ← runExceptT $ runBackT $ do
+      Flow.appUpdatedFlow description
+    pure unit
+  pure unit

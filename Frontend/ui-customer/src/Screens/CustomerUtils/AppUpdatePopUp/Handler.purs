@@ -20,7 +20,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Screens.AppUpdatePopUp.Controller as CD
 import Screens.AppUpdatePopUp.View as AppUpdatePopUpScreen
 import PrestoDOM.Core.Types.Language.Flow(runScreenWithNameSpace, initUIWithNameSpace)
-import Types.App (FlowBT, GlobalState(..))
+import Types.App (FlowBT, GlobalState(..), APP_UPDATE_POPUP(..))
 import Control.Monad.Except.Trans (lift)
 import Effect.Class (liftEffect)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
@@ -29,7 +29,7 @@ import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
 import Presto.Core.Types.Language.Flow (getLogFields)
 
-handleAppUpdatePopUp :: FlowBT String String
+handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
 handleAppUpdatePopUp  = do
   (GlobalState state) ← getState
   logField_ <-lift $ lift $ getLogFields
@@ -37,5 +37,5 @@ handleAppUpdatePopUp  = do
   act <- lift $ lift $ runScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen{logField = logField_})
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of
-    CD.Decline -> App.BackT $ App.NoBack <$> pure "Decline"
-    CD.Accept  -> App.BackT $ App.NoBack <$> pure "Accept"
+    CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
+    CD.Decline -> App.BackT $ App.BackPoint <$> pure Later

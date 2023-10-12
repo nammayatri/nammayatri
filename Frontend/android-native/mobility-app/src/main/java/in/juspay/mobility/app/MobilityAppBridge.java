@@ -99,6 +99,12 @@ public class MobilityAppBridge extends HyperBridge {
         public void inAppCallBack(String inAppCallBack) {
             callInAppNotificationCallBack(inAppCallBack);
         }
+
+        @Override
+        public void bundleUpdatedCallBack(String event, JSONObject payload) {
+            String command = String.format("window[\"onEvent'\"]('%s','%s')", event, payload.toString());
+            bridgeComponents.getJsCallback().addJsToWebView(command);
+        }
     };
 
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
@@ -106,6 +112,7 @@ public class MobilityAppBridge extends HyperBridge {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
         ChatService.registerCallback(callBack);
         InAppNotification.registerCallback(callBack);
+        RemoteAssetsDownloader.registerCallback(callBack);
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
     }
 
@@ -123,6 +130,7 @@ public class MobilityAppBridge extends HyperBridge {
     public void reset() {
         ChatService.deRegisterCallback(callBack);
         InAppNotification.deRegisterCallBack(callBack);
+        RemoteAssetsDownloader.deRegisterCallback(callBack);
     }
 
     // region Store And Trigger CallBack

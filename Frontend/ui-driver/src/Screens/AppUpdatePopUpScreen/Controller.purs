@@ -22,6 +22,7 @@ import PrestoDOM (Eval, Props, exit, continue)
 import Prelude (($))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpScreenState)
+import Components.PopUpModal as PopUpModal
 import Screens (ScreenName(..), getScreen)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -42,6 +43,7 @@ instance loggableAction :: Loggable Action where
     BackPressed -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     DateCallBack -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     PrimaryButtonActionController action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
+    AppUpdatedModelAction action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_popupmodal_click"
     
 data Action = OnCloseClick
             | OnAccept
@@ -49,6 +51,7 @@ data Action = OnCloseClick
             | BackPressed
             | DateCallBack
             | PrimaryButtonActionController PrimaryButtonController.Action
+            | AppUpdatedModelAction PopUpModal.Action
 
 
 eval :: Action -> AppUpdatePopUpScreenState -> Eval Action ScreenOutput AppUpdatePopUpScreenState
@@ -65,6 +68,8 @@ eval BackPressed state = do
   continue state
 eval DateCallBack state = do
     exit DateAndTime
+eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
+eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)

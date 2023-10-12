@@ -55,6 +55,8 @@ foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> 
 
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
 saveToLocalStore' = saveToLocalStoreImpl
+foreign import reboot :: Effect Unit
+foreign import showSplash :: Effect Unit
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader = 

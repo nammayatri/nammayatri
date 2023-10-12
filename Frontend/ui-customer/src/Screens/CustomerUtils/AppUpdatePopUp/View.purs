@@ -17,9 +17,11 @@ module Screens.AppUpdatePopUp.View where
 
 import Animation as Anim
 import Animation.Config (translateYAnimConfigUpdate)
-import Prelude (Unit, bind, const, pure, unit, ($), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, afterRender)
+import Prelude (Unit, bind, const, pure, unit, ($), (<>), (==),(/=),(<<<))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), onBackPressed, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, afterRender)
 import Screens.Types (AppUpdatePopUpState)
+import Components.PopUpModal as PopUpModal
+import Screens.Types (UpdatePopupType(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import JBridge as JB 
@@ -34,6 +36,10 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import MerchantConfig.Utils(Merchant(..), getMerchant, getValueFromConfig)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Helpers.Utils (getAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =
@@ -47,6 +53,18 @@ screen initialState =
   
 view :: forall w .  (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
 view push state =
+   linearLayout
+  [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , clickable true
+  ]
+  [ if (state.updatePopup == AppVersion) then  updateRequiredView push state
+    else if (state.updatePopup == AppUpdated) then appUpdatedView push state
+    else linearLayout[][] 
+  ]
+   
+updateRequiredView :: forall w .  (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
+updateRequiredView push state =   
    linearLayout [
     width MATCH_PARENT
     , height MATCH_PARENT
@@ -150,6 +168,55 @@ view push state =
       ]
   ]
 
+
+appUpdatedView :: forall w. (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
+appUpdatedView push state = 
+  linearLayout [
+    width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , clickable true
+    , background "#99000000"
+    , gravity CENTER_VERTICAL
+    , afterRender push (const AfterRender)
+  ][
+   PrestoAnim.animationSet [
+      Anim.translateYAnim $ translateYAnimConfigUpdate
+    ] $ PopUpModal.view (push <<< AppUpdatedModelAction) (appUpdatedModelConfig state) 
+  ]
+
+appUpdatedModelConfig :: AppUpdatePopUpState -> PopUpModal.Config
+appUpdatedModelConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = (Corners 15.0 true true true true)
+  , margin = (Margin 16 0 16 0)
+  , padding = (Padding 0 5 0 0)
+  , topTitle {visibility = GONE}
+  , primaryText {
+      text = state.appUpdatedView.primaryText
+    }
+  , secondaryText {
+      text =state.appUpdatedView.secondaryText
+    }
+    , option1 {
+     visibility = false
+    }
+  , option2 {
+      text =  state.appUpdatedView.optionTwoText,
+      padding = (Padding 16 0 16 0),
+      margin = (Margin 12 0 12 16)
+    }
+  , coverImageConfig {
+      imageUrl = state.appUpdatedView.coverImageUrl <> "," <> (getAssetStoreLink FunctionCall) <> state.appUpdatedView.coverImageUrl <> ".png"
+    , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE
+    , height = V 178
+    , width = V 204
+    }
+  }
+  in popUpConfig'
 
 getAppLink :: Merchant -> String 
 getAppLink merchant = 

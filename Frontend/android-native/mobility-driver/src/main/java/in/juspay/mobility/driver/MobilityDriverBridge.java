@@ -211,6 +211,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 public void inAppCallBack(String onTapAction) {
                     Log.i(OTHERS, "No Required");
                 }
+
+                @Override
+                public void bundleUpdatedCallBack(String event, JSONObject desc) {
+                    Log.i(CALLBACK, "No Required");
+                }
             };
             NotificationUtils.registerCallback(callBack);
             Utils.registerCallback(callBack);

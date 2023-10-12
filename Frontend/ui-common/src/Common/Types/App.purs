@@ -317,3 +317,9 @@ type YoutubeData = {
   , videoId :: String
   , videoType :: String
 }
+
+type FCMBundleUpdate = {
+  title :: String,
+  description :: String,
+  image :: String
+}
