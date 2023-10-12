@@ -32,10 +32,10 @@ library
       Consumer.AvailabilityTime.Storage.Queries
       Consumer.AvailabilityTime.Storage.Tables
       Consumer.AvailabilityTime.Types
-      Consumer.BecknRequest.Processor
       Consumer.BroadcastMessage.Processor
       Consumer.CustomerStats.Processor
       Consumer.Flow
+      Consumer.KafkaTable.Processor
       Environment
   other-modules:
       Paths_kafka_consumers

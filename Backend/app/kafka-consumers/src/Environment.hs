@@ -81,9 +81,8 @@ data ConsumerType
   = AVAILABILITY_TIME
   | BROADCAST_MESSAGE
   | PERSON_STATS
-  | RIDER_BECKN_REQUEST
-  | DRIVER_BECKN_REQUEST
-  deriving (Generic, FromDhall, Read, Eq)
+  | KAFKA_TABLE
+  deriving (Generic, FromDhall, Read)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -91,8 +90,7 @@ instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
-  show RIDER_BECKN_REQUEST = "rider-beckn-request"
-  show DRIVER_BECKN_REQUEST = "driver-beckn-request"
+  show KAFKA_TABLE = "kafka-table"
 
 type Seconds = Integer
 
@@ -121,6 +119,8 @@ data AppCfg = AppCfg
     s3Config :: Maybe S3Config
   }
   deriving (Generic, FromDhall)
+
+-- FIXME each consumer should have own env: AppEnv (ct :: ConsumerType)
 
 data AppEnv = AppEnv
   { hedisCfg :: HedisCfg,
@@ -169,10 +169,9 @@ buildAppEnv AppCfg {..} consumerType = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   s3Env <-
-    if consumerType `elem` [RIDER_BECKN_REQUEST, DRIVER_BECKN_REQUEST]
-      then do
-        P.maybe (P.throwIO $ InternalError "s3Config required for this consumer type") (pure . buildS3Env) s3Config
-      else do
+    case consumerType of
+      KAFKA_TABLE -> P.maybe (P.throwIO $ InternalError "s3Config required for this consumer type") (pure . buildS3Env) s3Config
+      _ -> do
         whenJust s3Config $ const (P.throwIO $ InternalError "s3Config not required for this consumer type")
         pure
           S3Env

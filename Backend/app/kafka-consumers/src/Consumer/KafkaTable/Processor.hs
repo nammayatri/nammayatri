@@ -12,9 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Consumer.BecknRequest.Processor
-  ( becknRequestProcessor,
-    BecknRequestType (..),
+module Consumer.KafkaTable.Processor
+  ( kafkaTableProcessor,
   )
 where
 
@@ -25,52 +24,50 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Beam.BecknRequest as BR
+import Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Types.Error
 import Kernel.Utils.Common (decodeFromText, encodeToText, logDebug, logWarning, throwError)
 
-data BecknRequestType = RIDER | DRIVER
-
-becknRequestProcessor :: BecknRequestType -> [BR.BecknRequestKafka] -> Flow ()
-becknRequestProcessor becknRequestType becknRequestsKafka = do
+-- for now kafkaTable.tableName = "beckn_request", in future can be added other tables
+kafkaTableProcessor :: [Kafka.KafkaTable] -> Flow ()
+kafkaTableProcessor kafkaTables = do
   pathPrefix <- asks (.s3Env.pathPrefix)
-  let mapBecknRequestsKafka = foldr (foldFunc pathPrefix) Map.empty becknRequestsKafka
+  let mapKafkaTable = foldr (foldFunc pathPrefix) Map.empty kafkaTables
   void $
-    flip Map.traverseWithKey mapBecknRequestsKafka $ \filePath mappedBecknRequestKafka -> do
-      logDebug $ "MessagesReceived: " <> show (length mappedBecknRequestKafka) <> "; filePath: " <> show filePath
+    flip Map.traverseWithKey mapKafkaTable $ \filePath mappedKafkaTables -> do
+      logDebug $ "MessagesReceived: " <> show (length mappedKafkaTables) <> "; filePath: " <> show filePath
       existingFile <- handle @Flow @SomeException (pure . const "") (S3.get filePath)
       if T.null existingFile
         then do
           logDebug $ "Create new file: " <> show filePath
-          S3.put filePath (encodeToText @[A.Value] (mappedBecknRequestKafka <&> (.becknRequest))) -- normal case
+          S3.put filePath (encodeToText @[A.Value] (mappedKafkaTables <&> (.tableContent))) -- normal case
         else do
           let mbExistingRequests :: Maybe [A.Value] = decodeFromText existingFile
           case mbExistingRequests of
-            Just existingBecknRequests -> do
+            Just existingKafkaTables -> do
               -- overwriting file because of some drainer delay
               logWarning $ "Overwriting file with beckn requests: " <> show filePath
-              S3.put filePath (encodeToText @[A.Value] $ existingBecknRequests <> (mappedBecknRequestKafka <&> (.becknRequest)))
+              S3.put filePath (encodeToText @[A.Value] $ existingKafkaTables <> (mappedKafkaTables <&> (.tableContent)))
             Nothing -> do
               -- should never happen
               throwError (InternalError $ "Could not decode existing file: " <> show filePath)
   where
     foldFunc ::
       Text ->
-      BR.BecknRequestKafka ->
-      Map.Map String [BR.BecknRequestKafka] ->
-      Map.Map String [BR.BecknRequestKafka]
-    foldFunc pathPrefix becknRequest mapBecknRequest = do
-      let filePath = mkFilePath becknRequestType pathPrefix becknRequest.timestamp
-      Map.insertWithKey (\_key newList oldList -> newList <> oldList) filePath [becknRequest] mapBecknRequest
+      Kafka.KafkaTable ->
+      Map.Map String [Kafka.KafkaTable] ->
+      Map.Map String [Kafka.KafkaTable]
+    foldFunc pathPrefix kafkaTable mapKafkaTable = do
+      let filePath = mkFilePath kafkaTable pathPrefix kafkaTable.timestamp
+      Map.insertWithKey (\_key newList oldList -> newList <> oldList) filePath [kafkaTable] mapKafkaTable
 
-mkFilePath :: BecknRequestType -> Text -> UTCTime -> String
-mkFilePath becknRequestType pathPrefix timestamp = do
-  let folderName = case becknRequestType of
-        RIDER -> "rider_beckn_requests"
-        DRIVER -> "driver_beckn_requests"
+mkFilePath :: Kafka.KafkaTable -> Text -> UTCTime -> String
+mkFilePath kafkaTable pathPrefix timestamp = do
   T.unpack pathPrefix
     <> "/"
-    <> folderName
+    <> T.unpack kafkaTable.schemaName
+    <> "/"
+    <> T.unpack kafkaTable.tableName
     <> "/"
     <> Time.formatTime Time.defaultTimeLocale "%Y.%m.%d-%H" timestamp
     <> ".json"
