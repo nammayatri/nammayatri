@@ -74,7 +74,6 @@ import qualified Storage.Queries.QuoteRental as QQuoteRental
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import qualified Storage.Queries.FareProduct as QFareProduct
-import SharedLogic.FareProduct
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Tools.Error
 import Tools.Event
@@ -242,21 +241,14 @@ handler merchant sReq' =
           merchantId = merchant.id
       sessiontoken <- generateGUIDText
       fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-      rentalFareProducts <- do
-          res <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
-          return $
-            FareProducts
-              { fareProducts = res,
-                area = DFareProduct.Default,
-                specialLocationTag = Nothing
-              }
+      fareProducts <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
       rentalfarePolicies <-
         mapM
           ( \fareProduct -> do
               farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
               return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
           )
-          rentalFareProducts.fareProducts
+          fareProducts
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
       _<- QSR.create rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
@@ -289,9 +281,7 @@ handler merchant sReq' =
                           (kilometersToMeters slab.baseDistance)
                           farePolicy.vehicleVariant
                           slab.baseDuration)
-                    
-                _ -> undefined
-                _ -> undefined
+                _ -> throwError $ InvalidRequest "This is not rental quote"
         let z = concat listOfRentalQuotes
         for_ z QQuoteRental.create
         return (Just (mkRentalQuoteInfo fromLocation now <$> z), Nothing)

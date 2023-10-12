@@ -147,7 +147,9 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
-  { baseDistance :: Kilometers,
+  {
+    id :: Text,
+    baseDistance :: Kilometers,
     baseDuration :: Hours
   }
 
@@ -263,8 +265,8 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
 
 buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
 buildRentalSlab RentalQuoteDetails {..} = do
-  id <- generateGUID
-  pure DRentalSlab.RentalSlab {..}
+  let quoteId = Id id
+  pure DRentalSlab.RentalSlab {id = quoteId,..}
 
 buildTripTerms ::
   MonadFlow m =>
