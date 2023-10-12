@@ -42,6 +42,7 @@ import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocati
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -294,20 +295,22 @@ eval (LoadMyPlans plans) state = do
                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                       lowAccountBalance = requiredBalance,
                       dueItems = constructDues planEntity.dues}}}
-      _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
-      _ <- pure $ setCleverTapUserProp "Search Request Eligibility" if isOverdue then "FALSE" else "TRUE"
-      _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
-      _ <- pure $ setCleverTapUserProp "Due Amount" $ show planEntity.currentDues
-      _ <- pure $ setCleverTapUserProp "Autopay status" $ fromMaybe "Nothing" currentPlanResp.autoPayStatus
+      _ <- pure $ setCleverTapUserProp [{key : "Plan", value : unsafeToForeign planEntity.name},
+                                        {key : "Subscription Offer", value : unsafeToForeign (map (\(OfferEntity offer) -> offer.title) planEntity.offers)},
+                                        {key : "Driver Due Amount" , value : unsafeToForeign (planEntity.currentDues)},
+                                        {key : "Autopay status", value : unsafeToForeign (fromMaybe "Nothing" currentPlanResp.autoPayStatus)},
+                                        {key : "Search Request Eligibility", value : unsafeToForeign $ if isOverdue then "FALSE" else "TRUE"},
+                                        {key : "Driver AutoPay Dues", value : unsafeToForeign planEntity.autopayDues},
+                                        {key : "Driver Manual Dues", value : unsafeToForeign $ planEntity.currentDues - planEntity.autopayDues}]
 
 
       case currentPlanResp.mandateDetails of 
         Mb.Nothing -> continue newState
         Mb.Just (MandateData mandateDetails) -> do
-          _ <- pure $ setCleverTapUserProp "Mandate status" mandateDetails.status
-          _ <- pure $ setCleverTapUserProp "Autopay Max Amount Registered" $ show mandateDetails.maxAmount
-          _ <- pure $ setCleverTapUserProp "Payment method" if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"
-          _ <- pure $ setCleverTapUserProp "UPI ID availability" if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"
+          _ <- pure $ setCleverTapUserProp [{key : "Mandate status", value : unsafeToForeign mandateDetails.status},
+                                            {key : "Autopay Max Amount Register", value : unsafeToForeign mandateDetails.maxAmount},
+                                            {key : "Payment method" , value : unsafeToForeign $ if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"},
+                                            {key : "UPI ID availability", value : unsafeToForeign $ if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"}]
           continue newState 
             {data {
                 myPlanData {

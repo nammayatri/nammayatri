@@ -147,3 +147,6 @@ bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
 
 disabilityList :: String -> String
 disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
+
+personStats :: String -> String
+personStats dummy = (getBaseUrl "40") <> "/personStats"

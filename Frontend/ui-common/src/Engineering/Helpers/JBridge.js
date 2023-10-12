@@ -1800,13 +1800,25 @@ export const setCleverTapUserData = function (key) {
   };
  };
 
- export const setCleverTapUserProp = function (key) {
-   return function (value) {
-         if(window.JBridge.setCleverTapUserProp){
-             window.JBridge.setCleverTapUserProp(key,value);
-         }
-   };
-  };
+export const setCleverTapUserProp = function(arr){
+  try{
+      if (window.JBridge.setCleverTapUserMultipleProp){
+        return JBridge.setCleverTapUserMultipleProp(JSON.stringify(arr));
+      }
+      else{
+        if(window.JBridge.setCleverTapUserProp){
+          for (let i = 0; i < arr.length; i++) {
+            const jsonObject = arr[i];
+            const key = jsonObject.key;
+            const value = jsonObject.value;
+            window.JBridge.setCleverTapUserProp(key,value);
+          }
+        }
+      }
+    }catch(err){
+      console.log("setCleverTapUserProp error " + err);
+    }
+}
 
 export const cleverTapCustomEvent = function(event){
     if (window.JBridge.cleverTapCustomEvent){

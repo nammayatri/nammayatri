@@ -59,6 +59,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getEN)
@@ -104,7 +105,7 @@ screen initialState =
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
                 Nothing -> do
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
-                           void $ pure $ JB.setCleverTapUserProp "Driver On-ride" "No"
+                           void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))

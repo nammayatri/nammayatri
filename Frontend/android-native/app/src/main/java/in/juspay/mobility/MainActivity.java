@@ -11,6 +11,7 @@ package in.juspay.mobility;
 
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.app.Utils.minimizeApp;
+import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -655,6 +656,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        setCleverTapUserProp("Session Status" , "true" , context);
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onResume").apply();
             sharedPref.edit().putString("MAPS_OPENED", "null").apply();
@@ -689,6 +691,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        setCleverTapUserProp("Session Status" , "false" , context);
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
         if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") &&

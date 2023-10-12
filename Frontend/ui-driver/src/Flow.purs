@@ -54,8 +54,7 @@ import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign (unsafeToForeign)
@@ -133,9 +132,9 @@ baseAppFlow baseFlow event = do
           appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
           movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
       versionName <- lift $ lift $ liftFlow $ getVersionName
-      void $ pure $ setCleverTapUserProp "App Version" versionName
-      void $ pure $ setCleverTapUserProp "Bundle version" bundle
-      void $ pure $ setCleverTapUserProp "Platform" os
+      void $ pure $ setCleverTapUserProp [{key : "App Version", value : unsafeToForeign versionName},
+                                          {key : "Bundle version", value : unsafeToForeign bundle},
+                                          {key : "Platform", value : unsafeToForeign os}]
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
@@ -220,7 +219,7 @@ loginFlow = do
   lift $ lift $ doAff do liftEffect hideSplash
   logField_ <- lift $ lift $ getLogFields
   runInternetCondition
-  void $ pure $ setCleverTapUserProp "Preferred Language" $ getValueFromConfig "defaultLanguage"
+  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   languageType <- UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
@@ -287,6 +286,7 @@ getDriverInfoFlow event = do
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
+      liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -311,7 +311,6 @@ getDriverInfoFlow event = do
             else do
               setValueToLocalStore IS_DRIVER_VERIFIED "false"
               onBoardingFlow
-      liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
     Left errorPayload -> do
       if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
         then onBoardingFlow
@@ -382,7 +381,7 @@ checkStatusAndStartLocationUpdates = do
       driverMode = fromMaybe "" getDriverInfoResp.mode
       isOffline = if isNoDriverMode  then getDriverInfoResp.active else driverMode == "OFFLINE"
       currentMode = if isNoDriverMode then show $ updateDriverStatus (getDriverInfoResp.active) else driverMode
-  if isNoDriverMode then pure unit else void $ pure $ setCleverTapUserProp "Mode" driverMode
+  if isNoDriverMode then pure unit else void $ pure $ setCleverTapUserProp [{key : "Mode", value : unsafeToForeign driverMode}]
   setDriverStatusInLocal (show (not isOffline)) $ show $ getDriverStatusFromMode currentMode
   liftFlowBT $ if isOffline then stopLocationPollingAPI else startLocationPollingAPI
 
@@ -1498,7 +1497,7 @@ currentRideFlow = do
             stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
-        void $ pure $ setCleverTapUserProp "Driver On-ride" "Yes"
+        void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false }})
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -1519,7 +1518,7 @@ currentRideFlow = do
         setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
         pure unit
 else pure unit
-  void $ pure $ setCleverTapUserProp "Driver On-ride" if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"
+  void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
   homeScreenFlow
@@ -1745,7 +1744,7 @@ homeScreenFlow = do
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
-      void $ pure $ setCleverTapUserProp "Driver On-ride" "No"
+      void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       _ <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
@@ -1787,7 +1786,11 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader false
       updateDriverDataToStates
       homeScreenFlow
-    GO_TO_CANCEL_RIDE {id, info , reason} -> do
+    GO_TO_CANCEL_RIDE {id, info , reason} state -> do
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
+                                                                                        {key : "Additional info", value : unsafeToForeign $ if info == "" then "null" else info},
+                                                                                        {key : "Pickup", value : unsafeToForeign state.data.activeRide.source},
+                                                                                        {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ removeAllPolylines ""
@@ -2410,8 +2413,10 @@ updateDriverDataToStates = do
 
 updateCleverTapUserProps :: GetDriverInfoResp -> Effect Unit
 updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
-  if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then void $ pure $ setCleverTapUserProp "First ride taken" "true"
-    else void $ pure $ setCleverTapUserProp "First ride taken" "false"
+  case getDriverInfoResp.freeTrialDaysLeft of
+        Just value -> do
+              void $ pure $ setCleverTapUserProp [{key : "Ny_Free_Trial_Days_Left", value : unsafeToForeign value}]
+        Nothing -> pure unit
   let middleName = case getDriverInfoResp.middleName of
                     Just ""  -> ""
                     Just name -> " " <> name
@@ -2422,14 +2427,11 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
                     Nothing -> ""
       name = getDriverInfoResp.firstName <> middleName <> lastName
   void $ pure $ setCleverTapUserData "Name" name
-  void $ pure $ setCleverTapUserProp "Enabled" if getDriverInfoResp.enabled then "TRUE" else "FALSE"
   void $ pure $ setCleverTapUserData "Identity" $ getValueToLocalStore DRIVER_ID
-  void $ pure $ setCleverTapUserProp "Plan Subscription Status" if isNothing getDriverInfoResp.autoPayStatus then "FALSE" else "TRUE"
-  void $ pure $ setCleverTapUserProp "Driver Subscribed" if getDriverInfoResp.subscribed then "TRUE" else "FALSE"
   case getDriverInfoResp.mobileNumber of
     Just value -> do 
       void $ pure $ setCleverTapUserData "Phone" $ "+91" <> value
-      void $ pure $ setCleverTapUserProp "Mobile_Number" $ "91" <> value
+      void $ pure $ setCleverTapUserProp [{key : "Mobile_Number", value : unsafeToForeign $ "91" <> value}]
     Nothing -> pure unit
   case getDriverInfoResp.gender of
     Just value | value /= "UNKNOWN" -> void $ pure $ setCleverTapUserData "gender" value
@@ -2438,20 +2440,26 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
     Just value -> void $ pure $ setCleverTapUserData "Alternate Number" $ "+91" <> value
     Nothing -> pure unit
   case getDriverInfoResp.numberOfRides of
-    Just value -> void $ pure $ setCleverTapUserData "Total Rides" $ show $ value
+    Just value -> void $ pure $ setCleverTapUserProp [{key : "total_driver_trips", value : unsafeToForeign value }]
     Nothing -> pure unit
   case getDriverInfoResp.rating of
-    Just value -> void $ pure $ setCleverTapUserData "Rating" $ show $ value
+    Just value -> void $ pure $ setCleverTapUserProp [{key : "Driver_rating", value : unsafeToForeign value}]
     Nothing -> pure unit
-  case getDriverInfoResp.linkedVehicle of
-    Just (Vehicle linkedVehicle) -> void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
-    Nothing -> pure unit
-  case getDriverInfoResp.blocked of
-    Just value -> void $ pure $ setCleverTapUserProp "Blocked" $ show $ value
-    Nothing -> pure unit
-  case getDriverInfoResp.mode of
-    Just currentMode -> void $ pure $ setCleverTapUserProp "Mode" currentMode
-    Nothing -> pure unit
+  let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+  void $ pure $ setCleverTapUserProp [{key : "Vehicle Variant", value : unsafeToForeign linkedVehicle.variant},
+                                      {key : "Blocked", value : (unsafeToForeign $ fromMaybe false getDriverInfoResp.blocked)},
+                                      {key : "Mode", value : unsafeToForeign $ fromMaybe "" getDriverInfoResp.mode},
+                                      {key : "First ride taken", value : unsafeToForeign $ if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then true else false},
+                                      {key : "Plan Subscription Status", value : unsafeToForeign $ if isNothing getDriverInfoResp.autoPayStatus then false else true},
+                                      {key : "Subscribed", value : unsafeToForeign $ getDriverInfoResp.subscribed},
+                                      {key : "Enabled", value : unsafeToForeign $ getDriverInfoResp.enabled},
+                                      {key : "to_be_blocked", value : unsafeToForeign $ if (fromMaybe 0.0 getDriverInfoResp.currentDues) >= 75.0 then true else false}]
+  case getDriverInfoResp.currentDues of
+        Just value -> void $ pure $ setCleverTapUserProp [{key : "Current Dues", value :unsafeToForeign value}]
+        Nothing -> pure unit
+  case getDriverInfoResp.manualDues of
+        Just value -> void $ pure $ setCleverTapUserProp [{key : "Manual Dues", value : (unsafeToForeign value)}]
+        Nothing -> pure unit
 
 
 updateAvailableAppsAndGoToSubs :: FlowBT String Unit
@@ -2468,8 +2476,8 @@ getUpiApps = do
   let (UpdateDriverInfoReq req) = Remote.mkUpdateDriverInfoReq ""
   let appsSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> item.supportsMandate) resp
   let appsNotSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> not item.supportsMandate) resp
-  pure $ setCleverTapUserProp "appsSupportMandate" appsSupportMandate
-  pure $ setCleverTapUserProp "appsNotSupportMandate" appsNotSupportMandate
+  pure $ setCleverTapUserProp [{key : "appsSupportMandate", value : unsafeToForeign appsSupportMandate},
+                               {key : "appsNotSupportMandate", value : unsafeToForeign appsNotSupportMandate}]
   void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})
 
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit

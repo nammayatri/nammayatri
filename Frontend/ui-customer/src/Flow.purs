@@ -82,7 +82,7 @@ import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressS
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), PermissionScreenStage(..))
 import Screens.Types (Gender(..)) as Gender
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
@@ -102,11 +102,11 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
       customerId = (getValueToLocalStore CUSTOMER_ID)
   versionCode <- lift $ lift $ liftFlow $ getVersionCode
   versionName <- lift $ lift $ liftFlow $ getVersionName
-  void $ pure $ setCleverTapUserProp "App Version" versionName
+  void $ pure $ setCleverTapUserProp [{key : "App Version", value : unsafeToForeign versionName}]
   checkVersion versionCode versionName
   setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
-  void $ pure $ setCleverTapUserProp "Bundle version" bundle
+  void $ pure $ setCleverTapUserProp [{ key : "Bundle version", value : unsafeToForeign bundle}]
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
@@ -210,7 +210,7 @@ getIosVersion merchant =
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
-  void $ pure $ setCleverTapUserProp "Platform" os
+  void $ pure $ setCleverTapUserProp [ {key : "Platform", value : unsafeToForeign os}]
   logField_ <- lift $ lift $ getLogFields
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
@@ -424,7 +424,12 @@ currentFlowStatus = do
       setValueToLocalStore DISABILITY_UPDATED $ if (isNothing response.hasDisability) then "false" else "true"
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
-      void $ pure $ setCleverTapUserProp "First ride taken" if response.hasTakenRide then "true" else "false"
+      (PersonStatsRes resp) <- Remote.getPersonStatsBT ""
+      void $ pure $ setCleverTapUserProp $ personStatsData (PersonStatsRes resp) (GetProfileRes response)
+      case resp.latestSearchFrom of
+        Just value -> void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign("lat: " <> (show $ value ^._lat) <> " long: " <> (show $ value ^._lon))}]
+        Nothing -> pure unit
+      
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
         liftFlowBT $ hideLoader
@@ -506,7 +511,7 @@ chooseLanguageScreenFlow = do
   case flow of
     NextScreen language -> do
                             setValueToLocalStore LANGUAGE_KEY language
-                            void $ pure $ setCleverTapUserProp "Preferred Language" language
+                            void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
                             _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
                             enterMobileNumberScreenFlow
     Refresh state -> chooseLanguageScreenFlow
@@ -720,6 +725,10 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false}})
         homeScreenFlow
         else pure unit
+      let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
+          currentDate =  getCurrentDate ""
+      void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
+                                          {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
       case rideSearchRes.routeInfo of
@@ -755,12 +764,12 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader showLoader
       (GlobalState newState) <- getState
       let state = newState.homeScreen
-      liftFlowBT $ logEventWithParams logField_ "ny_user_tip_search" "Tip amount" ("₹ " <> (show $ state.props.customerTip.tipForDriver))
+      liftFlowBT $ logEventWithParams logField_ "ny_user_tip_search" "Tip amount (₹)" (show $ state.props.customerTip.tipForDriver)
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_retry_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
-                                                                                                      {key : "Estimate Fare", value : unsafeToForeign $ "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))},
-                                                                                                      {key : "Customer tip (Rs.)", value : unsafeToForeign $ "₹" <> (show $ state.props.customerTip.tipForDriver)},
+                                                                                                      {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
+                                                                                                      {key : "Customer tip (₹)", value : unsafeToForeign state.props.customerTip.tipForDriver},
                                                                                                       {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign (show $ state.data.rateCard.nightCharges)}]
+                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
       if (not (isLocalStageOn QuoteList)) then do
         void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
         cancelEstimate state.props.estimateId
@@ -891,9 +900,9 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
-                                                                                                          {key : "Estimate Fare", value : unsafeToForeign $ "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))},
+                                                                                                          {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                           {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                          {key : "Night Ride", value : unsafeToForeign (show $ state.data.rateCard.nightCharges)}]
+                                                                                                          {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
             pure unit
@@ -968,7 +977,7 @@ homeScreenFlow = do
                                                                                                       {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
                                                                                                       {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
                                                                                                       {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
-                                                                                                      {key : "Night Ride", value : unsafeToForeign (show $ state.data.rateCard.nightCharges)}]
+                                                                                                      {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
@@ -1449,6 +1458,10 @@ rideSearchFlow flowType = do
           void $ lift $ lift $ toggleLoader false
         true -> do
           PlaceName address <- getPlaceName finalState.props.sourceLat finalState.props.sourceLong HomeScreenData.dummyLocation
+          let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
+              currentDate =  getCurrentDate ""
+          void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
+                                              {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId) finalState.data.destinationAddress)
           void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : address.formattedAddress, address : Nothing}
                                                           , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination, address : Nothing}
@@ -1533,7 +1546,7 @@ tripDetailsScreenFlow fromMyRides = do
                                                                                                           { key : "Fare", value : unsafeToForeign updatedState.data.selectedItem.totalAmount},
                                                                                                           { key : "Status", value : unsafeToForeign updatedState.data.selectedItem.status},
                                                                                                           { key : "Ride completion timestamp", value : unsafeToForeign updatedState.data.selectedItem.rideEndTime},
-                                                                                                          { key : "Rating", value : (unsafeToForeign $ show $ updatedState.data.selectedItem.rating)}]
+                                                                                                          { key : "Rating", value : (unsafeToForeign $ updatedState.data.selectedItem.rating)}]
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem, config = updatedState.data.config}})
       invoiceScreenFlow
     GO_TO_HOME state -> do
@@ -1613,7 +1626,7 @@ myRidesScreenFlow fromNavBar = do
                                                                                                                   { key : "Status", value : unsafeToForeign state.data.selectedItem.status},
                                                                                                                   { key : if state.data.selectedItem.status == "CANCELLED" then "Time" else "Ride completion timestamp",
                                                                                                                     value : unsafeToForeign $ if state.data.selectedItem.status == "CANCELLED" then state.data.selectedItem.time else state.data.selectedItem.rideEndTime},
-                                                                                                                  { key : "Rating", value : unsafeToForeign (show $ state.data.selectedItem.rating)}]
+                                                                                                                  { key : "Rating", value : (unsafeToForeign $ state.data.selectedItem.rating)}]
       modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}})
       tripDetailsScreenFlow MyRides
     LOADER_OUTPUT state -> do
@@ -1653,7 +1666,7 @@ selectLanguageScreenFlow = do
   flow <- UI.selectLanguageScreen
   case flow of
     UPDATE_LANGUAGE state -> do
-                                liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_lang_selected" $[{ key : "Previous language", value : unsafeToForeign $ show $ getValueToLocalStore LANGUAGE_KEY},
+                                liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_lang_selected" $[{ key : "Previous language", value : unsafeToForeign $ getValueToLocalStore LANGUAGE_KEY},
                                                                                                                           { key : "New language", value : unsafeToForeign state.props.selectedLanguage}]
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
                                 _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_lang_selec" "language" (state.props.selectedLanguage)
@@ -1664,7 +1677,7 @@ selectLanguageScreenFlow = do
                                                                                      "BN_IN" -> "BENGALI"
                                                                                      "ML_IN" -> "MALAYALAM"
                                                                                      _ -> getValueFromConfig "defaultLanguage"
-                                void $ pure $ setCleverTapUserProp "Preferred Language" langVal
+                                void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign langVal}]
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
                                 homeScreenFlow
@@ -1902,7 +1915,7 @@ addNewAddressScreenFlow input = do
         pure unit
       else pure unit
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_favourite_added" $ [{ key : "Address", value : unsafeToForeign state.data.address},
-                                                                                                                { key : "Tag", value : unsafeToForeign $ show $ state.data.selectedTag}]
+                                                                                                                { key : "Tag", value : unsafeToForeign state.data.selectedTag}]
       (GetPlaceNameResp sourcePlace) <- getPlaceNameResp (state.data.selectedItem.placeId) (fromMaybe 0.0 state.data.selectedItem.lat) (fromMaybe 0.0 state.data.selectedItem.lon)  state.data.selectedItem
       let source = state.data.selectedItem.description
           (PlaceName sourceAddressGeometry) = (fromMaybe HomeScreenData.dummyLocationName (sourcePlace!!0))
@@ -2369,11 +2382,36 @@ rideCompletedDetails (RideBookingRes resp) = do
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
 
-  [ {key : "Estimate ride distance", value : unsafeToForeign $ (show $ fromMaybe 0 contents.estimatedDistance/1000) <> " km"},
-          {key : "Actual ride distance", value : unsafeToForeign $  (show $ (fromMaybe 0 ride.chargeableRideDistance)/1000) <> " km"},
-          {key : "Difference between estimated and actual ride distance" , value : unsafeToForeign $  (show $ differenceOfDistance/1000) <> " km"},
-          {key : "Total Estimated fare",value : unsafeToForeign $  "₹" <> (show $ resp.estimatedFare)},
-          {key : "Total Actual fare",value : unsafeToForeign $  "₹" <> (show $ finalAmount)},
-          {key : "Difference between estimated and actual fares",value : unsafeToForeign $  "₹" <> (show $ resp.estimatedFare - finalAmount)},
-          {key : "Driver pickup charges",value : unsafeToForeign $  "₹ 10"},
-          {key : "Night ride",value : unsafeToForeign $  show $ nightChargesVal}]
+  [ {key : "Estimate ride distance (km)", value : unsafeToForeign (fromMaybe 0 contents.estimatedDistance/1000)},
+          {key : "Actual ride distance (km)", value : unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance)/1000)},
+          {key : "Difference between estimated and actual ride distance (km)" , value : unsafeToForeign (differenceOfDistance/1000)},
+          {key : "Total Estimated fare (₹)",value : unsafeToForeign (resp.estimatedFare)},
+          {key : "Total Actual fare (₹)",value : unsafeToForeign (finalAmount)},
+          {key : "Difference between estimated and actual fares (₹)",value : unsafeToForeign (resp.estimatedFare - finalAmount)},
+          {key : "Driver pickup charges (₹)",value : unsafeToForeign "10"},
+          {key : "Night ride",value : unsafeToForeign nightChargesVal}]
+
+personStatsData :: PersonStatsRes -> GetProfileRes -> Array ClevertapEventParams
+personStatsData (PersonStatsRes resp) (GetProfileRes response) = [{key : "First ride taken" , value : unsafeToForeign if response.hasTakenRide then "true" else "false"},
+                                                                  {key : "Common App Use Case",value : unsafeToForeign resp.commonAppUseCase},
+                                                                  {key : "Emergency Contacts Num", value : unsafeToForeign resp.emergencyContactsNum },
+                                                                  {key : "Favourite Locations Num", value : unsafeToForeign resp.favoriteLocationsNum},
+                                                                  {key : "Frequency Category" , value : unsafeToForeign resp.frequencyCategory},
+                                                                  {key : "Is Blocked", value : unsafeToForeign resp.isBlocked},
+                                                                  {key : "Is Churned User", value : unsafeToForeign resp.isChurnedUser},
+                                                                  {key : "Is WhatsApp Opt-In Status" , value : unsafeToForeign resp.isWhatsAppOptInStatus},
+                                                                  {key : "total_rider_trips" , value : unsafeToForeign resp.lifetimeRides},
+                                                                  {key : "Last Ride Taken" , value : unsafeToForeign (fromMaybe "" resp.lastRideTaken)},
+                                                                  {key : "Latest Search", value : unsafeToForeign (fromMaybe "" resp.latestSearch)},
+                                                                  {key : "Off Peak Rides Rate", value : unsafeToForeign (fromMaybe 0.0 resp.offPeakRidesRate)},
+                                                                  {key : "Overall Cancellation Rate", value : unsafeToForeign (fromMaybe 0.0 resp.overalCancellationRate)},
+                                                                  {key : "Sign-up Date", value : unsafeToForeign resp.signupDate},
+                                                                  {key : "Status" , value : unsafeToForeign (fromMaybe "" resp.status)},
+                                                                  {key : "User Cancellation Rate", value : unsafeToForeign (fromMaybe 0.0 resp.userCancellationRate)},
+                                                                  {key : "User Category", value : unsafeToForeign resp.userCategory},
+                                                                  {key : "Weekday Evening Peak Rides Rate", value : unsafeToForeign (fromMaybe 0.0 resp.weekdayEveningPeakRidesRate)},
+                                                                  {key : "Weekday Morning Peak Rides Rate", value : unsafeToForeign (fromMaybe 0.0 resp.weekdayMorningPeakRidesRate)},
+                                                                  {key : "Weekday Rides Rate", value : unsafeToForeign (fromMaybe 0.0 resp.weekdayRidesRate)},
+                                                                  {key : "Weekend Peak Ride Rate", value : unsafeToForeign (fromMaybe 0.0 resp.weekendPeakRideRate)},
+                                                                  {key : "Weekend Rides Rate", value : unsafeToForeign (fromMaybe 0.0 resp.weekendRidesRate)}
+                                                                  ]

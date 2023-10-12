@@ -910,3 +910,12 @@ disabilityList = do
   lift $ lift $ withAPIResult (EP.disabilityList "") unwrapResponse $ callAPI headers GetDisabilityListReq
   where
     unwrapResponse x = x
+------------------------------------------------------------------------ Person Stats ------------------------------------------------------------------------------------
+
+getPersonStatsBT :: String -> FlowBT String PersonStatsRes
+getPersonStatsBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.personStats "") (\x -> x) errorHandler (lift $ lift $ callAPI headers PersonStatsReq)
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack 
