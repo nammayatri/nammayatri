@@ -16,6 +16,9 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude (UTCTime)
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
+import qualified "rider-app" Storage.Beam.BecknRequest as BR
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -143,7 +146,7 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamDriverDrainerCreates :: ToJSON kafkaObject => Producer.KafkaProducer -> [(kafkaObject, TopicName)] -> Text -> IO (Either Text ())
+streamRiderDrainerCreates :: ToJSON kafkaObject => Producer.KafkaProducer -> [(kafkaObject, TopicName)] -> Text -> IO (Either Text ())
 streamRiderDrainerCreates producer dbObject streamKey = do
   let topicName = "rider-drainer"
   result' <- mapM (KafkaProd.produceMessage producer . message) dbObject

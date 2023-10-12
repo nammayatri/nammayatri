@@ -25,12 +25,15 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
 import qualified Data.HashMap as HM
+import Data.IORef
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
-import Kernel.Streaming.Kafka.KafkaTable as Kafka
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.Common (generateGUID, getCurrentTime, withLogTag)
@@ -113,6 +116,7 @@ kafkaTableConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 kafkaTableConsumer flowRt appEnv kafkaConsumer = do
   flip finally (Consumer.closeConsumer kafkaConsumer) $ do
     readKafkaTableMessages kafkaConsumer
+      & S.foldr foldFunc Map.empty
       >>= riderDrainerWithFlow
       >>= commitAllTopics
   where
@@ -122,52 +126,73 @@ kafkaTableConsumer flowRt appEnv kafkaConsumer = do
           >>= flip withLogTag (KTProcessor.kafkaTableProcessor messages)
       pure messages
 
-    commitAllTopics messages = case messages of
-      [] -> print ("Nothing to commit" :: Text)
-      _ -> do
-        mbErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kafkaConsumer
-        whenJust mbErr $ \err -> print ("Error while commit: message: " <> show err :: Text)
+    commitAllTopics messages =
+      if Map.null messages
+        then print ("Nothing to commit" :: Text)
+        else do
+          mbErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kafkaConsumer
+          whenJust mbErr $ \err -> print ("Error while commit: message: " <> show err :: Text)
+
+    foldFunc ::
+      Kafka.KafkaTable ->
+      Map.Map String [Kafka.KafkaTable] ->
+      Map.Map String [Kafka.KafkaTable]
+    foldFunc kafkaTable mapKafkaTable = do
+      let filePath = mkFilePathWithoutPrefix kafkaTable
+      Map.insertWithKey (\_key newList oldList -> newList <> oldList) filePath [kafkaTable] mapKafkaTable
+
+    mkFilePathWithoutPrefix :: Kafka.KafkaTable -> String
+    mkFilePathWithoutPrefix kafkaTable =
+      do
+        T.unpack kafkaTable.schemaName
+        <> "/"
+        <> T.unpack kafkaTable.tableName
+        <> "/"
+        <> Time.formatTime Time.defaultTimeLocale "%Y.%m.%d-%H" kafkaTable.timestamp
+        <> ".json"
 
 readKafkaTableMessages ::
   Consumer.KafkaConsumer ->
-  IO [Kafka.KafkaTable]
+  SerialT IO Kafka.KafkaTable
 readKafkaTableMessages kafkaConsumer = do
-  pollStartTime <- getCurrentTime
-  let currentTopic = Kafka.countTopicNumber pollStartTime
-  eitherRecords <- pollMessageLoop (currentTopic, 0, [])
-  let records = mapMaybe hush eitherRecords
-  mbDecodedRecords <- forM records $ \record -> do
+  let eitherRecords = S.bracket before after pollMessageR
+  let records = S.mapMaybe hush eitherRecords
+  flip S.mapMaybeM records $ \record -> do
     case Consumer.crValue record of
       Just value -> do
         case A.eitherDecode @Kafka.KafkaTable . LBS.fromStrict $ value of
           Right v -> pure (Just v)
-          Left err -> throwIO (InternalError $ "Could not decode record: " <> show value <> "; message: " <> show err) -- only when beckn_request tabular type was changed
+          Left err -> throwIO (InternalError $ "Could not decode record: " <> show value <> "; message: " <> show err) -- only when KafkaTable type changed
       Nothing -> pure Nothing
-  pure $ catMaybes mbDecodedRecords
   where
-    pollMessageLoop :: (Int, Int, [Either Consumer.KafkaError ConsumerRecordD]) -> IO [Either Consumer.KafkaError ConsumerRecordD]
-    pollMessageLoop (currentTopic, emptyMessagesCount, messages) = do
-      eMessage <- Consumer.pollMessage kafkaConsumer (Consumer.Timeout 500)
-      (continueLoop, updEmptyMessagesCount) <- predicate currentTopic emptyMessagesCount eMessage
-      let updMessages = eMessage : messages
-      if continueLoop then pollMessageLoop (currentTopic, updEmptyMessagesCount, updMessages) else pure updMessages
+    before = do
+      pollStartTime <- getCurrentTime
+      emptyMessagesCount <- newIORef (0 :: Int)
+      let currentTopic = Kafka.countTopicNumber pollStartTime
+      pure (currentTopic, emptyMessagesCount)
 
+    after (_currentTopic, _emptyMessagesCount) = do
+      pure () -- consumer will be closed after messages handled and commited
     predicate currentTopic emptyMessagesCount message = do
       now <- getCurrentTime
       if Kafka.countTopicNumber now /= currentTopic
         then do
           print ("Close consumer: current partition changed, not all messages was read!" :: Text)
-          pure (False, emptyMessagesCount)
+          pure False
         else do
           let isEmptyMessage = either (const True) (isNothing . Consumer.crValue) message
           if isEmptyMessage
             then do
-              let newCount = emptyMessagesCount + 1
+              newCount <- atomicModifyIORef emptyMessagesCount (\count -> (count + 1, count + 1))
               unless (newCount < 10) $
                 print ("Close consumer: received 10 empty messages" :: Text)
-              pure (newCount < 10, newCount)
+              pure $ newCount < 10
             else do
-              pure (True, 0)
+              atomicModifyIORef emptyMessagesCount (const (0, True))
+
+    pollMessageR (currentTopic, emptyMessagesCount) =
+      S.takeWhileM (predicate currentTopic emptyMessagesCount) $
+        S.repeatM $ Consumer.pollMessage kafkaConsumer (Consumer.Timeout 500)
 
 readMessages ::
   (FromJSON a, ConvertUtf8 aKey ByteString) =>
