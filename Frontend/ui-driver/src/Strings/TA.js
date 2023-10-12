@@ -665,7 +665,7 @@ const tamilStrings = {
   PAYMENT_HISTORY : "கட்டண வரலாறு",
   DO_A_ONE_TIME_SETTLEMENT : "ஒரு முறை பணம் செலுத்துங்கள்",
   TAP_A_PLAN_TO_VIEW_DETAILS : "விவரங்களைப் பார்க்க ஒரு திட்டத்தைத் அழுத்தவும்",
-  HOW_IT_WORKS : "<u> மேலும் விவரம் </u>",
+  HOW_IT_WORKS : "தானியங்கு செலுத்துதல் எவ்வாறு செயல்படுகிறது?",
   ZERO_COMMISION : "ஜீரோ கமிஷன்",
   EARN_TODAY_PAY_TOMORROW : "இன்று சம்பாதிக்கவும், நாளை செலுத்தவும்",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "நீங்கள் சவாரி செய்தால் மட்டும் பணம் செலுத்துங்கள்",

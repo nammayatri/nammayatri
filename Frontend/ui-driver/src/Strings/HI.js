@@ -693,7 +693,7 @@ const hindiStrings = {
   PAYMENT_HISTORY : "भुगतान इतिहास",
   DO_A_ONE_TIME_SETTLEMENT : "एकमुश्त निपटान करें",
   TAP_A_PLAN_TO_VIEW_DETAILS : "विवरण देखने के लिए किसी योजना पर टैप करें",
-  HOW_IT_WORKS : "यह कैसे काम करता है?",
+  HOW_IT_WORKS : "ऑटोपे कैसे काम करता है?",
   ZERO_COMMISION : "शून्य कमीशन",
   EARN_TODAY_PAY_TOMORROW : "आज कमाएँ, कल भुगतान करें",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "भुगतान केवल तभी करें जब आप सवारी लें",
