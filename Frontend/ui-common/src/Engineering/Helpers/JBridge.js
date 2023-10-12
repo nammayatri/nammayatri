@@ -650,6 +650,13 @@ export const storeCallBackMessageUpdated = function (cb) {
   };
 };
 
+export const storeKeyBoardCallback = function (cb, action) {
+      var keyBoardCallback = function(state) {
+        cb (action (state))();
+      }
+      window.keyBoardCallback = keyBoardCallback;
+};
+
 export const getChatMessages = function(string) {
     return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
 }

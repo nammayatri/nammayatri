@@ -622,6 +622,7 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
 
 
@@ -635,6 +636,16 @@ eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval TerminateApp state = do
   pure $ terminateApp state.props.currentStage true
+  continue state
+
+eval (KeyboardCallback keyBoardState) state = do 
+  let isOpen = case keyBoardState of
+                    "onKeyboardOpen" -> true
+                    "onKeyboardClose" -> false
+                    _ -> false 
+  if isLocalStageOn ChatWithDriver && isOpen then
+    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
+  else pure unit
   continue state
 
 eval (NotifyDriverStatusCountDown seconds id status timerID) state = do 

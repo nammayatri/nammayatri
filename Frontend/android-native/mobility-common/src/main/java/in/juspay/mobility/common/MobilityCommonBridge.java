@@ -37,6 +37,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -61,9 +62,11 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -216,6 +219,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private LottieAnimationView animationView;
     protected Method[] methods = null;
     protected  Receivers receivers;
+    private ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener;
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
     protected String downloadLayout;
@@ -257,6 +261,15 @@ public class MobilityCommonBridge extends HyperBridge {
         markers = new JSONObject();
         pickupPointsZoneMarkers = new ArrayList<>();
         layer = null;
+        if(onGlobalLayoutListener != null && bridgeComponents.getActivity() != null) {
+            View parentView = bridgeComponents.getActivity().findViewById(android.R.id.content);
+            if(parentView != null) {
+                ViewTreeObserver observer = parentView.getRootView().getViewTreeObserver();
+                if(observer != null && observer.isAlive()) {
+                    observer.removeOnGlobalLayoutListener(onGlobalLayoutListener);
+                }
+            }
+        }
 
         // CallBacks
         storeLocateOnMapCallBack = null;
@@ -431,6 +444,46 @@ public class MobilityCommonBridge extends HyperBridge {
     public void initiateLocationServiceClient() {
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
+        setKeyboardVisibilityListener();
+    }
+    
+    // Alternate way to get the keyboard status since there is no Keyboard Listener or Events in android
+    private void setKeyboardVisibilityListener() {
+        if (bridgeComponents.getActivity() != null){
+            try {
+                final View parentView = ((ViewGroup) bridgeComponents.getActivity().findViewById(android.R.id.content)).getRootView();
+                onGlobalLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
+
+                    private boolean alreadyOpen;
+                    private final Rect rect = new Rect();
+
+                    @Override
+                    public void onGlobalLayout() {
+                        int defaultKeyboardHeightDP = 100;
+                        int estimatedKeyboardDP = defaultKeyboardHeightDP + 48;
+                        int estimatedKeyboardHeight = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, estimatedKeyboardDP, parentView.getResources().getDisplayMetrics());
+                        parentView.getWindowVisibleDisplayFrame(rect);
+                        int heightDiff = parentView.getRootView().getHeight() - (rect.bottom - rect.top);
+                        boolean isShown = heightDiff >= estimatedKeyboardHeight;
+
+                        if (isShown == alreadyOpen) {
+                            return;
+                        }
+                        alreadyOpen = isShown;
+                        try {
+                            String encoded = Base64.encodeToString("{}".getBytes(), Base64.NO_WRAP);
+                            String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", isShown ? "onKeyboardOpen" : "onKeyboardClose", encoded);
+                            bridgeComponents.getJsCallback().addJsToWebView(command);
+                        } catch (Exception e) {
+                            Log.e("MobilityCommonBridge", "Error in onVisibilityChanged " + e);
+                        }
+                    }
+                };
+                parentView.getViewTreeObserver().addOnGlobalLayoutListener(onGlobalLayoutListener);
+            } catch (Exception e) {
+                Log.e("MobilityCommonBridge", "Error in setKeyboardVisibilityListener " + e);
+            }
+        }
     }
 
     private void resolvableLocationSettingsReq() {
