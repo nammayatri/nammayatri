@@ -127,6 +127,7 @@ initData = {
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
+    , searchLocationModelData : dummySearchLocationModelData
     },
     props: {
       rideRequestFlow : false
@@ -222,7 +223,19 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , searchLocationModelProps : dummySearchLocationModelProps
     }
+}
+
+dummySearchLocationModelProps = {
+    isAutoComplete : false
+  , showLoader : false
+  , crossBtnSrcVisibility : false
+  , crossBtnDestVisibility : false
+}
+
+dummySearchLocationModelData = {
+  prevLocation : ""
 }
 
 dummyZoneType = {

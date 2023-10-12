@@ -603,6 +603,7 @@ type HomeScreenStateData =
   , logField :: Object Foreign
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
+  , searchLocationModelData :: SearchLocationModelData
   }
 
 type DisabilityT = 
@@ -700,7 +701,19 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , searchLocationModelProps :: SearchLocationModelProps
   }
+
+type SearchLocationModelProps = {
+    isAutoComplete :: Boolean
+  , showLoader :: Boolean
+  , crossBtnSrcVisibility :: Boolean
+  , crossBtnDestVisibility :: Boolean
+}
+
+type SearchLocationModelData = {
+    prevLocation :: String
+}
 
 type RouteEndPoints = {
     source :: Location
@@ -1173,6 +1186,7 @@ type LocationListItemState = {
   , locationItemType :: Maybe LocationItemType
   , distance :: Maybe String
   , showDistance :: Maybe Boolean
+  , actualDistance :: Int
 }
 
 data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
