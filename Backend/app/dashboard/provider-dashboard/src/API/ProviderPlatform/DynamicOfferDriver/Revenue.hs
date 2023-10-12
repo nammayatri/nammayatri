@@ -55,7 +55,7 @@ getCollectionHistory merchantShortId apiTokenInfo volunteerId place mbFrom mbTo 
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.revenue.getCollectionHistory) volunteerId place mbFrom mbTo
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.AllDriverFeeRes
+getAllDriverFeeHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
 getAllDriverFeeHistory merchantShortId apiTokenInfo mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.revenue.getAllDriverFeeHistory) mbFrom mbTo

@@ -41,19 +41,12 @@ type GetAllDriverFeeHistory =
   "allFeeHistory"
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
-    :> Get '[JSON] AllDriverFeeRes
-
-data AllDriverFeeRes = AllDriverFeeRes
-  { driversPaidOnline :: Int,
-    driversPaidOffline :: Int,
-    driversYetToPay :: Int,
-    allFees :: [AllFees]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+    :> Get '[JSON] [AllFees]
 
 data AllFees = AllFees
   { status :: DriverFeeStatus,
     numRides :: Int,
+    numDrivers :: Int,
     totalAmount :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
