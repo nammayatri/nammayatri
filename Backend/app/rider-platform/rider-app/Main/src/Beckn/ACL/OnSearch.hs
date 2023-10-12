@@ -166,9 +166,10 @@ buildRentalQuoteDetails ::
   OnSearch.Item ->
   m DOnSearch.RentalQuoteDetails
 buildRentalQuoteDetails item = do
+  let bppQuoteId = item.fulfillment_id
   baseDistance <- (getRentalBaseDistance =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
   baseDuration <- (getRentalBaseDuration =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
-  pure DOnSearch.RentalQuoteDetails {..}
+  pure DOnSearch.RentalQuoteDetails {id = bppQuoteId,..}
 
 validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
 validateFareRange totalFare DEstimate.FareRange {..} = do
