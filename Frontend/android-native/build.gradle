@@ -13,6 +13,9 @@ buildscript {
         maven {
             url "https://maven.juspay.in/jp-build-packages/hypersdk-asset-download/releases/"
         }
+        maven {
+            url 'https://developer.huawei.com/repo/'
+        }
 
     }
     dependencies {
@@ -27,6 +30,7 @@ buildscript {
         classpath 'javax.activation:activation:1.1'
         classpath 'javax.mail:mail:1.4.1'
         classpath 'in.juspay:hypersdk-asset-plugin:1.0.3'
+        classpath 'com.huawei.agconnect:agcp:1.9.0.300'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -44,6 +48,7 @@ allprojects {
             url "https://maven.juspay.in/jp-build-packages/hypersdk-asset-download/releases/"
         }
         maven { url "https://maven.getsimpl.com" }
+        maven { url 'https://developer.huawei.com/repo/' }
     }
 }
 
