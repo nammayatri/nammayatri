@@ -494,7 +494,7 @@ waitTimeView push config =
          ]
          [textView $
         [ height WRAP_CONTENT
-         , width WRAP_CONTENT
+         , width $ V 80
          , text (getString WAIT_TIME)
          , color Color.black650
          , textSize FontSize.a_14
@@ -504,7 +504,7 @@ waitTimeView push config =
         ,
         imageView
           [ height MATCH_PARENT
-            , width  $ V 40
+            , width  $ V 25
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
             , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"

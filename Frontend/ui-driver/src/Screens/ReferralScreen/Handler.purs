@@ -40,17 +40,17 @@ referralScreen = do
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
       App.BackT $ pure App.GoBack
-    GoToHomeScreen -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
+    GoToHomeScreen updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN)
-    GoToRidesScreen -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
+    GoToRidesScreen updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN)
-    GoToProfileScreen -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
+    GoToProfileScreen updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN)
-    GoToNotifications -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
+    GoToNotifications updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN)
     LinkReferralApi updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_FLOW_AND_COME_BACK updatedState)
     Refresh updatedState -> do

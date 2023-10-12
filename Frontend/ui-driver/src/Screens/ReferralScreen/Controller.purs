@@ -159,11 +159,11 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | UpdateReferralCodeFailed
 
 
-data ScreenOutput = GoToHomeScreen
+data ScreenOutput = GoToHomeScreen ReferralScreenState
                   | GoBack
-                  | GoToRidesScreen
-                  | GoToProfileScreen
-                  | GoToNotifications
+                  | GoToRidesScreen ReferralScreenState
+                  | GoToProfileScreen ReferralScreenState
+                  | GoToNotifications ReferralScreenState
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
                   | SubscriptionScreen ReferralScreenState
@@ -243,7 +243,7 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = continue st
 
 eval GoToAlertScreen state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ GoToNotifications
+      exit $ GoToNotifications state
 
 eval (PrimaryEditTextAction1 (PrimaryEditText.TextChanged valId newVal)) state = do
   _ <- if length newVal >= 6 then do
@@ -291,13 +291,13 @@ eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
   case item of
-    "Home" -> exit GoToHomeScreen
-    "Rides" -> exit GoToRidesScreen
-    "Profile" -> exit $ GoToProfileScreen
+    "Home" -> exit $ GoToHomeScreen state
+    "Rides" -> exit $ GoToRidesScreen state
+    "Profile" -> exit $ GoToProfileScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications
+      exit $ GoToNotifications state
     "Join" -> do
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"

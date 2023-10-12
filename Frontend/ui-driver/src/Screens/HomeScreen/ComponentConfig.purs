@@ -875,13 +875,13 @@ accessibilityPopUpConfig state =
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           imageUrl = popupData.imageUrl
-        , visibility = if popupData.videoUrl /= "" then GONE else VISIBLE
+        , visibility = if popupData.videoUrl /= "" && state.data.config.enablePurpleRideBanner then GONE else VISIBLE
         , height = V 160
         , width = MATCH_PARENT
         , margin = Margin 16 16 16 0
         },
         coverVideoConfig {
-          visibility = if popupData.videoUrl /= "" then VISIBLE else GONE 
+          visibility = if popupData.videoUrl /= "" && state.data.config.enablePurpleRideBanner then VISIBLE else GONE 
         , height = V 175
         , width = MATCH_PARENT
         , padding = Padding 16 16 16 0

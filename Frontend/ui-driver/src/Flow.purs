@@ -2389,6 +2389,7 @@ updateDriverDataToStates = do
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName
     , driverMobile = getDriverInfoResp.mobileNumber
+    , vehicleVariant = linkedVehicle.variant
     , vehicleRegNumber = linkedVehicle.registrationNo
     , referralCode = getDriverInfoResp.referralCode }}})
   if (isJust getDriverInfoResp.numberOfRides) then do
