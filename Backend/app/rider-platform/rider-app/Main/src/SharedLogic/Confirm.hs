@@ -85,7 +85,7 @@ confirm ::
   ) =>
   DConfirmReq ->
   m DConfirmRes
-  confirm DConfirmReq {..} = do
+confirm DConfirmReq {..} = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   fulfillmentId <-

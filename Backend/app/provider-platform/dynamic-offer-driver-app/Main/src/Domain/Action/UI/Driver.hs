@@ -1166,60 +1166,65 @@ respondQuote (driverId, _) req = do
     now <- getCurrentTime
     when (searchTry.validTill < now) $ throwError SearchRequestExpired
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    let mbOfferedFare = req.offeredFare
-    organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-    when driverInfo.onRide $ throwError DriverOnRide
-    sReqFD <-
-      QSRD.findByDriverAndSearchTryId driverId searchTry.id
-        >>= fromMaybeM NoSearchRequestForDriver
-    driverFCMPulledList <-
-      case req.response of
-        Pulled -> throwError UnexpectedResponseValue
-        Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ do
-            whenM (CS.isSearchTryCancelled searchTryId) $
-              throwError (InternalError "SEARCH_TRY_CANCELLED")
-            CS.markSearchTryAsAssigned searchTryId
-          logDebug $ "offered fare: " <> show req.offeredFare
-          whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-          when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-          quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
-          quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
-          when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
-          let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-          whenJust mbOfferedFare $ \off ->
-            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
-              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
-                throwError $ NotAllowedExtraFee $ show off
-          fareParams <-
-            calculateFareParameters
-              CalculateFareParametersParams
-                { farePolicy = farePolicy,
-                  distance = searchReq.estimatedDistance,
-                  rideTime = sReqFD.startTime,
-                  waitingTime = Nothing,
-                  driverSelectedFare = mbOfferedFare,
-                  customerExtraFee = searchTry.customerExtraFee,
-                  nightShiftCharge = Nothing
-                }
-          driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
-          triggerQuoteEvent QuoteEventData {quote = driverQuote}
-          _ <- QDrQt.create driverQuote
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
-          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
-          -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-          sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
-          sendDriverOffer organization searchReq searchTry driverQuote
-          pure driverFCMPulledList
-        Reject -> do
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
-          pure []
-    DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
+    case searchReq.searchRequestDetails of
+      DSR.SearchRequestDetailsOnDemand {} -> do
+          let mbOfferedFare = req.offeredFare
+          organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+          when driverInfo.onRide $ throwError DriverOnRide
+          sReqFD <-
+            QSRD.findByDriverAndSearchTryId driverId searchTry.id
+              >>= fromMaybeM NoSearchRequestForDriver
+          driverFCMPulledList <-
+            case req.response of
+              Pulled -> throwError UnexpectedResponseValue
+              Accept -> do
+                when (searchReq.searchRequestDetails.autoAssignEnabled == Just True) $ do
+                  whenM (CS.isSearchTryCancelled searchTryId) $
+                    throwError (InternalError "SEARCH_TRY_CANCELLED")
+                  CS.markSearchTryAsAssigned searchTryId
+                logDebug $ "offered fare: " <> show req.offeredFare
+                whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+                when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+                quoteLimit <- getQuoteLimit searchReq.providerId searchReq.searchRequestDetails.estimatedDistance
+                quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
+                when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
+                farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
+                let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+                whenJust mbOfferedFare $ \off ->
+                  whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+                    unless (isAllowedExtraFee driverExtraFeeBounds' off) $
+                      throwError $ NotAllowedExtraFee $ show off
+                fareParams <-
+                  calculateFareParameters
+                    CalculateFareParametersParams
+                      { farePolicy = farePolicy,
+                        distance = searchReq.searchRequestDetails.estimatedDistance,
+                        rideTime = sReqFD.startTime,
+                        waitingTime = Nothing,
+                        driverSelectedFare = mbOfferedFare,
+                        customerExtraFee = searchTry.customerExtraFee,
+                        nightShiftCharge = Nothing,
+                        endRideTime = Nothing
+                      }
+                driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
+                triggerQuoteEvent QuoteEventData {quote = driverQuote}
+                _ <- QDrQt.create driverQuote
+                _ <- QSRD.updateDriverResponse sReqFD.id req.response
+                QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+                let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.searchRequestDetails.autoAssignEnabled == Just True)
+                driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
+                -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
+                sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
+                sendDriverOffer organization searchReq searchTry driverQuote
+                pure driverFCMPulledList
+              Reject -> do
+                _ <- QSRD.updateDriverResponse sReqFD.id req.response
+                pure []
+          DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
+      DSR.SearchRequestDetailsRental {} -> do
+        throwError $ InvalidRequest "Driver can't offer quote increase in Rental"
   pure Success
   where
     buildDriverRespondEventPayload searchTryId merchantId restActiveDriverSearchReqs =
@@ -1238,34 +1243,38 @@ respondQuote (driverId, _) req = do
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
     buildDriverQuote driver searchReq sd estimateId fareParams = do
-      guid <- generateGUID
-      now <- getCurrentTime
-      driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams
-      pure
-        DDrQuote.DriverQuote
-          { id = guid,
-            requestId = searchReq.id,
-            searchTryId = sd.searchTryId,
-            searchRequestForDriverId = Just sd.id,
-            driverId,
-            driverName = driver.firstName,
-            driverRating = SP.roundToOneDecimal <$> driver.rating,
-            status = DDrQuote.Active,
-            vehicleVariant = sd.vehicleVariant,
-            distance = searchReq.estimatedDistance,
-            distanceToPickup = sd.actualDistanceToPickup,
-            durationToPickup = sd.durationToPickup,
-            createdAt = now,
-            updatedAt = now,
-            validTill = addUTCTime driverQuoteExpirationSeconds now,
-            providerId = searchReq.providerId,
-            estimatedFare,
-            fareParams,
-            specialLocationTag = searchReq.specialLocationTag,
-            goHomeRequestId = sd.goHomeRequestId,
-            estimateId
-          }
+      case searchReq.searchRequestDetails of
+        DSR.SearchRequestDetailsOnDemand {..} -> do
+          guid <- generateGUID
+          now <- getCurrentTime
+          driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
+          let estimatedFare = fareSum fareParams
+          pure
+            DDrQuote.DriverQuote
+              { id = guid,
+                requestId = searchReq.id,
+                searchTryId = sd.searchTryId,
+                searchRequestForDriverId = Just sd.id,
+                driverId,
+                driverName = driver.firstName,
+                driverRating = SP.roundToOneDecimal <$> driver.rating,
+                status = DDrQuote.Active,
+                vehicleVariant = sd.vehicleVariant,
+                distance = estimatedDistance,
+                distanceToPickup = sd.actualDistanceToPickup,
+                durationToPickup = sd.durationToPickup,
+                createdAt = now,
+                updatedAt = now,
+                validTill = addUTCTime driverQuoteExpirationSeconds now,
+                providerId = searchReq.providerId,
+                estimatedFare,
+                fareParams,
+                specialLocationTag = specialLocationTag,
+                goHomeRequestId = sd.goHomeRequestId,
+                estimateId
+              }
+        DSR.SearchRequestDetailsRental {} -> do
+          throwError $ InvalidRequest "Driver cant build rental quotes"
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
@@ -1304,6 +1313,7 @@ getStats (driverId, merchantId) date = do
                       ( \x -> case fareParametersDetails x of
                           ProgressiveDetails det -> Just (deadKmFare det)
                           SlabDetails _ -> Nothing
+                          RentalSlabDetails _ -> Nothing
                       )
                 )
                   fareParameters

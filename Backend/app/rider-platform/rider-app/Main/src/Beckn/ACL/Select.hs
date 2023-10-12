@@ -68,7 +68,7 @@ buildOrder res = do
                     time = Select.TimeTimestamp currentTime
                   },
               end =
-                Select.StopInfo
+                Just $ Select.StopInfo
                   { location = end
                   },
               id = res.estimate.bppEstimateId.getId,
