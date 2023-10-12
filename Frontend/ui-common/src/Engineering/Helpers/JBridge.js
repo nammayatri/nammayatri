@@ -2,7 +2,6 @@ import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
 const { JBridge } = window;
 var mainFiber = null;
-let suggestions = require("../Engineering.Helpers.Suggestions")
 var timer;
 let locationPollingTimer;
 const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
@@ -632,8 +631,7 @@ export const storeCallBackMessageUpdated = function (cb) {
             if (messagesSize == undefined) {
               messagesSize = "-1"
             }
-            let decodedMessage = suggestions.getMessageFromKey(message)(getKeyInSharedPrefKeys("LANGUAGE_KEY"))
-            let messageObj = { "message": decodedMessage, "sentBy": sentBy, "timeStamp": timeStamp, type: "Text", delay: 0 }
+            let messageObj = { "message": message, "sentBy": sentBy, "timeStamp": timeStamp, type: "Text", delay: 0 }
             window.chatMessages = window.chatMessages || [];
             window.chatMessages.push(messageObj);
             if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
@@ -659,6 +657,10 @@ export const storeKeyBoardCallback = function (cb, action) {
 
 export const getChatMessages = function(string) {
     return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
+}
+
+export const clearChatMessages = function() {
+  window.chatMessages = undefined;
 }
 
 export const dateCallback = function (cb, action) {
@@ -796,33 +798,33 @@ export const getSuggestionfromKey = function (key) {
   return function (language) {
     try {
       if (!window.suggestionsDefs) {
-        window.suggestionsDefs = JSON.parse(JBridge.getFromSharedPrefs("SUGGESTIONS_DEFINITIONS"));
+        window.suggestionsDefs = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS_DEFINITIONS"));
       }
-      let suggestionsDefs = window.suggestionDefs;
+      let suggestionsDefs = window.suggestionsDefs;
       let val = suggestionsDefs[key];
       let suggestion = "";
       if (val) {
         switch(language) {
           case "EN_US" :
-            suggestion = val[en_us];
+            suggestion = val["en_us"];
             break;
           case "HI_IN" :
-            suggestion = val[hi_in];
+            suggestion = val["hi_in"];
             break;
           case "KN_IN" :
-            suggestion = val[kn_in];
+            suggestion = val["kn_in"];
             break;
           case "BN_IN" :
-            suggestion = val[bn_in];
+            suggestion = val["bn_in"];
             break;
           case "ML_IN" :
-            suggestion = val[ml_in];
+            suggestion = val["ml_in"];
             break;
           case "TA_IN" :
-            suggestion = val[ta_in];
+            suggestion = val["ta_in"];
             break;
           default :
-            suggestion = val[en_us];
+            suggestion = val["en_us"];
             break;
         }
         return suggestion;

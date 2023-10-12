@@ -1,3 +1,18 @@
+{-
+
+  Copyright 2022-23, Juspay India Pvt Ltd
+
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Engineering.Helpers.Suggestions where
 
 import Data.Array (filter, head, concatMap)
@@ -217,7 +232,6 @@ getSuggestions dummy = [
    {key : "dis4cr3BP", value : ["dis4cr3ds1BP", "dis4cr3ds2BP"]},
    {key : "driverOverlayDefaultAP", value : ["dols1AP", "dols2AP", "dols3AP"]},
    {key : "driverOverlayDefaultBP", value : ["dols1BP", "dols2BP", "dols3BP"]},
-
    {key : "driverDefaultAP", value : ["dds1AP", "dds2AP", "dds3AP"]},
    {key : "driverDefaultBP", value : ["dds1BP", "dds2BP", "dds3BP"]}
 ]

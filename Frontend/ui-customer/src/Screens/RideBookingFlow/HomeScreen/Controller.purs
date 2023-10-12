@@ -68,7 +68,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
+import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
@@ -102,7 +102,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -622,6 +622,7 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
 
@@ -732,16 +733,22 @@ eval (UpdateMessages message sender timeStamp size) state = do
       pure $ (DriverInfoCardActionController (DriverInfoCardController.LoadMessages))
     ]
 
+eval LoadMessages state = do
+  continueWithCmd state [do
+    pure $ (DriverInfoCardActionController (DriverInfoCardController.LoadMessages))
+  ]
+
 eval (DriverInfoCardActionController (DriverInfoCardController.LoadMessages)) state = do
   let allMessages = getChatMessages ""
   case (last allMessages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
-                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true}}
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
+                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                        let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                        let suggestions = getSuggestionsfromKey value.message
-                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value }, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (show ((length allMessages) - 1) == state.data.messagesSize || state.data.messagesSize == "-1"), canSendSuggestion = true}}
+                            unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver) then true else false))
+                            suggestions = getCustomerSuggestions state $ getSuggestionsfromKey value.message
+                            isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
+                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value }, props {unReadMessages = unReadMessages, showChatNotification = isChatNotificationDismissed && unReadMessages, canSendSuggestion = true,  isChatNotificationDismissed = false}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -797,20 +804,20 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages ""
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true }}
+      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true , isChatNotificationDismissed = false}}
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver)
       ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
-  continue state {props { showChatNotification = false}}
+  continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
     let message = getMessageFromKey chatSuggestion "EN_US"
     _ <- pure $ sendMessage message
     let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
-    continue state {props {canSendSuggestion = false}}
+    continue state {data {suggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
 ------------------------------- ChatService - End --------------------------
@@ -2341,3 +2348,8 @@ callDriver state callType = do
         let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField ("ny_user_"<> callType <>"_call_click") "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
         pure NoAction
     ]
+
+getCustomerSuggestions :: HomeScreenState -> Array String -> Array String
+getCustomerSuggestions state suggestions = case (length suggestions == 0) of
+                                  true -> if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
+                                  false -> suggestions

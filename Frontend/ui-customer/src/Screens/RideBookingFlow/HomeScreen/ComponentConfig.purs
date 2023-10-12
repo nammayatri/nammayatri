@@ -725,8 +725,8 @@ chatViewConfig state = let
       , messages = state.data.messages
       , messagesSize = state.data.messagesSize
       , sendMessageActive = state.props.sendMessageActive
-      , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber
-      , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getCustomerSuggestions state else []
+      , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber     
+      , suggestionsList = if showSuggestions state then if (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP then getSuggestionsfromKey "customerInitialAP" else getSuggestionsfromKey "customerInitialBP" else state.data.suggestionsList
       , hint = (getString MESSAGE)
       , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
       , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -750,18 +750,8 @@ chatViewConfig state = let
   }
   in chatViewConfig'
 
-getCustomerSuggestions :: ST.HomeScreenState -> Array String
-getCustomerSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
-                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerInitialAP" else getSuggestionsfromKey "customerInitialBP")
-                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP") else []
-                                  false, false -> state.data.suggestionsList
-                                  false, true -> getSuggestionsfromKey "customerDefaultAP"
-
 showSuggestions :: ST.HomeScreenState -> Boolean
-showSuggestions state = do
-  case (DA.last state.data.messages) of
-    Just value -> if value.sentBy == "Customer" then false else true
-    Nothing -> true
+showSuggestions state = (not $ state.data.lastMessage.sentBy == "Customer") && DA.null state.data.suggestionsList && ((show $ DA.length $ JB.getChatMessages "") == state.data.messagesSize || state.data.messagesSize == "-1")
 
 metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =

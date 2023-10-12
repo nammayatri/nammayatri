@@ -215,7 +215,7 @@ chatView config push =
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding (PaddingHorizontal 16 16)
-            ](mapWithIndex (\index item -> chatComponent config push item (if (config.messagesSize /= "-1") then (show index == config.messagesSize ) else (index == (length config.messages - 1))) (config.userConfig.appType)) (config.messages))
+            ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.appType)) (config.messages))
           , if (length config.suggestionsList) > 0 && config.spanParent then suggestionsView config push else dummyTextView
         ]
       ]
@@ -314,7 +314,7 @@ suggestionsView config push =
     , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 (if os == "IOS" then 8 else 0) 16 0)
     , onAnimationEnd push (const EnableSuggestions)
     , alpha if config.spanParent then 0.0 else 1.0
-    , visibility if (length config.suggestionsList == 0 ) || not config.canSendSuggestion then GONE else VISIBLE
+    , visibility if (length config.suggestionsList == 0 ) && not config.canSendSuggestion then GONE else VISIBLE
     ][ linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -438,7 +438,7 @@ chatComponent state push config isLastItem userType =
                     ]
                    ]
         _ -> textView
-          [ text (config.message)
+          [ text if state.spanParent then config.message else getMessageFromKey config.message state.languageKey
           , textSize FontSize.a_14
           , singleLine false
           , lineHeight "18"

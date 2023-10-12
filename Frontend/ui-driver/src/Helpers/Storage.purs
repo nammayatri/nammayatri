@@ -85,7 +85,6 @@ data KeyStore = USER_NAME
                 | WAYPOINT_DEVIATION_COUNT
                 | TOLERANCE_EARTH
                 | RIDE_ID
-                | SUGGESTIONS_ENABLED
                 | IS_VALID_TIME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY

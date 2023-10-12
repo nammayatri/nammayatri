@@ -51,6 +51,7 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm)
+import Engineering.Helpers.Suggestions (getMessageFromKey)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -474,7 +475,7 @@ messageNotificationView push state =
           , textView
             [ width (V ((screenWidth unit)-178))
             , height WRAP_CONTENT
-            , text $ state.data.lastMessage.message
+            , text $ getMessageFromKey state.data.lastMessage.message $ getValueToLocalStore LANGUAGE_KEY 
             , color Color.grey900
             , gravity CENTER_VERTICAL
             , maxLines 1
@@ -501,7 +502,7 @@ messageNotificationView push state =
               , text $ getString REPLY
               , color Color.black900
               , ellipsize true
-              , margin $ MarginTop $ if (getValueToLocalStore LANGUAGE_KEY) == "KN_IN" then 6 else 0
+              , margin $ MarginTop $ if (getValueToLocalStore LANGUAGE_KEY) == "KN_IN" then 2 else 0
               , textSize FontSize.a_12
               , lineHeight "15"
               , fontStyle $ FontStyle.bold LanguageStyle
@@ -776,25 +777,24 @@ contactView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity RIGHT
-          ] [ PrestoAnim.animationSet [ fadeInWithDelay 150 true ] $ linearLayout
-              [ height $ V 40
-              , width $ V 64
-              , gravity CENTER
-              , cornerRadius 20.0
-              , background state.data.config.driverInfoConfig.callBackground
-              , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , onAnimationEnd push $ const $ LoadMessages
-              , onClick push $ const $ MessageDriver
-              , accessibilityHint "Chat or Call : Button"
-              , accessibility ENABLE
-              ][ imageView
-                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
-                  , height $ V state.data.config.driverInfoConfig.callHeight
-                  , width $ V state.data.config.driverInfoConfig.callWidth
-                  ]
-              ]
-            ]
-          ]
+          ][ linearLayout
+             [ height $ V 40
+             , width $ V 64
+             , gravity CENTER
+             , cornerRadius 20.0
+             , background state.data.config.driverInfoConfig.callBackground
+             , stroke state.data.config.driverInfoConfig.callButtonStroke
+             , onClick push $ const $ MessageDriver
+             , accessibilityHint "Chat or Call : Button"
+             , accessibility ENABLE
+             ][ imageView
+                 [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                 , height $ V state.data.config.driverInfoConfig.callHeight
+                 , width $ V state.data.config.driverInfoConfig.callWidth
+                 ]
+             ]
+           ]
+        ]
     ]
 
 

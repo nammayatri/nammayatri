@@ -233,6 +233,7 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
+foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import getVideoID :: String -> String
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit

@@ -140,7 +140,6 @@ baseAppFlow baseFlow event = do
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
       setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
-      setValueToLocalStore SUGGESTIONS_ENABLED "false"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalStore MESSAGES_DELAY "0"
       setValueToLocalStore SHOW_PAYMENT_MODAL "true"

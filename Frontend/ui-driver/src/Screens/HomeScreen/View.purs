@@ -130,6 +130,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.chatcallbackInitiated) then do
+                                  _ <- JB.clearChatMessages
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
@@ -148,6 +149,7 @@ screen initialState =
                                   _ <- launchAff $ EHC.flowRunner defaultGlobalState $ rideStatusPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) 20000.0 initialState push Notification
                                   pure unit
                                   else pure unit
+                                push GetMessages
             "RideStarted"    -> do
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toString initialState.data.activeRide.src_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toString initialState.data.activeRide.src_lon)
@@ -167,7 +169,7 @@ screen initialState =
                                   else pure unit
             "ChatWithCustomer" -> do
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
-                                  _ <- pure $ JB.sendMessage $ getMessageFromKey "dis1AP" "EN_US"
+                                  _ <- pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.4.5" then (getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
                                   push UpdateInChat
                                   else pure unit
             _                -> do

@@ -529,7 +529,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getDriverSuggestions state else []
+    , suggestionsList = if showSuggestions state then if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.suggestionsList
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -551,18 +551,12 @@ chatViewConfig state = let
   }
   in chatViewConfig'
 
-getDriverSuggestions :: ST.HomeScreenState -> Array String
-getDriverSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
-                                  true, true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP"
-                                  true, false -> if (showSuggestions state) then (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP") else []
-                                  false, false -> state.data.suggestionsList
-                                  false, true -> getSuggestionsfromKey "driverDefaultAP" 
-
 showSuggestions :: ST.HomeScreenState -> Boolean
 showSuggestions state = do
-  case (DA.last state.data.messages) of 
-    Just value -> if value.sentBy == "Driver" then false else true
-    Nothing -> true
+  let canShowSuggestions = case (DA.last state.data.messages) of 
+                            Just value -> not $ value.sentBy == "Driver"
+                            Nothing -> true
+  DA.null state.data.suggestionsList && canShowSuggestions && ((show $ DA.length $ JB.getChatMessages "") == state.data.messagesSize || state.data.messagesSize == "-1")
 
 silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
 silentModeConfig state = let
