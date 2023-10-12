@@ -523,7 +523,7 @@ const frenchStrings = {
   PAYMENT_HISTORY : "Historique des paiements",
   DO_A_ONE_TIME_SETTLEMENT : "Effectuer un règlement unique",
   TAP_A_PLAN_TO_VIEW_DETAILS : "Appuyez sur un plan pour afficher les détails",
-  HOW_IT_WORKS : "Comment ça marche ?",
+  HOW_IT_WORKS : "Comment fonctionne le paiement automatique ?",
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Gagnez aujourd'hui, payez demain",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Ne payez que si vous faites des trajets",

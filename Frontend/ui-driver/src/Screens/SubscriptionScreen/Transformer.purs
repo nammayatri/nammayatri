@@ -211,7 +211,7 @@ introductoryOfferConfig lazy =
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : "ny_ic_discount," <> (getAssetStoreLink FunctionCall) <> "ny_ic_discount.png",
+    imageURL : "ny_ic_lock," <> (getAssetStoreLink FunctionCall) <> "ny_ic_lock.png",
     offerDescription : Just $ getString NO_CHARGES_TILL,
     addedFromUI : false
     }

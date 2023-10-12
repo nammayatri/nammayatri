@@ -55,7 +55,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, lottieAnimationView, id)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -373,6 +373,23 @@ plansBottomView push state =
                 , imageWithFallback "ny_ic_upi_autopay,"
                 ]
             ]
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , onClick (\action -> do
+                        _ <- push action
+                        _ <- JB.openUrlInApp "https://yatrisathi.in/plans/"
+                        pure unit
+                        ) (const NoAction)
+          ][ textView $
+              [ weight 1.0
+              , height WRAP_CONTENT
+              , gravity LEFT
+              , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
+              , color Color.blue900
+              ] <> FontStyle.body1 TypoGraphy
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -1443,11 +1460,18 @@ planPriceView fares frequency isSelectedLangTamil =
       , margin $ MarginLeft 3
       , color Color.black600
       ]
-   , imageView 
-     [ imageWithFallback $ "ny_ic_discount," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_discount.png" 
-     , height $ V 16  
-     , width $ V 16
+   , linearLayout
+     [ height WRAP_CONTENT
+     , width WRAP_CONTENT
+     , padding $ Padding 5 5 5 5
+     , background Color.blue600
+     , cornerRadius 24.0
      , margin $ Margin 4 2 0 0
+     ][ imageView 
+        [ imageWithFallback $ "ny_ic_lock," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_lock.png" 
+        , height $ V 12 
+        , width $ V 12
+        ]
      ]
    ]
 
