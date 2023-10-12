@@ -37,6 +37,9 @@ blue800 = "#2194FF"
 blue900 :: Color
 blue900 = "#0066FF"
 
+blue9000 :: Color
+blue9000 = "#1A0066FF"
+
 grey700 :: Color
 grey700 = "#F4F4F6"
 
