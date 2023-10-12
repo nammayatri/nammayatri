@@ -22,6 +22,7 @@ import Data.Either
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int
 import Data.List (zip7)
+import qualified Data.List as DL
 import Data.Maybe
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -683,7 +684,7 @@ instance FromTType' BeamR.Ride Ride where
     fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
 
     when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+    let toLocMap = DL.maximumBy (comparing (.order)) toLocationMappings
     toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
     tUrl <- parseBaseUrl trackingUrl
     merchant <- case merchantId of
