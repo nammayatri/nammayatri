@@ -481,7 +481,7 @@ const englishStrings = {
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "Website: <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "Your customer is probably in a rush to reach the metro station on time! \n We urge you not to cancel.",
   ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel.",
-  RANKINGS : "Contest",
+  RANKINGS : "Rankings",
   GETTING_THE_LEADERBOARD_READY : "Getting the leaderboard ready!",
   PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "Please wait while we update the details",
   LAST_UPDATED : "Last Updated: ",

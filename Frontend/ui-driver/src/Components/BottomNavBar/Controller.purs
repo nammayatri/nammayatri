@@ -60,7 +60,7 @@ navData screenName = {
     {
       activeIcon: "ic_referral_active," <> (getAssetStoreLink FunctionCall) <> "ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
-      text: "Rankings"
+      text: "Contest"
     }
     ]) <> 
     [{
