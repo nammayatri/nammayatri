@@ -432,6 +432,8 @@
       "widget_close_gradient" : true,
       "ic_arrow" : true,
       "ic_clock" : true,
-      "ic_elipse" : true
+      "ic_elipse" : true,
+      "ic_bi_star_fill" :true,
+      "ic_tabler_disabled":true
    }
 }

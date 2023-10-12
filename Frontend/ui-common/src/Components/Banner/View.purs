@@ -41,7 +41,9 @@ view push config =
     , clickable config.bannerClickable
     , stroke config.stroke
     ]
-    [  linearLayout
+    [  
+      
+      linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         , padding $ Padding 20 0 0 0

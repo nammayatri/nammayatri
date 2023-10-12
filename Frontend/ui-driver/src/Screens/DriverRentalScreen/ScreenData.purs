@@ -32,6 +32,16 @@ initData = {
     ,
     props : {
         isRentalAccepted : false
+       ,selectedIndex : 0
+       ,selectedRentalRequest : {  sourceArea : "",
+                            sourceAddress : "",
+                            sourcePincode : "",
+                            time : "",
+                            distance : "",
+                            baseFare : "",
+                            pickupDistance : "",
+                            pickupTime :  ""
+                        }
     }
 }
 

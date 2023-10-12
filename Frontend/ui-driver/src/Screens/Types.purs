@@ -1850,7 +1850,10 @@ type DriverRentalScreenStateData = {
 }
 
 type DriverRentalScreenStateProps = {
-     isRentalAccepted :: Boolean
+     isRentalAccepted :: Boolean,
+     selectedRentalRequest :: RentalRequestDetial,
+     selectedIndex :: Int
+
 }
 
 type RentalRequestDetial = {

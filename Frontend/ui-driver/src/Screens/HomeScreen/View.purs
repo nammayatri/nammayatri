@@ -323,7 +323,8 @@ driverMapsHeaderView push state =
                 , orientation VERTICAL
                 , weight 1.0
                 ][
-                  rentalRidesView state push
+                  rentalBannerView state push
+
                 ]
               ]
             , alternateNumberOrOTPView state push
@@ -457,7 +458,17 @@ autoPayBannerView state push configureImage =
     ][
         Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
     ]
-  
+rentalBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalBannerView state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ (V 64)
+  , margin (Margin 16 16 16 0)
+  , padding (Padding 16 0 0 0)
+  , cornerRadius 8.0
+  , orientation HORIZONTAL
+  , background Color.white900
+  ][Banner.view (push <<< RentalBanner)(rentalBannerConfig state)]
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
   linearLayout
@@ -867,7 +878,7 @@ rentalRidesView state push =
                 , height (V 8)
                 , padding $ PaddingTop 3
                 , gravity CENTER
-                , imageWithFallback $ "ic_arrow," <> (getAssetStoreLink FunctionCall) <> "ic_arrow.png"
+                , imageWithFallback $ "ic_arrow," <> (HU.getAssetStoreLink FunctionCall) <> "ic_arrow.png"
                 ]
           ]
       ]
@@ -884,7 +895,7 @@ rentalRidesView state push =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity RIGHT
-                , imageWithFallback $ "ic_suv_ac," <> (getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
+                , imageWithFallback $ "ic_suv_ac," <> (HU.getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
                 ]
       ]
   ]

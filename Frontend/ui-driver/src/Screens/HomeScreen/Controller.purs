@@ -195,6 +195,7 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    RentalBanner act -> pure unit
     _ -> pure unit
 
 
@@ -292,6 +293,7 @@ data Action = NoAction
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
             | GoToRental
+            | RentalBanner Banner.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -719,6 +721,9 @@ eval GoToProfile state =  do
 
 eval GoToRental state = do
   exit $ GoToDriverRentalScreen state
+eval (RentalBanner (Banner.OnClick)) state = do
+  exit $ GoToDriverRentalScreen state
+
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then
       exit $ AadhaarVerificationFlow state

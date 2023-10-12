@@ -19,7 +19,7 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddVehicleDetailsScreen.Controller (dateFormat)
-import Screens.Types (DriverRentalScreenState)
+import Screens.Types 
 
 instance showAction :: Show Action where
     show _ = ""
@@ -31,16 +31,18 @@ instance loggableAction :: Loggable Action where
             trackAppBackPress appId (getScreen DRIVER_RENTAL_SCREEN)
             trackAppEndScreen appId (getScreen DRIVER_RENTAL_SCREEN)
         NAVIGATE_TO_PICKUP -> trackAppScreenRender appId "screen" (getScreen DRIVER_RENTAL_SCREEN)
+        SELECT_RENTAL_REQUEST _ind _rentalReuest-> trackAppScreenRender appId "screen" (getScreen DRIVER_RENTAL_SCREEN)
 
 
 data ScreenOutput = GoToHomeScreen DriverRentalScreenState | GoBack
 
 
-data Action = BackPressed | AfterRender | NAVIGATE_TO_PICKUP
+data Action = BackPressed | AfterRender | NAVIGATE_TO_PICKUP | SELECT_RENTAL_REQUEST Int RentalRequestDetial
 
 eval :: Action -> DriverRentalScreenState -> Eval Action ScreenOutput DriverRentalScreenState
 eval action state = case action of 
     AfterRender -> continue state
     BackPressed -> exit $ GoBack 
     NAVIGATE_TO_PICKUP -> continue state {props {isRentalAccepted = true}}
+    SELECT_RENTAL_REQUEST index  rentalRequest-> continue state {props {selectedIndex = index , selectedRentalRequest = rentalRequest}}
     _  -> continue state

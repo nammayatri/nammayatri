@@ -799,6 +799,24 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         _ -> item.component
     } ) paymentBreakUpArr
 
+
+rentalBannerConfig :: ST.HomeScreenState -> Banner.Config
+rentalBannerConfig state =
+ let
+   config = Banner.config
+   config' = config
+    {
+      backgroundColor = Color.white900
+     ,title = "Rental Rides"
+     ,titleColor = Color.lightGradientPurple
+     ,actionText = "View All Requests"
+     ,actionTextColor = Color.lightGradientPurple
+     ,imageUrl = "ic_suv_ac," <> (HU.getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
+     ,isBanner = true
+     ,imageHeight = (V 97)
+     ,imageWidth = (V 55)
+    }
+  in config'
 autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
 autopayBannerConfig state configureImage =
   let

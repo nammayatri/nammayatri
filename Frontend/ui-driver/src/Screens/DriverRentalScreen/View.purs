@@ -118,7 +118,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverRentalScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  scrollView
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , scrollBarY true
@@ -132,83 +132,28 @@ view push state =
         
         ][
               headerView state push
-             ,rentalRequestDetailsView state push
-             ,rentalRequestShortView state push
-             ,rentalRequestShortView state push
-             ,rentalRequestShortView state push
-             ,rentalRequestShortView state push
-             ,rentalRequestShortView state push
+             ,rentalRequestDetailsView push state.props.selectedRentalRequest state.props.isRentalAccepted
+             ,renderRentalRequests push state
             
-
+            
          ]
 
     ]
 
--- renderRentalRequests :: forall  w. DriverRentalScreenStateData -> (Action -> Effect Unit) ->Array ( PrestoDOM (Effect Unit) w)
--- renderRentalRequests requests action = do
---   mapWithIndex (\ index item -> linearLayout
---             [ width MATCH_PARENT
---             , height WRAP_CONTENT
---             , orientation VERTICAL
---             , background Color.white900
---             , margin $ Margin 16 16 16 0
---             , padding $ Padding 8 16 8 16
---             , cornerRadii $ Corners 8.0 true true true true
---             ][
---             linearLayout[
---                 width MATCH_PARENT
---             , height WRAP_CONTENT
---             , orientation HORIZONTAL
---             ][
---                 textView[
---                     height WRAP_CONTENT
---                 , width WRAP_CONTENT
---                 , text  "maidan"
---                 , textSize FontSize.a_14
---                 , color Color.black800
---                 ]
---                 ,
---                 imageView
---                 [ height $ V 4
---                 , width $ V 4
---                 , imageWithFallback $ "ic_elipse," <> (getCommonAssetStoreLink FunctionCall) <> "ic_elipse.png"
---                 , margin $ Margin 8 8 8 8
---                 ]
---             ,textView[
---                     height WRAP_CONTENT
---                 , width WRAP_CONTENT
---                 , text "40 Kms" 
---                 , textSize FontSize.a_14
---                 , color Color.black800
---                 ]
---                 ,
---                 textView[
---                     height WRAP_CONTENT
---                 , width WRAP_CONTENT
---                 , text "₹1600"
---                 , textSize FontSize.a_16
---                 , color Color.black800
---                 , weight 1.0
---                 , margin $ MarginRight 0
---                 , gravity RIGHT
---                 ]
---             ]
---             ,
---             linearLayout[
---                 width WRAP_CONTENT
---                 , height WRAP_CONTENT
---                 , orientation VERTICAL
---             ][ textView[
---                 text "Maidan,H82W+248, Maidan, Kolkata, West Bengal"
---             , textSize FontSize.a_14
---             , color Color.black800
---             , ellipsize true
---             , singleLine true
---             ]
-
---             ]
---             ]
---         ) requests.rentalRequestDetails
+renderRentalRequests :: forall w. (Action -> Effect Unit) -> ST.DriverRentalScreenState ->PrestoDOM (Effect Unit) w
+renderRentalRequests push  state = do
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL 
+    , visibility if state.props.isRentalAccepted then GONE else VISIBLE
+    ](mapWithIndex (\index item-> 
+            if index /= state.props.selectedIndex then
+                 rentalRequestShortView push item index state.props.isRentalAccepted
+            else linearLayout[][]   
+        ) state.data.rentalRequestDetails
+        )
+    
   
   
 
@@ -236,17 +181,72 @@ headerView state push =
       ] <> FontStyle.h3 TypoGraphy)
   ]
 
-rentalRequestDetailsView :: forall w. ST.DriverRentalScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rentalRequestDetailsView state push =
+rentalRequestDetailsView :: forall w. (Action -> Effect Unit) -> RentalRequestDetial -> Boolean -> PrestoDOM (Effect Unit) w
+rentalRequestDetailsView push state isRentalAccepted=
     linearLayout
     [  width MATCH_PARENT
     ,  height WRAP_CONTENT
     ,  orientation VERTICAL
     ,  background Color.white900
-    ,  padding $ Padding 16 16 16 16
     ,  margin $ Margin 16 16 16 16
-    ][
-        linearLayout
+    , cornerRadii $ Corners 8.0 true true true true
+    ][linearLayout[
+        width MATCH_PARENT
+       ,height WRAP_CONTENT
+       ,orientation HORIZONTAL
+       ,background Color.lightCyanColor
+       ,padding $ Padding 12 12 12 12
+     ][linearLayout[
+        width WRAP_CONTENT
+       ,height WRAP_CONTENT
+       ,orientation HORIZONTAL
+       ,background Color.purple
+       ,cornerRadii $ Corners 28.0 true true true true
+       
+     ][imageView
+      [ width $ V 16
+      , height $ V 16
+      , margin $ MarginTop 8
+      , padding $ PaddingLeft 4
+      , imageWithFallback $ "ic_tabler_disabled," <> (getAssetStoreLink FunctionCall) <> "ic_tabler_disabled.png"
+      ],
+        textView[
+        text "Purple Ride"
+       ,textSize FontSize.a_12
+       ,color  Color.white900
+       ,margin $ Margin 6 8 6 8
+     ]]
+     ,
+     linearLayout[
+        width WRAP_CONTENT
+       ,height WRAP_CONTENT
+       ,orientation HORIZONTAL
+       ,background Color.blue800
+       ,cornerRadii $ Corners 28.0 true true true true
+       ,margin $ MarginLeft 8
+     ][ imageView
+      [ width $ V 16
+      , height $ V 16
+      , margin $ MarginTop 8
+      , padding $ PaddingLeft 4
+      , imageWithFallback $ "ic_bi_star_fill," <> (getAssetStoreLink FunctionCall) <> "ic_bi_star_fill.png"
+      ],
+        textView[
+        text "Metro Ride"
+       ,textSize FontSize.a_12
+       ,color  Color.white900
+       ,margin $ Margin 6 8 6 8
+     ]
+     ]
+     ]
+     ,linearLayout[
+       width MATCH_PARENT
+    ,  height WRAP_CONTENT
+    ,  orientation VERTICAL
+    ,  background Color.white900
+    ,  padding $ Padding 16 16 16 16
+     ][
+      linearLayout
         [  width MATCH_PARENT
         ,  height WRAP_CONTENT
         ,  orientation HORIZONTAL
@@ -261,12 +261,12 @@ rentalRequestDetailsView state push =
                 ,  textSize FontSize.a_16
                 ,  color  Color.black700
                 ,  fontStyle $ FontStyle.bold LanguageStyle
-                ,  padding $ PaddingTop 8
+                ,  padding $ PaddingVertical 8 8
                 ] )
               ,
               textView
                 ([ 
-                   text ("600m")
+                   text state.pickupDistance
                 ,  textSize FontSize.a_22
                 ,  color  Color.black900
                 ,  margin $ MarginLeft 8
@@ -279,21 +279,21 @@ rentalRequestDetailsView state push =
             , weight 1.0
             , height WRAP_CONTENT
             , orientation HORIZONTAL
+            , gravity RIGHT
             ]
             [ imageView
                 [ width (V 20)
                 , height (V 20)
-                , gravity  RIGHT
-                , margin $ MarginTop 8
+                , margin $ MarginTop 4
                 , imageWithFallback $ "ic_clock," <> (getAssetStoreLink FunctionCall) <> "ic_clock.png"
                 ]
                 ,
                 textView
                 ([
-                   text ("12:30 PM")
+                   text state.pickupTime
                 ,  textSize FontSize.a_22
                 ,  color  Color.black900
-                ,  gravity RIGHT
+              
                 ])
 
             ]
@@ -310,12 +310,13 @@ rentalRequestDetailsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , margin $ MarginVertical 24 24
+        , margin $ MarginVertical 16 16
         ][  imageView
-            [ height $ V 20
-            , width $ V 20
+            [ height $ V 16
+            , width $ V 16
             , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
             , margin $ Margin 0 3 8 0
+            , padding $ PaddingTop 4
             ]
         ,linearLayout
         [ width WRAP_CONTENT
@@ -324,7 +325,7 @@ rentalRequestDetailsView state push =
         ][  textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text "Dakshineshwar Kalibari"
+            , text state.sourceArea
             , color Color.black800
             , ellipsize true
             , singleLine true
@@ -333,14 +334,14 @@ rentalRequestDetailsView state push =
         , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text "Dakshineswar, Kolkata, West Bengal "
+            , text state.sourceAddress
             , color Color.black650
             ]<> FontStyle.body1 TypoGraphy
         , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text "700076"
-            , color Color.black650
+            , text state.sourcePincode
+            , color Color.black800
             , textSize FontSize.a_14
             , maxLines 2
            -- , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
@@ -359,10 +360,10 @@ rentalRequestDetailsView state push =
           , width WRAP_CONTENT
           , padding $ Padding 6 8 6 8
           , background Color.grey700
-          , text "8 hr"
+          , text state.time
           , color Color.black900
-          , cornerRadii $ Corners 1.5 true true true true
-          , stroke $ "4," <> Color.grey900
+          , cornerRadii $ Corners 4.0 true true true true
+          , stroke $ "1," <> Color.grey900
           , fontStyle $ FontStyle.bold LanguageStyle
           ]
           ,
@@ -372,24 +373,24 @@ rentalRequestDetailsView state push =
            , width WRAP_CONTENT
            , padding $ Padding 6 8 6 8
            , background Color.grey700
-           , text "80 km"
+           , text state.distance
            , color Color.black900
-           , cornerRadii $ Corners 1.5 true true true true
-           , stroke $ "4," <> Color.grey900
+           , cornerRadii $ Corners 4.0 true true true true
+           , stroke $ "1," <> Color.grey900
            , fontStyle $ FontStyle.bold LanguageStyle
           ]
         ]
         ]
         ]
        ,linearLayout
-        [ height WRAP_CONTENT
+        [ height $ (V 48)
         , width MATCH_PARENT
         , cornerRadii $ Corners 8.0 true true true true
         , gravity CENTER
         , background Color.grey700
         ]
         [  textView [
-             text "₹ 800"
+             text state.baseFare
            , color Color.black900
            , textSize FontSize.a_22
            , fontStyle $ FontStyle.bold LanguageStyle
@@ -404,7 +405,7 @@ rentalRequestDetailsView state push =
         [ 
         textView [
           text "Includes ₹10 Pickup. Extra per km charge: ₹12"
-        , color Color.black900
+        , color Color.black700
         , textSize FontSize.a_12
         ]
         ]
@@ -422,7 +423,7 @@ rentalRequestDetailsView state push =
               , stroke $ "1," <> Color.grey900
               , weight 1.0 
               , gravity CENTER
-              , visibility if state.props.isRentalAccepted then GONE else VISIBLE
+              , visibility if isRentalAccepted then GONE else VISIBLE
             ][
                 textView [
                   text "DECLINE"
@@ -443,7 +444,7 @@ rentalRequestDetailsView state push =
               , onClick push $ const NAVIGATE_TO_PICKUP
             ][
                 textView [
-                  text $  if state.props.isRentalAccepted then "Navigate to Pickup" else "Accept Rental"
+                  text   if isRentalAccepted then  "Navigate to Pickup" else "Accept Rental" 
                 , color Color.black900
                 , padding $ Padding 18 16 18 16
                 , textSize FontSize.a_18
@@ -453,12 +454,13 @@ rentalRequestDetailsView state push =
             ]
 
         ]
+     ]
 
     ]
 
 
-rentalRequestShortView :: forall w. ST.DriverRentalScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rentalRequestShortView  state push  = 
+rentalRequestShortView :: forall w.  (Action -> Effect Unit) ->  RentalRequestDetial -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+rentalRequestShortView push state selectedIndex isRentalPickuped = 
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -467,7 +469,7 @@ rentalRequestShortView  state push  =
     , margin $ Margin 16 16 16 0
     , padding $ Padding 8 16 8 16
     , cornerRadii $ Corners 8.0 true true true true
-    , visibility if state.props.isRentalAccepted then GONE else VISIBLE
+    , onClick push $ const (SELECT_RENTAL_REQUEST selectedIndex state)
     ][
       linearLayout[
         width MATCH_PARENT
@@ -477,7 +479,7 @@ rentalRequestShortView  state push  =
         textView[
             height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text  "maidan"
+          , text  state.sourceArea
           , textSize FontSize.a_14
           , color Color.black800
         ]
@@ -491,7 +493,7 @@ rentalRequestShortView  state push  =
        ,textView[
             height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text "40 Kms" 
+          , text state.distance 
           , textSize FontSize.a_14
           , color Color.black800
         ]
@@ -499,7 +501,7 @@ rentalRequestShortView  state push  =
         textView[
             height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text "₹1600"
+          , text state.baseFare
           , textSize FontSize.a_16
           , color Color.black800
           , weight 1.0
@@ -513,7 +515,7 @@ rentalRequestShortView  state push  =
         , height WRAP_CONTENT
         , orientation VERTICAL
     ][ textView[
-        text "Maidan,H82W+248, Maidan, Kolkata, West Bengal"
+        text state.sourceAddress
       , textSize FontSize.a_14
       , color Color.black800
       , ellipsize true
