@@ -23,11 +23,34 @@
           arion;
       };
       packages = {
-        cryptostore.source = "0.2.3.0";
+        amazonka.source = inputs.amazonka-git + /lib/amazonka;
+        amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
+        amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
+        amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
+        amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
+        amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
+        streamly.source = inputs.streamly-083r1-git;
       };
       settings = {
         location-updates.check = false;
         beckn-test.check = false;
+        singletons-th.jailbreak = true;
+        singletons-base = {
+          jailbreak = true;
+          check = false;
+        };
+        streamly = {
+          extraBuildDepends = lib.optional pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Cocoa;
+          # Conditional flag jailbreak bug workaround patch:-
+          #     current cabal-jailbreak doesn't remove version bounds from dependencies
+          #     that are behind conditional flags in cabal files.
+          #     This meant streamly v0.8.3r1 won't compile with `unicode-data` v0.4+
+          #     And the bug won't us bypass that with jailbreak = true;
+          #     `unicode-data` package is v0.4+ in nixpkgs.
+          patches = [ ./patches/streamly-conditional-dependency-version-bump.patch ];
+          jailbreak = true;
+        };
+        base32.jailbreak = true;
       };
     };
 
