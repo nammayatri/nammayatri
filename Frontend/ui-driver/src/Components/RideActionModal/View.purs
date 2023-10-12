@@ -369,7 +369,7 @@ sourceAndDestinationView push config =
 startRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 startRide push config =
   PrestoAnim.animationSet
-  [ scaleYAnimWithDuration 20
+  [ scaleYAnimWithDuration 1
   ]$ linearLayout
   [ width MATCH_PARENT
   , height (V 50)

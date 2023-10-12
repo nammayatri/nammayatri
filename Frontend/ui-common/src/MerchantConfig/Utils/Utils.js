@@ -90,9 +90,8 @@ export const getStringWithVar = function (str) {
         const regex = /{}/g;
     
         const processedString = str.replace(regex, () => {
-          const currentValue = vals[currentIndex];
-          currentIndex++;
-          return currentValue;
+          const currentValue = vals[currentIndex++];
+          return currentValue ? currentValue : "";
         });
         return processedString;
       } catch (err) {

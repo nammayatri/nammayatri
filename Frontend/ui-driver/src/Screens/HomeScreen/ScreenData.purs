@@ -112,6 +112,7 @@ initData = {
         },
         profileImg : Nothing,
         triggerPatchCounter : 0,
+        peekHeight : 0,
         endRideData : {
           rideId : "",
           zeroCommision : 0,

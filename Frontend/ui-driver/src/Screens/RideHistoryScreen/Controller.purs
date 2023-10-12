@@ -87,7 +87,6 @@ instance loggableAction :: Loggable Action where
     OpenPaymentHistory -> pure unit
 
 data ScreenOutput = GoBack
-                    | RideHistoryScreen RideHistoryScreenState
                     | HomeScreen
                     | GoToFilter String
                     | ProfileScreen
@@ -273,8 +272,8 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
     destination : (decodeAddress (ride.toLocation) false),
-    vehicleType : ride.vehicleVariant
-
+    vehicleType : ride.vehicleVariant,
+    riderName : fromMaybe "" ride.riderName
 }) list )
 
 
@@ -303,5 +302,6 @@ dummyCard =  {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
   }
