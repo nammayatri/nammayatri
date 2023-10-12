@@ -295,7 +295,7 @@ const kannadaStrings = {
   VIEW_BREAKDOWN: "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   APP_INFO: "ಅಪ್ಲಿಕೇಶನ್ ಮಾಹಿತಿ",
   OTHER: "ಬೇರೆ",
-  VEHICLE_ISSUE: "ವಾಹನ ಸಮಸ್ಯೆ.ವಾಹನ ಸಮಸ್ಯೆ",
+  VEHICLE_ISSUE: "ವಾಹನ ಸಮಸ್ಯೆ",
   FARE_UPDATED: "ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ",
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES: "ಪದೇ ಪದೇ ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ಕಡಿಮೆ ರೈಡ್‌ಗಳು ಮತ್ತು ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗುತ್ತದೆ",
   CONTINUE: "ಮುಂದುವರಿಸಿ",

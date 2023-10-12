@@ -610,7 +610,8 @@ type IndividualRideCardState =
     updatedAt :: String,
     source :: String,
     destination :: String,
-    vehicleType :: String
+    vehicleType :: String,
+    riderName :: String
   }
 
 
@@ -771,7 +772,8 @@ type HomeScreenData =  {
   profileImg :: Maybe String, 
   endRideData :: EndRideData,
   config :: AppConfig,
-  triggerPatchCounter :: Int
+  triggerPatchCounter :: Int,
+  peekHeight :: Int
 }
 
 type EndRideData = {

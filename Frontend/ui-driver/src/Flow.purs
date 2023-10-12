@@ -1242,7 +1242,6 @@ myRidesScreenFlow = do
     REFRESH state -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
       myRidesScreenFlow
-    MY_RIDE state -> tripDetailsScreenFlow
     HOME_SCREEN -> homeScreenFlow
     PROFILE_SCREEN -> driverProfileFlow
     GO_TO_REFERRAL_SCREEN -> referralScreenFlow
@@ -1262,7 +1261,8 @@ myRidesScreenFlow = do
       totalAmount = selectedCard.total_amount,
       distance = selectedCard.rideDistance,
       status = selectedCard.status,
-      vehicleType = selectedCard.vehicleType
+      vehicleType = selectedCard.vehicleType,
+      rider = selectedCard.riderName
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
@@ -1496,6 +1496,7 @@ currentRideFlow = do
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
         _ <- updateStage $ HomeScreenStage HomeScreen
+        updateDriverDataToStates
         if onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount appConfig.subscriptionConfig.onBoardingSubscription then onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount 
           else if onBoardingSubscriptionViewCount < 6 then  do 
             setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
@@ -1788,6 +1789,7 @@ homeScreenFlow = do
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       removeChatService ""
       _ <- updateStage $ HomeScreenStage HomeScreen
+      updateDriverDataToStates
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
       homeScreenFlow
     FCM_NOTIFICATION notificationType -> do
@@ -1801,6 +1803,7 @@ homeScreenFlow = do
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
+          updateDriverDataToStates
           homeScreenFlow
         "DRIVER_ASSIGNMENT" -> do
           let (GlobalState defGlobalState) = defaultGlobalState
@@ -2390,6 +2393,7 @@ updateDriverDataToStates = do
     {  driverName = getDriverInfoResp.firstName
     , driverMobile = getDriverInfoResp.mobileNumber
     , vehicleRegNumber = linkedVehicle.registrationNo
+    , vehicleVariant = linkedVehicle.variant
     , referralCode = getDriverInfoResp.referralCode }}})
   if (isJust getDriverInfoResp.numberOfRides) then do
     setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ fromMaybe 0 getDriverInfoResp.numberOfRides == 0

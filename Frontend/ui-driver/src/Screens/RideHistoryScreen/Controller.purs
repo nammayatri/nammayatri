@@ -30,7 +30,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String (Pattern(..), split)
@@ -87,7 +87,6 @@ instance loggableAction :: Loggable Action where
     OpenPaymentHistory -> pure unit
 
 data ScreenOutput = GoBack
-                    | RideHistoryScreen RideHistoryScreenState
                     | HomeScreen
                     | GoToFilter String
                     | ProfileScreen
@@ -234,7 +233,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
                     "CANCELLED" -> Color.red
                     _ -> Color.black800),
       riderName : toPropValue $ fromMaybe "" ride.riderName,
-      metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing && (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing) then "visible" else "gone",
+      metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing && (getRequiredTag "text" ride.specialLocationTag accessibilityTag) /= Nothing && (isNothing accessibilityTag)) then "visible" else "gone",
       accessibilityTagVisibility : toPropValue if (isJust accessibilityTag) then "visible" else "gone",
       specialZoneText : toPropValue $ getRideLabelData "text" (if (isJust accessibilityTag) then Just "Purple_Ride" else ride.specialLocationTag) Nothing,
       specialZoneImage : toPropValue $ getRideLabelData "imageUrl" ride.specialLocationTag accessibilityTag,
@@ -273,8 +272,8 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
     destination : (decodeAddress (ride.toLocation) false),
-    vehicleType : ride.vehicleVariant
-
+    vehicleType : ride.vehicleVariant,
+    riderName : fromMaybe "" ride.riderName
 }) list )
 
 
@@ -303,5 +302,6 @@ dummyCard =  {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
   }

@@ -125,6 +125,7 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
+                                if (initialState.data.peekHeight == 0) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.chatcallbackInitiated) then do
@@ -157,6 +158,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
+                                if (initialState.data.peekHeight == 0) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -1183,7 +1185,7 @@ rideActionModelView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
-          , peakHeight $ getPeekHeight state
+          , peakHeight $ state.data.peekHeight
           , topShift 0.0
           ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
                 RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
@@ -1192,16 +1194,6 @@ rideActionModelView push state =
       ]
     ]
 
-getPeekHeight :: HomeScreenState -> Int
-getPeekHeight state = 
-  let headerLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionHeaderLayout"
-      labelLayout =  runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLabelLayout"
-      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "rideActionLayout"
-      pixels = runFn1 HU.getPixels ""
-      density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
-      currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
-      requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then if state.data.activeRide.isDriverArrived then 518 else 470 else requiredPeekHeight
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =

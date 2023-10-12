@@ -193,8 +193,7 @@ data ScreenType =
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
-data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
-                            | HOME_SCREEN
+data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
                             | REFRESH RideHistoryScreenState

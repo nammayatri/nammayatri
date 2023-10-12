@@ -42,7 +42,6 @@ rideHistory = do
   act <- lift $ lift $ runScreen $ RideHistoryScreen.screen state.rideHistoryScreen{shimmerLoader = AnimatedIn} rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
-    RideHistoryScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ MY_RIDE updatedState)
     HomeScreen -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
       App.BackT $ App.BackPoint <$> (pure $ HOME_SCREEN )
@@ -90,6 +89,7 @@ rideHistoryItem = {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
 }
 

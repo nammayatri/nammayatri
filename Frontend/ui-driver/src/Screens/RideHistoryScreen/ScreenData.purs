@@ -46,7 +46,8 @@ initData = {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
   },
   offsetValue: 0,
   loaderButtonVisibility: false,
