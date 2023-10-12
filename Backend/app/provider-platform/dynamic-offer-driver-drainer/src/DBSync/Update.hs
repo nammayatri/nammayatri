@@ -13,7 +13,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import Data.Text as T
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -262,10 +262,10 @@ updValToJSON :: [(Text, A.Value)] -> A.Value
 updValToJSON keyValuePairs = A.Object $ AKM.fromList . map (BiFunctor.first AesonKey.fromText) $ keyValuePairs
 
 getPKeyandValuesList :: Text -> [(Text, A.Value)]
-getPKeyandValuesList pKeyAndValue = go (splitOn "_" pKeyTrimmed) []
+getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
   where
     go (tName : k : v : rest) acc = go (tName : rest) ((k, A.String v) : acc)
     go _ acc = acc
-    pKeyTrimmed = case splitOn "{" pKeyAndValue of
+    pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x

@@ -22,7 +22,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Com
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Revenue as Common
 import Data.List (nub)
 import Data.Maybe
-import Data.Text hiding (drop, filter, length, map, take)
+import Data.Text hiding (drop, elem, filter, length, map, take)
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Merchant as DM
