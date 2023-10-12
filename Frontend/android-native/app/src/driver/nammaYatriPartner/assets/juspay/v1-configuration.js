@@ -99,5 +99,6 @@ window.getMerchantConfig = function () {
         "showVehicleVariant" : false
       }
     , "referralType" : "LeaderBoard"
+    , "enablePurpleRideBanner" : true
   })
 }

@@ -13,7 +13,8 @@ type AppConfig =
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
-    profile :: ProfileConfig
+    profile :: ProfileConfig,
+    enablePurpleRideBanner :: Boolean
   } 
 
 type Language =  {

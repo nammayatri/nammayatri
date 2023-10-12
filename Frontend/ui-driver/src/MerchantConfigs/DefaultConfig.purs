@@ -42,4 +42,5 @@ config =
   , profile :
       { bookingOptionMenuForTaxi : false
       }
+  , enablePurpleRideBanner : false
   }

@@ -33,7 +33,7 @@ import JBridge (openUrlInApp, startTimerWithTime, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -1082,7 +1082,7 @@ qrScreen push state =
 
       ]
   ,   linearLayout
-      [  height $ V 80
+      [  height WRAP_CONTENT
       , width MATCH_PARENT
       , margin $ MarginTop 16
       , cornerRadius 12.0
@@ -1090,7 +1090,7 @@ qrScreen push state =
       ]
       [  linearLayout
           [ width WRAP_CONTENT
-          , height MATCH_PARENT
+          , height WRAP_CONTENT
           , weight 1.0
           , padding $ Padding 20 13 0 0
           , orientation VERTICAL
@@ -1118,6 +1118,7 @@ qrScreen push state =
           [
             height $ V 80
           ,  width $ V 118
+          , layoutGravity "bottom"
           , imageWithFallback $ if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then getActiveReferralBannerIcon state.data.driverInfo.vehicleVariant else getReferralBannerIcon state.data.driverInfo.vehicleVariant
           ]
       ]
@@ -1207,18 +1208,14 @@ contactUsTextView push state =
   , margin $ MarginTop 4
   , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then VISIBLE else GONE
   , onClick push $ const GoToAlertScreen
+  , padding $ PaddingBottom 4
   ][ textView $
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity LEFT
-    , text (getString FOR_UPDATES_SEE_ALERTS)
+    , textFromHtml $ "<u>"<>(getString FOR_UPDATES_SEE_ALERTS) <> "</u>"
     , color Color.white900
     ] <> FontStyle.body3 TypoGraphy
-    , linearLayout
-    [ height $ V 1
-    , width MATCH_PARENT
-    , background Color.white900
-    ][]
   ]
 
 

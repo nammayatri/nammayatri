@@ -73,4 +73,5 @@ commonConfig =
         , profile :
             { bookingOptionMenuForTaxi : false
             }
+        , enablePurpleRideBanner : false
         }

@@ -320,7 +320,7 @@ driverMapsHeaderView push state =
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
                 else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
                 else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
-                else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen) then accessibilityBanner state push 
+                else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.enablePurpleRideBanner) then accessibilityBanner state push 
                 else dummyTextView
             ]
         ]
