@@ -21,7 +21,6 @@ import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.Time as Time
 import Environment
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.KafkaTable as Kafka
@@ -29,12 +28,12 @@ import Kernel.Types.Error
 import Kernel.Utils.Common (decodeFromText, encodeToText, logDebug, logWarning, throwError)
 
 -- for now kafkaTable.tableName = "beckn_request", in future can be added other tables
-kafkaTableProcessor :: [Kafka.KafkaTable] -> Flow ()
-kafkaTableProcessor kafkaTables = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  let mapKafkaTable = foldr (foldFunc pathPrefix) Map.empty kafkaTables
+kafkaTableProcessor :: Map.Map String [Kafka.KafkaTable] -> Flow ()
+kafkaTableProcessor mapKafkaTable = do
+  pathPrefix <- T.unpack <$> asks (.s3Env.pathPrefix)
   void $
-    flip Map.traverseWithKey mapKafkaTable $ \filePath mappedKafkaTables -> do
+    flip Map.traverseWithKey mapKafkaTable $ \filePathWithoutPrefix mappedKafkaTables -> do
+      let filePath = pathPrefix <> "/" <> filePathWithoutPrefix
       logDebug $ "MessagesReceived: " <> show (length mappedKafkaTables) <> "; filePath: " <> show filePath
       existingFile <- handle @Flow @SomeException (pure . const "") (S3.get filePath)
       if T.null existingFile
@@ -51,23 +50,3 @@ kafkaTableProcessor kafkaTables = do
             Nothing -> do
               -- should never happen
               throwError (InternalError $ "Could not decode existing file: " <> show filePath)
-  where
-    foldFunc ::
-      Text ->
-      Kafka.KafkaTable ->
-      Map.Map String [Kafka.KafkaTable] ->
-      Map.Map String [Kafka.KafkaTable]
-    foldFunc pathPrefix kafkaTable mapKafkaTable = do
-      let filePath = mkFilePath kafkaTable pathPrefix kafkaTable.timestamp
-      Map.insertWithKey (\_key newList oldList -> newList <> oldList) filePath [kafkaTable] mapKafkaTable
-
-mkFilePath :: Kafka.KafkaTable -> Text -> UTCTime -> String
-mkFilePath kafkaTable pathPrefix timestamp = do
-  T.unpack pathPrefix
-    <> "/"
-    <> T.unpack kafkaTable.schemaName
-    <> "/"
-    <> T.unpack kafkaTable.tableName
-    <> "/"
-    <> Time.formatTime Time.defaultTimeLocale "%Y.%m.%d-%H" timestamp
-    <> ".json"

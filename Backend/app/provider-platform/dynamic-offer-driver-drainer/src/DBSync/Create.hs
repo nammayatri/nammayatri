@@ -18,9 +18,9 @@ import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude (UTCTime)
 import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BR
-import System.Timeout (timeout)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -204,6 +204,6 @@ streamDriverDrainerCreates producer dbObject streamKey model = do
 driverDrainerTopicName :: TopicName
 driverDrainerTopicName = TopicName "driver-drainer"
 
-mkBecknRequestTopicName :: BR.BecknRequest -> TopicName
-mkBecknRequestTopicName becknRequest = do
-  TopicName $ "driver-beckn-request" <> "_" <> show (BR.countTopicNumber becknRequest.timeStamp)
+mkKafkaTableTopicName :: UTCTime -> TopicName
+mkKafkaTableTopicName timestamp = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)
