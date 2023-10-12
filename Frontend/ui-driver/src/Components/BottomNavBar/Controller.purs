@@ -20,7 +20,7 @@ import Data.Maybe as Maybe
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>), (||))
-import Prelude (unit, (<>), (==), negate)
+import Prelude (unit, (<>), (==), negate, (/=))
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
@@ -76,8 +76,8 @@ getActiveIndex screenName = case screenName of
   ScreenNames.HOME_SCREEN -> 0
   ScreenNames.RIDE_HISTORY_SCREEN -> 1
   ScreenNames.SUBSCRIPTION_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else 2
-  ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 
-                                 else if ( getMerchant FunctionCall == YATRI || getMerchant FunctionCall == YATRISATHI) then 2 
+  ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI || getMerchant FunctionCall == YATRISATHI) then 3 
+                                 else if ( getMerchant FunctionCall == YATRI ) then 2 
                                  else -1
-  ScreenNames.ALERTS_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 4 else 3
+  ScreenNames.ALERTS_SCREEN -> if (getMerchant FunctionCall /= YATRI) then 4 else 3
   _ -> -1
