@@ -35,7 +35,7 @@ import SharedLogic.Merchant
 import Storage.Queries.DriverFee (findAllByStatus, findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
 import Storage.Queries.Volunteer (findAllByPlace)
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.AllDriverFeeRes
+getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
 getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
@@ -48,21 +48,13 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
       overdueFees = getFeeWithStatus [PAYMENT_OVERDUE] allDriverFee
       exemptedFees = getFeeWithStatus [EXEMPTED] allDriverFee
       cashedFees = getFeeWithStatus [COLLECTED_CASH] allDriverFee
-      yetToPayFees = getFeeWithStatus [PAYMENT_PENDING, PAYMENT_OVERDUE] allDriverFee
-      driversPaidOnline = getNumDrivers clearedFees
-      driversPaidOffline = getNumDrivers cashedFees
-      driversYetToPay = getNumDrivers yetToPayFees
-  pure $
-    Common.AllDriverFeeRes
-      driversPaidOnline
-      driversPaidOffline
-      driversYetToPay
-      [ Common.AllFees Common.CLEARED (getNumRides clearedFees) (getTotalAmount clearedFees),
-        Common.AllFees Common.COLLECTED_CASH (getNumRides cashedFees) (getTotalAmount cashedFees),
-        Common.AllFees Common.PAYMENT_PENDING (getNumRides pendingFees) (getTotalAmount pendingFees),
-        Common.AllFees Common.PAYMENT_OVERDUE (getNumRides overdueFees) (getTotalAmount overdueFees),
-        Common.AllFees Common.EXEMPTED (getNumRides exemptedFees) (getTotalAmount exemptedFees)
-      ]
+  pure
+    [ Common.AllFees Common.CLEARED (getNumRides clearedFees) (getNumDrivers clearedFees) (getTotalAmount clearedFees),
+      Common.AllFees Common.COLLECTED_CASH (getNumRides cashedFees) (getNumDrivers cashedFees) (getTotalAmount cashedFees),
+      Common.AllFees Common.PAYMENT_PENDING (getNumRides pendingFees) (getNumDrivers pendingFees) (getTotalAmount pendingFees),
+      Common.AllFees Common.PAYMENT_OVERDUE (getNumRides overdueFees) (getNumDrivers overdueFees) (getTotalAmount overdueFees),
+      Common.AllFees Common.EXEMPTED (getNumRides exemptedFees) (getNumDrivers exemptedFees) (getTotalAmount exemptedFees)
+    ]
   where
     getNumDrivers fee = length $ DL.nub (map driverId fee)
     getFeeWithStatus status = filter (\fee_ -> fee_.status `elem` status)
