@@ -177,20 +177,18 @@ public class MessageOverlayService extends Service implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
-        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String suggestions_enabled = sharedPref.getString("SUGGESTIONS_ENABLED", "null");
         int id = view.getId();
         if (id == R.id.message_sheet_header) {
             startMainActivity();
         } else if (id == R.id.suggestion1) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(suggestions.s1, "EN_US"));
+                sendMessage(cb, suggestions.s1);
         } else if (id == R.id.suggestion2) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(suggestions.s2, "EN_US"));
+                sendMessage(cb, suggestions.s2);
         } else if (id == R.id.suggestion3) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(suggestions.s3, "EN_US"));
+                sendMessage(cb,suggestions.s3);
         }
         overlayView.setVisibility(View.GONE);
     }

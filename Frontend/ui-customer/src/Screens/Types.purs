@@ -701,6 +701,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
   }
 

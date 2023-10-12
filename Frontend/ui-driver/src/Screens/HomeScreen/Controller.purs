@@ -45,7 +45,7 @@ import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, repl
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC, getPixels, getDeviceDefaultDensity)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
@@ -163,6 +163,7 @@ instance loggableAction :: Loggable Action where
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
     ScrollToBottom -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_to_bottom"
+    GetMessages -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_messages"
     KeyboardCallback status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
     ChatViewActionController act -> pure unit -- case act of
       -- ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
@@ -293,6 +294,7 @@ data Action = NoAction
             | RatingCardAC RatingCard.Action
             | PopUpModalChatBlockerAction PopUpModal.Action
             | StartEarningPopupAC PopUpModal.Action
+            | GetMessages
             | PaymentPendingPopupAC PopUpModal.Action
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
@@ -515,8 +517,14 @@ eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
-    let allMessages = getChatMessages ""
-    continue state{data{messages = allMessages}, props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}}
+    continueWithCmd state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}} [do
+      pure $ (RideActionModalAction (RideActionModal.LoadMessages))
+    ]
+
+eval GetMessages state = do
+  continueWithCmd state [do
+    pure $ (RideActionModalAction (RideActionModal.LoadMessages))
+  ]
 
 eval (RideActionModalAction (RideActionModal.VisuallyImpairedCustomer)) state = continue state{props{showChatBlockerPopUp = true}}
 
@@ -545,7 +553,7 @@ eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                         let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                        let suggestions = getSuggestionsfromKey value.message
+                        let suggestions = getDriverSuggestions state $ getSuggestionsfromKey value.message
                         updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
@@ -574,10 +582,10 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
-    let message = getMessageFromKey chatSuggestion "EN_US"
+    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.4.5" then (getMessageFromKey chatSuggestion "EN_US") else chatSuggestion
     _ <- pure $ sendMessage message
     let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
-    continue state{props {canSendSuggestion = false}}
+    continue state{data {suggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -1001,3 +1009,8 @@ getPeekHeight state =
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
     in if requiredPeekHeight == 0 then if state.data.activeRide.isDriverArrived then 518 else 470 else requiredPeekHeight
+  
+getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
+getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
+                                  true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP"
+                                  false -> suggestions

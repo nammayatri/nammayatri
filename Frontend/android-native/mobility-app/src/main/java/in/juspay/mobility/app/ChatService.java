@@ -243,7 +243,10 @@ public class ChatService extends Service {
                     );
                 }
                 firestoreInstance.collection("Chats").document(chatChannelID).collection("messages").add(_newMessage);
-                if (merchantType.equals("DRIVER")) sendFCM(message);
+                if (merchantType.equals("DRIVER")) {
+                    String decodedMessage = getMessageFromKey(message, "EN_US");
+                    if(!decodedMessage.equals("")) sendFCM(decodedMessage);
+                }
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error in sending a message" + e);
             }
@@ -287,7 +290,7 @@ public class ChatService extends Service {
                     Log.e(LOG_TAG, "Error sending the message to jbridge : " + err);
                 }
             }
-            String message = getMessageFromKey(_message);
+            String message = getMessageFromKey(_message, null);
             if (!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify && !message.equals("") && merchantType.equals("DRIVER")) {
                 if (appState.equals("onDestroy") || appState.equals("onPause")) {
                     if (NotificationUtils.overlayFeatureNotAvailable(context))
@@ -439,15 +442,14 @@ public class ChatService extends Service {
         }
     }
 
-    private String getMessageFromKey(String key) {
+    private String getMessageFromKey(String key, @Nullable String lang) {
         try {
             String suggestionsStr = sharedPrefs.getString("SUGGESTIONS_DEFINITIONS", "null");
             JSONObject suggestions = new JSONObject(suggestionsStr);
-            String language = sharedPrefs.getString("LANGUAGE_KEY", "null");
+            String language = lang == null ? sharedPrefs.getString("LANGUAGE_KEY", "null") : lang;
             if (suggestions.has(key)) {
                 JSONObject message = suggestions.getJSONObject(key);
-                if (message.has(language.toLowerCase()))
-                    return message.getString(language.toLowerCase());
+                if (message.has(language.toLowerCase())) return message.getString(language.toLowerCase());
                 else return message.getString("en_us");
             } else {
                 return key;

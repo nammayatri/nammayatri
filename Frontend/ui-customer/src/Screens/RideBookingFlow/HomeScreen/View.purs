@@ -62,7 +62,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, getCommonAssetStoreLink, getAssetStoreLink, getAssetsBaseUrl, getSearchType)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, startTimerWithTime)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -161,7 +161,9 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
+                push LoadMessages
                 if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone) then do
+                  _ <- clearChatMessages
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
