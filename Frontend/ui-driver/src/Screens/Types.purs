@@ -612,7 +612,8 @@ type IndividualRideCardState =
     updatedAt :: String,
     source :: String,
     destination :: String,
-    vehicleType :: String
+    vehicleType :: String,
+    riderName :: String
   }
 
 

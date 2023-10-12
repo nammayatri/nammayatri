@@ -244,6 +244,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
+    "Contest" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToReferralScreen
     "Join" -> do 
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"

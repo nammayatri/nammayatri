@@ -271,6 +271,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Contest" -> do
+      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+      exit $ GoToReferralScreen
     _ -> continue state
 
 eval (UpdateValue value) state = do

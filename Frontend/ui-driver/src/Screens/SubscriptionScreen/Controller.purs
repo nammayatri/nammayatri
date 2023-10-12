@@ -182,6 +182,9 @@ eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirec
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
               exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Contest" -> do
+              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+              exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
 
 eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
@@ -214,6 +217,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
               _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
               exit $ Alerts newState
             "Rankings" -> do
+              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+              exit $ Contest newState
+            "Contest" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
               exit $ Contest newState
             _ -> continue state
