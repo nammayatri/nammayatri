@@ -24,7 +24,7 @@ import qualified Kafka.Consumer as Consumer
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Beam.BecknRequest as BR
+import Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
@@ -60,17 +60,16 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   where
     newKafkaConsumer = do
       consumerTopicNames <- case appEnv.consumerType of
-        RIDER_BECKN_REQUEST -> buildBecknRequestConsumerTopics
-        DRIVER_BECKN_REQUEST -> buildBecknRequestConsumerTopics
+        KAFKA_TABLE -> buildKafkaTableConsumerTopics
         _ -> pure kafkaConsumerCfg.topicNames
       either (error . ("Unable to open a kafka consumer: " <>) . show) id
         <$> Consumer.newConsumer
           (kafkaConsumerCfg.consumerProperties)
           (Consumer.topics consumerTopicNames <> maybe mempty Consumer.offsetReset kafkaConsumerCfg.offsetReset)
 
-    buildBecknRequestConsumerTopics = do
+    buildKafkaTableConsumerTopics = do
       now <- getCurrentTime
-      let currentTopicNumber = BR.countTopicNumber now
+      let currentTopicNumber = Kafka.countTopicNumber now
       let topicNumbers = filter (/= currentTopicNumber) [0 .. 23 :: Int]
       let topicNameTemplate = case kafkaConsumerCfg.topicNames of
             [tn] -> tn

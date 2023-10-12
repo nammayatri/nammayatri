@@ -73,7 +73,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
-    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkBecknRequestTopicName obj, val, entryId, BR.mkBecknRequestKafka obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put BecknRequestKafka to Kafka, not DBCreateObject
+    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkKafkaTableTopicName (BR.timeStamp obj), val, entryId, Kafka.mkKafkaTable @BR.BecknRequestT obj (BR.timeStamp obj)) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put KafkaTable to Kafka, not DBCreateObject
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBooking" :: Text) [(obj, val, entryId, TicketBookingObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingObject obj), val) <- cmds]
@@ -171,6 +171,6 @@ streamRiderDrainerCreates producer dbObject streamKey model = do
 riderDrainerTopicName :: TopicName
 riderDrainerTopicName = TopicName "rider-drainer"
 
-mkBecknRequestTopicName :: BR.BecknRequest -> TopicName
-mkBecknRequestTopicName becknRequest = do
-  TopicName $ "rider-beckn-request" <> "_" <> show (BR.countTopicNumber becknRequest.timeStamp)
+mkKafkaTableTopicName :: UTCTime -> TopicName
+mkKafkaTableTopicName timestamp = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)

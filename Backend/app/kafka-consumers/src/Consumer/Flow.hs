@@ -16,9 +16,9 @@
 module Consumer.Flow where
 
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
-import qualified Consumer.BecknRequest.Processor as BRProcessor
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
+import qualified Consumer.KafkaTable.Processor as KTProcessor
 import Control.Error.Util hiding (err)
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
@@ -30,7 +30,7 @@ import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
-import qualified Kernel.Storage.Beam.BecknRequest as BR
+import Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.Common (generateGUID, getCurrentTime, withLogTag)
@@ -44,8 +44,7 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     AVAILABILITY_TIME -> availabilityConsumer flowRt appEnv kafkaConsumer
     BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
     PERSON_STATS -> updateCustomerStatsConsumer flowRt appEnv kafkaConsumer
-    RIDER_BECKN_REQUEST -> becknRequestConsumer BRProcessor.RIDER flowRt appEnv kafkaConsumer
-    DRIVER_BECKN_REQUEST -> becknRequestConsumer BRProcessor.DRIVER flowRt appEnv kafkaConsumer
+    KAFKA_TABLE -> kafkaTableConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
@@ -115,17 +114,17 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
         start = SF.Partial ([], Nothing)
         extract = id
 
-becknRequestConsumer :: BRProcessor.BecknRequestType -> L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-becknRequestConsumer becknRequestType flowRt appEnv kafkaConsumer = do
+kafkaTableConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+kafkaTableConsumer flowRt appEnv kafkaConsumer = do
   flip finally (Consumer.closeConsumer kafkaConsumer) $ do
-    readBecknRequestMessages kafkaConsumer
+    readKafkaTableMessages kafkaConsumer
       >>= riderDrainerWithFlow
       >>= commitAllTopics
   where
     riderDrainerWithFlow messages = do
       runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (BRProcessor.becknRequestProcessor becknRequestType messages)
+          >>= flip withLogTag (KTProcessor.kafkaTableProcessor messages)
       pure messages
 
     commitAllTopics messages = case messages of
@@ -134,18 +133,18 @@ becknRequestConsumer becknRequestType flowRt appEnv kafkaConsumer = do
         mbErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kafkaConsumer
         whenJust mbErr $ \err -> print ("Error while commit: message: " <> show err :: Text)
 
-readBecknRequestMessages ::
+readKafkaTableMessages ::
   Consumer.KafkaConsumer ->
-  IO [BR.BecknRequestKafka]
-readBecknRequestMessages kafkaConsumer = do
+  IO [Kafka.KafkaTable]
+readKafkaTableMessages kafkaConsumer = do
   pollStartTime <- getCurrentTime
-  let currentTopic = BR.countTopicNumber pollStartTime
+  let currentTopic = Kafka.countTopicNumber pollStartTime
   eitherRecords <- pollMessageLoop (currentTopic, 0, [])
   let records = mapMaybe hush eitherRecords
   mbDecodedRecords <- forM records $ \record -> do
     case Consumer.crValue record of
       Just value -> do
-        case A.eitherDecode @BR.BecknRequestKafka . LBS.fromStrict $ value of
+        case A.eitherDecode @Kafka.KafkaTable . LBS.fromStrict $ value of
           Right v -> pure (Just v)
           Left err -> throwIO (InternalError $ "Could not decode record: " <> show value <> "; message: " <> show err) -- only when beckn_request tabular type was changed
       Nothing -> pure Nothing
@@ -160,7 +159,7 @@ readBecknRequestMessages kafkaConsumer = do
 
     predicate currentTopic emptyMessagesCount message = do
       now <- getCurrentTime
-      if BR.countTopicNumber now /= currentTopic
+      if Kafka.countTopicNumber now /= currentTopic
         then do
           print ("Close consumer: current partition changed, not all messages was read!" :: Text)
           pure (False, emptyMessagesCount)
@@ -201,5 +200,4 @@ getConfigNameFromConsumerType = \case
   AVAILABILITY_TIME -> pure "driver-availability-calculator"
   BROADCAST_MESSAGE -> pure "broadcast-message"
   PERSON_STATS -> pure "person-stats"
-  RIDER_BECKN_REQUEST -> pure "rider-beckn-request-consumer"
-  DRIVER_BECKN_REQUEST -> pure "driver-beckn-request-consumer"
+  KAFKA_TABLE -> pure "kafka-table-consumer"

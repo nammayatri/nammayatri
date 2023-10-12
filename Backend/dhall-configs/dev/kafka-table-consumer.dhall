@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/rider-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "atlas_app"
       , connectionPoolCount = +25
       }
 
@@ -43,14 +43,14 @@ let hedisClusterCfg =
       }
 
 let consumerProperties =
-      { groupId = "driver-beckn-request-compute"
+      { groupId = "kafka-table-compute"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "driver-beckn-request" ]
+      { topicNames = [ "kafka-table" ]
       , offsetReset = common.kafkaOffsetResetConfig.Earliest
       , consumerProperties
       }
@@ -83,7 +83,7 @@ in  { hedisCfg
     , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers-driver-beckn-request.log"
+        //  { logFilePath = "/tmp/kafka-consumers-kafka-table.log"
             , logRawSql = False
             }
     , enableRedisLatencyLogging = True

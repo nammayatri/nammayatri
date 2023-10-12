@@ -18,6 +18,7 @@ import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
 import qualified "dynamic-offer-driver-app" Storage.Beam.BecknRequest as BR
 import System.Timeout (timeout)
 import Types.DBSync
@@ -101,7 +102,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Feedback" :: Text) [(obj, val, entryId, FeedbackObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackBadge" :: Text) [(obj, val, entryId, FeedbackBadgeObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
-    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkBecknRequestTopicName obj, val, entryId, BR.mkBecknRequestKafka obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put BecknRequestKafka to Kafka, not DBCreateObject
+    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkKafkaTableTopicName (BR.timeStamp obj), val, entryId, Kafka.mkKafkaTable @BR.BecknRequestT obj (BR.timeStamp obj)) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put KafkaTable to Kafka, not DBCreateObject
     |::| runCreateInKafkaAndDb dbConf streamKey ("RegistryMapFallback" :: Text) [(obj, val, entryId, RegistryMapFallbackObject obj) | (CreateDBCommand entryId _ _ _ _ (RegistryMapFallbackObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverGoHomeRequest" :: Text) [(obj, val, entryId, DriverGoHomeRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverGoHomeRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverHomeLocation" :: Text) [(obj, val, entryId, DriverHomeLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverHomeLocationObject obj), val) <- cmds]
