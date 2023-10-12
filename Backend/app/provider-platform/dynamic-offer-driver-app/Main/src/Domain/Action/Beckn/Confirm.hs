@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Confirm where
 
@@ -192,7 +193,7 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = Just uBooking.toLocation,
+                toLocation = Nothing,
                 driverId = Just driver.id.getId,
                 driverName = Just driver.firstName,
                 vehicleVariant = req.vehicleVariant
@@ -227,7 +228,7 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = Just uBooking.toLocation,
+                toLocation = Nothing,
                 driverId = Nothing,
                 driverName = Nothing,
                 vehicleVariant = req.vehicleVariant
@@ -244,12 +245,31 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId _ otp = do
+    buildRide driverId booking _ghrId _ otp = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
+      let (rideType,rideDetails) = case booking.bookingDetails of
+            BookingDetailsOnDemand {..} -> 
+              (DRide.ON_DEMAND,DRide.RideDetailsOnDemand 
+                {
+                  toLocation = toLocation
+                , driverGoHomeRequestId=Nothing
+                , driverDeviatedFromRoute=Nothing
+                , numberOfSnapToRoadCalls=Nothing
+                , numberOfDeviation=Nothing
+                , uiDistanceCalculationWithAccuracy=Nothing
+                , uiDistanceCalculationWithoutAccuracy=Nothing
+                })
+            BookingDetailsRental {} -> 
+              (DRide.RENTAL,DRide.RideDetailsRental
+                  {
+                rentalToLocation= Nothing,
+                odoMeterStartReading=Nothing,
+                odoMeterEndReading=Nothing
+            })
       return
         DRide.Ride
           { id = guid,
@@ -270,17 +290,19 @@ handler transporter req quote = do
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fromLocation = booking.fromLocation, --check if correct
-            toLocation = booking.toLocation, --check if correct
+            -- toLocation = booking.toLocation, --check if correct
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            driverDeviatedFromRoute = Just False,
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            rideDetails = rideDetails,
+            rideType = rideType
+            -- driverDeviatedFromRoute = Just False,
+            -- numberOfSnapToRoadCalls = Nothing,
+            -- numberOfDeviation = Nothing,
+            -- uiDistanceCalculationWithAccuracy = Nothing,
+            -- uiDistanceCalculationWithoutAccuracy = Nothing,
+            -- driverGoHomeRequestId = ghrId
           }
 
     buildTrackingUrl rideId = do
@@ -444,3 +466,4 @@ validateRequest subscriber transporterId req now = do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
       return (transporter, Right quoteSpecialZone)
+    DRB.RentalBooking -> undefined

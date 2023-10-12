@@ -69,6 +69,7 @@ buildInitReq subscriber req = do
     buildInitTypeReq = \case
       Init.RIDE_OTP -> DInit.InitSpecialZoneReq
       Init.RIDE -> DInit.InitNormalReq
+      Init.RENTAL -> DInit.InitRentalReq
     castVehicleVariant = \case
       Init.SEDAN -> VehVar.SEDAN
       Init.SUV -> VehVar.SUV

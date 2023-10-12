@@ -146,7 +146,7 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
 endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy}
+  let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy,rentalEndRideOTP=Nothing,odoMeterEndReading=Nothing}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
