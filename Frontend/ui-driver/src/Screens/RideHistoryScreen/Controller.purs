@@ -154,6 +154,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Contest" -> do
+      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+      exit $ GoToReferralScreen
     "Join" -> do
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
@@ -273,8 +276,8 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
     destination : (decodeAddress (ride.toLocation) false),
-    vehicleType : ride.vehicleVariant
-
+    vehicleType : ride.vehicleVariant,
+    riderName : fromMaybe "" ride.riderName
 }) list )
 
 
@@ -303,5 +306,6 @@ dummyCard =  {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
   }

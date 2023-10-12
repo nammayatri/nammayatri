@@ -90,6 +90,7 @@ rideHistoryItem = {
     updatedAt : "",
     source : "",
     destination : "",
-    vehicleType : ""
+    vehicleType : "",
+    riderName : ""
 }
 
