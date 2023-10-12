@@ -81,6 +81,7 @@ import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
