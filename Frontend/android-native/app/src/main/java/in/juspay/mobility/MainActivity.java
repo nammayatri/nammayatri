@@ -51,6 +51,10 @@ import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
+import com.clevertap.android.sdk.pushnotification.PushConstants;
+import com.xiaomi.mipush.sdk.MiPushClient;
+import com.xiaomi.channel.commonutils.android.Region;
+import com.clevertap.android.sdk.Constants;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -275,6 +279,10 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
+        String clevertapXiaomiAppKey = getApplicationContext().getResources().getString(R.string.xiaomi_app_key);
+        String clevertapXiaomiAppId = getApplicationContext().getResources().getString(R.string.xiaomi_app_id);
+        CleverTapAPI.changeXiaomiCredentials(clevertapXiaomiAppKey,clevertapXiaomiAppId);
+        CleverTapAPI.enableXiaomiPushOn(PushConstants.XIAOMI_MIUI_DEVICES);
         activity = this;
         try {
             setContentView(R.layout.activity_main);
@@ -374,6 +382,16 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
+        Region xiaomiRegion = Region.India;
+        MiPushClient.setRegion(xiaomiRegion);
+        MiPushClient.registerPush(this, clevertapXiaomiAppId, clevertapXiaomiAppKey);
+        String xiaomiToken = MiPushClient.getRegId(this);
+
+        if(cleverTap != null){
+            cleverTap.pushXiaomiRegistrationId(xiaomiToken, String.valueOf(xiaomiRegion), true);
+        }else{
+            Log.e(LOG_TAG,"CleverTap is NULL");
+        }
 
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
