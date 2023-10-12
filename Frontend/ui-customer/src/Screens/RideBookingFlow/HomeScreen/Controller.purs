@@ -73,7 +73,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, updateInputString, withinTimeRange, toString, secondsToHms)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, updateInputString, withinTimeRange, toString, secondsToHms, recentDistance)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -918,7 +918,7 @@ eval HandleCallback state = do
 
 eval (UpdateSource lat lng name) state = do
   _ <- pure $ printLog "Name::" name
-  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = lat, sourceLong = lng } } true
+  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = lat, sourceLong = lng, searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} } true
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
 
@@ -932,7 +932,7 @@ eval LiveDashboardAction state = do
   else continue state {props {showLiveDashboard = true}}
 
 
-eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}}
+eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props{searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} }
 
 eval (MAPREADY key latitude longitude) state =
   case key of
@@ -944,7 +944,7 @@ eval (MAPREADY key latitude longitude) state =
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation }, data {source=srcValue} }
+  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2}}, data {source=srcValue} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -1072,7 +1072,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source=(getString CURRENT_LOCATION)}}
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false}}, data{source=(getString CURRENT_LOCATION)}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1371,16 +1371,17 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
     continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
+  let srcValue = if (state.data.source == "" || state.data.source == "Current Location") then true else false
   let
     newState = state {props{sourceSelectedOnMap = if (state.props.locateOnMap) then true else state.props.sourceSelectedOnMap}}
-  if (input /= state.data.source) then do
-    continueWithCmd newState { props { isRideServiceable = true } }
+  if (input /= state.data.source) then do 
+    continueWithCmd newState { props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input) > 2 then state.props.searchLocationModelProps.isAutoComplete else false}}} 
       [ do
           _ <- pure $ updateInputString input
           pure NoAction
       ]
   else
-    continueWithCmd newState
+    continueWithCmd newState{props {searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = false}}}
       [ do
           _ <- pure $ updateInputString input
           pure NoAction
@@ -1388,13 +1389,13 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
   if (input /= state.data.destination) then do
-    continueWithCmd state { props { isRideServiceable = true } }
+    continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
       [ do
           _ <- pure $ updateInputString input
           pure NoAction
       ]
   else
-    continueWithCmd state
+    continueWithCmd state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
       [ do
           _ <- pure $ updateInputString input
           pure NoAction
@@ -1403,7 +1404,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false }}
+    continueWithCmd state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
             _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
@@ -1412,10 +1413,10 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
   else
-    continueWithCmd state { props { isSource = Just true}}
+    continueWithCmd state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} }
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
-            _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source)
+            _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source) 
             pure $ NoAction
           else
             pure $ NoAction
@@ -1430,7 +1431,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  continue state { data { source = ""}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  continue state { data { source = "", recentSearchs {predictionArray = predicArray}, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1439,7 +1441,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   else
     pure unit
-  continue state { data { destination = "" }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true } }
+  continue state { data { destination = ""}, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1452,7 +1454,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
-  continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
+  pure $ setText (getNewIDWithTag "SourceEditText") (getString CURRENT_LOCATION)
+  continue state{ data{source = (getString CURRENT_LOCATION)} ,props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap, searchLocationModelProps{isAutoComplete = false}}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1466,13 +1469,13 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ unsafePerformEffect $ runEffectFn5 locateOnMap false lat lon state.data.polygonCoordinates state.data.nearByPickUpPoints
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
-  let newState = state{data{source = srcValue}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
+  let newState = state{data{source = srcValue}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false, searchLocationModelProps{isAutoComplete = false}}}
   (updateAndExit newState) $ UpdatedState newState false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do
-    let newState = state{data{source = name,sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing}}
+    let newState = state{data{source = (getString CURRENT_LOCATION),sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
     updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
     else do
       let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}
@@ -1915,7 +1918,7 @@ validateSearchInput state searchString =
   else
     continue state
   where
-  callSearchLocationAPI = exit $ SearchPlace searchString state
+  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true}}} $ SearchPlace searchString state
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
@@ -2066,6 +2069,7 @@ dummyListItem = {
   , locationItemType : Nothing
   , distance : Nothing
   , showDistance : Just false
+  , actualDistance : 0
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

@@ -849,7 +849,7 @@ recentSearchesView state push =
                   , orientation VERTICAL
                   , visibility if (state.props.isBanner && index >0) then GONE else VISIBLE
                   ]
-                  [ LocationListItem.view (push <<< PredictionClickedAction) item
+                  [ LocationListItem.view (push <<< PredictionClickedAction) item false
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT

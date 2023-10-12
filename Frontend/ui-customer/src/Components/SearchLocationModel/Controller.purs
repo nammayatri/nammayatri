@@ -58,6 +58,11 @@ type SearchLocationModelState = {
   , isRideServiceable :: Boolean
   , homeScreenConfig :: AppConfig
   , logField :: Object Foreign
+  , crossBtnSrcVisibility :: Boolean
+  , crossBtnDestVisibility :: Boolean
+  , isAutoComplete :: Boolean
+  , showLoader :: Boolean
+  , prevLocation :: String
 }
 
 dummy_data :: Array LocationListItemState
@@ -85,6 +90,7 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
   , { prefixImageUrl : "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"
     , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
@@ -109,6 +115,7 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
   , { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
     , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
@@ -133,5 +140,6 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
 ]

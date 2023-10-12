@@ -23,7 +23,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName)
-import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||))
+import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||), (&&), (>) , (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, accessibilityHint, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback, accessibility)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
@@ -31,8 +31,8 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Data.Array(any)
 import Common.Types.App (LazyCheck(..))
 
-view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
-view push config =
+view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> Boolean -> PrestoDOM (Effect Unit) w
+view push config flag =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -64,9 +64,10 @@ view push config =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text $ fromMaybe "" config.distance
+                , color if (flag && config.actualDistance >= 500) then Color.red else Color.black700
                 , textSize FontSize.a_11
                 , gravity CENTER
-                , visibility $ if config.showDistance == Just true then VISIBLE else GONE
+                , visibility $ if config.actualDistance == 0 then GONE else VISIBLE
                 ]
               ]
           , linearLayout

@@ -47,6 +47,7 @@ dummyLocationListState = { prefixImageUrl : ""
   , locationItemType : Nothing
   , distance : Nothing
   , showDistance : Just false
+  , actualDistance : 0
   }
 
 dummyAddress :: Address

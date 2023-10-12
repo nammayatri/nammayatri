@@ -418,3 +418,6 @@ paleLavender = "#F4ECFF"
 purple :: Color 
 purple = "#9747FF"
 
+darkGreyishBlue :: Color
+darkGreyishBlue = "#313440"
+

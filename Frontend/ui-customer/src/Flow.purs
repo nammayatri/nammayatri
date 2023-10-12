@@ -48,7 +48,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent, setFCMTokenWithTimeOut, getLocationPermissionStatus)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -846,16 +846,18 @@ homeScreenFlow = do
         (GlobalState globalState) <- getState
         let updateScreenState = globalState.homeScreen
         if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}})
+          let recentList = recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}, data {recentSearchs {predictionArray = recentList}}})
           homeScreenFlow
         else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
           if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
             _ <- pure $ toast (getString LOCATION_UNSERVICEABLE)
             pure unit
             else pure unit
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}})
+          let recentList = (recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}, data {recentSearchs {predictionArray = recentList}}})
           homeScreenFlow
-         else modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{ isRideServiceable= true, isSrcServiceable = true, isDestServiceable = true}})
+         else modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{ isRideServiceable= true, isSrcServiceable = true, isDestServiceable = true}, data {recentSearchs {predictionArray = (recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong)}}})
         rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
@@ -873,7 +875,7 @@ homeScreenFlow = do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ event
       let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
       let predictionList = getLocationList sortedByDistanceList
-      let recentLists = state.data.recentSearchs.predictionArray
+      let recentLists =  recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong
       let filteredRecentsList = filterRecentSearches recentLists predictionList
       let filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList =
@@ -893,7 +895,7 @@ homeScreenFlow = do
                         lon = item.lon,
                         locationItemType = item.locationItemType,
                         postfixImageUrl = "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }
-            ) ((filteredRecentsList) <> filteredPredictionList) }})
+            ) ((filteredRecentsList) <> filteredPredictionList) }, props{searchLocationModelProps{isAutoComplete = true,  showLoader = false}}})
       homeScreenFlow
     GET_QUOTES state -> do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
@@ -1284,11 +1286,12 @@ homeScreenFlow = do
               savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")) (AddNewAddress.getSavedLocations listResp.list))
               updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
                                                                         else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }) (recents))
+              predicArray = (recentDistance updatedList currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong)
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
                                                                     { data
                                                                       { savedLocations = (AddNewAddress.getSavedLocations listResp.list)
-                                                                      , recentSearchs {predictionArray = updatedList}
-                                                                      , locationList = updatedList
+                                                                      , recentSearchs {predictionArray = predicArray}
+                                                                      , locationList = predicArray
                                                                       }
                                                                     })
           homeScreenFlow

@@ -857,6 +857,11 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , savedlocationList: state.data.savedLocations
                                     , homeScreenConfig : state.data.config
                                     , logField : state.data.logField
+                                    , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
+                                    , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
+                                    , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
+                                    , showLoader: state.props.searchLocationModelProps.showLoader
+                                    , prevLocation: state.data.searchLocationModelData.prevLocation
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

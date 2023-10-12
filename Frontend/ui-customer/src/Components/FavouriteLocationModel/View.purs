@@ -210,4 +210,5 @@ getFavouritesItem item = {
   , locationItemType : Just SAVED_LOCATION
   , distance : item.distance
   , showDistance: Just false
+  , actualDistance : 0
 }

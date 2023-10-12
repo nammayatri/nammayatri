@@ -63,7 +63,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -78,6 +78,8 @@ import Types.App (GlobalState)
 import Unsafe.Coerce (unsafeCoerce)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Int (round, toNumber)
+import Data.Boolean (otherwise)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -369,6 +371,15 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 sortPredctionByDistance :: Array Prediction -> Array Prediction
 sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+
+
+getDistanceString :: Int -> Int -> String
+getDistanceString distanceInMeters decimalPoint
+  | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
+  | otherwise = show distanceInMeters <> " m"
+
+recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
+recentDistance arr currLat currLon = map (\item -> item{actualDistance = round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
 
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of

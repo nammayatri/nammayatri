@@ -50,7 +50,7 @@ view push state =
         , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius 16.0
+        , cornerRadius 8.0
         ][ imageView
             [ width $ V 15
             , height $ V 17
@@ -78,7 +78,7 @@ view push state =
                     WORK_TAG -> getString WORK
                     HOME_TAG -> getString HOME
                     _        -> getString ALL_FAVOURITES
-            ] <> FontStyle.tags LanguageStyle
+            ] <> FontStyle.body2 LanguageStyle
             ]) [HOME_TAG, WORK_TAG, OTHER_TAG] )
     ]
 
