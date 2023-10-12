@@ -21,6 +21,7 @@ where
 
 import Dashboard.Common as Reexport
 import Dashboard.ProviderPlatform.Driver (DriverFeeStatus)
+import Data.Aeson
 import Data.Text
 import GHC.Int
 import Kernel.Prelude
