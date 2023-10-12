@@ -2412,6 +2412,7 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
       name = getDriverInfoResp.firstName <> middleName <> lastName
   void $ pure $ setCleverTapUserData "Name" name
   void $ pure $ setCleverTapUserProp "Enabled" if getDriverInfoResp.enabled then "TRUE" else "FALSE"
+  void $ pure $ setCleverTapUserProp "Driver Subscribed" if getDriverInfoResp.subscribed then "TRUE" else "FALSE"
   void $ pure $ setCleverTapUserData "Identity" $ getValueToLocalStore DRIVER_ID
   void $ pure $ setCleverTapUserProp "Plan Subscription Status" if isNothing getDriverInfoResp.autoPayStatus then "FALSE" else "TRUE"
   case getDriverInfoResp.mobileNumber of
