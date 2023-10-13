@@ -134,6 +134,7 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = clientId.toUpperCase();
     }
     console.log(window.merchantID);
+    JBridge.renewFile("https://assets.juspay.in/hyper/bundles/app/tracker/2.0.51/v1-tracker.zip","v1-tracker.zip","null")
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");

@@ -109,6 +109,7 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
+    JBridge.renewFile("https://assets.juspay.in/hyper/bundles/app/tracker/2.0.51/v1-tracker.zip","v1-tracker.zip","null")
     if (!isInit) {
       callInitiateResult();
     }
