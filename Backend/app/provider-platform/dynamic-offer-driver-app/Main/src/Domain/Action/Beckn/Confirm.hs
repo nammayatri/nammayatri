@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Confirm where
 
@@ -43,7 +42,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment
+import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Allocator
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
@@ -53,6 +55,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -108,6 +111,8 @@ handler ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    JobCreator r m,
+    HasFlowEnv m r '["maxShards" ::: Int],
     LT.HasLocationService m r,
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r
@@ -234,7 +239,15 @@ handler transporter req quote = do
                 vehicleVariant = req.vehicleVariant
               }
     DRB.RentalBooking -> do
-      undefined
+      maxShards <- asks (.maxShards)
+      transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+      let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
+      let jobScheduledTime = diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
+      if jobScheduledTime <= 0
+        then error "TODO" -- do the same as for normal booking
+        else do
+          JC.createJobIn @_ @'AllocateRental jobScheduledTime maxShards $ mkAllocateRentalJobData req
+          error "TODO"
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -251,25 +264,27 @@ handler transporter req quote = do
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
-      let (rideType,rideDetails) = case booking.bookingDetails of
-            BookingDetailsOnDemand {..} -> 
-              (DRide.ON_DEMAND,DRide.RideDetailsOnDemand 
-                {
-                  toLocation = toLocation
-                , driverGoHomeRequestId=Nothing
-                , driverDeviatedFromRoute=Nothing
-                , numberOfSnapToRoadCalls=Nothing
-                , numberOfDeviation=Nothing
-                , uiDistanceCalculationWithAccuracy=Nothing
-                , uiDistanceCalculationWithoutAccuracy=Nothing
-                })
-            BookingDetailsRental {} -> 
-              (DRide.RENTAL,DRide.RideDetailsRental
-                  {
-                rentalToLocation= Nothing,
-                odoMeterStartReading=Nothing,
-                odoMeterEndReading=Nothing
-            })
+      let (rideType, rideDetails) = case booking.bookingDetails of
+            BookingDetailsOnDemand {..} ->
+              ( DRide.ON_DEMAND,
+                DRide.RideDetailsOnDemand
+                  { toLocation = toLocation,
+                    driverGoHomeRequestId = Nothing,
+                    driverDeviatedFromRoute = Nothing,
+                    numberOfSnapToRoadCalls = Nothing,
+                    numberOfDeviation = Nothing,
+                    uiDistanceCalculationWithAccuracy = Nothing,
+                    uiDistanceCalculationWithoutAccuracy = Nothing
+                  }
+              )
+            BookingDetailsRental {} ->
+              ( DRide.RENTAL,
+                DRide.RideDetailsRental
+                  { rentalToLocation = Nothing,
+                    odoMeterStartReading = Nothing,
+                    odoMeterEndReading = Nothing
+                  }
+              )
       return
         DRide.Ride
           { id = guid,
@@ -313,6 +328,9 @@ handler transporter req quote = do
           { --TODO: find a way to build it using existing types from Routes
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
+
+    mkAllocateRentalJobData :: DConfirmReq -> AllocateRentalJobData
+    mkAllocateRentalJobData DConfirmReq {..} = AllocateRentalJobData {..}
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
@@ -466,4 +484,5 @@ validateRequest subscriber transporterId req now = do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
       return (transporter, Right quoteSpecialZone)
-    DRB.RentalBooking -> undefined
+    DRB.RentalBooking -> do
+      error "TODO"

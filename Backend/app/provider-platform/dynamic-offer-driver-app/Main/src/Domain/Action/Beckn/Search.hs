@@ -12,8 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-unused-record-wildcards #-}
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module Domain.Action.Beckn.Search
   ( DSearchReq (..),
@@ -38,11 +36,13 @@ import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.QuoteRental as DQuoteRental
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
@@ -64,24 +64,22 @@ import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
+import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.QuoteRental as QQuoteRental
+import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
-import qualified Storage.Queries.FareProduct as QFareProduct
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-import qualified Storage.CachedQueries.FarePolicy as QFP
--- import qualified Storage.CachedQueries.FareProduct as QFareProduct
-import qualified Domain.Types.QuoteRental as DQuoteRental
+
 -- import qualified Control.Monad as NE
 
 data DSearchReqOnDemand' = DSearchReqOnDemand'
@@ -132,15 +130,15 @@ data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
   }
 
 data RentalQuoteInfo = RentalQuoteInfo
- { quoteId :: Id DQuoteRental.QuoteRental,
-   vehicleVariant :: DVeh.Variant,
-   baseFare :: Money,
-   baseDistance :: Kilometers,
-   baseDuration :: Hours,
-   fromLocation :: LatLong,
-   rentalTag :: Maybe Text,
-   startTime :: UTCTime
- }
+  { quoteId :: Id DQuoteRental.QuoteRental,
+    vehicleVariant :: DVeh.Variant,
+    baseFare :: Money,
+    baseDistance :: Kilometers,
+    baseDuration :: Hours,
+    fromLocation :: LatLong,
+    rentalTag :: Maybe Text,
+    startTime :: UTCTime
+  }
 
 data DSearchRes = DSearchRes
   { provider :: DM.Merchant,
@@ -242,7 +240,7 @@ handler merchant sReq' =
       sessiontoken <- generateGUIDText
       fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
       fareProducts <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
-      rentalfarePolicies <-
+      rentalFarePolicies <-
         mapM
           ( \fareProduct -> do
               farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
@@ -250,38 +248,39 @@ handler merchant sReq' =
           )
           fareProducts
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
-      _<- QSR.create rentalSearchReq
+      _ <- QSR.create rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
-      let listOfVehicleVariants = listVehicleVariantHelper rentalfarePolicies
+      let listOfVehicleVariants = listVehicleVariantHelper rentalFarePolicies
       (quotes, mbEstimateInfos) <- do
         now <- getCurrentTime
         -- let listOfBuildRentalQuote = []
         listOfRentalQuotes <- do
-            for listOfVehicleVariants $ \farePolicy -> do
-              case farePolicy.farePolicyDetails of
-                FarePolicyD.RentalSlabsDetails slabList -> do
-                  for (toList slabList.rentalSlabs) $
-                    (\slab -> do
-                        fareParams <-
-                          calculateFareParameters
-                            CalculateFareParametersParams
-                              { farePolicy = farePolicy,
-                                distance = kilometersToMeters slab.baseDistance,
-                                rideTime = sReq.pickupTime,
-                                endRideTime = Nothing,
-                                waitingTime = Nothing,
-                                driverSelectedFare = Nothing,
-                                customerExtraFee = Nothing,
-                                nightShiftCharge = Nothing
-                              }
-                        buildRentalQuote
-                          rentalSearchReq
-                          fareParams
-                          merchant.id
-                          (kilometersToMeters slab.baseDistance)
-                          farePolicy.vehicleVariant
-                          slab.baseDuration)
-                _ -> throwError $ InvalidRequest "This is not rental quote"
+          for listOfVehicleVariants $ \farePolicy -> do
+            case farePolicy.farePolicyDetails of
+              FarePolicyD.RentalSlabsDetails slabList -> do
+                for (toList slabList.rentalSlabs) $
+                  ( \slab -> do
+                      fareParams <-
+                        calculateFareParameters
+                          CalculateFareParametersParams
+                            { farePolicy = farePolicy,
+                              distance = kilometersToMeters slab.baseDistance,
+                              rideTime = sReq.pickupTime,
+                              endRideTime = Nothing,
+                              waitingTime = Nothing,
+                              driverSelectedFare = Nothing,
+                              customerExtraFee = Nothing,
+                              nightShiftCharge = Nothing
+                            }
+                      buildRentalQuote
+                        rentalSearchReq
+                        fareParams
+                        merchant.id
+                        (kilometersToMeters slab.baseDistance)
+                        farePolicy.vehicleVariant
+                        slab.baseDuration
+                  )
+              _ -> throwError $ InvalidRequest "This is not rental quote"
         let z = concat listOfRentalQuotes
         for_ z QQuoteRental.create
         return (Just (mkRentalQuoteInfo fromLocation now <$> z), Nothing)
@@ -411,14 +410,15 @@ buildSearchRequest ::
 buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
-  let searchDetails = DSR.SearchRequestDetailsOnDemand {
-      fromLocation = fromLocation,
-      toLocation = toLocation,
-      estimatedDistance = estimatedDistance,
-      estimatedDuration = estimatedDuration,
-      specialLocationTag = specialLocationTag,
-      autoAssignEnabled = Nothing
-      }
+  let searchDetails =
+        DSR.SearchRequestDetailsOnDemand
+          { fromLocation = fromLocation,
+            toLocation = toLocation,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
+            specialLocationTag = specialLocationTag,
+            autoAssignEnabled = Nothing
+          }
   pure
     DSR.SearchRequest
       { id = Id uuid,
@@ -441,9 +441,10 @@ buildRentalSearchRequest ::
 buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
   uuid <- generateGUID
   now <- getCurrentTime
-  let searchDetails = DSR.SearchRequestDetailsRental {
-      rentalFromLocation = fromLocation
-      }
+  let searchDetails =
+        DSR.SearchRequestDetailsRental
+          { rentalFromLocation = fromLocation
+          }
   pure
     DSR.SearchRequest
       { id = Id uuid,
@@ -452,7 +453,7 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         searchRequestDetails = searchDetails,
-        tag = DSR.RENTAL ,
+        tag = DSR.RENTAL,
         ..
       }
 
@@ -541,7 +542,7 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
         createdAt = now,
         updatedAt = now,
         baseDistance = metersToKilometers distance,
-        baseDuration = Hours $ div (getSeconds duration ) 3600,
+        baseDuration = Hours $ div (getSeconds duration) 3600,
         baseFare = estimatedFare,
         ..
       }
@@ -559,8 +560,7 @@ mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> DQuoteRental.QuoteRental -> Ren
 mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
   RentalQuoteInfo
-    {
-      quoteId = id,
+    { quoteId = id,
       rentalTag = Nothing,
       ..
     }

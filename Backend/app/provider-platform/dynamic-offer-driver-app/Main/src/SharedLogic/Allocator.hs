@@ -17,11 +17,14 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import Domain.Types.Booking as DB
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -38,6 +41,7 @@ data AllocatorJobType
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
+  | AllocateRental
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -54,6 +58,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
+  restoreAnyJobInfo SAllocateRental jobData = AnyJobInfo <$> restoreJobInfo SAllocateRental jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -159,3 +164,20 @@ data SendOverlayJobData = SendOverlayJobData
 instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
+
+-- TODO the same as DConfirmReq
+data AllocateRentalJobData = AllocateRentalJobData
+  { bookingId :: Id DB.Booking,
+    vehicleVariant :: VehVar.Variant,
+    driverId :: Maybe Text,
+    customerMobileCountryCode :: Text,
+    customerPhoneNumber :: Text,
+    fromAddress :: DL.LocationAddress,
+    toAddress :: Maybe DL.LocationAddress,
+    mbRiderName :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'AllocateRental
+
+type instance JobContent 'AllocateRental = AllocateRentalJobData
