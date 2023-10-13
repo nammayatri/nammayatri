@@ -966,6 +966,12 @@ getPaymentHistory from to status = do
    where
         unwrapResponse (x) = x
 
+getInvoice:: String -> String -> Flow GlobalState (Either ErrorResponse GetInvoiceResp)
+getInvoice from to = do
+      headers <- getHeaders "" true
+      withAPIResult (EP.invoice from to) unwrapResponse (callAPI headers (GetInvoiceReq from to))
+   where
+        unwrapResponse (x) = x
 
 ---------------------------------------- triggerAadhaarOtp ---------------------------------------------
 triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)

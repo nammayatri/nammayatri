@@ -249,6 +249,15 @@ instance encodeAPIPaymentStatus  :: Encode APIPaymentStatus where encode = defau
 instance eqAPIPaymentStatus :: Eq APIPaymentStatus where eq = genericEq
 instance standardEncodeAPIPaymentStatus :: StandardEncode APIPaymentStatus where standardEncode _ = standardEncode {}
 
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE 
+
+derive instance genericDriverFeeStatus :: Generic DriverFeeStatus _
+instance showDriverFeeStatus :: Show DriverFeeStatus where show = genericShow
+instance decodeDriverFeeStatus :: Decode DriverFeeStatus where decode = defaultEnumDecode
+instance encodeDriverFeeStatus  :: Encode DriverFeeStatus where encode = defaultEnumEncode
+instance eqDriverFeeStatus :: Eq DriverFeeStatus where eq = genericEq
+instance standardEncodeDriverFeeStatus :: StandardEncode DriverFeeStatus where standardEncode _ = standardEncode {}
+
 type DateObj = {
   date :: Int
 , month :: String

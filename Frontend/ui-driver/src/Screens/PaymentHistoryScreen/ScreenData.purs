@@ -17,8 +17,12 @@ module Screens.PaymentHistoryScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig, InvoiceListItem)
 import Services.API (AutopayPaymentStage(..), FeeType(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Array((!!))
+import Prelude (show, ($))
+import Data.String (Pattern(..), split)
 
 initData :: PaymentHistoryScreenState
 initData = {
@@ -45,7 +49,16 @@ initData = {
         autoPaySetup : false,
         selectedDue : "",
         offset : 0,
-        enableLoadMore : true
+        enableLoadMore : true,
+        weeks : [],
+        invoicePopupVisible : false,
+        startDate : Nothing,
+        endDate : Nothing,
+        selectedTimeSpan : dummyDateItem,
+        showError : false,
+        errorMessage : "",
+        downloadInvoice : false,
+        invoiceData : dummyInvoiceData
     }
 }
 
@@ -83,3 +96,35 @@ dummyPromoConfig = {
                         imageURL : "",
                         addedFromUI : false
                     }
+
+dummyInvoiceData :: Array InvoiceListItem
+dummyInvoiceData = [
+  { createdAt : "2019-05-26T19:50:34.4400000Z"
+  , totalRides : 23
+  , cgst : 2.25
+  , sgst : 2.24
+  , platformFee : 20.50
+  , totalFee : 25.00
+  , driverFeeId : "adfj-3458-akdf-859n"
+  , status : show Pending
+  , planTitle : ""
+  , offerTitle : ""
+  , debitedOn : "2020-05-26T19:50:34.4400000Z"
+  , billNumber : "NY/8948933"
+  },
+  { createdAt : "2019-05-26T19:50:34.4400000Z"
+  , totalRides : 23
+  , cgst : 2.25
+  , sgst : 2.24
+  , platformFee : 20.50
+  , totalFee : 25.00
+  , driverFeeId : "adfk-adms-kadk-akdf"
+  , status : show Success
+  , planTitle : ""
+  , offerTitle : ""
+  , debitedOn : "2020-05-26T19:50:34.4400000Z"
+  , billNumber : "NY/1438918"
+  }
+]
+
+dummyDateItem = {date : 0, isInRange : false, isStart : false, isEnd : false, utcDate : "", shortMonth : "", year : 0, intMonth : 0}

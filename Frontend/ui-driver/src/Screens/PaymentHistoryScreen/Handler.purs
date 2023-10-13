@@ -44,3 +44,6 @@ paymentHistory = do
     LoadMoreItems updatedState -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ LOAD_MORE_ITEMS updatedState)
+    DownloadingInvoice updatedState -> do
+      modifyScreenState $ PaymentHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DOWNLOADING_INVOICE updatedState)

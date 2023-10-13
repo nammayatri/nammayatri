@@ -110,6 +110,7 @@ export const getWeeksInMonth = function (year) {
 
 export const getCurrentDay = function (dummy) {
   var date = new Date();
-  return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
+  var startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return { utcDate: startDate.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
            isInRange : false, isStart: false , isEnd: false }
 }

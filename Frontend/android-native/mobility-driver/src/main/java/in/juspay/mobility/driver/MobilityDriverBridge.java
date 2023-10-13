@@ -7,9 +7,13 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.WINDOW_SERVICE;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -17,6 +21,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.pdf.PdfDocument;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -28,6 +35,7 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -37,11 +45,14 @@ import android.webkit.JavascriptInterface;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -89,11 +100,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.AudioRecorder;
 import in.juspay.mobility.app.CheckPermissionOverlay;
@@ -129,6 +142,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private String storeDriverCallBack = null;
     private String storeUpdateTimeCallBack = null;
     private String storeImageUploadCallBack = null;
+
+    protected String driverInvoice;
+
     private CallBack callBack;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
 
@@ -1187,6 +1203,187 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
     //endregion
+
+    @JavascriptInterface
+    public void generateInvoicePDF(String str, String format) throws JSONException {
+        driverInvoice = str;
+        if(checkAndAskStoragePermission()){
+            downloadPDF(str, bridgeComponents.getContext());
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void downloadPDF(String str, Context context) throws JSONException {
+        new Thread(() -> {
+            try {
+                JSONObject state = new JSONObject(str);
+                JSONObject data = state.getJSONObject("props");
+                String userName = getKeysInSharedPref("USER_NAME");
+                String driverId = getKeysInSharedPref("DRIVER_ID");
+                JSONArray invoices = data.getJSONArray("invoiceData");
+
+                PdfDocument pdfDocument = new PdfDocument();
+                JuspayLogger.d(OTHERS, "Invoice PDF Document Created");
+
+                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                f.setTimeZone(TimeZone.getTimeZone("IST"));
+                String invoiceDownloadTime = f.format(new Date());
+
+                // drawing the pages on the pdfDocument
+                for (int i = 0; i < invoices.length() ; i++) {
+                    PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(960, 1338, i).create();
+                    PdfDocument.Page page = pdfDocument.startPage(pageInfo);
+                    JSONObject invoice = invoices.getJSONObject(i);
+
+                    View content = getInvoiceLayout(userName, driverId, invoice, invoiceDownloadTime, context);
+                    content.measure(page.getCanvas().getWidth(), page.getCanvas().getHeight());
+                    content.layout(0, 0, page.getCanvas().getWidth(), page.getCanvas().getHeight());
+                    content.draw(page.getCanvas());
+                    pdfDocument.finishPage(page);
+                }
+
+                // naming the file
+                String fileNameFormat;
+                String serviceName = context.getResources().getString(R.string.service);
+
+                if (serviceName.equals("yatrisathiprovider")) {
+                    fileNameFormat = "YS_INVOICE_";
+                } else if (serviceName.equals("yatripartner")) {
+                    fileNameFormat = "YATRI_INVOICE_";
+                } else if (serviceName.equals("nammayatriprovider")) {
+                    fileNameFormat = "NY_INVOICE_";
+                } else {
+                    fileNameFormat = "INVOICE_";
+                }
+
+                fileNameFormat += invoiceDownloadTime;
+                String removedSpecial = fileNameFormat.replaceAll("[^a-zA-Z\\d]", "_");
+                JuspayLogger.d(OTHERS, "PDF Document name " + removedSpecial);
+
+                try {
+                    File file = checkAndGetFileName(removedSpecial);
+                    JuspayLogger.d(OTHERS, "Available File name for PDF" + file.getPath());
+                    FileOutputStream fos = new FileOutputStream(file);
+                    pdfDocument.writeTo(fos);
+                    JuspayLogger.d(OTHERS, "PDF Document written to path " + file.getPath());
+
+                    Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+                    showInvoiceNotification(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                pdfDocument.close();
+                JuspayLogger.d(OTHERS, "PDF Document closed");
+
+            } catch (Exception e) {
+                JuspayLogger.e(OTHERS, e.toString());
+
+            }
+        }).start();
+    }
+
+    private void showInvoiceNotification(Uri path) {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                toast("Invoice Downloaded!");
+                Context context = bridgeComponents.getContext();
+                JuspayLogger.d(OTHERS, "PDF Document inside show notification");
+                Intent pdfOpenIntent = new Intent(Intent.ACTION_VIEW);
+                pdfOpenIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                pdfOpenIntent.setDataAndType(path, "application/pdf");
+                String CHANNEL_ID = "Invoice";
+
+                PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenIntent, PendingIntent.FLAG_IMMUTABLE);
+
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Invoice Download", NotificationManager.IMPORTANCE_HIGH);
+                    channel.setDescription("Invoice download");
+                    NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .build();
+                    channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
+                    notificationManager.createNotificationChannel(channel);
+                }
+
+                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+                int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getActivity().getPackageName());
+                mBuilder.setContentTitle("Invoice download")
+                        .setSmallIcon(launcher)
+                        .setContentText("Invoice is downloaded!")
+                        .setAutoCancel(true)
+                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .setPriority(NotificationCompat.PRIORITY_MAX);
+                mBuilder.setContentIntent(pendingIntent);
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+                JuspayLogger.d(OTHERS, "PDF Document notification is created");
+                if(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                    notificationManager.notify(234567, mBuilder.build());
+                    JuspayLogger.d(OTHERS, "PDF Document notification is notified");
+                } else {
+                    JuspayLogger.d(OTHERS, "PDF Document Notification permission is not given");
+                }
+            }
+        });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private View getInvoiceLayout( String userName, String driverId, JSONObject invoice, String invoiceDownloadTime, Context context) {
+        View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.driver_invoice_template, null, false);
+        TextView textView = invoiceLayout.findViewById(R.id.invoice_driverName);
+        textView.setText(userName);
+        textView = invoiceLayout.findViewById(R.id.invoice_driverId);
+        textView.setText(driverId);
+
+        try {
+            String value = invoice.getString("totalRides");
+            textView = invoiceLayout.findViewById(R.id.totalRides);
+            textView.setText(value);
+
+            value = invoice.getString("cgst");
+            textView = invoiceLayout.findViewById(R.id.invoice_cgst);
+            textView.setText("\u20B9 "+ value);
+
+            value = invoice.getString("sgst");
+            textView = invoiceLayout.findViewById(R.id.invoice_sgst);
+            textView.setText("\u20B9 " + value);
+
+            value = invoice.getString("platformFee");
+            textView = invoiceLayout.findViewById(R.id.invoice_gross_total);
+            textView.setText("\u20B9 " + value);
+
+            value = invoice.getString("totalFee");
+            textView = invoiceLayout.findViewById(R.id.invoice_total);
+            textView.setText("\u20B9 " + value);
+
+            value = invoice.getString("status");
+            textView = invoiceLayout.findViewById(R.id.invoice_payment_status);
+            textView.setText(value);
+
+            value = invoice.getString("planTitle");
+            textView = invoiceLayout.findViewById(R.id.invoice_planTitle);
+            textView.setText(value);
+
+            value = invoice.getString("debitedOn");
+            textView = invoiceLayout.findViewById(R.id.invoice_debited_on);
+            textView.setText(value);
+
+            value = invoice.getString("billNumber");
+            textView = invoiceLayout.findViewById(R.id.invoice_number);
+            textView.setText(value);
+
+            textView = invoiceLayout.findViewById(R.id.invoice_downloaded_at);
+            textView.setText("Downloaded at : " + invoiceDownloadTime);
+
+        }catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return invoiceLayout;
+    }
+
 }
 
 

@@ -17,7 +17,7 @@ module Screens.PaymentHistoryScreen.Transformer where
 
 import Prelude
 
-import Common.Types.App (PaymentStatus(..), PaymentStatus(..))
+import Common.Types.App (PaymentStatus(..), DriverFeeStatus(..))
 import Data.Array (length, mapWithIndex, (!!), filter)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (convertUTCtoISC)
@@ -25,10 +25,11 @@ import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getFeeBreakup, getPromoConfig)
-import Screens.Types (PromoConfig)
+import Screens.Types (PromoConfig, InvoiceListItem(..))
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
+import Data.String (Pattern(..), split)
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
@@ -178,3 +179,50 @@ dummyDriverFee =
       driverFeeAmount : 0.0
   }
 
+getInvoiceDetailsList :: Array API.InvoiceDetailsEntity -> Array InvoiceListItem
+getInvoiceDetailsList arr = map (\item -> getInvoiceDetailsItem item) arr
+
+getInvoiceDetailsItem :: API.InvoiceDetailsEntity -> InvoiceListItem
+getInvoiceDetailsItem (API.InvoiceDetailsEntity item) = {
+      createdAt : (convertUTCtoISC item.createdAt "DD/MM/YYYY")
+    , totalRides : item.totalRides
+    , driverFeeId : item.driverFeeId
+    , cgst : getPlanBreakUpComponent "CGST" item.chargesBreakup
+    , sgst : getPlanBreakUpComponent "SGST" item.chargesBreakup
+    , platformFee : getPlanBreakUpComponent "Platform Fee" item.chargesBreakup
+    , totalFee : getPlanBreakUpComponent "Final Platform Fee" item.chargesBreakup
+    , status :  case item.status of 
+                  Just status -> case status of
+                                  CLEARED -> show Success
+                                  _ -> show Pending
+                  Nothing -> show Pending    
+    , planTitle : case item.planOfferTitle of 
+                          Just val -> getPlanTitle val
+                          Nothing -> ""
+    , offerTitle :  case item.planOfferTitle of 
+                          Just val -> getOfferTitle val
+                          Nothing -> ""
+    , debitedOn : case item.planOfferTitle of 
+                          Just date -> (convertUTCtoISC date "DD/MM/YYYY")
+                          Nothing -> ""
+    , billNumber : case item.billNumber of 
+                          Just number -> "NY/" <> (convertUTCtoISC item.createdAt "DDMMYYYY") <> "/" <> show number
+                          Nothing -> ""
+}
+
+getPlanBreakUpComponent :: String -> Array API.PaymentBreakUp -> Number
+getPlanBreakUpComponent componentName paymentBreakup = do
+  let filteredVal = filter (\(API.PaymentBreakUp charge) -> charge.component == componentName) paymentBreakup 
+  case filteredVal !! 0 of
+    Just (API.PaymentBreakUp ob) -> ob.amount
+    Nothing -> 0.0
+
+getPlanTitle :: String -> String
+getPlanTitle val = do
+  fromMaybe "" $ (split (Pattern "-*@*-") val) !! 0
+ 
+
+getOfferTitle :: String -> String
+getOfferTitle val = do
+  let offer = fromMaybe "" $ (split (Pattern "-*@*-") val) !! 1
+  fromMaybe "" $ (split (Pattern "-*$*-") offer) !! 0

@@ -53,14 +53,22 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.PaymentHistoryScreen.ScreenData (dummyPromoConfig)
-import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getAutoPayStageData)
+import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getAutoPayStageData, getInvoiceDetailsList)
 import Screens.SubscriptionScreen.Transformer (getPromoConfig)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PromoConfig)
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
-import Services.API (FeeType(..), OfferEntity(..))
+import Services.API (FeeType(..), OfferEntity(..), GetInvoiceResp(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
+import Screens.PaymentHistoryScreen.ComponentConfig (calendarConfig)
+import Components.Calendar as Calendar
+import Engineering.Helpers.Commons as EHC
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Either (Either(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 screen :: PaymentHistoryScreenState -> Screen Action PaymentHistoryScreenState ScreenOutput
 screen initialState =
@@ -81,6 +89,24 @@ screen initialState =
           lift $ lift $ EHU.toggleLoader false
           pure unit
         else pure unit
+
+      void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        if initialState.props.downloadInvoice then do
+          case initialState.props.startDate of 
+                Just startDate -> do
+                  let endDate = case initialState.props.endDate of
+                                  Just endDate -> endDate
+                                  Nothing -> startDate
+                  resp <- lift $ lift $ Remote.getInvoice (EHC.convertUTCtoISC startDate.utcDate "DD/MM/YYYY") (EHC.convertUTCtoISC endDate.utcDate "DD/MM/YYYY") 
+                  case resp of
+                      Right (GetInvoiceResp response) -> do
+                        let invoiceDataResp = getInvoiceDetailsList response
+                        if DA.length invoiceDataResp > 0 then do
+                          lift $ lift $ doAff do liftEffect $ push $ DownloadInvoice invoiceDataResp
+                        else lift $ lift $ doAff do liftEffect $ push $ NoInvoiceAvailable
+                      Left err -> do lift $ lift $ doAff do liftEffect $ push $ NoInvoiceAvailable
+                Nothing -> pure unit
+        else pure unit
       pure (pure unit)
     )]
   , eval:
@@ -94,32 +120,36 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimationFadeInOut $
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , onBackPressed push $ const BackPressed
-  , afterRender push $ const AfterRender
-  , background Color.white900
-  ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , linearLayout
-      [ height $ V 1
+  relativeLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  ]([  Anim.screenAnimationFadeInOut $
+      linearLayout
+      [ height MATCH_PARENT
       , width MATCH_PARENT
-      , background Color.grey900
-      , margin $ MarginBottom 16
-      ][]
-    , relativeLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , weight 1.0
       , orientation VERTICAL
-      ][  if (state.props.subView == PaymentHistory) then paymentHistoryView push state (state.props.subView == PaymentHistory) else emptyView
-        , if (state.props.subView == TransactionDetails) then transactionDetails push state (state.props.subView == TransactionDetails) else emptyView
-        , if (state.props.subView == RideDetails) then rideDetails push state (state.props.subView == RideDetails) else emptyView
+      , gravity CENTER
+      , onBackPressed push $ const BackPressed
+      , afterRender push $ const AfterRender
+      , background Color.white900
+      ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.grey900
+          , margin $ MarginBottom 16
+          ][]
+        , relativeLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , weight 1.0
+          , orientation VERTICAL
+          ][  if (state.props.subView == PaymentHistory) then paymentHistoryView push state (state.props.subView == PaymentHistory) else emptyView
+            , if (state.props.subView == TransactionDetails) then transactionDetails push state (state.props.subView == TransactionDetails) else emptyView
+            , if (state.props.subView == RideDetails) then rideDetails push state (state.props.subView == RideDetails) else emptyView
+          ]
       ]
-  ]
+  ] <> if state.props.invoicePopupVisible then [Calendar.view (push <<< CalendarAction) (calendarConfig state)] else [] )
 
 emptyView :: forall w. PrestoDOM (Effect Unit) w
 emptyView = linearLayout[visibility GONE][]
@@ -137,14 +167,42 @@ paymentHistoryView push state visibility' =
    , paymentList push state
   ]
 
+
+downloadInvoice :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
+downloadInvoice push state =
+  linearLayout 
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , onClick push $ const ShowCalendarPopup
+  ][ textView
+     [ text $ getString DOWNLOAD_INVOICE
+     , color Color.blue900
+     , textSize FontSize.a_14
+     , fontStyle $ FontStyle.bold LanguageStyle
+     ]
+    , imageView
+      [ width $ V 16
+      , height $ V 16
+      , margin (MarginLeft 12)
+      , imageWithFallback $ "ny_ic_blue_download," <> getAssetStoreLink FunctionCall <> "ny_ic_blue_download.png"
+      ]
+  ]
+
 paymentList :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> PrestoDOM (Effect Unit) w
 paymentList push state = 
   let transactionItems = if state.props.autoPayHistory then state.data.autoPayList else state.data.manualPayList
   in
   PrestoAnim.animationSet [Anim.fadeIn true] $ 
   if DA.null transactionItems then noPaymentsView state push 
-  else 
-    scrollView
+  else
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  ][downloadInvoice push state
+  , scrollView
     [ width MATCH_PARENT
     , weight 1.0
     , height WRAP_CONTENT
@@ -232,6 +290,7 @@ paymentList push state =
           ] <> FontStyle.body1 TypoGraphy
         ]
     ]
+  ]  
 
 noPaymentsView :: forall w. PaymentHistoryScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 noPaymentsView state push =  

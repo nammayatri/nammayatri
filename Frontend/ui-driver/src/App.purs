@@ -374,5 +374,6 @@ data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
                                     | SWITCH_TAB
                                     | LOAD_MORE_ITEMS PaymentHistoryScreenState
+                                    | DOWNLOADING_INVOICE PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow

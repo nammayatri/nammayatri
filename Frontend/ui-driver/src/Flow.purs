@@ -2051,6 +2051,7 @@ paymentHistoryFlow = do
     LOAD_MORE_ITEMS state -> do
       modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{offset = state.props.offset + 15}})
       paymentHistoryFlow
+    DOWNLOADING_INVOICE state -> paymentHistoryFlow
   pure unit 
 
 ysPaymentFlow :: FlowBT String Unit

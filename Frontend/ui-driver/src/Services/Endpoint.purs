@@ -234,3 +234,6 @@ paymentEntityDetails id = (getBaseUrl "") <> "/driver/v2/payments/history/" <> i
 
 cleardues :: String -> String 
 cleardues _ = (getBaseUrl "") <> "/driver/cleardues"
+
+invoice :: String -> String -> String
+invoice to from =  (getBaseUrl "") <> "/driver/invoice?from=" <> from <> "&to=" <> to

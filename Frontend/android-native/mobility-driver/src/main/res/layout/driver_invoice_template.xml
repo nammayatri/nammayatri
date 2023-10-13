@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="960px"
+    android:layout_height="1338px"
+    tools:ignore="UnusedAttribute"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/subscription_invoice"
+        android:layout_width="960px"
+        android:layout_height="1338px"
+        android:orientation="vertical"
+        android:paddingTop="80px"
+        android:paddingHorizontal="80px">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="right"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:lineHeight="20px"
+                android:text="JUSPAY TECHNOLOGIES PRIVATE LIMITED"
+                android:textColor="@color/Black900"
+                android:textSize="18px"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:lineHeight="22px"
+                android:text="Stallion Business Centre, No. 444, 3rd &amp; 4th Floor,18th Main, 6th Block,\nKoramangala\nBangalore 560095\nKarnataka\nGSTIN: 29AACCJ9163G1Z9\nPAN: AACCJ9163G"
+                android:textColor="@color/Black900"
+                android:textSize="16px" />
+
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="27px"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="360px"
+                android:layout_height="1px"
+                android:background="@color/Black900" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="5px"
+                android:text="TAX INVOICE"
+                android:textColor="@color/Black900"
+                android:textSize="16px"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="360px"
+                android:layout_height="1px"
+                android:background="@color/Black900" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40px"
+            android:gravity="right"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Invoice#:  "
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/invoice_number"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NY/230823/000001"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Invoice Date:  "
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/invoice_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="23/08/2023"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="80px"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bill To:"
+                android:textColor="@color/Black900"
+                android:textSize="18px"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:lineHeight="24px"
+                android:text="Mr. XYZ QIOWERUIO"
+                android:id="@+id/invoice_driverName"
+                android:textColor="@color/Black900"
+                android:textSize="18px" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5px"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Driver id:  "
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/invoice_driverId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="adfjakdjka-dfkolaj-lakjfkla"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="70px">
+
+            <TableRow>
+
+                <TextView
+                    android:layout_width="250px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="Plan"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="230px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="Description"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="100px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="HSN/SAC"
+                    android:textAlignment="center"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="120px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="Rides Taken"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="100px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="Amount"
+                    android:textAlignment="center"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:textStyle="bold" />
+            </TableRow>
+
+            <TableRow>
+
+
+                <TextView
+                    android:layout_width="250px"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/cell_shape"
+                    android:maxLines="2"
+                    android:padding="10px"
+                    android:id="@+id/invoice_planTitle"
+                    android:text="Daily per ride"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+                <TextView
+                    android:layout_width="230px"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/cell_shape"
+                    android:maxLines="2"
+                    android:padding="10px"
+                    android:text="Subscription Charges"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+                <TextView
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="998314"
+                    android:textAlignment="center"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+                <TextView
+                    android:id="@+id/totalRides"
+                    android:layout_width="120px"
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="1"
+                    android:textAlignment="center"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+
+                <TextView
+                    android:background="@drawable/cell_shape"
+                    android:padding="10px"
+                    android:text="Amount"
+                    android:textAlignment="center"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px" />
+            </TableRow>
+
+        </TableLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40px"
+            android:gravity="right"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gross Total :  "
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                    <TextView
+                        android:id="@+id/invoice_gross_total"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\u20B9 20.50"
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ CGST (9%):  "
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                    <TextView
+                        android:id="@+id/invoice_cgst"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\u20B9 2.25"
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ SGST (9%):  "
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                    <TextView
+                        android:id="@+id/invoice_sgst"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\u20B9 2.25"
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="1px"
+                    android:layout_gravity="right"
+                    android:background="@color/Black900" />
+
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:layout_marginTop="5px"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/invoice_total_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Net Total : "
+                        android:textColor="@color/Black900"
+                        android:textSize="18px"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/invoice_total"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="\u20B9 25.00"
+                        android:textColor="@color/Black900"
+                        android:textSize="18px" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="1px"
+                    android:background="@color/Black900" />
+
+            </LinearLayout>
+
+            <!--            <LinearLayout-->
+            <!--                android:layout_width="wrap_content"-->
+            <!--                android:layout_height="wrap_content"-->
+            <!--                android:layout_gravity="right"-->
+            <!--                android:layout_marginTop="5px"-->
+            <!--                android:orientation="horizontal">-->
+
+            <!--                <TextView-->
+            <!--                    android:layout_width="wrap_content"-->
+            <!--                    android:layout_height="wrap_content"-->
+            <!--                    android:text="Total In Words: "-->
+            <!--                    android:textColor="@color/Black900"-->
+            <!--                    android:textSize="18px" />-->
+
+            <!--                <TextView-->
+            <!--                    android:id="@+id/invoice_total_in_words"-->
+            <!--                    android:layout_width="match_parent"-->
+            <!--                    android:layout_height="wrap_content"-->
+            <!--                    android:fontFamily="@font/plus_jakarta_sans_bold"-->
+            <!--                    android:text="Indian Rupee Twenty Five Only"-->
+            <!--                    android:textColor="@color/Black900"-->
+            <!--                    android:textSize="16px"-->
+            <!--                    android:textStyle="italic" />-->
+
+            <!--            </LinearLayout>-->
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24px"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Payment Status : "
+                android:textColor="@color/Black900"
+                android:textSize="18px"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/invoice_payment_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pending"
+                android:textColor="@color/Black900"
+                android:textSize="18px" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10px"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Debited on : "
+                android:textColor="@color/Black900"
+                android:textSize="18px"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/invoice_debited_on"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="23/08/2023"
+                android:textColor="@color/Black900"
+                android:textSize="18px" />
+
+        </LinearLayout>
+
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="bottom">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="*This is computer generated invoice, signature is not required*"
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:layout_marginBottom="50px"
+                    android:textStyle="italic" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/invoice_downloaded_at"
+                    android:text="Downloaded at : "
+                    android:textColor="@color/Black900"
+                    android:textSize="18px"
+                    android:gravity="right"
+                    android:textStyle="italic" />
+
+            </LinearLayout>
+
+
+
+        </RelativeLayout>
+
+
+    </LinearLayout>
+
+
+</LinearLayout>

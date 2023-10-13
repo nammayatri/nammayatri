@@ -160,6 +160,7 @@ foreign import removeKeysInNativeSharedPrefs :: String -> Unit
 foreign import toggleLoaderImpl :: Boolean -> Effect Unit
 foreign import loaderTextImpl :: String -> String -> Effect Unit
 foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> String -> Unit
+foreign import generateInvoicePDF :: forall driverInvoiceScreenState. driverInvoiceScreenState -> String -> Unit
 foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit

@@ -1297,6 +1297,22 @@ export const generatePDF = function (state) {
   };
 };
 
+export const generateInvoicePDF = function (state) {
+  return function (type) {
+    var data = JSON.stringify(state)
+    if(window.JBridge.generateInvoicePDF){
+      try{
+        window.JBridge.generateInvoicePDF(data, type);
+      }catch(error){
+        toast("Something went wrong!");
+        console.log(error);
+      }
+
+    }
+    return true;
+  }
+};
+
 export const stopLocationPollingAPI = function () {
   if (locationPollingTimer) return;
   if (JBridge.isServiceRunning){

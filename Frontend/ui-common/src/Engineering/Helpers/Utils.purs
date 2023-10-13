@@ -34,6 +34,7 @@ import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEff
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Foreign (Foreign, unsafeToForeign)
 import Helpers.FileProvider.Utils (loadInWindow, mergeObjects)
+import Helpers.Utils (getCurrentUTC)
 import LoaderOverlay.Handler as UI
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DefaultConfig
@@ -41,7 +42,7 @@ import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, delay)
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
-
+import Debug (spy)
 
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
@@ -158,6 +159,13 @@ saveObject objName obj =
   doAff do
     (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
+
+initializeCalendar :: Boolean -> ModifiedCalendarObject
+initializeCalendar selectTodaysDate = do
+  let currentDay = getCurrentDay ""
+  let weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+  if selectTodaysDate then (selectSingleCalendarDate currentDay Nothing Nothing weeks)
+  else { selectedTimeSpan : currentDay, weeks : weeks, startDate : Nothing, endDate : Nothing }
 
 decrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> ModifiedCalendarObject
 decrementCalendarMonth selectedTimeSpan startDate endDate  = do

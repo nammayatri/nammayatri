@@ -36,7 +36,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), InvoiceStatus)
 import Styles.Types (FontSize)
 
 type EditTextInLabelState =
@@ -1829,7 +1829,16 @@ type PaymentHistoryScreenProps = {
   autoPaySetup :: Boolean,
   selectedDue :: String,
   offset :: Int,
-  enableLoadMore :: Boolean
+  enableLoadMore :: Boolean,
+  invoicePopupVisible :: Boolean,
+  weeks :: Array Common.CalendarModalWeekObject,
+  startDate :: Maybe Common.CalendarModalDateObject,
+  endDate :: Maybe Common.CalendarModalDateObject,
+  selectedTimeSpan :: Common.CalendarModalDateObject,
+  showError :: Boolean,
+  errorMessage :: String,
+  downloadInvoice :: Boolean,
+  invoiceData :: Array InvoiceListItem
 }
 
 data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails
@@ -1847,3 +1856,17 @@ type UpiApps
     , appName :: String
     }
 
+type InvoiceListItem = {
+    createdAt :: String
+  , totalRides :: Int
+  , cgst :: Number
+  , sgst :: Number
+  , platformFee :: Number
+  , totalFee :: Number
+  , driverFeeId :: String
+  , status :: String
+  , planTitle :: String
+  , offerTitle :: String
+  , debitedOn :: String
+  , billNumber :: String
+}

@@ -17,7 +17,7 @@ module Services.API where
 
 import Data.Maybe
 
-import Common.Types.App (Version(..), APIPaymentStatus(..)) as Common
+import Common.Types.App (Version(..), APIPaymentStatus(..), DriverFeeStatus(..)) as Common
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
 import Control.Monad.Except (runExcept)
@@ -2865,3 +2865,47 @@ instance standardEncodeClearDuesResp :: StandardEncode ClearDuesResp where stand
 instance showClearDuesResp :: Show ClearDuesResp where show = genericShow
 instance decodeClearDuesResp :: Decode ClearDuesResp where decode = defaultDecode
 instance encodeClearDuesResp :: Encode ClearDuesResp where encode = defaultEncode
+
+------------------------------------------------------------------
+-- invoice api
+
+data GetInvoiceReq = GetInvoiceReq String String
+
+newtype GetInvoiceResp = GetInvoiceResp (Array InvoiceDetailsEntity)
+
+newtype InvoiceDetailsEntity = InvoiceDetailsEntity {
+    createdAt :: String
+  , totalRides :: Int
+  , chargesBreakup :: Array PaymentBreakUp
+  , driverFeeId :: String
+  , status :: Maybe Common.DriverFeeStatus
+  , planOfferTitle :: Maybe String
+  , debitedOn :: Maybe String
+  , invoiceStatus :: Maybe InvoiceStatus
+  , billNumber :: Maybe Int
+}
+
+instance makeGetInvoiceReq :: RestEndpoint GetInvoiceReq GetInvoiceResp where
+ makeRequest reqBody@(GetInvoiceReq from to) headers = defaultMakeRequest GET (EP.invoice from to) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetInvoiceReq :: Generic GetInvoiceReq _
+instance standardEncodeGetInvoiceReq :: StandardEncode GetInvoiceReq where standardEncode res = standardEncode {}
+instance showGetInvoiceReq :: Show GetInvoiceReq where show = genericShow
+instance decodeGetInvoiceReq :: Decode GetInvoiceReq where decode = defaultDecode
+instance encodeGetInvoiceReq :: Encode GetInvoiceReq where encode = defaultEncode
+
+derive instance genericGetInvoiceResp :: Generic GetInvoiceResp _
+derive instance newtypeGetInvoiceResp :: Newtype GetInvoiceResp _
+instance standardEncodeGetInvoiceResp :: StandardEncode GetInvoiceResp where standardEncode (GetInvoiceResp res) = standardEncode res
+instance showGetInvoiceResp :: Show GetInvoiceResp where show = genericShow
+instance decodeGetInvoiceResp :: Decode GetInvoiceResp where decode = defaultDecode
+instance encodeGetInvoiceResp :: Encode GetInvoiceResp where encode = defaultEncode
+
+derive instance genericInvoiceDetailsEntity :: Generic InvoiceDetailsEntity _
+derive instance newtypeInvoiceDetailsEntity:: Newtype InvoiceDetailsEntity _
+instance standardEncodeInvoiceDetailsEntity :: StandardEncode InvoiceDetailsEntity where standardEncode (InvoiceDetailsEntity res) = standardEncode res
+instance showInvoiceDetailsEntity :: Show InvoiceDetailsEntity where show = genericShow
+instance decodeInvoiceDetailsEntity :: Decode InvoiceDetailsEntity where decode = defaultDecode
+instance encodeInvoiceDetailsEntity :: Encode InvoiceDetailsEntity where encode = defaultEncode

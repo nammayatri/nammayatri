@@ -24,6 +24,7 @@ import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (getAssetStoreLink)
+import Engineering.Helpers.Utils (getCurrentDay)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -31,7 +32,9 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), visibilit
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..))
 import Screens.Types as ST
 import Services.API as API
-
+import Components.Calendar as Calendar
+import Font.Size as FontSize
+import Data.Maybe (Maybe(..))
 
 genericHeaderConfig :: PaymentHistoryScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
@@ -102,3 +105,66 @@ getTransactionConfig transactionInfo = do
     Common.Pending -> {image : "ny_ic_transaction_pending," <> (getAssetStoreLink FunctionCall) <> "ny_ic_transaction_pending.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
     Common.Failed  -> {image : "ny_ic_payment_failed," <> (getAssetStoreLink FunctionCall) <> "ny_ic_payment_failed.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
     Common.Scheduled  -> {image : "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}
+
+primaryButtonConfigDownloadInvoice :: ST.PaymentHistoryScreenState -> PrimaryButton.Config
+primaryButtonConfigDownloadInvoice state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+      { text = getString DOWNLOAD_INVOICE
+      , color = case state.props.startDate of
+                    Nothing -> Color.yellow100
+                    Just _ -> if state.props.showError then Color.yellow100  else Color.primaryButtonColor
+      }
+      , margin = (Margin 16 0 16 0)
+      , cornerRadius = 8.0
+      , background =  case state.props.startDate of
+                       Nothing -> Color.black600
+                       Just _ -> if state.props.showError then Color.black600 else Color.black900
+      , height = (V 50)
+      , alpha = 1.0
+      , isClickable = case state.props.startDate of
+                       Nothing -> false
+                       Just _ -> if state.props.showError then false else true
+      , id = "PaymentHistroyScreenDownloadInvoiceButton"
+      }
+  in primaryButtonConfig'
+
+primaryButtonConfigCancel :: ST.PaymentHistoryScreenState -> PrimaryButton.Config
+primaryButtonConfigCancel state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+      { text = getString CANCEL
+      , color = Color.black650
+      }
+      , margin = (Margin 16 0 16 0)
+      , cornerRadius = 8.0
+      , background = Color.white900
+      , height = (V 60)
+      , alpha = 1.0
+      , isClickable = true
+      , id = "PaymentHistroyScreenCancelButton"
+      }
+  in primaryButtonConfig'
+
+calendarConfig :: ST.PaymentHistoryScreenState -> Calendar.Config
+calendarConfig state = let 
+  config = Calendar.config
+  calendarConfig' = config
+    { weeks = state.props.weeks
+    , startDate = state.props.startDate
+    , endDate = state.props.endDate
+    , selectedTimeSpan = state.props.selectedTimeSpan
+    , showError = state.props.showError
+    , errorMessage = state.props.errorMessage
+    , primaryButtonConfig = primaryButtonConfigDownloadInvoice state
+    , cancelButtonConfig = primaryButtonConfigCancel state
+    , defaultMessage = getString SELECT_DATE
+    , pastLimit = {date : 15, isInRange : false, isStart : false, isEnd : false, utcDate : "2023-08-14T18:30:00.000Z", shortMonth : "Aug", year : 2023, intMonth : 7}
+    , futureLimit = getCurrentDay ""
+    , selectedDateColor = Color.blue800
+    , dateInRangeColor = Color.blue9000
+    , selectRange = false
+    }
+  in calendarConfig'
