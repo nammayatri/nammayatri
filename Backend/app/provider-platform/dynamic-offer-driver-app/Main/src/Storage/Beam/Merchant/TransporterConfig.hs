@@ -95,7 +95,9 @@ data TransporterConfigT f = TransporterConfigT
     ratingAsDecimal :: B.C f Bool,
     refillVehicleModel :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
+    driverSmsReceivingLimit :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 

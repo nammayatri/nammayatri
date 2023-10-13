@@ -20,6 +20,9 @@ module Storage.Queries.Merchant.MerchantMessage
     #-}
 where
 
+import Data.Aeson (fromJSON)
+import qualified Data.Aeson as A
+import Data.Default.Class (Default (..))
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantMessage
 import Kernel.Beam.Functions
@@ -40,9 +43,17 @@ instance FromTType' BeamMM.MerchantMessage MerchantMessage where
           { merchantId = Id merchantId,
             messageKey = messageKey,
             message = message,
+            templateId = fromMaybe "" templateId,
+            jsonData = fromMaybe def (valueToJsonData =<< jsonData),
+            containsUrlButton = containsUrlButton,
             updatedAt = updatedAt,
             createdAt = createdAt
           }
+    where
+      valueToJsonData :: A.Value -> Maybe MerchantMessageDefaultDataJSON
+      valueToJsonData value = case fromJSON value of
+        A.Error _ -> Nothing
+        A.Success a -> Just a
 
 instance ToTType' BeamMM.MerchantMessage MerchantMessage where
   toTType' MerchantMessage {..} = do
@@ -50,6 +61,9 @@ instance ToTType' BeamMM.MerchantMessage MerchantMessage where
       { BeamMM.merchantId = getId merchantId,
         BeamMM.messageKey = messageKey,
         BeamMM.message = message,
+        BeamMM.templateId = Just templateId,
+        BeamMM.jsonData = Just $ toJSON jsonData,
+        BeamMM.containsUrlButton = containsUrlButton,
         BeamMM.updatedAt = updatedAt,
         BeamMM.createdAt = createdAt
       }

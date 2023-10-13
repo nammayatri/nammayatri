@@ -15,6 +15,7 @@
 
 module Storage.Beam.Merchant.MerchantMessage where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import Kernel.Prelude
@@ -24,6 +25,9 @@ data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
+    templateId :: B.C f (Maybe Text),
+    jsonData :: B.C f (Maybe A.Value),
+    containsUrlButton :: B.C f Bool,
     updatedAt :: B.C f UTCTime,
     createdAt :: B.C f UTCTime
   }
