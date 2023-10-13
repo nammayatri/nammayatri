@@ -107,8 +107,9 @@ public class LocationUpdateService extends Service {
     private int maximumLimit = 60;
     private int pointsToRemove = 1;
     private Location prevLocation = null, prevAccLocation = null;
+    private String vVariant, merchantID, drMode;
     private static int finalDistance = 0, finalDistanceWithAcc = 0;
-    private int maximumLimitNotOnRide = 3;
+    private int maximumLimitNotOnRide = 1;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
     private String rideWaypoints = null;
@@ -292,7 +293,7 @@ public class LocationUpdateService extends Service {
             String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
             maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "60"));
             String MAX_LIMIT_TO_STORE_LOCATION_PT_NOT = "MAX_LIMIT_TO_STORE_LOCATION_PT_NOT";
-            maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "3"));
+            maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "1"));
             // UPDATE FOR GOOGLE CALLBACK FREQUENCY
             String locationGFrequency = sharedPrefs.getString("RIDE_G_FREQUENCY", null);
             delayForGNew = locationGFrequency != null ? Integer.parseInt(locationGFrequency) : 50000;
@@ -513,10 +514,11 @@ public class LocationUpdateService extends Service {
             try {
                 locationPayload = new JSONArray(bufferedLocationObjects);
                 String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
-                maximumLimit = rideStatus!=null && rideStatus.equals("false") ? maximumLimitNotOnRide : maximumLimit;
-                while (locationPayload.length() >= maximumLimit) {
-                    int index = (pointsToRemove++) % (locationPayload.length() - 1);
-                    if (index != 0) locationPayload.remove(index);
+                if (rideStatus!=null && rideStatus.equals("false")){
+                    return new JSONArray();
+                }
+                while ( locationPayload.length() >1 && locationPayload.length() >= maximumLimit) {
+                    locationPayload.remove(0);
                     if (pointsToRemove > 1000000) pointsToRemove = 1;
                 }
             } catch (JSONException e) {
@@ -636,9 +638,40 @@ public class LocationUpdateService extends Service {
                         String merchantId = getValueFromStorage("MERCHANT_ID");
                         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
-                        if (merchantId != null) baseHeaders.put("mId", merchantId); else baseHeaders.put("mId", "not_found");
-                        if (vehicleVariant != null) baseHeaders.put("vt", vehicleVariant); else baseHeaders.put("vt", "not_found");
-                        if (driverMode != null) baseHeaders.put("dm", driverMode.toUpperCase()); else baseHeaders.put("dm", "not_found");
+                        if (merchantId != null && vehicleVariant != null && driverMode != null){
+                            baseHeaders.put("mId", merchantId);
+                            baseHeaders.put("vt", vehicleVariant);
+                            baseHeaders.put("dm", driverMode.toUpperCase());
+                        }else if( vVariant != null && drMode != null && merchantID != null) {
+                            baseHeaders.put("mId", merchantID);
+                            baseHeaders.put("vt", vVariant);
+                            baseHeaders.put("dm", drMode);
+                        }else{
+                            MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
+                            try {
+                                JSONObject resp = new JSONObject(apiResponse.getResponseBody());
+                                if(resp.has("mode")){
+                                    drMode = resp.get("mode").toString().toUpperCase();
+                                    baseHeaders.put("dm", drMode);
+                                }
+                                JSONObject org = resp.optJSONObject("organization");
+                                if (org != null && org.has("id")) {
+                                    merchantID = org.getString("id");
+                                    baseHeaders.put("mId", merchantID);
+                                    updateStorage("MERCHANT_ID", merchantID);
+                                }
+                                JSONObject vehicle = resp.optJSONObject("linkedVehicle");
+                                if (vehicle != null && vehicle.has("variant")) {
+                                    vVariant = vehicle.getString("variant");
+                                    baseHeaders.put("vt", vVariant);
+                                    updateStorage("VEHICLE_VARIANT", vVariant);
+                                }
+                            } catch (JSONException e) {
+                                Bundle params = new Bundle();
+                                params.putString("error", e.toString());
+                                FirebaseAnalytics.getInstance(context).logEvent("LS_ERROR_GETTING_PROFILE", params);
+                            }
+                        }
                         Log.d(LOG_TAG, "LocationPayload Size - " + locationPayload.length());
 
                         MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
