@@ -2489,7 +2489,7 @@ updateBannerAndPopupFlags = do
                               _, false, true -> do
                                           if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
                                           else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-                                          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues <= subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+                                          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
                                           else NO_SUBSCRIPTION_BANNER
                               true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
                               _, _, _        -> NO_SUBSCRIPTION_BANNER
