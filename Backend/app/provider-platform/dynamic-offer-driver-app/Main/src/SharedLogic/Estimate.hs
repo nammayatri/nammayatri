@@ -91,7 +91,6 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
       let waitingChargeInfo = case farePolicy.farePolicyDetails of
             SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
             ProgressiveDetails det -> det.waitingChargeInfo
-            RentalSlabsDetails det -> (findFPRSlabsDetailsSlabByDistance dist det.rentalSlabs).waitingChargeInfo
       let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
             Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
@@ -106,7 +105,6 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
-        DFP.RentalSlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPRSlabsDetailsSlabByDistance dist det.rentalSlabs).nightShiftCharge
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
@@ -124,7 +122,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
-        DFParams.Rental -> 
+        DFParams.Rental ->
           breakup.title == "BASE_DISTANCE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
@@ -133,6 +131,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
+
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
   let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
@@ -154,7 +153,6 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
     processAdditionalDetails = \case
       DFP.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       DFP.SlabsDetails det -> mkAdditionalSlabBreakups $ DFP.findFPSlabsDetailsSlabByDistance distance det.slabs
-      DFP.RentalSlabsDetails det -> mkAdditionalRentalSlabBreakups $ DFP.findFPRSlabsDetailsSlabByDistance distance det.rentalSlabs
     mkAdditionalProgressiveBreakups det = do
       let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
@@ -168,14 +166,6 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
       [perExtraKmFareItem] <> catMaybes [mbWaitingOrPickupChargesItem]
     mkAdditionalSlabBreakups det = do
-      let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
-          mbWatingChargeValue =
-            (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case
-              PerMinuteWaitingCharge hpm -> roundToIntegral hpm
-              ConstantWaitingCharge mo -> mo
-          mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
-      catMaybes [mbWaitingOrPickupChargesItem]
-    mkAdditionalRentalSlabBreakups det = do
       let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
           mbWatingChargeValue =
             (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case

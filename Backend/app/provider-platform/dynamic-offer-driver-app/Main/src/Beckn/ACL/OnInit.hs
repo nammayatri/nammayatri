@@ -23,6 +23,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import SharedLogic.FareCalculator
+
 -- import EulerHS.Prelude (undefined)
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
@@ -75,17 +76,18 @@ mkOnInitMessage res = do
                   end =
                     case res.booking.bookingDetails of
                       DRB.BookingDetailsOnDemand {..} -> do
-                        Just OnInit.StopInfo
-                          { location =
-                              OnInit.Location
-                                { gps =
-                                    OnInit.Gps
-                                      { lat = toLocation.lat,
-                                        lon = toLocation.lon
-                                      },
-                                  address = castAddress toLocation.address
-                                }
-                          }
+                        Just
+                          OnInit.StopInfo
+                            { location =
+                                OnInit.Location
+                                  { gps =
+                                      OnInit.Gps
+                                        { lat = toLocation.lat,
+                                          lon = toLocation.lon
+                                        },
+                                    address = castAddress toLocation.address
+                                  }
+                            }
                       DRB.BookingDetailsRental {} -> do
                         Nothing,
                   vehicle =
@@ -158,7 +160,7 @@ mkOnInitMessage res = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-        DFParams.Rental -> 
+        DFParams.Rental ->
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "EXTRA_KILOMETER_FARE"

@@ -11,9 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module SharedLogic.FareCalculator
   ( mkBreakupList,
     fareSum,
@@ -42,7 +42,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Utils.Common
-import Data.Ratio
+
 -- import Kernel.Utils.Common (Kilometers(getKilometers), Meters (getMeters))
 -- import Extra (intToFloat)
 
@@ -127,6 +127,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
           extraRentalHourFareItem =
             mkBreakupItem extraRentalHourFareCaption (mkPrice det.extraRentalHourFare)
       catMaybes [Just deadKmFareItem, Just extraRentalHourFareItem]
+
 -- TODO: make some tests for it
 
 fareSum :: FareParameters -> Money
@@ -204,8 +205,7 @@ calculateFareParameters params = do
                 countPlatformFee -- Mb change platformFee from Nothing to proper value
                   fullCompleteRideCost
                   (DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs & (.platformFeeInfo))
-                  fareParametersDetails
-              DFP.RentalSlabsDetails _ -> fareParametersDetails,
+                  fareParametersDetails,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -214,7 +214,6 @@ calculateFareParameters params = do
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs
-      DFP.RentalSlabsDetails det -> processFPRSlabDetailsSlab params.rideTime params.endRideTime params.distance $ DFP.findFPRSlabsDetailsSlabByDistance params.distance det.rentalSlabs
     processFPProgressiveDetails DFP.FPProgressiveDetails {..} = do
       let mbExtraDistance =
             params.distance - baseDistance
@@ -255,28 +254,6 @@ calculateFareParameters params = do
               cgst = Nothing
             }
         )
-    processFPRSlabDetailsSlab startTime endTime distanceTravelled req@DFP.FPRSlabDetailsSlab {..} = do
-      let (extraTotalRentalHourFare,extraTotalRentalKmFare) = case endTime of
-              Nothing  -> ( (0 :: Money),  0 ::  Money)
-              Just endTime' -> calculateRentalExtraFare startTime endTime' distanceTravelled req
-
-                -- let actualDuration = div (fromEnum . nominalDiffTimeToSeconds $ diffUTCTime endTime' startTime) 1000000000000
-                --     actualHours =2
-                --     diffHours = max (0::Int) (actualHours - baseDuration)
-                --     totalKmOffered = (diffHours * (getKilometers kmAddedForEveryExtraHour)) + (getKilometers baseDistance)
-                --     diffKilometer = max (0::Int) (getMeters distance - totalKmOffered)
-                -- in  (  Money { getMoney=diffHours * (getMoney extraRentalHoursFare)} , Money { getMoney=(diffKilometer * (getMoney extraRentalKmFare)) })
-        in
-        ( baseFare,
-          nightShiftCharge,
-          waitingChargeInfo,
-          DFParams.RentalSlabDetails
-            DFParams.FParamsRentalSlabDetails
-              {
-                extraRentalHourFare=extraTotalRentalHourFare,
-                extraRentalKmFare=extraTotalRentalKmFare
-              }
-        )
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
@@ -313,44 +290,12 @@ calculateFareParameters params = do
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
 
-
-calculateRentalExtraFare ::
-  UTCTime ->
-  UTCTime ->
-  Meters ->
-  FPRSlabDetailsSlab ->
-  (Money,Money)
-calculateRentalExtraFare tripStartTime tripStopTime distance rentalFareSlab = do
-  let tripTime = diffUTCTime tripStopTime tripStartTime
-      tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
-      extraTime = toInteger tripTimeInMinutes - (toInteger rentalFareSlab.baseDuration) * 60
-      extraHours = ceiling $ extraTime % 60
-      distanceInKm = metersToKilometers distance
-      extraDistance = toInteger distanceInKm - toInteger rentalFareSlab.baseDistance - extraHours * (toInteger rentalFareSlab.kmAddedForEveryExtraHour)
-
-  let extraDistanceFare = roundToIntegral $ if extraDistance > 0
-        then realToFrac $ extraDistance * ( toInteger rentalFareSlab.extraRentalKmFare)
-        else 0
-      extraHoursFare = roundToIntegral $ realToFrac $ extraHours * (toInteger rentalFareSlab.extraRentalHoursFare)
-  ( extraHoursFare,extraDistanceFare)
--- calculateRentalExtraTimeFare ::
---   FPRSlabDetails ->
---   TripStartTime ->
---   TripStopTime ->
---   Money
--- calculateRentalExtraTimeFare farePolicy tripStartTime tripStopTime = roundToIntegral $ do
---   let tripTime = diffUTCTime tripStopTime tripStartTime
---       tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
---       extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDuration * 60
---   if extraTime > 0
---     then realToFrac (toRational extraTime) * farePolicy.extraMinuteFare
---     else 0
-
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money, Money)
 countFullFareOfParamsDetails = \case
-  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0,0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst),0)
-  DFParams.RentalSlabDetails det -> (0,0,0,det.extraRentalHourFare+  det.extraRentalKmFare)
+  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
+  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst), 0)
+  DFParams.RentalSlabDetails det -> (0, 0, 0, det.extraRentalHourFare + det.extraRentalKmFare)
+
 isNightShift ::
   DFP.NightShiftBounds ->
   UTCTime ->

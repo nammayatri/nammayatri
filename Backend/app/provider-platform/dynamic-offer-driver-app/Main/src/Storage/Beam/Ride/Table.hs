@@ -51,8 +51,9 @@ data RideT f = RideT
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
     driverGoHomeRequestId :: B.C f (Maybe Text),
-    odoMeterStartReading :: B.C f (Maybe Meters),
-    odoMeterEndReading :: B.C f (Maybe Meters),
+    odometerStartReading :: B.C f (Maybe Meters),
+    odometerEndReading :: B.C f (Maybe Meters),
+    endRideOtp :: B.C f (Maybe Text),
     rideType :: B.C f Domain.RideType
   }
   deriving (Generic, B.Beamable)

@@ -171,11 +171,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
           fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
                     }
   let initial = "" :: Text
-  let (_,toLocation') = case booking.bookingDetails of
-            DRB.BookingDetailsOnDemand {..} -> 
-              (DRide.ON_DEMAND, Just toLocation)
-            DRB.BookingDetailsRental {} -> 
-              (DRide.RENTAL,Nothing)
+  let (_, toLocation') = case booking.bookingDetails of
+        DRB.BookingDetailsOnDemand {..} ->
+          (DRide.ON_DEMAND, Just toLocation)
+        DRB.BookingDetailsRental {} ->
+          (DRide.RENTAL, Nothing)
   DriverRideRes
     { id = ride.id,
       shortRideId = ride.shortId,
@@ -297,25 +297,28 @@ otpRideCreate driver otpCode booking = do
       shortId <- generateShortId
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
-      let (rideType,rideDetails) = case booking.bookingDetails of
-            DRB.BookingDetailsOnDemand {..} -> 
-              (DRide.ON_DEMAND,DRide.RideDetailsOnDemand 
-                {
-                  toLocation = toLocation
-                , driverGoHomeRequestId=Nothing
-                , driverDeviatedFromRoute=Nothing
-                , numberOfSnapToRoadCalls=Nothing
-                , numberOfDeviation=Nothing
-                , uiDistanceCalculationWithAccuracy=Nothing
-                , uiDistanceCalculationWithoutAccuracy=Nothing
-                })
-            DRB.BookingDetailsRental {} -> 
-              (DRide.RENTAL,DRide.RideDetailsRental
-                  {
-                rentalToLocation= Nothing,
-                odoMeterStartReading=Nothing,
-                odoMeterEndReading=Nothing
-            })
+      let (rideType, rideDetails) = case booking.bookingDetails of
+            DRB.BookingDetailsOnDemand {..} ->
+              ( DRide.ON_DEMAND,
+                DRide.RideDetailsOnDemand
+                  { toLocation = toLocation,
+                    driverGoHomeRequestId = Nothing,
+                    driverDeviatedFromRoute = Nothing,
+                    numberOfSnapToRoadCalls = Nothing,
+                    numberOfDeviation = Nothing,
+                    uiDistanceCalculationWithAccuracy = Nothing,
+                    uiDistanceCalculationWithoutAccuracy = Nothing
+                  }
+              )
+            DRB.BookingDetailsRental {} ->
+              ( DRide.RENTAL,
+                DRide.RideDetailsRental
+                  { rentalToLocation = Nothing,
+                    odometerStartReading = Nothing,
+                    odometerEndReading = Nothing,
+                    endRideOtp = Nothing
+                  }
+              )
       return
         DRide.Ride
           { id = guid,

@@ -44,21 +44,20 @@ $(mkHttpInstancesForEnum ''RideStatus)
 
 data SpecificRideDetails
   = RideDetailsOnDemand
-     {
-        toLocation :: DL.Location
-      , driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
-      , driverDeviatedFromRoute :: Maybe Bool
-      , numberOfSnapToRoadCalls :: Maybe Int
-      , numberOfDeviation :: Maybe Bool
-      , uiDistanceCalculationWithAccuracy :: Maybe Int
-      , uiDistanceCalculationWithoutAccuracy :: Maybe Int
-    }
+      { toLocation :: DL.Location,
+        driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+        driverDeviatedFromRoute :: Maybe Bool,
+        numberOfSnapToRoadCalls :: Maybe Int,
+        numberOfDeviation :: Maybe Bool,
+        uiDistanceCalculationWithAccuracy :: Maybe Int,
+        uiDistanceCalculationWithoutAccuracy :: Maybe Int
+      }
   | RideDetailsRental
-    {
-        rentalToLocation :: Maybe DL.Location,
-        odoMeterStartReading :: Maybe Meters,
-        odoMeterEndReading :: Maybe Meters
-    }
+      { rentalToLocation :: Maybe DL.Location,
+        odometerStartReading :: Maybe Meters,
+        odometerEndReading :: Maybe Meters,
+        endRideOtp :: Maybe Text
+      }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 data RideType = ON_DEMAND | RENTAL

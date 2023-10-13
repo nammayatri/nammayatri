@@ -133,10 +133,12 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
             authorization = Nothing
           },
       end =
-        (\toLoc' ->
-          OnConfirm.StopInfo
-            { location = mklocation toLoc'
-            }) <$> toLoc,
+        ( \toLoc' ->
+            OnConfirm.StopInfo
+              { location = mklocation toLoc'
+              }
+        )
+          <$> toLoc,
       vehicle =
         OnConfirm.Vehicle
           { category = vehicleVariant
@@ -194,10 +196,12 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
             authorization = authorization
           },
       end =
-        (\toLoc' ->
-          OnConfirm.StopInfo
-            { location = mklocation toLoc'
-            }) <$> toLoc,
+        ( \toLoc' ->
+            OnConfirm.StopInfo
+              { location = mklocation toLoc'
+              }
+        )
+          <$> toLoc,
       vehicle =
         OnConfirm.Vehicle
           { category = vehicleVariant

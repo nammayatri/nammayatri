@@ -231,8 +231,7 @@ updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
 updateOdometerEndReading rideId meters = do
   now <- getCurrentTime
   updateOneWithKV
-    [
-      Se.Set BeamR.odoMeterEndReading (Meters <$> meters),
+    [ Se.Set BeamR.odometerEndReading (Meters <$> meters),
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -257,6 +256,24 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Meters -> m ()
+updateOdometerStartReading rideId reading = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerStartReading reading,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+-- updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m()
+-- updateOdometerEndReading rideId reading = do
+--   now <- getCurrentTime
+--   updateOneWithKV
+--     [ Se.Set BeamR.odometerEndReading reading,
+--       Se.Set BeamR.updatedAt now
+--     ]
+--     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStatusByIds :: MonadFlow m => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
   now <- getCurrentTime
@@ -279,17 +296,24 @@ updateDistance driverId distance snapCalls = do
 updateAll :: MonadFlow m => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
+
   updateWithKV
-    [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-      Se.Set BeamR.fare ride.fare,
-      Se.Set BeamR.tripEndTime ride.tripEndTime,
-      Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
-      Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
-      Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
-      Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
-      Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
-      Se.Set BeamR.updatedAt now
-    ]
+    ( [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+        Se.Set BeamR.fare ride.fare,
+        Se.Set BeamR.tripEndTime ride.tripEndTime,
+        Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
+        Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
+        Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
+        Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
+        Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
+        Se.Set BeamR.updatedAt now
+      ]
+        <> ( case ride.rideDetails of
+               RideDetailsOnDemand {} -> []
+               RideDetailsRental {odometerEndReading} ->
+                 [Se.Set BeamR.odometerEndReading odometerEndReading]
+           )
+    )
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 getCountByStatus :: MonadFlow m => Id Merchant -> m [(RideStatus, Int)]
@@ -526,15 +550,16 @@ instance FromTType' BeamR.Ride Ride where
         let toLocMap = maximumBy (comparing (.order)) toLocationMappings
         toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
         tUrl <- parseBaseUrl trackingUrl
-        let details = RideDetailsOnDemand {
-           toLocation = toLocation,
-           driverDeviatedFromRoute = driverDeviatedFromRoute,
-           numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-           numberOfDeviation = numberOfDeviation,
-           uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
-           uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-           driverGoHomeRequestId = Id <$> driverGoHomeRequestId
-        }
+        let details =
+              RideDetailsOnDemand
+                { toLocation = toLocation,
+                  driverDeviatedFromRoute = driverDeviatedFromRoute,
+                  numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
+                  numberOfDeviation = numberOfDeviation,
+                  uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
+                  uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
+                  driverGoHomeRequestId = Id <$> driverGoHomeRequestId
+                }
         pure $
           Just
             Ride
@@ -556,11 +581,13 @@ instance FromTType' BeamR.Ride Ride where
         fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
         fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
         tUrl <- parseBaseUrl trackingUrl
-        let details = RideDetailsRental {
-           DRide.rentalToLocation = Nothing,
-           odoMeterStartReading = odoMeterStartReading,
-           odoMeterEndReading = odoMeterEndReading
-        }
+        let details =
+              RideDetailsRental
+                { DRide.rentalToLocation = Nothing,
+                  endRideOtp = endRideOtp,
+                  odometerStartReading = odometerStartReading,
+                  odometerEndReading = odometerEndReading
+                }
         pure $
           Just
             Ride
@@ -576,7 +603,6 @@ instance FromTType' BeamR.Ride Ride where
                 rideDetails = details,
                 ..
               }
-
 
 instance ToTType' BeamR.Ride Ride where
   toTType' Ride {..} =
@@ -612,8 +638,9 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
             BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
             BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
-            BeamR.odoMeterStartReading = Nothing,
-            BeamR.odoMeterEndReading = Nothing,
+            BeamR.odometerStartReading = Nothing,
+            BeamR.odometerEndReading = Nothing,
+            BeamR.endRideOtp = Nothing,
             BeamR.rideType = rideType
           }
       RideDetailsRental {..} -> do
@@ -647,7 +674,8 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.uiDistanceCalculationWithAccuracy = Nothing,
             BeamR.uiDistanceCalculationWithoutAccuracy = Nothing,
             BeamR.driverGoHomeRequestId = Nothing,
-            BeamR.odoMeterStartReading = odoMeterStartReading,
-            BeamR.odoMeterEndReading = odoMeterEndReading,
+            BeamR.odometerStartReading = odometerStartReading,
+            BeamR.odometerEndReading = odometerEndReading,
+            BeamR.endRideOtp = endRideOtp,
             BeamR.rideType = rideType
           }
