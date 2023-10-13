@@ -200,7 +200,7 @@ monthYearPicker push config =
       ]
     , imageView
       [ imageWithFallback $ if incrementMonthFlag then "ny_ic_chevron_right_black," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_black.png"
-                            else  "ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                            else  "ny_ic_chevron_right_grey_900," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey_900.png"
       , width $ V 28
       , height $ V 28
       , gravity CENTER
