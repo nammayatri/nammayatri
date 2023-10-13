@@ -19,7 +19,7 @@ import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
 
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
+import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
@@ -73,6 +73,7 @@ import Effect.Uncurried (runEffectFn4)
 import Constants 
 import Data.Function.Uncurried (runFn1)
 import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -588,7 +589,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
-    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.4.5" then (getMessageFromKey chatSuggestion "EN_US") else chatSuggestion
+    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion "EN_US") else chatSuggestion
     _ <- pure $ sendMessage message
     let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
     continue state{data {suggestionsList = []}, props {canSendSuggestion = false}}
@@ -1020,3 +1021,11 @@ getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
                                   true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP"
                                   false -> suggestions
+
+getPreviousVersion :: Merchant -> String
+getPreviousVersion merchant = 
+  case merchant of
+    NAMMAYATRI -> "1.4.5"
+    YATRI -> "2.3.0"
+    YATRISATHI -> "0.1.8"
+    _ -> "100.100.100"

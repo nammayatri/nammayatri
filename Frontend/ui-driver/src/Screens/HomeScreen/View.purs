@@ -75,7 +75,7 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getPreviousVersion)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..), LocalStoreSubscriptionInfo)
 import Screens.Types as ST
@@ -169,7 +169,7 @@ screen initialState =
                                   else pure unit
             "ChatWithCustomer" -> do
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
-                                  _ <- pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.4.5" then (getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
+                                  _ <- pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (MU.getMerchant FunctionCall)) then (getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
                                   push UpdateInChat
                                   else pure unit
             _                -> do
