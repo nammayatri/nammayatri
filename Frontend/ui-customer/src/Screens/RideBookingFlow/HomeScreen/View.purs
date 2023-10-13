@@ -1831,8 +1831,9 @@ confirmPickUpLocationView push state =
                 , imageWithFallback "ny_ic_zone_walk,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_zone_walk.png"
                 ]
               , textView
-                [ width WRAP_CONTENT
+                [ width if os == "IOS" && state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
                 , height WRAP_CONTENT
+                , gravity CENTER
                 , textSize FontSize.a_14
                 , text if state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then
                         (getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED)
