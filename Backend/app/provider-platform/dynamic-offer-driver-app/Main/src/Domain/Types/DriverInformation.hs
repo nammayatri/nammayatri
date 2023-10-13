@@ -68,6 +68,7 @@ data DriverInformationE e = DriverInformation
     onRide :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    optForRental :: Bool,
     numOfLocks :: Int,
     verified :: Bool,
     subscribed :: Bool,

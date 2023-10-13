@@ -81,6 +81,10 @@ type API =
              :> MandatoryQueryParam "active" Bool
              :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
+             :<|> "setRental"
+               :> TokenAuth
+               :> MandatoryQueryParam "flag" Bool -- add it in rental search
+               :> Post '[JSON] APISuccess
              :<|> "goHome"
                :> ( "activate" :> TokenAuth
                       :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
@@ -200,6 +204,7 @@ handler =
       :<|> deleteDriver
   )
     :<|> ( setActivity
+             :<|> setRental
              :<|> ( activateGoHomeFeature
                       :<|> deactivateGoHomeFeature
                       :<|> addHomeLocation
@@ -236,6 +241,9 @@ getInformation = withFlowHandlerAPI . DDriver.getInformation
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
 setActivity (personId, driverId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId) isActive
+
+setRental :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> FlowHandler APISuccess
+setRental (personId, driverId) = withFlowHandlerAPI . DDriver.setRental (personId, driverId)
 
 activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> FlowHandler APISuccess
 activateGoHomeFeature (personId, driverId) homeLocationId = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId) homeLocationId

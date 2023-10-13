@@ -122,7 +122,37 @@ handler transporter req quote = do
   unless (booking.status == DRB.NEW) $
     throwError (BookingInvalidStatus $ show booking.status)
   case booking.bookingType of
-    DRB.NormalBooking -> do
+    DRB.SpecialZoneBooking -> do
+      case quote of
+        Left _ -> throwError AccessDenied
+        Right _ -> do
+          otpCode <- generateOTPCode
+          QRB.updateSpecialZoneOtpCode booking.id otpCode
+          when isNewRider $ QRD.create riderDetails
+          QRB.updateRiderId booking.id riderDetails.id
+          QL.updateAddress booking.fromLocation.id req.fromAddress
+          QL.updateAddress booking.toLocation.id req.toAddress
+          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+          QBE.logRideConfirmedEvent booking.id
+
+          uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+
+          pure
+            DConfirmRes
+              { booking = uBooking,
+                ride = Nothing,
+                riderDetails,
+                riderMobileCountryCode = req.customerMobileCountryCode,
+                riderPhoneNumber = req.customerPhoneNumber,
+                riderName = req.mbRiderName,
+                transporter,
+                fromLocation = uBooking.fromLocation,
+                toLocation = uBooking.toLocation,
+                driverId = Nothing,
+                driverName = Nothing,
+                vehicleVariant = req.vehicleVariant
+              }
+    bookingType -> do
       case quote of
         Left (driver, driverQuote) -> do
           cfg <- QGHC.findByMerchantId transporter.id
@@ -135,7 +165,7 @@ handler transporter req quote = do
               pure otpCode
             Just otp -> pure otp
 
-          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
+          ride <- buildRide driver.id booking (if bookingType == DRB.RentalBooking then Nothing else ghrId) req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           enableLocationTrackingService <- asks (.enableLocationTrackingService)
           when enableLocationTrackingService $ do
@@ -194,36 +224,6 @@ handler transporter req quote = do
                 vehicleVariant = req.vehicleVariant
               }
         Right _ -> throwError AccessDenied
-    DRB.SpecialZoneBooking -> do
-      case quote of
-        Left _ -> throwError AccessDenied
-        Right _ -> do
-          otpCode <- generateOTPCode
-          QRB.updateSpecialZoneOtpCode booking.id otpCode
-          when isNewRider $ QRD.create riderDetails
-          QRB.updateRiderId booking.id riderDetails.id
-          QL.updateAddress booking.fromLocation.id req.fromAddress
-          QL.updateAddress booking.toLocation.id req.toAddress
-          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-          QBE.logRideConfirmedEvent booking.id
-
-          uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-
-          pure
-            DConfirmRes
-              { booking = uBooking,
-                ride = Nothing,
-                riderDetails,
-                riderMobileCountryCode = req.customerMobileCountryCode,
-                riderPhoneNumber = req.customerPhoneNumber,
-                riderName = req.mbRiderName,
-                transporter,
-                fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation,
-                driverId = Nothing,
-                driverName = Nothing,
-                vehicleVariant = req.vehicleVariant
-              }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -239,6 +239,7 @@ handler transporter req quote = do
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
+      endRideOtp <- generateOTPCode -- startRide otp code adding logic can be added later
       trackingUrl <- buildTrackingUrl guid
       return
         DRide.Ride
@@ -270,7 +271,10 @@ handler transporter req quote = do
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            driverGoHomeRequestId = ghrId,
+            odometerStartReading = Nothing,
+            odometerEndReading = Nothing,
+            endRideOtp = if booking.bookingType == DRB.RentalBooking then Just endRideOtp else Nothing
           }
 
     buildTrackingUrl rideId = do
@@ -420,17 +424,18 @@ validateRequest subscriber transporterId req now = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   case booking.bookingType of
-    DRB.NormalBooking -> do
-      _ <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-      driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-      driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
-      unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
-        cancelBooking booking (Just driver) transporter
-        throwError $ QuoteExpired driverQuote.id.getId
-      return (transporter, Left (driver, driverQuote))
     DRB.SpecialZoneBooking -> do
       quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       unless (quoteSpecialZone.validTill > now) $ do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
       return (transporter, Right quoteSpecialZone)
+    _ -> do
+      -- FIX ME
+      void $ req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+      driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+      driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+      unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
+        cancelBooking booking (Just driver) transporter
+        throwError $ QuoteExpired driverQuote.id.getId
+      return (transporter, Left (driver, driverQuote))

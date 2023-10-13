@@ -60,7 +60,11 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
                     { platformFeeCharge = platformFeeCharge',
                       cgst = platformFeeCgst',
                       sgst = platformFeeSgst'
-                    }
+                    },
+              maxDuration = maxDuration,
+              maxDistanceBuffer = maxDistanceBuffer,
+              perExtraKmFare = perExtraKmFare,
+              perExtraMinFare = perExtraMinFare
             }
         )
 
@@ -76,5 +80,9 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         platformFeeSgst = DFP.sgst <$> platformFeeInfo,
         waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
-        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
+        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo,
+        maxDuration = maxDuration,
+        maxDistanceBuffer = maxDistanceBuffer,
+        perExtraKmFare = perExtraKmFare,
+        perExtraMinFare = perExtraMinFare
       }

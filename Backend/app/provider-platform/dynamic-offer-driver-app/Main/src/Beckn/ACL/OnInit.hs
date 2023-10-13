@@ -140,8 +140,8 @@ mkOnInitMessage res = do
       VehVar.TAXI -> OnInit.TAXI
       VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
     buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+      _ -> OnInit.RIDE -- FIX ME
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->

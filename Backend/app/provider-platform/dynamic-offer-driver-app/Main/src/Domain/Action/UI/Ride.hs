@@ -322,7 +322,10 @@ otpRideCreate driver otpCode booking = do
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            driverGoHomeRequestId = ghrId,
+            odometerStartReading = Nothing,
+            odometerEndReading = Nothing,
+            endRideOtp = Nothing
           }
 
     buildTrackingUrl rideId = do
