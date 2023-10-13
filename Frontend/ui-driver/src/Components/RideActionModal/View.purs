@@ -455,7 +455,7 @@ customerNameView push config =
           , ellipsize true
           , singleLine false
           ] <> FontStyle.subHeading2 TypoGraphy
-        ] <> if config.isDriverArrived then [arrivedButtonView push config] else [dummyView push]
+        ] <> if config.isDriverArrived then [arrivedButtonView push config] else [dummyView push config]
     ]
 
 estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -677,8 +677,8 @@ lineImageView val =
     , margin $ MarginLeft 7
     ]
 
-dummyView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-dummyView push =
+dummyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+dummyView push config =
   textView
     [ afterRender push $ const NoAction
     , width $ V 0
