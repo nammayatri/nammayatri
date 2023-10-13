@@ -241,6 +241,24 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateOdometerStartReading rideId reading = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerStartReading reading,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+-- updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m()
+-- updateOdometerEndReading rideId reading = do
+--   now <- getCurrentTime
+--   updateOneWithKV
+--     [ Se.Set BeamR.odometerEndReading reading,
+--       Se.Set BeamR.updatedAt now
+--     ]
+--     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStatusByIds :: MonadFlow m => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
   now <- getCurrentTime
@@ -272,6 +290,7 @@ updateAll rideId ride = do
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
+      Se.Set BeamR.odometerEndReading ride.odometerEndReading,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -556,5 +575,8 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.numberOfDeviation = numberOfDeviation,
         BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
         BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
+        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
+        BeamR.odometerStartReading = odometerStartReading,
+        BeamR.odometerEndReading = odometerEndReading,
+        BeamR.endRideOtp = endRideOtp
       }

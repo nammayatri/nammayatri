@@ -61,7 +61,14 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
           case dConfirmRes.booking.bookingType of
-            DBooking.NormalBooking -> do
+            DBooking.SpecialZoneBooking -> do
+              fork "on_confirm/on_update" $ do
+                handle (errHandler' dConfirmRes transporter) $ do
+                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                  void $
+                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+            _ -> do
+              -- FIX ME
               ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
               driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
               --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
@@ -75,12 +82,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   void $
                     BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
               DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-            DBooking.SpecialZoneBooking -> do
-              fork "on_confirm/on_update" $ do
-                handle (errHandler' dConfirmRes transporter) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                  void $
-                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc

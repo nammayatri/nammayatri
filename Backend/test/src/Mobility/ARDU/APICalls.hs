@@ -95,6 +95,7 @@ ui = do
       )
       :<|> ( setDriverOnline
                :<|> _
+               :<|> _
                :<|> getNearbySearchRequests
                :<|> offerQuote
                :<|> respondQuote
@@ -140,7 +141,8 @@ buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =
   RideAPI.StartRideReq
     { RideAPI.rideOtp = otp,
-      point = initialPoint
+      point = initialPoint,
+      odometerStartReading = Just 0
     }
 
 buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty LocationAPI.Waypoint)

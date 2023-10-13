@@ -111,8 +111,10 @@ type RideEndAPI =
     :> ReqBody '[JSON] EndRideReq
     :> Post '[JSON] APISuccess
 
-newtype EndRideReq = EndRideReq
-  { point :: Maybe LatLong
+data EndRideReq = EndRideReq
+  { point :: Maybe LatLong,
+    odometerEndReading :: Maybe Int,
+    endRideOtp :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

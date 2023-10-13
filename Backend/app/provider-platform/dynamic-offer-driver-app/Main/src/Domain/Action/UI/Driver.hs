@@ -71,6 +71,7 @@ module Domain.Action.UI.Driver
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
     fetchDriverPhoto,
+    setRental,
   )
 where
 
@@ -215,6 +216,7 @@ data DriverInformationRes = DriverInformationRes
     onRide :: Bool,
     verified :: Bool,
     enabled :: Bool,
+    optForRental :: Bool,
     blocked :: Bool,
     subscribed :: Bool,
     paymentPending :: Bool,
@@ -261,6 +263,7 @@ data DriverEntityRes = DriverEntityRes
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
+    optForRental :: Bool,
     registeredAt :: UTCTime,
     language :: Maybe Maps.Language,
     alternateNumber :: Maybe Text,
@@ -611,6 +614,7 @@ createDriverDetails personId adminId merchantId = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             payerVpa = Nothing,
+            optForRental = False,
             lastEnabledOn = Just now,
             enabledAt = Just now,
             createdAt = now,
@@ -673,6 +677,13 @@ setActivity (personId, merchantId) isActive mode = do
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
     QDFS.updateStatus personId $
       DMode.getDriverStatus mode isActive
+  pure APISuccess.Success
+
+setRental :: (MonadFlow m, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> m APISuccess.APISuccess
+setRental (personId, _) isRental = do
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driverId = cast personId
+  QDriverInformation.updateRental driverId isRental
   pure APISuccess.Success
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
@@ -825,6 +836,7 @@ buildDriverEntityRes (person, driverInfo) = do
         blocked = driverInfo.blocked,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
+        optForRental = driverInfo.optForRental,
         paymentPending = driverInfo.paymentPending,
         registeredAt = person.createdAt,
         language = person.language,

@@ -30,6 +30,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data FlowType
   = RIDE_OTP
   | NORMAL
+  | RENTAL
   deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON, Ord)
 
 data Area
