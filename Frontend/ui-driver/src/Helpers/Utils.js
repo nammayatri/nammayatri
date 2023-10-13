@@ -121,7 +121,7 @@ export const countDown = function (countDownTime) {
             var countDown = countDownTime;
             var timerIID = instantGetTimer(function () {
               countDown -= 1;
-              if (countDown < 0) {
+              if (countDown <= 0) {
                 //clearInterval(window.timerId);
                 cb(action(0)(id)("EXPIRED")(timerIID))();
               } else {
