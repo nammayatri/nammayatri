@@ -15,6 +15,7 @@
 
 module Domain.Types.Merchant.MerchantMessage where
 
+import Data.Default.Class
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
@@ -31,7 +32,19 @@ data MessageKey
   | BOOKING_MESSAGE
   | CASH_COLLECTED_MESSAGE
   | SEND_PAYMENT_LINK
-  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
+  | WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE
+  | WHATSAPP_CLEAR_DUES_MESSAGE
+  | WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
+  | WHATSAPP_SETUP_AUTOPAY_MESSAGE
+  | WHATSAPP_SWITCH_PLAN_MESSAGE
+  | WHATSAPP_HOW_IT_WORKS_MESSAGE
+  | SMS_CLEAR_DUES_CALL_MISSED_MESSAGE
+  | SMS_CLEAR_DUES_MESSAGE
+  | SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS
+  | SMS_SETUP_AUTOPAY_MESSAGE
+  | SMS_SWITCH_PLAN_MESSAGE
+  | SMS_HOW_IT_WORKS_MESSAGE
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord, ToSchema)
 
 $(mkBeamInstancesForEnum ''MessageKey)
 
@@ -39,6 +52,9 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,
     messageKey :: MessageKey,
     message :: Text,
+    templateId :: Text,
+    jsonData :: MerchantMessageDefaultDataJSON,
+    containsUrlButton :: Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -49,3 +65,18 @@ type MerchantMessage = MerchantMessageD 'Safe
 instance FromJSON (MerchantMessageD 'Unsafe)
 
 instance ToJSON (MerchantMessageD 'Unsafe)
+
+data MerchantMessageDefaultDataJSON = MerchantMessageDefaultDataJSON
+  { var1 :: Maybe Text,
+    var2 :: Maybe Text,
+    var3 :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
+
+instance Default MerchantMessageDefaultDataJSON where
+  def =
+    MerchantMessageDefaultDataJSON
+      { var1 = Nothing,
+        var2 = Nothing,
+        var3 = Nothing
+      }

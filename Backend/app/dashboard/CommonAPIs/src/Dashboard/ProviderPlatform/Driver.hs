@@ -57,6 +57,7 @@ data DriverEndpoint
   | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
   | SetVehicleDriverRcStatusForFleetEndpoint
   | FleetUnlinkVehicleEndpoint
+  | SendSmsToDriverViaDashboardEndPoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"

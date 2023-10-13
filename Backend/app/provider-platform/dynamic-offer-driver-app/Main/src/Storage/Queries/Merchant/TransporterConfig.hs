@@ -120,6 +120,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             updateOrderStatusBatchSize,
             orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
+            volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
+            driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
             ..
           }
     where
@@ -202,5 +204,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
         BeamTC.ratingAsDecimal = ratingAsDecimal,
-        BeamTC.refillVehicleModel = refillVehicleModel
+        BeamTC.refillVehicleModel = refillVehicleModel,
+        BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
+        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit
       }

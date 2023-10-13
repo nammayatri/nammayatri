@@ -38,6 +38,14 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data DashboardMediaSendingLimit = DashboardMediaSendingLimit
+  { sms :: Int,
+    whatsapp :: Int,
+    overlay :: Int,
+    alert :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
   { merchantId :: Id Merchant,
@@ -109,7 +117,9 @@ data TransporterConfigD u = TransporterConfig
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
     ratingAsDecimal :: Bool,
-    refillVehicleModel :: Bool
+    refillVehicleModel :: Bool,
+    volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
+    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit
   }
   deriving (Generic, Show)
 

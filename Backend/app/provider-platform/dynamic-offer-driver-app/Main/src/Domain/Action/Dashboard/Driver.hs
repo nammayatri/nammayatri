@@ -60,13 +60,19 @@ module Domain.Action.Dashboard.Driver
     getFleetDriverAssociation,
     getFleetVehicleAssociation,
     getAllDriverForFleet,
+    sendSmsToDriver,
+    SendSmsReq (..),
+    MediaChannel (..),
+    VolunteerTransactionStorageReq (..),
   )
 where
 
 import Control.Applicative ((<|>))
+import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
@@ -88,6 +94,9 @@ import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.MerchantMessage (MessageKey)
+import Domain.Types.Merchant.TransporterConfig (DashboardMediaSendingLimit (..))
+import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.Vehicle as DVeh
@@ -95,11 +104,15 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
@@ -107,8 +120,11 @@ import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -124,6 +140,8 @@ import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Invoice as QINV
+import qualified Storage.Queries.Message.Message as MQuery
+import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
@@ -131,7 +149,9 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
+import Tools.Whatsapp as Whatsapp
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
@@ -1336,3 +1356,126 @@ fleetDriverEarning _merchantShortId fleetOwnerId driverId = do
         vehicleType = Nothing,
         ..
       }
+
+------------------------------------------------------------------------------------------------
+data MediaChannel
+  = SMS
+  | WHATSAPP
+  | OVERLAY
+  | ALERT
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SendSmsReq = SendSmsReq
+  { channel :: MediaChannel,
+    messageKey :: MessageKey,
+    overlayKey :: Maybe Text,
+    messageId :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SendSmsReq where
+  hideSecrets = identity
+
+data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
+  { volunteerId :: Text,
+    driverId :: Text,
+    messageKey :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets VolunteerTransactionStorageReq where
+  hideSecrets = identity
+
+sendSmsToDriver :: ShortId DM.Merchant -> Id Common.Driver -> Text -> SendSmsReq -> Flow APISuccess
+sendSmsToDriver merchantShortId driverId volunteerId _req@SendSmsReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  -- limit checking
+  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  void $ checkIfVolunteerSMSSendingLimitExceeded volunteerId transporterConfig.volunteerSmsSendingLimit channel
+  void $ checkIfDriverSMSReceivingLimitExceeded driverId.getId transporterConfig.driverSmsReceivingLimit channel
+
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access check
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  smsCfg <- asks (.smsCfg)
+  mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
+      sender = smsCfg.sender
+  withLogTag ("personId_" <> personId.getId) $ do
+    case channel of
+      SMS -> do
+        message <- MessageBuilder.buildGenericMessage driver.merchantId messageKey MessageBuilder.BuildGenericMessageReq {}
+        Sms.sendSMS driver.merchantId (Sms.SendSMSReq message phoneNumber sender)
+          >>= Sms.checkSmsResult
+      WHATSAPP -> do
+        merchantMessage <-
+          QMM.findByMerchantIdAndMessageKey driver.merchantId messageKey
+            >>= fromMaybeM (MerchantMessageNotFound driver.merchantId.getId (show messageKey))
+        let jsonData = merchantMessage.jsonData
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
+        when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
+      OVERLAY -> whenJust overlayKey $ \oKey -> do
+        mOverlay <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId oKey (fromMaybe ENGLISH driver.language) Nothing
+        whenJust mOverlay $ \overlay -> do
+          TN.sendOverlay driver.merchantId driver.id driver.deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody
+      ALERT -> whenJust messageId $ \_mId -> do
+        topicName <- asks (.broadcastMessageTopic)
+        message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+        msg <- createMessageLanguageDict message
+        produceMessage (topicName, Just (encodeUtf8 $ getId driverId)) msg
+  -- if the message is sent successfuly then increment the count of both volunteer and driver
+  void $ incrementVolunteerSMSSendingCount volunteerId channel
+  void $ incrementDriverSMSReceivingCount driverId.getId channel
+  pure Success
+  where
+    createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
+    createMessageLanguageDict message = do
+      translations <- B.runInReplica $ MTQuery.findByMessageId message.id
+      pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
+
+    addTranslation Domain.RawMessage {..} trans =
+      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
+
+windowLimit :: SWC.SlidingWindowOptions
+windowLimit = SWC.SlidingWindowOptions 24 SWC.Hours
+
+checkIfVolunteerSMSSendingLimitExceeded :: (CacheFlow m r, MonadFlow m) => Text -> Maybe DashboardMediaSendingLimit -> MediaChannel -> m ()
+checkIfVolunteerSMSSendingLimitExceeded volunteerId limitConfig channel = do
+  let limit = case limitConfig of
+        Nothing -> 500
+        Just config -> getLimitAccordingToChannel config channel
+  (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
+  when (currentLimit >= limit) $ throwError VolunteerSmsSendingLimitExceeded -- the limit is counted from 0
+
+incrementVolunteerSMSSendingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
+incrementVolunteerSMSSendingCount volunteerId channel = SWC.incrementWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
+
+checkIfDriverSMSReceivingLimitExceeded :: (CacheFlow m r, MonadFlow m) => Text -> Maybe DashboardMediaSendingLimit -> MediaChannel -> m ()
+checkIfDriverSMSReceivingLimitExceeded driverId limitConfig channel = do
+  let limit = case limitConfig of
+        Nothing -> 10
+        Just config -> getLimitAccordingToChannel config channel
+  (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
+  when (currentLimit >= limit) $ throwError DriverSmsReceivingLimitExceeded -- the limit is counted from 0
+
+incrementDriverSMSReceivingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
+incrementDriverSMSReceivingCount driverId channel = SWC.incrementWindowCount (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
+
+mkVolunteerSMSSendingLimitKey :: Text -> MediaChannel -> Text
+mkVolunteerSMSSendingLimitKey volunteerId channel = "Dashboard:VolunteerId-" <> volunteerId <> ":channel-" <> show channel <> ":SendSMS:HitCount"
+
+mkDriverSMSRecevingLimitKey :: Text -> MediaChannel -> Text
+mkDriverSMSRecevingLimitKey driverId channel = "Dashboard:DriverId-" <> driverId <> ":channel-" <> show channel <> ":SendSMS:ReceiveCount"
+
+getLimitAccordingToChannel :: DashboardMediaSendingLimit -> MediaChannel -> Int
+getLimitAccordingToChannel config channel =
+  case channel of
+    SMS -> config.sms
+    WHATSAPP -> config.whatsapp
+    OVERLAY -> config.overlay
+    ALERT -> config.alert
+
+--------------------------------------------------------------------------------------------------

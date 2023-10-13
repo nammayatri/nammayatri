@@ -798,3 +798,25 @@ instance IsHTTPError OverlayError where
     OverlayKeyAndUdfAlreadyPresent _ -> E400
 
 instance IsAPIError OverlayError
+
+data DashboardSMSError
+  = VolunteerSmsSendingLimitExceeded
+  | DriverSmsReceivingLimitExceeded
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DashboardSMSError
+
+instance IsBaseError DashboardSMSError where
+  toMessage = \case
+    VolunteerSmsSendingLimitExceeded -> Just "Volunteer Sms Sending limit exceeded"
+    DriverSmsReceivingLimitExceeded -> Just "Drivers' Sms receiving limit exceeded"
+
+instance IsHTTPError DashboardSMSError where
+  toErrorCode = \case
+    VolunteerSmsSendingLimitExceeded -> "VOLUNTEER_SMS_SENDING_LIMIT_EXCEEDED"
+    DriverSmsReceivingLimitExceeded -> "DRIVER_SMS_RECEIVING_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    VolunteerSmsSendingLimitExceeded -> E400
+    DriverSmsReceivingLimitExceeded -> E400
+
+instance IsAPIError DashboardSMSError

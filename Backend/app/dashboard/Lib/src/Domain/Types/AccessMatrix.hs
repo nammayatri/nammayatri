@@ -183,6 +183,7 @@ data UserActionType
   | GET_DRIVER_VEHICLE_ASSOCIATION
   | GET_DRIVER_ASSOCIATION
   | GET_VEHICLE_ASSOCIATION
+  | SEND_SMS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
