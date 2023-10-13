@@ -301,7 +301,7 @@ export const countDown = function (countDownTime) {
               var timerIID = countDownTimers[id];
               if (timerIID != undefined) {
                 countDown -= 1;
-                if (countDown < 0) {
+                if (countDown <= 0) {
                   delete countDownTimers[id];
                   cb(action(0)(id)("EXPIRED")(timerIID))();
                 } else {
