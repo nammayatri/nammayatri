@@ -28,6 +28,8 @@ module SharedLogic.MessageBuilder
     buildCollectCashMessage,
     BuildSendPaymentLinkReq (..),
     buildSendPaymentLink,
+    BuildGenericMessageReq (..),
+    buildGenericMessage,
   )
 where
 
@@ -155,3 +157,18 @@ buildCollectCashMessage merchantId req = do
   return $
     merchantMessage.message
       & T.replace (templateText "amount") req.amount
+
+data BuildGenericMessageReq = BuildGenericMessageReq {}
+  deriving (Generic)
+
+buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
+buildGenericMessage merchantId messageKey _ = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId messageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show messageKey))
+  let jsonData = merchantMessage.jsonData
+  return $
+    merchantMessage.message
+      & T.replace (templateText "var1") (fromMaybe "" jsonData.var1)
+      & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
+      & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)

@@ -33,6 +33,7 @@ import qualified Dashboard.ProviderPlatform.Revenue as Revenue
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
@@ -118,7 +119,8 @@ data DriversAPIs = DriversAPIs
     getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     getFleetDriverAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
+    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -311,7 +313,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> getFleetDriverVehicleAssociation
       :<|> getFleetDriverAssociation
       :<|> getFleetVehicleAssociation
-      :<|> setVehicleDriverRcStatusForFleet = driversClient
+      :<|> setVehicleDriverRcStatusForFleet
+      :<|> sendMessageToDriverViaDashboard = driversClient
 
     rideList
       :<|> rideStart

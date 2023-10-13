@@ -21,6 +21,7 @@ where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Driver as ADDriver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -91,6 +92,7 @@ type API =
            :<|> GetFleetDriverAssociationAPI
            :<|> GetFleetVehicleAssociationAPI
            :<|> SetVehicleDriverRcStatusForFleetAPI
+           :<|> SendMessageToDriverViaDashboardAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -281,6 +283,10 @@ type SetVehicleDriverRcStatusForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
     :> Common.SetVehicleDriverRcStatusForFleetAPI
 
+type SendMessageToDriverViaDashboardAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'SEND_DASHBOARD_MESSAGE
+    :> ADDriver.SendMessageToDriverViaDashboardAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -330,6 +336,7 @@ handler merchantId =
     :<|> getFleetDriverAssociation merchantId
     :<|> getFleetVehicleAssociation merchantId
     :<|> setVehicleDriverRcStatusForFleet merchantId
+    :<|> sendMessageToDriverViaDashboard merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -638,3 +645,10 @@ setVehicleDriverRcStatusForFleet merchantShortId apiTokenInfo driverId req = wit
   transaction <- buildTransaction Common.SetVehicleDriverRcStatusForFleetEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.setVehicleDriverRcStatusForFleet) driverId apiTokenInfo.personId.getId req
+
+sendMessageToDriverViaDashboard :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> DDriver.SendSmsReq -> FlowHandler APISuccess
+sendMessageToDriverViaDashboard merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.SendMessageToDriverViaDashboardEndPoint apiTokenInfo driverId (Just $ DDriver.VolunteerTransactionStorageReq apiTokenInfo.personId.getId driverId.getId (show req.messageKey) (show req.channel) (show $ fromMaybe "" req.overlayKey) (show $ fromMaybe "" req.messageId))
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.sendMessageToDriverViaDashboard) driverId apiTokenInfo.personId.getId req

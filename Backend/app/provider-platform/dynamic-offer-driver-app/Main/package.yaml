@@ -58,6 +58,7 @@ dependencies:
   - bytestring
   - cryptonite
   - containers
+  - data-default-class
   - euler-hs
   - exceptions
   - hspec

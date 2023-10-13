@@ -579,6 +579,7 @@ library
     , containers
     , cryptonite
     , dashboard-helper-api
+    , data-default-class
     , either
     , esqueleto
     , euler-hs
@@ -686,6 +687,7 @@ executable dynamic-offer-driver-app-exe
     , containers
     , cryptonite
     , dashboard-helper-api
+    , data-default-class
     , dynamic-offer-driver-app
     , either
     , esqueleto
