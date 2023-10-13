@@ -21,13 +21,13 @@ import Kernel.Utils.GenericPretty (PrettyShow)
 
 data RentalSlab = RentalSlab
   { id :: Id RentalSlab, --not used in domain layer
-    baseDistance :: Kilometers,
-    baseDuration :: Hours
+    baseDistance :: Meters,
+    baseDuration :: Seconds
   }
   deriving (Generic, Show, PrettyShow)
 
 data RentalSlabAPIEntity = RentalSlabAPIEntity
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
+  { baseDistance :: Meters,
+    baseDuration :: Seconds
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

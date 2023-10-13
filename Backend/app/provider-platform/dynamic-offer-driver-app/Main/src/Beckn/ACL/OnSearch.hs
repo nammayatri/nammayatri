@@ -17,6 +17,7 @@ module Beckn.ACL.OnSearch where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import Beckn.Types.Core.Taxi.OnSelect (TimeTimestamp (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
@@ -24,7 +25,6 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
-import Beckn.Types.Core.Taxi.OnSelect (TimeTimestamp(..))
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -54,8 +54,8 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let stopInfo = mkStopInfo res
   let (quoteEntitiesList :: [QuoteEntities]) =
         maybe [] (map (mkQuoteEntities startInfo stopInfo provider)) estimateList
-        <> maybe [] (map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider)) specialQuoteList
-        <> maybe [] (map (mkQuoteEntitiesRental startInfo provider)) rentalQuoteList
+          <> maybe [] (map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider)) specialQuoteList
+          <> maybe [] (map (mkQuoteEntitiesRental startInfo provider)) rentalQuoteList
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
   let providerSpec =
@@ -89,13 +89,16 @@ mkStartInfo dReq =
 
 mkStopInfo :: DSearch.DSearchRes -> Maybe OS.StopInfo
 mkStopInfo res =
-  res.toLocation <&> (\toLoc -> OS.StopInfo
-    { location =
-        OS.Location
-          { gps = OS.Gps {lat = toLoc.lat, lon = toLoc.lon},
-            address = Nothing
-          }
-    })
+  res.toLocation
+    <&> ( \toLoc ->
+            OS.StopInfo
+              { location =
+                  OS.Location
+                    { gps = OS.Gps {lat = toLoc.lat, lon = toLoc.lon},
+                      address = Nothing
+                    }
+              }
+        )
 
 data QuoteEntities = QuoteEntities
   { fulfillment :: OS.FulfillmentInfo,
@@ -228,7 +231,7 @@ mkQuoteEntitiesRental start provider it = do
           { start,
             end = Nothing,
             id = it.quoteId.getId,
-            _type = OS.RIDE,
+            _type = OS.RENTAL,
             vehicle = OS.Vehicle {category = variant}
           }
       item =
