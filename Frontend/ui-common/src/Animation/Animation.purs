@@ -331,7 +331,7 @@ scaleYAnimWithDelay :: Int -> PrestoAnim.Animation
 scaleYAnimWithDelay delay =
    PrestoAnim.Animation
     [ PrestoAnim.duration 1
-    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.fromScaleY 1.0
     , PrestoAnim.toScaleY 1.0
     , PrestoAnim.delay delay
     , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)

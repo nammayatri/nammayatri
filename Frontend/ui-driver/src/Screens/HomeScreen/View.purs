@@ -1190,7 +1190,7 @@ rideActionModelView push state =
           , PP.sheetState COLLAPSED
           , peakHeight $ if (DA.elem state.data.peekHeight [518,470,0]) || state.data.peekHeight < 450 then getPeekHeight state else state.data.peekHeight
           , topShift 0.0
-          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
+          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then
                 RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
                 else linearLayout[][]
         ]
