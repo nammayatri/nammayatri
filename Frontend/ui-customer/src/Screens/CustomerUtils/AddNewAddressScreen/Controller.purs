@@ -419,7 +419,7 @@ checkPermissionAndUpdatePersonMarker state = do
       else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
-showPersonMarker state marker location = animateCamera location.lat location.lng 19 ""
+showPersonMarker state marker location = animateCamera location.lat location.lng 19 "ZOOM"
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
