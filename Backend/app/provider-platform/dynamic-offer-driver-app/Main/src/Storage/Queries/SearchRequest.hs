@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,7 +13,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.Queries.SearchRequest where
 
@@ -60,7 +60,6 @@ createDSReq searchRequest = do
     RENTAL -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> create searchRequest
-
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -116,14 +115,15 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
               { id = Id id,
                 transactionId = transactionId,
                 providerId = Id providerId,
-                searchRequestDetails = SearchRequestDetailsOnDemand {
-                    fromLocation = fl,
-                    toLocation = tl,
-                    estimatedDistance = estimatedDistance,
-                    estimatedDuration = estimatedDuration,
-                    specialLocationTag = specialLocationTag,
-                    autoAssignEnabled = autoAssignEnabled
-                 },
+                searchRequestDetails =
+                  SearchRequestDetailsOnDemand
+                    { fromLocation = fl,
+                      toLocation = tl,
+                      estimatedDistance = estimatedDistance,
+                      estimatedDuration = estimatedDuration,
+                      specialLocationTag = specialLocationTag,
+                      autoAssignEnabled = autoAssignEnabled
+                    },
                 area = area,
                 bapId = bapId,
                 bapUri = pUrl,
@@ -156,9 +156,10 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
               { id = Id id,
                 transactionId = transactionId,
                 providerId = Id providerId,
-                searchRequestDetails = SearchRequestDetailsRental {
-                    rentalFromLocation = fl
-                 },
+                searchRequestDetails =
+                  SearchRequestDetailsRental
+                    { rentalFromLocation = fl
+                    },
                 area = area,
                 bapId = bapId,
                 bapUri = pUrl,
@@ -170,7 +171,6 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 createdAt = createdAt,
                 tag = tag
               }
-
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
@@ -203,7 +203,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
           { BeamSR.id = getId id,
             BeamSR.transactionId = transactionId,
             BeamSR.providerId = getId providerId,
-            BeamSR.fromLocationId = Just $ getId details.fromLocation.id,
+            BeamSR.fromLocationId = Just $ getId details.rentalFromLocation.id,
             BeamSR.toLocationId = Nothing,
             BeamSR.area = area,
             BeamSR.bapId = bapId,
@@ -220,7 +220,8 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.specialLocationTag = Nothing,
             BeamSR.tag = tag
           }
-      --_ -> undefined
+
+--_ -> undefined
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
 buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
