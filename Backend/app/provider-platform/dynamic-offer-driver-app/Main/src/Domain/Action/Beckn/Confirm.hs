@@ -193,7 +193,7 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = Nothing,
+                toLocation = uBooking.bookingDetails.toLocation,
                 driverId = Just driver.id.getId,
                 driverName = Just driver.firstName,
                 vehicleVariant = req.vehicleVariant
@@ -228,7 +228,7 @@ handler transporter req quote = do
                 riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = Nothing,
+                toLocation = uBooking.bookingDetails.toLocation,
                 driverId = Nothing,
                 driverName = Nothing,
                 vehicleVariant = req.vehicleVariant
