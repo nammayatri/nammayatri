@@ -53,7 +53,9 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.TimeZone;
 
 
@@ -65,6 +67,8 @@ public class WidgetService extends Service {
     private String widgetMessage;
     private int calculatedTime = 0;
     private JSONObject entity_payload, data;
+    private boolean isRemovingInProcess = false;
+    private final Queue<Intent> rideRequestQueue = new LinkedList<>();
 
     private final Bundle params = new Bundle();
 
@@ -79,6 +83,8 @@ public class WidgetService extends Service {
         } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
                 removeViewAndRequest(0);
+            } else if (isRemovingInProcess) {
+                rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
                 addMessageToWidget(intent);
             }
@@ -140,12 +146,15 @@ public class WidgetService extends Service {
 
                 // Update text for fare and distanceToPickup
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                fareTextView.setText(sharedPref.getString("CURRENCY", "₹") + fare);
+                String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
+                fareTextView.setText(fareText);
+                String distanceText;
                 if (distanceToPickup > 1000) {
-                    distanceTextView.setText((df.format(distanceToPickup / 1000)) + " km pickup");
+                    distanceText = (df.format(distanceToPickup / 1000)) + " km pickup";
                 } else {
-                    distanceTextView.setText(distanceToPickup + " m pickup");
+                    distanceText = distanceToPickup + " m pickup";
                 }
+                distanceTextView.setText(distanceText);
 
                 silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
                 if (silentRideRequest != null){
@@ -261,6 +270,7 @@ public class WidgetService extends Service {
 
     private void removeViewAndRequest(int delayInMilliSeconds) {
         handler.postDelayed(() -> {
+            isRemovingInProcess = true;
             if (silentRideRequest != null) {
                 silentRideRequest.animate().translationX(-1500)
                         .setInterpolator(new FastOutLinearInInterpolator())
@@ -285,7 +295,11 @@ public class WidgetService extends Service {
                     progressBar = null;
                     dismissRequest = null;
                     calculatedTime = 0;
+                    isRemovingInProcess = false;
                     handler.removeCallbacksAndMessages(null);
+                    if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
+                        showSilentNotification(rideRequestQueue.poll());
+                    }
                 }
             }, 700);
         }, delayInMilliSeconds);
@@ -368,7 +382,7 @@ public class WidgetService extends Service {
         }
         //inflating widgetView
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        widgetView = LayoutInflater.from(this).inflate(R.layout.floating_widget_layout, null);
+        widgetView = LayoutInflater.from(this).inflate(R.layout.floating_widget_layout,null);
         DisplayMetrics dm = new DisplayMetrics();
         windowManager.getDefaultDisplay().getRealMetrics(dm);
         WindowManager.LayoutParams widgetLayoutParams = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, LAYOUT_FLAG, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
@@ -443,7 +457,7 @@ public class WidgetService extends Service {
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
                                     if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
-                                        long percentUsedRam = (long) Math.round(getCurrentUsedRam());
+                                        long percentUsedRam = Math.round(getCurrentUsedRam());
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
                                         mainLooper.postDelayed(() -> openMainActivity(), percentUsedRam*10 > 500 ? percentUsedRam*10 : 500 );
                                     } else {
@@ -503,6 +517,7 @@ public class WidgetService extends Service {
             windowManager.removeView(imageClose);
             imageClose = null;
         }
+        rideRequestQueue.clear();
     }
 
     private double getCurrentUsedRam(){
