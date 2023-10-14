@@ -89,6 +89,7 @@ library
     , hw-kafka-client
     , mobility-core
     , monad-control
+    , openapi3
     , persistent
     , persistent-postgresql
     , postgresql-simple
@@ -96,6 +97,7 @@ library
     , record-hasfield
     , rider-app
     , sequelize
+    , servant-openapi3
     , servant-server
     , sessionizer-metrics
     , streamly
@@ -167,12 +169,14 @@ executable kafka-consumers-exe
     , kafka-consumers
     , mobility-core
     , monad-control
+    , openapi3
     , persistent
     , persistent-postgresql
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
+    , servant-openapi3
     , servant-server
     , sessionizer-metrics
     , streamly

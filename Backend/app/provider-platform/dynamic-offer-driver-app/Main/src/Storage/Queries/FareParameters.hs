@@ -67,6 +67,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 govtCharges = govtCharges,
                 baseFare = baseFare,
                 waitingCharge = waitingCharge,
+                rideExtraTimeFare = rideExtraTimeFare,
                 nightShiftCharge = nightShiftCharge,
                 fareParametersDetails
               }
@@ -83,6 +84,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.nightShiftRateIfApplies = nightShiftRateIfApplies,
         BeamFP.baseFare = baseFare,
         BeamFP.waitingCharge = waitingCharge,
+        BeamFP.rideExtraTimeFare = rideExtraTimeFare,
         BeamFP.nightShiftCharge = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
       }

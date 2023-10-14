@@ -15,6 +15,7 @@
 
 module Consumer.AvailabilityTime.Types where
 
+import Data.OpenApi
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)

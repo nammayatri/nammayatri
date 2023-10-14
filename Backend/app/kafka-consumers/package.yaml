@@ -67,6 +67,8 @@ dependencies:
   - hashmap
   - bytestring
   - streamly
+  - openapi3
+  - servant-openapi3
   - hw-kafka-client
   - monad-control
   - persistent

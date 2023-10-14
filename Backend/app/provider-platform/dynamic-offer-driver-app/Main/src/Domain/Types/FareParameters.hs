@@ -29,6 +29,7 @@ data FareParameters = FareParameters
     govtCharges :: Maybe Money,
     baseFare :: Money,
     waitingCharge :: Maybe Money,
+    rideExtraTimeFare :: Maybe Money,
     nightShiftCharge :: Maybe Money,
     nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails

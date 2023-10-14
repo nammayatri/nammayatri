@@ -37,6 +37,7 @@ data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
   | CantCalculateDistance
+  | AverageVehicleSpeedLessThanZero
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FarePolicyError
@@ -49,6 +50,7 @@ instance IsHTTPError FarePolicyError where
   toErrorCode NoFarePolicy = "NO_FARE_POLICY"
   toErrorCode NoPerExtraKmRate = "NO_PER_EXTRA_KM_RATE"
   toErrorCode CantCalculateDistance = "CANT_CALCULATE_DISTANCE"
+  toErrorCode AverageVehicleSpeedLessThanZero = "AVERAGE_SPEED_OF_VEHICLE LESS THAN ZERO"
   toHttpCode _ = E500
 
 instance IsAPIError FarePolicyError
