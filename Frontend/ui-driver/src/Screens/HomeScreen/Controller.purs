@@ -48,7 +48,7 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC, getPixels, getDeviceDefaultDensity)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp, uploadFile)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
@@ -203,6 +203,8 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    UploadImage -> pure unit
+    CallBackImageUpload _ _ _ -> pure unit
     _ -> pure unit
 
 
@@ -302,6 +304,9 @@ data Action = NoAction
             | PaymentPendingPopupAC PopUpModal.Action
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
+            | CallBackImageUpload String String String
+            | UploadImage
+          
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -379,6 +384,21 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state
   pure AfterRender
   ]
+
+eval (UploadImage) state = continueWithCmd state [do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
+  _ <- liftEffect $ uploadFile unit
+  pure NoAction]
+
+
+eval (CallBackImageUpload image imageName imagePath) state = do
+    _ <- pure $ setValueToLocalStore RIDE_START_ODOMETER image -- After it normal ride flow will start
+    _ <- pure $ printLog "value of image base 64 taking time" image
+    _ <- pure $ printLog "value of image base 64 from local store" (getValueToLocalStore RIDE_START_ODOMETER )
+      
+    continue state
+
+
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
@@ -480,7 +500,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = continue state{props{enterOdometerReadingModal = true, enterOtpModal = false}}
     -- let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
     -- exit exitState
-eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continue state -- make api call
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continueWithCmd state  [ pure UploadImage] -- make api call
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
   _ <- pure $ spy "Inside InAppKeyboardModalOdometerAction" (show key <> "index : " <> ( show index))
   _ <- pure $ spy "Odometer value" (length state.props.editedOdometerValue)

@@ -110,6 +110,8 @@ data KeyStore = USER_NAME
                 | TRIP_DISTANCE
                 | TRIP_STATUS
                 | TRIP_STARTED
+                | RIDE_START_ODOMETER
+                | RIDE_END_ODOMETER
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

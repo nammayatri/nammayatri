@@ -95,6 +95,7 @@ screen initialState =
   , globalEvents : [
         ( \push -> do
           -- _ <- pure $ printLog "initial State" initialState
+          _ <- JB.storeCallBackImageUpload push CallBackImageUpload
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
