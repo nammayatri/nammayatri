@@ -36,7 +36,9 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
-import EulerHS.Prelude hiding (id)
+import Domain.Types.Merchant.TransporterConfig (AvgSpeedOfVechilePerKm)
+import Domain.Types.Vehicle.Variant
+import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
 import Kernel.Utils.Common
 
@@ -62,6 +64,11 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
         fareParams.customerExtraFee <&> \ceFare -> do
           mkBreakupItem customerExtraFareCaption (mkPrice ceFare)
 
+      extraTimeFareCaption = "EXTRA_TIME_FARE"
+      mkExtraTimeFareCaption =
+        fareParams.rideExtraTimeFare <&> \tbCharge -> do
+          mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
+
       totalFareFinalRounded = fareSum fareParams
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
@@ -85,7 +92,8 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
-      mkCustomerExtraFareItem
+      mkCustomerExtraFareItem,
+      mkExtraTimeFareCaption
     ]
     <> detailsBreakups
   where
@@ -130,6 +138,7 @@ pureFareSum fareParams = do
     + fromMaybe 0 fareParams.waitingCharge
     + fromMaybe 0 fareParams.govtCharges
     + fromMaybe 0 fareParams.nightShiftCharge
+    + fromMaybe 0 fareParams.rideExtraTimeFare
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
@@ -139,6 +148,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     distance :: Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
+    actualRideDuration :: Maybe Seconds,
+    avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
     nightShiftCharge :: Maybe Money
@@ -168,6 +179,7 @@ calculateFareParameters params = do
           + notPartOfNightShiftCharge
       govtCharges =
         roundToIntegral . (fromIntegral fullRideCostN *) <$> (fp.govtCharges)
+      extraTimeFareInfo = calculateExtraTimeFare params.distance fp.perMinuteRideExtraTimeCharge params.actualRideDuration fp.vehicleVariant =<< params.avgSpeedOfVehicle -- todo tp transporter_config
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
@@ -180,6 +192,7 @@ calculateFareParameters params = do
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
+            rideExtraTimeFare = extraTimeFareInfo,
             nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
             fareParametersDetails = case fp.farePolicyDetails of
               DFP.ProgressiveDetails _ -> fareParametersDetails
@@ -271,6 +284,27 @@ calculateFareParameters params = do
               cgst = Just . realToFrac $ baseFee * platformFeeInfo'.cgst,
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
+    calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> Variant -> AvgSpeedOfVechilePerKm -> Maybe Money
+    calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration vehicleVariant avgSpeedOfVehicle = do
+      let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
+      let avgSpeedOfVehicle' = realToFrac @_ @Double case vehicleVariant of
+            SEDAN -> avgSpeedOfVehicle.sedan.getKilometers
+            SUV -> avgSpeedOfVehicle.suv.getKilometers
+            HATCHBACK -> avgSpeedOfVehicle.hatchback.getKilometers
+            AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
+            TAXI -> avgSpeedOfVehicle.taxi.getKilometers
+            TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
+      if avgSpeedOfVehicle' > 0
+        then do
+          let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
+          let perMinuteRideExtraTimeCharge' = realToFrac @_ @Double (fromMaybe 0 perMinuteRideExtraTimeCharge).getHighPrecMoney
+          let estimatedTimeTakeInMinutes :: Int = round $ (distanceInKilometer / avgSpeedOfVehicle') * 60
+          let rideDurationDifference = realToFrac @_ @Double <$> (\actualRideDurationInMinutes' -> actualRideDurationInMinutes' - estimatedTimeTakeInMinutes) <$> (actualRideDurationInMinutes <&> getMinutes)
+          let extraTimeFare = (Money <$> round) . (* perMinuteRideExtraTimeCharge') <$> rideDurationDifference
+          case extraTimeFare of
+            Just fare | fare > 0 -> Just fare
+            _ -> Nothing
+        else Nothing
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
 countFullFareOfParamsDetails = \case

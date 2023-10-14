@@ -28,6 +28,16 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [(Variant, Kilometers)]
+  { sedan :: Kilometers,
+    suv :: Kilometers,
+    hatchback :: Kilometers,
+    autorickshaw :: Kilometers,
+    taxi :: Kilometers,
+    taxiplus :: Kilometers
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
   { merchantId :: Id Merchant,
@@ -73,6 +83,7 @@ data TransporterConfigD u = TransporterConfig
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,
+    avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     updateNotificationStatusBatchSize :: Int,
     updateOrderStatusBatchSize :: Int,
     mandateValidity :: Int,

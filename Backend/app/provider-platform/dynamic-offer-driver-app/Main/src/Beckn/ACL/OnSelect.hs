@@ -182,6 +182,7 @@ mkQuote driverQuote now = do
         || breakup.title == "CUSTOMER_SELECTED_FARE"
         || breakup.title == "TOTAL_FARE"
         || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+        || breakup.title == "EXTRA_TIME_FARE"
     formatTimeDifference duration =
       let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)

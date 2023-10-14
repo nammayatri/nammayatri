@@ -24,6 +24,18 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
+let esqLocationDBCfg = esqDBCfg
+
+let esqLocationDBRepCfg =
+      { connectHost = esqLocationDBCfg.connectHost
+      , connectPort = 5434
+      , connectUser = esqLocationDBCfg.connectUser
+      , connectPassword = esqLocationDBCfg.connectPassword
+      , connectDatabase = esqLocationDBCfg.connectDatabase
+      , connectSchemaName = esqLocationDBCfg.connectSchemaName
+      , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
+      }
+
 let clickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"

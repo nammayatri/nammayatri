@@ -30,6 +30,7 @@ data FarePolicyT f = FarePolicyT
     maxAllowedTripDistance :: B.C f (Maybe Meters),
     minAllowedTripDistance :: B.C f (Maybe Meters),
     govtCharges :: B.C f (Maybe Double),
+    perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

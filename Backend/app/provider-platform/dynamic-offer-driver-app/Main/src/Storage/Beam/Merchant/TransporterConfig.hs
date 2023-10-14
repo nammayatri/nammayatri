@@ -69,6 +69,7 @@ data TransporterConfigT f = TransporterConfigT
     aadhaarVerificationRequired :: B.C f Bool,
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
+    avgSpeedOfVehicle :: B.C f (Maybe A.Value),
     mandateValidity :: B.C f Int,
     bankErrorExpiry :: B.C f Seconds,
     driverLocationAccuracyBuffer :: B.C f Meters,
