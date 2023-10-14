@@ -48,6 +48,7 @@ type InAppKeyboardModalState = {
     , modalType :: KeyboardModalType
     , isValidAlternateNumber :: Boolean
     , showResendOtpButton :: Boolean
+    , confirmBtnColor :: String
 }
 
 type TextConfig =
@@ -189,4 +190,5 @@ config = {
   , modalType : NONE
   , isValidAlternateNumber : true
   , showResendOtpButton : false
+  , confirmBtnColor : Color.darkMint
   }

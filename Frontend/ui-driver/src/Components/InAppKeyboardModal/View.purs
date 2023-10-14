@@ -253,7 +253,7 @@ keyboard push state =
            , gravity CENTER
            , margin (Margin 3 3 3 3)
            , alpha if (key == "done") then state.imageConfig.alpha else 1.0
-           , background if key == "back" then Color.lightGrey else Color.darkMint
+           , background if key == "back" then Color.lightGrey else state.confirmBtnColor --Color.darkMint
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))

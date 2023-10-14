@@ -72,8 +72,8 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
-      detailText = state.data.activeRide.source
+      titleText = "Dakshineshwar Kalibari",  --fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
+      detailText = "Dakshineswar, Kolkata, West Bengal  700076"--state.data.activeRide.source
     },
     destinationAddress {
       titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.destination)) DA.!! 0),
@@ -89,7 +89,8 @@ rideActionModalConfig state =
     isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
-    appConfig = state.data.config
+    appConfig = state.data.config,
+    rideType = ST.RENTAL_BOOKING--tate.data.activeRide.rideType
     }
     in rideActionModalConfig'
 
@@ -615,7 +616,8 @@ enterOtpStateConfig state = let
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
-      modalType = ST.OTP
+      modalType = ST.OTP,
+      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
       }
       in inAppModalConfig'
 
@@ -642,7 +644,8 @@ enterOdometerReadingConfig state = let
       imageConfig {
         alpha = 1.0 --if(DS.length state.props.odometerValue < 4) then 0.3 else 1.0
       },
-      modalType = ST.ODOMETER
+      modalType = ST.ODOMETER,
+      confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint
       }
       in inAppModalConfig'
 

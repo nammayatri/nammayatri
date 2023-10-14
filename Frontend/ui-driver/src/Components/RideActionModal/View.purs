@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.RideActionModal.View where
+module Components.RideActionModal.View  where
 
 import Common.Types.App
 import PrestoDOM.Animation as PrestoAnim
@@ -38,7 +38,7 @@ import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
+import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..), RideType(..))
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Engineering.Helpers.Utils (showAndHideLoader)
@@ -326,7 +326,10 @@ rideActionDataView push config =
             , width MATCH_PARENT
             , orientation VERTICAL
             ][ rideInfoView push config
-            , if config.rideType == "RENTAL" then destinationView config push else if config.startRideActive then sourceAndDestinationView push config else destinationView config push
+            , if config.rideType == RENTAL_BOOKING then 
+                if config.startRideActive then locationView config push "source" else rentalRideDescView config push 
+              else 
+                if config.startRideActive then sourceAndDestinationView push config else locationView config push "destination"
             ]
           ]
       ]
@@ -342,7 +345,7 @@ totalDistanceView push config =
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if config.rideType == "RENTAL" then "Distance" else (getString RIDE_DISTANCE)
+        , text $ if config.rideType == RENTAL_BOOKING then "Distance" else (getString RIDE_DISTANCE)
         , color Color.black650
         , ellipsize true
         , singleLine true
@@ -361,25 +364,35 @@ totalDurationView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , gravity LEFT
+    , gravity START
     , orientation VERTICAL
     , weight 1.0
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if config.rideType == "RENTAL" then "Duration" else (getString RIDE_DISTANCE)
+        , text $ "Duration kjhsfkjhsdkhgfk" 
         , color Color.black650
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $
+      , linearLayout[height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL] $ [
+        textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.totalDistance
+        , text if config.startRideActive then config.totalDuration else (config.durationTravelled)
+        , color Color.black900
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body11 TypoGraphy] <> if config.startRideActive then [] else [textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text (" / " <> config.totalDuration)
         , color Color.black650
         , ellipsize true
         , singleLine true
-        ] <> FontStyle.body11 TypoGraphy
+        ] <> FontStyle.body11 TypoGraphy]
     ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -494,7 +507,7 @@ estimatedFareView push config =
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text if config.rideType == "RENTAL" then "Rental Fare" else (getString RIDE_FARE)
+        , text if config.rideType == RENTAL_BOOKING then "Rental Fare" else (getString RIDE_FARE)
         , color Color.black650
         , ellipsize true
         , singleLine true
@@ -566,13 +579,13 @@ rideInfoView push config =
       
     --   estimatedFareView push config
     --  , separator true
-    --  , if config.rideType == "RENTAL" then totalDurationView push config else dummyView push
-    --  ,  if config.rideType == "RENTAL" then separator true else dummyView push
+    --  , if config.rideType == RENTAL_BOOKING then totalDurationView push config else dummyView push
+    --  ,  if config.rideType == RENTAL_BOOKING then separator true else dummyView push
     --  , totalDistanceView push config 
     --  , separator $ isWaitTimeVisible config
     --  , waitTimeView push config
      ] <>
-     if config.rideType == "RENTAL" then rentalOrder config push else normalOrder config push
+     if config.rideType == RENTAL_BOOKING then rentalOrder config push else normalOrder config push
      <>
      [
      linearLayout
@@ -585,8 +598,12 @@ normalOrder config push = [estimatedFareView push config , separator true, total
               <> if (isWaitTimeVisible config ) then [ separator $ true, waitTimeView push config] else []
 
 rentalOrder config push = ([estimatedFareView push config]
-          <> if config.startRideActive then [ separator true, totalDistanceView push config] else []
-          <> if (isWaitTimeVisible config ) then [ separator $ true, waitTimeView push config] else [separator true, totalDurationView push config])
+          <> if config.startRideActive then 
+            [ separator true
+            , totalDistanceView push config 
+            , separator true
+            , if (isWaitTimeVisible config) then waitTimeView push config else totalDurationView push config ] else [separator true, totalDurationView push config])
+          -- <> if (isWaitTimeVisible config) then [ separator $ true, waitTimeView push config] else [separator true, totalDurationView push config])
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
@@ -607,6 +624,7 @@ sourceDestinationImageView  config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
+    , margin $ MarginLeft 4
     , orientation VERTICAL
     ][ imageView
         [ height $ V 14
@@ -618,7 +636,7 @@ sourceDestinationImageView  config =
       , imageView
         [ height $ V 14
         , width $ V 14
-        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
+        , imageWithFallback $ "ny_ic_drop_indicator," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_indicator.png" --"ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
         ]
       ]
 
@@ -631,28 +649,30 @@ sourceDestinationTextView push config =
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
     , afterRender push $ const NoAction
-    ][  textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.sourceAddress.titleText
-        , id (getNewIDWithTag "sourceArea")
-        , color Color.black800
-        , ellipsize true
-        , singleLine true
-        , afterRender push $ const NoAction
-        ] <> FontStyle.subHeading1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.sourceAddress.detailText
-        , id (getNewIDWithTag "sourceAddress")
-        , color Color.black650
-        , margin (MarginBottom 25)
-        , ellipsize true
-        , singleLine true
-        , afterRender push $ const NoAction
-        ] <> FontStyle.body1 TypoGraphy
-      , destAddressTextView config push
+    ][  
+      -- textView $
+      --   [ height WRAP_CONTENT
+      --   , width WRAP_CONTENT
+      --   , text config.sourceAddress.titleText
+      --   , id (getNewIDWithTag "sourceArea")
+      --   , color Color.black800
+      --   , ellipsize true
+      --   , singleLine true
+      --   , afterRender push $ const NoAction
+      --   ] <> FontStyle.subHeading1 TypoGraphy
+      -- , textView $
+      --   [ height WRAP_CONTENT
+      --   , width WRAP_CONTENT
+      --   , text config.sourceAddress.detailText
+      --   , id (getNewIDWithTag "sourceAddress")
+      --   , color Color.black650
+      --   , margin (MarginBottom 25)
+      --   , ellipsize true
+      --   , singleLine true
+      --   , afterRender push $ const NoAction
+      --   ] <> FontStyle.body1 TypoGraphy
+      addressTextView config push "source" (MarginLeft 0)
+      , addressTextView config push "destination" (MarginLeft 0)
       ]
 
 arrivedButtonView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -692,21 +712,20 @@ arrivedButtonView push config =
       ]<> FontStyle.body1 TypoGraphy
     ]
 
-destinationView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destinationView config push =
+locationView :: forall w . Config -> (Action -> Effect Unit) -> String -> PrestoDOM (Effect Unit) w
+locationView config push locType =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , margin $ MarginVertical 24 24
   ][  imageView
-      [ height $ V 24
-      , width $ V 24
-      , imageWithFallback $ if config.rideType == "RENTAL" then "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png" else "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
-      , margin $ Margin 0 3 8 0
+      [ height $ V if locType == "source" then 14 else 24
+      , width $ V if locType == "source" then 14 else 24
+      , imageWithFallback $ if locType == "source" then "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png" else "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+      , margin $ Margin 0 (if locType == "source" then 7 else 3) 8 0
       ]
-    -- , if config.rideType == "RENTAL" then rentalRideDescView config push else
-    ,  destAddressTextView config push
+    ,  addressTextView config push locType (MarginLeft 0)
   ]
 
 lineImageView :: forall w . Int -> PrestoDOM (Effect Unit) w
@@ -726,17 +745,18 @@ dummyView push =
     , height $ V 0
     ]
 
-destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destAddressTextView config push=
+addressTextView :: forall w . Config -> (Action -> Effect Unit) -> String -> Margin -> PrestoDOM (Effect Unit) w
+addressTextView config push locType marginVal =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
+    , margin $ marginVal
     , orientation VERTICAL
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.destinationAddress.titleText
-        , id (getNewIDWithTag "destinationArea")
+        , text $ if locType == "source" then config.sourceAddress.titleText else config.destinationAddress.titleText
+        , id (getNewIDWithTag "locationArea")
         , color Color.black800
         , ellipsize true
         , singleLine true
@@ -744,8 +764,8 @@ destAddressTextView config push=
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.destinationAddress.detailText
-        , id (getNewIDWithTag "destinationAddress")
+        , text $ if locType == "source" then config.sourceAddress.detailText else config.destinationAddress.detailText
+        , id (getNewIDWithTag "locationAddress")
         , color Color.black650
         , ellipsize true
         , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
@@ -753,12 +773,19 @@ destAddressTextView config push=
       ]
   
 rentalRideDescView config push = 
-  linearLayout
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 24
+  , afterRender push $ const NoAction
+  ][linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
+  
   , orientation VERTICAL
   ][  linearLayout
       [ height WRAP_CONTENT
+      , margin (MarginLeft 25)
       , width MATCH_PARENT
       ][  textView $ 
           [ text "Start Time: "
@@ -776,7 +803,7 @@ rentalRideDescView config push =
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , margin $ MarginTop 8
+      , margin (Margin 25 8 0 0)
       ][  textView $ 
           [ text "Start ODO Reading: "
           , height WRAP_CONTENT
@@ -790,14 +817,53 @@ rentalRideDescView config push =
           , text $ config.startODOReading <> " Kms"
           ] <> FontStyle.body1 TypoGraphy
         ]
-    -- , pickUpAtView config push
+    , pickUpAtView config push
+    
+  ]
+  , sourceDestinationImageView config
   ]
 
+pickUpAtView config push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ MarginTop 24
+  ][ linearLayout
+      [height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ Margin 0 4 0 0
+      , cornerRadius 16.0
+      , padding $ Padding 24 3 0 5
+      , background "#F2F2F4"][
+        textView $ 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "Picked up at"
+          , color Color.black600
+          ] <> FontStyle.body1 TypoGraphy
+      ]
+    , addressTextView config push "source" (MarginLeft 24)
+    -- , textView $ 
+    --       [ text config.sourceAddress.titleText
+    --       , height WRAP_CONTENT
+    --       , width WRAP_CONTENT
+    --       , color Color.black700
+    --       , margin $ MarginLeft 24
+    --       ] <> FontStyle.body1 TypoGraphy
+    --     , textView $ 
+    --       [ height WRAP_CONTENT
+    --       , width WRAP_CONTENT
+    --       , color Color.black800
+    --       , margin $ MarginLeft 24
+    --       , text config.sourceAddress.detailText
+    --       ] <> FontStyle.body1 TypoGraphy
 
+  ]
 
 getTitle :: Config -> String
 getTitle config = case config.startRideActive of
-  false -> if config.rideType == "RENTAL" then "You are on a rental ride" else (getString YOU_ARE_ON_A_RIDE)
+  false -> if config.rideType == RENTAL_BOOKING then "You are on a rental ride" else (getString YOU_ARE_ON_A_RIDE)
   true  -> case config.isDriverArrived, config.notifiedCustomer of
     false, false  -> (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
     true, _       -> (getString YOU_ARE_AT_PICKUP)
@@ -825,4 +891,4 @@ getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
 
 isWaitTimeVisible :: Config -> Boolean
-isWaitTimeVisible config =  true || (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" )
+isWaitTimeVisible config = (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" )

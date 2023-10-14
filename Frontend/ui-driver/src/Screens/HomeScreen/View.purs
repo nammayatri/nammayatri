@@ -221,7 +221,7 @@ view push state =
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.enterOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -908,7 +908,7 @@ driverStatus push state =
 
 enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 enterOtpModal push state =
-  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction)(enterOtpStateConfig state)
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction)( enterOtpStateConfig state)
 
 enterOdometerReadingModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 enterOdometerReadingModal push state =

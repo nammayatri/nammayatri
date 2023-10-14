@@ -52,7 +52,9 @@ initData = {
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
-          disabilityTag : Nothing
+          disabilityTag : Nothing,
+          rentalBooking : false,
+          rideType : RENTAL_BOOKING
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -123,8 +125,7 @@ initData = {
           feedback : "",
           disability : Nothing,
           payerVpa : ""
-        },
-        bookingType : NORMAL_BOOKING
+        }
     
     },
     props: {
@@ -135,9 +136,11 @@ initData = {
         rideActionModal : false,
         updatedArrivalInChat : false,
         enterOtpModal : false,
+        endRideOtpModal : false,
         odometerValue : "0000•0",
         editedOdometerValue : "",
         enterOdometerReadingModal : false,
+        endRideOdometerReadingModal : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
         time : 0,
@@ -149,7 +152,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : false,
-        currentStage : RideAccepted,
+        currentStage : RideStarted,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,

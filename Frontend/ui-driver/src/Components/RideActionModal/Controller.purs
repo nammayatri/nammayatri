@@ -17,7 +17,7 @@ module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import MerchantConfig.DefaultConfig as DC
-import Screens.Types (HomeScreenStage(..), DisabilityType(..))
+import Screens.Types (HomeScreenStage(..), DisabilityType(..), RideType(..))
 
 data Action = StartRide 
             | EndRide 
@@ -54,9 +54,11 @@ type Config = {
   requestedVehicleVariant :: Mb.Maybe String,
   accessibilityTag :: Mb.Maybe DisabilityType,
   appConfig :: AppConfig,
-  rideType :: String,
+  rideType :: RideType,
   startTime :: String,
-  startODOReading :: String
+  startODOReading :: String,
+  totalDuration :: String,
+  durationTravelled :: String
   }
 
 type AddressConfig = {
@@ -90,7 +92,9 @@ config = {
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
   appConfig : DC.config
-  , rideType : "RENTAL",
+  , rideType : NORMAL_BOOKING,
   startTime : "12:45 PM",
-  startODOReading : "21477"
+  startODOReading : "21477",
+  totalDuration : "6 hrs",
+  durationTravelled : "1 hr"
   }

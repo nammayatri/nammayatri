@@ -774,8 +774,7 @@ type HomeScreenData =  {
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
-  peekHeight :: Int,
-  bookingType :: BookingType
+  peekHeight :: Int
 }
 
 type EndRideData = {
@@ -881,10 +880,16 @@ type ActiveRide = {
   rideCreatedAt :: String,
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
-  disabilityTag :: Maybe DisabilityType
+  disabilityTag :: Maybe DisabilityType,
+  rentalBooking :: Boolean,
+  rideType :: RideType
 }
 
-data BookingType = SPECIAL_ZONE_BOOKING | NORMAL_BOOKING | RENTAL_BOOKING
+data RideType = SPECIAL_ZONE_BOOKING | NORMAL_BOOKING | RENTAL_BOOKING
+
+derive instance genericRideType :: Generic RideType _
+instance showRideType :: Show RideType where show = genericShow
+instance eqRideType :: Eq RideType where eq = genericEq
 
 type HomeScreenProps =  {
   statusOnline :: Boolean,
@@ -892,10 +897,12 @@ type HomeScreenProps =  {
   screenName :: String,
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
+  endRideOtpModal :: Boolean,
   rideOtp :: String,
   editedOdometerValue :: String,
   odometerValue :: String,
   enterOdometerReadingModal :: Boolean,
+  endRideOdometerReadingModal :: Boolean,
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,

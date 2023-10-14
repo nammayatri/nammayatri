@@ -1509,7 +1509,7 @@ currentRideFlow = do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
         void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, isDriverArrived = getDriverArrivedStatus activeRide stage}}, props{ silentPopUpView = false, goOfflineModal = false}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, isDriverArrived = getDriverArrivedStatus activeRide stage}}, props{ rentalBooking = ride.rentalBooking ,silentPopUpView = false, goOfflineModal = false}})
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
         _ <- updateStage $ HomeScreenStage HomeScreen

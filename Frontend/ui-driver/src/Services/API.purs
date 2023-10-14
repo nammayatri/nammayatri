@@ -503,7 +503,8 @@ newtype RidesInfo = RidesInfo
       customerExtraFee :: Maybe Int,
       disabilityTag :: Maybe String,
       payerVpa :: Maybe String,
-      autoPayStatus :: Maybe String
+      autoPayStatus :: Maybe String,
+      rentalBooking :: Boolean --- tag to identify the type of ride
   }
 
 newtype LocationInfo = LocationInfo
