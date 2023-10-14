@@ -45,9 +45,11 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.CachedQueries.Coins.CoinPlan as CQCP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
+import qualified Storage.Queries.Coins.PurchaseHistory as QCPH
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -95,6 +97,12 @@ data ErrorEntity = ErrorEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data CoinsEntity = CoinsEntity
+  { totalQuantityPerPlan :: Int,
+    usedQuantityPerPlan :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data PlanFareBreakup = PlanFareBreakup
   { component :: Text,
     amount :: HighPrecMoney
@@ -118,7 +126,8 @@ data CurrentPlanRes = CurrentPlanRes
     planRegistrationDate :: Maybe UTCTime,
     latestAutopayPaymentDate :: Maybe UTCTime,
     latestManualPaymentDate :: Maybe UTCTime,
-    isLocalized :: Maybe Bool
+    isLocalized :: Maybe Bool,
+    coinDetails :: Maybe CoinsEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -209,7 +218,7 @@ currentPlan (driverId, _merchantId) = do
         mbOrder <- SOrder.findById (cast invoice.id)
         maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       Nothing -> return (Nothing, Nothing)
-
+  coinDetails <- mkCoinsDetails driverId
   return $
     CurrentPlanRes
       { currentPlanDetails = currentPlanEntity,
@@ -221,6 +230,7 @@ currentPlan (driverId, _merchantId) = do
         latestManualPaymentDate = latestManualPayment <&> (.updatedAt),
         latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
         planRegistrationDate = mDriverPlan <&> (.createdAt),
+        coinDetails,
         isLocalized = Just True
       }
   where
@@ -230,6 +240,18 @@ currentPlan (driverId, _merchantId) = do
       if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
         then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
         else return (Nothing, Nothing)
+
+mkCoinsDetails :: Id SP.Person -> Flow (Maybe CoinsEntity)
+mkCoinsDetails driverId' = do
+  latestActiveCoinPurchase <- listToMaybe <$> QCPH.getPurchasedHistory driverId' (Just 1) Nothing True
+  case latestActiveCoinPurchase of
+    Just purchase -> do
+      planLinkedToPurchase <- CQCP.getCoinPlanDetails purchase.coinPlanId >>= fromMaybeM (InternalError $ "No coin plan found with id : " <> purchase.coinPlanId)
+      let numDays = planLinkedToPurchase.numOfDays
+          modDays = purchase.quantityLeft `mod` numDays
+          quantityUsed = numDays - (if modDays == 0 then numDays else modDays)
+      return $ Just $ CoinsEntity numDays quantityUsed
+    Nothing -> return Nothing
 
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> DI.DriverInformation -> Flow PlanSubscribeRes
@@ -458,15 +480,12 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   let translatedName = maybe plan.name (.name) mbtranslation
       translatedDescription = maybe plan.description (.description) mbtranslation
       planBaseFrequcency = getPlanBaseFrequency planBaseAmount
-
   dues <-
     if isCurrentPlanEntity
       then do mkDueDriverFeeInfoEntity dueDriverFees transporterConfig_
       else return []
-
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
-
   return
     PlanEntity
       { id = plan.id.getId,

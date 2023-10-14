@@ -1677,7 +1677,8 @@ data AutoPayInvoiceHistory = AutoPayInvoiceHistory
     amount :: HighPrecMoney,
     executionAt :: UTCTime,
     autoPayStage :: Maybe DDF.AutopayPaymentStage,
-    rideTakenOn :: UTCTime
+    rideTakenOn :: UTCTime,
+    paidByCoins :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1749,7 +1750,8 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
               amount = sum $ mapToAmount [dfee],
               executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
               autoPayStage = dfee.autopayPaymentStage,
-              rideTakenOn = dfee.createdAt
+              rideTakenOn = dfee.createdAt,
+              paidByCoins = dfee.status == DDF.CLEARED_BY_YATRI_COINS
             }
     Nothing -> return Nothing
   where
