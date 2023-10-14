@@ -86,6 +86,8 @@ public class NotificationUtils {
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
+
+    public static  String RENTAL_ALLOCATION_TYPE = "NEW_RENTAL_RIDE_AVAILABLE";
     public static String TRIP_CHANNEL_ID = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
@@ -121,13 +123,18 @@ public class NotificationUtils {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
             f.setTimeZone(TimeZone.getTimeZone("IST"));
             String currTime = f.format(new Date());
-
+            System.out.println("Inside entity_payload " + entity_payload);
             String notificationType = data.getString("notification_type");
             if (ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
                 System.out.println("The remove notification cleare "+data.getString("entity_ids"));
                 MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
                 return;
             }
+            if (RENTAL_ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
+                MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
+                return;
+            }
+
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
@@ -167,6 +174,7 @@ public class NotificationUtils {
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
+                    sheetData.putString("notificationType" , notificationType);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
@@ -182,7 +190,7 @@ public class NotificationUtils {
                 }
                 boolean rideReqExpired = (RideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
                 Log.e(TAG, "TimeDifference : " + (RideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
-                if (RideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2){
+                if (RideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2 || true){
                     if (checkPermission(context)) {
                         //Starting OverlaySheetService
                         if (binder == null) {
@@ -265,6 +273,143 @@ public class NotificationUtils {
                           iterator.remove();
                       }
                   }
+            }
+
+            if (RENTAL_ALLOCATION_TYPE.equals(notificationType)) {
+                Bundle params = new Bundle();
+                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+                mFirebaseAnalytics.logEvent("rental_ride_request_received", params);
+                //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
+
+                Intent svcT = new Intent(context, OverlaySheetService.class);
+                SharedPreferences sharedPref = context.getSharedPreferences(
+                        context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                System.out.println("Call Service before");
+                Bundle sheetData = new Bundle();
+                String expiryTime = "";
+                String searchRequestId = "";
+                try {
+                    JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
+                    JSONObject addressDrop = new JSONObject(entity_payload.get("toLocation").toString());
+                    sheetData.putString("searchRequestId", entity_payload.getString("searchRequestId"));
+                    sheetData.putString("searchRequestValidTill", entity_payload.getString("searchRequestValidTill"));
+                    sheetData.putInt("baseFare", entity_payload.getInt("baseFare"));
+                    sheetData.putString("currency", sharedPref.getString("CURRENCY", "₹"));
+                    sheetData.putInt("distanceToPickup", entity_payload.getInt("distanceToPickup"));
+                    sheetData.putString("durationToPickup", entity_payload.getString("durationToPickup"));
+                    sheetData.putInt("distanceTobeCovered", entity_payload.getInt("distance"));
+                    sheetData.putString("sourceArea", addressPickUp.getString("area"));
+                    sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
+                    
+                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);
+                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 20);
+                    sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
+                    sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                    sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
+                    sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                    sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
+                    sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
+                    sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
+                    sheetData.putString("notificationType" , notificationType);
+                    expiryTime = entity_payload.getString("searchRequestValidTill");
+                    searchRequestId = entity_payload.getString("searchRequestId");
+                    System.out.println(entity_payload);
+                } catch (Exception e) {
+                    System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
+                    Bundle overlayExceptionParams = new Bundle();
+                    overlayExceptionParams.putString("search_request_id", searchRequestId);
+                    overlayExceptionParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
+                    mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+                    mFirebaseAnalytics.logEvent("exception_parsing_overlay_data", overlayExceptionParams);
+                    Log.e(TAG, "Exception" + e);
+
+                }
+                boolean rideReqExpired = (RideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
+                Log.e(TAG, "TimeDifference : " + (RideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
+                if (RideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2 || true){
+                    if (checkPermission(context)) {
+                        //Starting OverlaySheetService
+                        if (binder == null) {
+                            context.startService(svcT);
+                            listData.add(sheetData);
+                        } else {
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                if (binder != null) {
+                                    binder.getService().addToList(sheetData);
+                                }
+                            });
+                        }
+                        context.bindService(svcT, new ServiceConnection() {
+                            @Override
+                            public void onServiceConnected(ComponentName name, IBinder service) {
+                                if (service instanceof OverlaySheetService.OverlayBinder) {
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        binder = (OverlaySheetService.OverlayBinder) service;
+                                        ArrayList<Bundle> x = listData;
+                                        listData = new ArrayList<>();
+                                        for (Bundle item : x) {
+                                            binder.getService().addToList(item);
+                                        }
+                                    });
+                                }
+                            }
+
+                            @Override
+                            public void onServiceDisconnected(ComponentName name) {
+                                binder = null;
+                            }
+                        }, BIND_AUTO_CREATE);
+                    } else {
+                        if (overlayFeatureNotAvailable(context)) {
+                            try {
+                                mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                if (RideRequestActivity.getInstance() == null) {
+                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    intent.putExtras(sheetData);
+                                    context.getApplicationContext().startActivity(intent);
+                                } else {
+                                    RideRequestActivity.getInstance().addToList(sheetData);
+                                }
+                                lastRideReq = new Bundle();
+                                lastRideReq.putAll(sheetData);
+                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                startMediaPlayer(context, R.raw.allocation_request, true);
+                                RideRequestUtils.createRideRequestNotification(context);
+                            } catch (Exception e) {
+                                params.putString("exception", e.toString());
+                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
+                            }
+                        }
+
+//                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
+                        System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
+                        Bundle overlayPermissionParams = new Bundle();
+                        overlayPermissionParams.putString("search_request_id", searchRequestId);
+                        overlayPermissionParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
+                        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+                        mFirebaseAnalytics.logEvent("no_overlay_permission", overlayPermissionParams);
+                    }
+                } else {
+                    Bundle overlayParams = new Bundle();
+                    String expireTimer = String.valueOf(RideRequestUtils.calculateExpireTimer(expiryTime, currTime));
+                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + expireTimer + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
+                    overlayParams.putString("current_time", currTime);
+                    overlayParams.putString("expiry_time", expiryTime);
+                    overlayParams.putString("time_difference", expireTimer);
+                    overlayParams.putString("search_request_id", searchRequestId);
+                    overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
+                    mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+                    mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
+                }
+                notificationId++;
+                for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<String, Long> entry = iterator.next();
+                    if(RideRequestUtils.timeDifferenceInMinutes(entry.getValue(), System.currentTimeMillis()) > 30) {
+                        iterator.remove();
+                    }
+                }
             }
 
             if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {

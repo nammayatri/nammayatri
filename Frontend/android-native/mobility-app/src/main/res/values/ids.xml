@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="dashedLine" type="id" />
+    <item name="destinationIcon" type="id" />
+    <item name="rentalTime" type="id" />
+    <item name="rentalDistance" type="id" />
+    <item name="rentalBookingDateAndTime" type="id" />
+    <item name="rentalBookingDate" type="id" />
+    <item name="rentalBookingTime" type="id" />
+    <item name="rental_view_0" type="id" />
+</resources>

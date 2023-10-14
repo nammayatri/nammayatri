@@ -157,7 +157,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     }
                     if (remoteMessage.getData().containsKey("entity_data")) {
                         String notificationType = remoteMessage.getData().get("notification_type");
-                        if (notificationType != null && notificationType.equals("NEW_RIDE_AVAILABLE")) {
+                        if (notificationType != null && (notificationType.equals("NEW_RIDE_AVAILABLE") ||  notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE"))) {
                             String entityPayload = remoteMessage.getData().get("entity_data");
                             if (entityPayload != null) {
                                 entity_payload = new JSONObject(entityPayload);
@@ -208,6 +208,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
                                 if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
                             }else showRR(entity_payload, payload);
+                            break;
+                        
+                        case NotificationTypes.NEW_RENTAL_RIDE_AVAILABLE:
+                            if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")){
+                                 if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRentalRideRequest(entity_payload, payload);
+                            }else showRentalRideRequest(entity_payload, payload);
                             break;
 
                         case NotificationTypes.CLEARED_FARE:
@@ -420,6 +426,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+     private void showRentalRideRequest(JSONObject entity_payload, JSONObject payload){
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RENTAL_RIDE_AVAILABLE)).apply();
+        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
+            startWidgetService(null, payload, entity_payload);
+        } else {
+            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+        }
+    }
+
+
     private void showOverlayMessage(JSONObject payload) {
         try {
             Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
@@ -595,5 +612,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
         private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        private static final String NEW_RENTAL_RIDE_AVAILABLE = "NEW_RENTAL_RIDE_AVAILABLE";
     }
 }

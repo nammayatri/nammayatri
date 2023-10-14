@@ -17,6 +17,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -66,11 +67,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText , rentalTime , rentalDistance,rentalBookingDate,rentalBookingTime;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
-        ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag;
+        ImageView assetZonePickup, assetZoneDrop, rideTypeImage, dashedLine;
+        LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag , rentalBookingDateAndTime;
+        CardView destinationIcon;
 
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -105,6 +107,13 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rideTypeText = itemView.findViewById(R.id.rideTypeText);
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);
             durationToPickupImage = itemView.findViewById(R.id.durationToPickupImage);
+            dashedLine = itemView.findViewById(R.id.dashedLine);
+            destinationIcon = itemView.findViewById(R.id.destinationIcon);
+            rentalTime = itemView.findViewById(R.id.rentalTime);
+            rentalDistance = itemView.findViewById(R.id.rentalDistance);
+            rentalBookingDateAndTime = itemView.findViewById(R.id.rentalBookingDateAndTime);
+            rentalBookingDate = itemView.findViewById(R.id.rentalBookingDate);
+            rentalBookingTime = itemView.findViewById(R.id.rentalBookingTime);
         }
     }
 

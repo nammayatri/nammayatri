@@ -46,4 +46,5 @@
     <string name="and">and</string>
     <string name="no_enabled_browser">No enabled browser found in your device, please enable or install a browser</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="today">Today</string>
 </resources>
