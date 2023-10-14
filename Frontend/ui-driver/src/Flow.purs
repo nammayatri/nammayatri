@@ -1427,7 +1427,7 @@ referralScreenFlow = do
         selectedWeek = case last pastWeeks of
                         Just week -> week
                         Nothing -> state.props.selectedWeek
-    modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen {props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek }} )
+    modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen {props{ showShimmer = true, days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek }} )
   act <- UI.referralScreen
   case act of
     GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN -> homeScreenFlow
@@ -1795,6 +1795,7 @@ homeScreenFlow = do
               time = (convertUTCtoISC (response.createdAt )"h:mm A"),
               source = (decodeAddress response.fromLocation false),
               destination = (decodeAddress response.toLocation false),
+              vehicleType = response.vehicleVariant,
               totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
               distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
               status = response.status,
@@ -2412,6 +2413,7 @@ updateDriverDataToStates = do
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
+  setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)
   setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { data {  driverName = getDriverInfoResp.firstName
     , driverVehicleType = linkedVehicle.variant
