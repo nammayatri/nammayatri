@@ -49,7 +49,8 @@ import Tools.Event
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quoteId :: Id DQuote.Quote,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    startTime :: Maybe UTCTime
   }
 
 data DConfirmRes = DConfirmRes
@@ -66,7 +67,8 @@ data DConfirmRes = DConfirmRes
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    startTime :: Maybe UTCTime
   }
   deriving (Show, Generic)
 
@@ -91,7 +93,9 @@ confirm DConfirmReq {..} = do
   fulfillmentId <-
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure (Nothing)
-      DQuote.RentalDetails _ -> pure (Nothing)
+      DQuote.RentalDetails rentalOffer -> do
+        unless (isJust startTime) $ throwError $ InvalidRequest "Rental confirm qoute should have startTime param"
+        pure $ Just rentalOffer.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -109,7 +113,7 @@ confirm DConfirmReq {..} = do
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now startTime Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -124,7 +128,7 @@ confirm DConfirmReq {..} = do
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
 
-  -- DB.runTransaction $ do 
+  -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
@@ -148,7 +152,7 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {..}
+        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {bppQuoteId = id.getId, ..}
         DQuote.DriverOfferDetails driverOffer -> do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
@@ -157,7 +161,6 @@ confirm DConfirmReq {..} = do
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
-
 
 buildBooking ::
   MonadFlow m =>
@@ -168,11 +171,12 @@ buildBooking ::
   Maybe DL.Location ->
   DExophone.Exophone ->
   UTCTime ->
+  Maybe UTCTime ->
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now startTime otpCode paymentMethodId driverId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -192,7 +196,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         providerName = quote.providerName,
         itemId = quote.itemId,
         providerMobileNumber = quote.providerMobileNumber,
-        startTime = searchRequest.startTime,
+        startTime = fromMaybe now startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
         estimatedFare = quote.estimatedFare,

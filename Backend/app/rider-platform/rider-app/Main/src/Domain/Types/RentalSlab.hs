@@ -27,7 +27,8 @@ data RentalSlab = RentalSlab
   deriving (Generic, Show, PrettyShow)
 
 data RentalSlabAPIEntity = RentalSlabAPIEntity
-  { baseDistance :: Meters,
+  { bppQuoteId :: Text,
+    baseDistance :: Meters,
     baseDuration :: Seconds
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

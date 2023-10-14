@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -43,6 +44,7 @@ buildConfirmReq res = do
 mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
 mkConfirmMessage res = do
   let vehicleVariant = castVehicleVariant res.vehicleVariant
+  now <- getCurrentTime
   pure
     Confirm.ConfirmMessage
       { order =
@@ -54,7 +56,7 @@ mkConfirmMessage res = do
                       price = Nothing
                     }
                 ],
-              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant now,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
               quote =
                 Confirm.Quote
@@ -86,8 +88,8 @@ mkConfirmMessage res = do
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
-mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> UTCTime -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant startTime =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
       _type = fulfillmentType,
@@ -102,6 +104,7 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                       },
                   address = mkAddress startLoc.address
                 },
+            time = TimeTimestamp startTime,
             authorization = Nothing
           },
       end =
