@@ -123,7 +123,9 @@ initData = {
           feedback : "",
           disability : Nothing,
           payerVpa : ""
-        }
+        },
+        bookingType : NORMAL_BOOKING
+    
     },
     props: {
         statusOnline : true,
@@ -133,6 +135,9 @@ initData = {
         rideActionModal : false,
         updatedArrivalInChat : false,
         enterOtpModal : false,
+        odometerValue : "0000•0",
+        editedOdometerValue : "",
+        enterOdometerReadingModal : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
         time : 0,
@@ -144,7 +149,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : false,
-        currentStage : HomeScreen,
+        currentStage : RideAccepted,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,
@@ -153,6 +158,7 @@ initData = {
         openChatScreen : false,
         silentPopUpView : false,
         zoneRideBooking : true,
+        rentalBooking : true,
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,

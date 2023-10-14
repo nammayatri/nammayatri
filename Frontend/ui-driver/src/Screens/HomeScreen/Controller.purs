@@ -42,6 +42,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
+import Data.String.Common (joinWith)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
@@ -73,6 +74,7 @@ import Effect.Uncurried (runEffectFn4)
 import Constants 
 import Data.Function.Uncurried (runFn1)
 import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -111,7 +113,7 @@ instance loggableAction :: Loggable Action where
       -- InAppKeyboardModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
       -- InAppKeyboardModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
       -- _ -> pure unit
-
+    InAppKeyboardModalOdometerAction act -> pure unit
     CountDown seconds -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "count_down"
     PopUpModalAction act -> pure unit --case act of
       -- PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_end_ride" "go_back_onclick"
@@ -230,6 +232,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
                     | ClearPendingDues ST.HomeScreenState
+                    | FetchOdometerReading ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -243,6 +246,7 @@ data Action = NoAction
             | BottomNavBarAction BottomNavBar.Action
             | RideActionModalAction RideActionModal.Action
             | InAppKeyboardModalAction InAppKeyboardModal.Action
+            | InAppKeyboardModalOdometerAction InAppKeyboardModal.Action
             | CountDown Int
             | CurrentLocation String String
             | ActiveRideAPIResponseAction (Array RidesInfo)
@@ -473,9 +477,28 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
-    exit exitState
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = continue state{props{enterOdometerReadingModal = true, enterOtpModal = false}}
+    -- let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+    -- exit exitState
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continue state -- make api call
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
+  _ <- pure $ spy "Inside InAppKeyboardModalOdometerAction" (show key <> "index : " <> ( show index))
+  _ <- pure $ spy "Odometer value" (length state.props.editedOdometerValue)
+  if length state.props.editedOdometerValue >=5 then continue state
+    else do
+      let 
+        editedOdometerValue = state.props.editedOdometerValue <> key
+        odometerVal = (joinWith "" (Array.replicate (6 - (length editedOdometerValue +1)) "0")) <> editedOdometerValue
+      _ <- pure $ spy "OdometerValue" ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal))
+      continue state{props{odometerValue = ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal)), editedOdometerValue = editedOdometerValue }}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
+  let 
+    text = state.props.editedOdometerValue 
+    editedOdometerValue = if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" 
+    odometerVal = (joinWith "" (Array.replicate (6 - (length editedOdometerValue + 1)) "0")) <> editedOdometerValue
+  continue state { props{ odometerValue = ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal)), editedOdometerValue = editedOdometerValue } }
+
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }

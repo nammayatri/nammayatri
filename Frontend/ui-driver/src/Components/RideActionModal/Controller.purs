@@ -53,7 +53,10 @@ type Config = {
   isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
   accessibilityTag :: Mb.Maybe DisabilityType,
-  appConfig :: AppConfig
+  appConfig :: AppConfig,
+  rideType :: String,
+  startTime :: String,
+  startODOReading :: String
   }
 
 type AddressConfig = {
@@ -87,4 +90,7 @@ config = {
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
   appConfig : DC.config
-}
+  , rideType : "RENTAL",
+  startTime : "12:45 PM",
+  startODOReading : "21477"
+  }

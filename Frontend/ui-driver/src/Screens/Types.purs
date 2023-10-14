@@ -339,6 +339,7 @@ type DriverProfileScreenProps = {
   removeAlternateNumber :: Boolean,
   enterOtpModal :: Boolean,
   enterOtpFocusIndex :: Int,
+  enterOdometerFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
   alternateMobileOtp :: String,
@@ -649,7 +650,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -773,7 +774,8 @@ type HomeScreenData =  {
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
-  peekHeight :: Int
+  peekHeight :: Int,
+  bookingType :: BookingType
 }
 
 type EndRideData = {
@@ -882,6 +884,8 @@ type ActiveRide = {
   disabilityTag :: Maybe DisabilityType
 }
 
+data BookingType = SPECIAL_ZONE_BOOKING | NORMAL_BOOKING | RENTAL_BOOKING
+
 type HomeScreenProps =  {
   statusOnline :: Boolean,
   goOfflineModal :: Boolean,
@@ -889,6 +893,9 @@ type HomeScreenProps =  {
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
   rideOtp :: String,
+  editedOdometerValue :: String,
+  odometerValue :: String,
+  enterOdometerReadingModal :: Boolean,
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
@@ -910,6 +917,7 @@ type HomeScreenProps =  {
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean,
+  rentalBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,

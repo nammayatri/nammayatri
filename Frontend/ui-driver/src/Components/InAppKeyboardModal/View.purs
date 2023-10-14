@@ -26,7 +26,7 @@ import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=), (&&), (<), not)
+import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, (<$>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback)
@@ -37,6 +37,7 @@ import Language.Strings (getString)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.Array ((..))
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -92,33 +93,42 @@ view push state =
 
                 ]
               , otpView push state
+              , odometerView push state
             ]
           , keyboard push state
         ]
     ]
 
-textBoxes :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-textBoxes push state =
+textBoxes :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> TextBoxConfig -> PrestoDOM (Effect Unit) w
+textBoxes push state textBoxConfig =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded then VISIBLE else GONE
+  , visibility if (state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded) || state.modalType == KeyboardModalType.ODOMETER then VISIBLE else GONE
   , margin (Margin 0 20 0 20)
   , clickable false
   ](mapWithIndex (\index item ->
       textView $
-      [ width (V 48)
-      , height (V 56)
-      , color Color.greyTextColor
-      , text ( take 1 (drop index state.inputTextConfig.text) )
+      [ width textBoxConfig.width 
+      , height textBoxConfig.height
+      , color if ( take 1 (drop index state.inputTextConfig.text) == "•" ) then Color.black600 else Color.greyTextColor
+      , text if ( take 1 (drop index state.inputTextConfig.text) ) == "-" then "" else ( take 1 (drop index state.inputTextConfig.text) ) 
       , gravity CENTER
       , cornerRadius 4.0
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
-      , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
+      , margin textBoxConfig.margin
       , onClick push (const (OnclickTextBox index))
-      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) [1,2,3,4])
+      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) (1..(textBoxConfig.numberOfBoxes)))
+
+
+type TextBoxConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  numberOfBoxes :: Int
+  }
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 singleTextBox push state =
@@ -154,6 +164,16 @@ singleTextBox push state =
         ]
       ]
 
+
+odometerView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , visibility if state.modalType == KeyboardModalType.ODOMETER then VISIBLE else GONE
+  , gravity CENTER  
+  ][  textBoxes push state {margin : (MarginHorizontal 12 6), width : V 42 , height : V 46 , numberOfBoxes : 6}]
+
 otpView :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 otpView push state =
    linearLayout
@@ -161,9 +181,9 @@ otpView push state =
            , height WRAP_CONTENT
            , margin (Margin 20 0 20 0)
            , orientation VERTICAL
+           , visibility if state.modalType /= KeyboardModalType.ODOMETER then VISIBLE else GONE
            , gravity if(state.modalType == KeyboardModalType.OTP) then CENTER else LEFT
-       ]
-             ([] <> [textBoxes push state] <> [singleTextBox push state] <>
+       ] ([] <> [textBoxes push state {numberOfBoxes : 4 , width : V 48, height : V 56, margin : (MarginHorizontal 24 12)}] <> [singleTextBox push state] <>
                     [textView $
                     [ width state.subHeadingConfig.width
                     , height state.subHeadingConfig.height
@@ -238,7 +258,7 @@ keyboard push state =
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
+                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber==true)) || state.modalType == KeyboardModalType.ODOMETER then true else false 
            ][ 
                 if key == "back" then 
                 imageView

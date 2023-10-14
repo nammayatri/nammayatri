@@ -619,6 +619,33 @@ enterOtpStateConfig state = let
       }
       in inAppModalConfig'
 
+enterOdometerReadingConfig state = let
+  config' = InAppKeyboardModal.config
+  inAppModalConfig' = config'{
+      otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
+      otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
+      inputTextConfig {
+        text = state.props.odometerValue,
+        focusIndex = 5,
+        textStyle = FontStyle.Heading1
+      },
+      headingConfig {
+        text = "Enter current odo reading"
+      },
+      errorConfig {
+        text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
+        visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE
+      },
+      subHeadingConfig {
+        visibility = GONE  
+      },
+      imageConfig {
+        alpha = 1.0 --if(DS.length state.props.odometerValue < 4) then 0.3 else 1.0
+      },
+      modalType = ST.ODOMETER
+      }
+      in inAppModalConfig'
+
 driverStatusIndicators :: Array ST.PillButtonState
 driverStatusIndicators = [
     {

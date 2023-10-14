@@ -94,7 +94,7 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
-          _ <- pure $ printLog "initial State" initialState
+          -- _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
@@ -221,6 +221,7 @@ view push state =
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
@@ -906,8 +907,12 @@ driverStatus push state =
 
 enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 enterOtpModal push state =
-  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterOtpStateConfig state)
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction)(enterOtpStateConfig state)
 
+enterOdometerReadingModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+enterOdometerReadingModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOdometerAction) (enterOdometerReadingConfig state)
+  
 showOfflineStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showOfflineStatus push state =
   linearLayout
