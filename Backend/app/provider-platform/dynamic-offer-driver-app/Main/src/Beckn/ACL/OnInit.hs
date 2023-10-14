@@ -24,8 +24,6 @@ import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import SharedLogic.FareCalculator
 
--- import EulerHS.Prelude (undefined)
-
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
@@ -156,15 +154,6 @@ mkOnInitMessage res = do
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "DEAD_KILOMETER_FARE"
             || breakup.title == "EXTRA_DISTANCE_FARE"
-            || breakup.title == "DRIVER_SELECTED_FARE"
-            || breakup.title == "CUSTOMER_SELECTED_FARE"
-            || breakup.title == "TOTAL_FARE"
-            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-        DFParams.Rental ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "SERVICE_CHARGE"
-            || breakup.title == "EXTRA_KILOMETER_FARE"
-            || breakup.title == "EXTRA_HOUR_FARE"
             || breakup.title == "DRIVER_SELECTED_FARE"
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"

@@ -36,14 +36,7 @@ data FareParameters = FareParameters
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalSlabDetails FParamsRentalSlabDetails
-  deriving (Generic, Show, Eq, PrettyShow)
-
-data FParamsRentalSlabDetails = FParamsRentalSlabDetails
-  {
-    extraRentalKmFare :: Money,
-    extraRentalHourFare :: Money
-  }
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
@@ -61,8 +54,7 @@ data FParamsSlabDetails = FParamsSlabDetails
 
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 
-data FareParametersType = Progressive | Slab | Rental
- 
+data FareParametersType = Progressive | Slab
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -72,4 +64,3 @@ getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of
   ProgressiveDetails _ -> Progressive
   SlabDetails _ -> Slab
-  RentalSlabDetails _ -> Rental

@@ -30,7 +30,6 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.QuoteRental as BeamQR
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
--- import qualified Storage.Beam.QuoteRental as BeamQR
 
 create :: MonadFlow m => QuoteRental -> m ()
 create quote = SQFP.create quote.fareParams >> createWithKV quote
@@ -69,7 +68,6 @@ instance FromTType' BeamQR.QuoteRental QuoteRental where
             baseFare = baseFare,
             fareParams = fp
           }
-
 
 instance ToTType' BeamQR.QuoteRental QuoteRental where
   toTType' QuoteRental {..} = do

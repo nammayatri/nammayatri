@@ -108,7 +108,7 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
           case nonEmpty slabs of
             Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
             Nothing -> return Nothing
-        RentalSlabs -> undefined
+
     case mFarePolicyDetails of
       Just farePolicyDetails -> do
         return $

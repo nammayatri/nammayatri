@@ -1325,7 +1325,6 @@ getStats (driverId, merchantId) date = do
                       ( \x -> case fareParametersDetails x of
                           ProgressiveDetails det -> Just (deadKmFare det)
                           SlabDetails _ -> Nothing
-                          RentalSlabDetails _ -> Nothing
                       )
                 )
                   fareParameters

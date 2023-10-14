@@ -60,6 +60,7 @@ data GetQuotesRes = GetQuotesRes
 
 data OfferRes
   = OnDemandCab QuoteAPIEntity
+  | OnRentalCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
   deriving (Show, Generic)
@@ -104,7 +105,7 @@ getOffers searchRequest = do
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
       quoteList <- runInReplica $ QRentalQuote.findAllBySRId searchRequest.id
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -119,6 +120,7 @@ getOffers searchRequest = do
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
+    creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
 getEstimates :: EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]

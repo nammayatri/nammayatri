@@ -98,7 +98,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
-      DFParams.RentalSlabDetails det -> mkFPRSlabDetailsBreakupList det
+
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
@@ -118,15 +118,6 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
           cgstCaption = "CGST"
           mbCgstItem = mkBreakupItem cgstCaption . mkPrice . roundToIntegral <$> det.cgst
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem]
-    mkFPRSlabDetailsBreakupList det = do
-      let extraRentalKmFareCation = "EXTRA_RENTAL_KM_FARE"
-          deadKmFareItem = mkBreakupItem extraRentalKmFareCation (mkPrice det.extraRentalKmFare)
-
-          extraRentalHourFareCaption = "EXTRA_RENTAL_HOUR_FARE"
-          -- mbExtraKmFareRounded = det.extraRentalHourFare -- <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
-          extraRentalHourFareItem =
-            mkBreakupItem extraRentalHourFareCaption (mkPrice det.extraRentalHourFare)
-      catMaybes [Just deadKmFareItem, Just extraRentalHourFareItem]
 
 -- TODO: make some tests for it
 
@@ -278,7 +269,6 @@ calculateFareParameters params = do
       (DFParams.ProgressiveDetails det) -> DFParams.ProgressiveDetails det -- should be impossible anyway
       (DFParams.SlabDetails _det) ->
         DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing) countPlatformFeeMath platformFeeInfo
-      _ -> undefined
       where
         countPlatformFeeMath platformFeeInfo' = do
           let baseFee = case platformFeeInfo'.platformFeeCharge of
@@ -294,7 +284,6 @@ countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money,
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst), 0)
-  DFParams.RentalSlabDetails det -> (0, 0, 0, det.extraRentalHourFare + det.extraRentalKmFare)
 
 isNightShift ::
   DFP.NightShiftBounds ->

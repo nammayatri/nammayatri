@@ -18,7 +18,6 @@ module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
-import Domain.Types.FarePolicy.FarePolicyRentalSlabsDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
@@ -68,7 +67,7 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs | RentalSlabs
+data FarePolicyType = Progressive | Slabs
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 

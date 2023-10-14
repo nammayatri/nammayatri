@@ -221,7 +221,6 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.tag = tag
           }
 
---_ -> undefined
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
 buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
