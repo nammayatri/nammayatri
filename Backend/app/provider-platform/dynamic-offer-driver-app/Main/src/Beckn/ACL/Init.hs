@@ -41,6 +41,7 @@ buildInitReq subscriber req = do
   let context = req.context
   Context.validateContext Context.INIT context
   let order = req.message.order
+  let startTime = order.fulfillment.start.time.timestamp
   _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
@@ -52,7 +53,6 @@ buildInitReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-
   pure
     DInit.InitReq
       { estimateId = fulfillmentId,
@@ -63,6 +63,7 @@ buildInitReq subscriber req = do
         vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
         driverId = order.provider <&> (.id),
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
+        startTime = startTime,
         ..
       }
   where

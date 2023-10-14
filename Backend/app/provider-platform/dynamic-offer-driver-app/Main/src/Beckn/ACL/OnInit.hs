@@ -15,6 +15,7 @@
 module Beckn.ACL.OnInit where
 
 import qualified Beckn.ACL.Common as Common
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp (TimeTimestamp (TimeTimestamp))
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Booking as DRB
@@ -27,6 +28,7 @@ import SharedLogic.FareCalculator
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
+      startTime = res.startTime
       vehicleVariant = castVehicleVariant res.booking.vehicleVariant
       itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
       fareDecimalValue = fromIntegral rb.estimatedFare
@@ -69,6 +71,7 @@ mkOnInitMessage res = do
                                   },
                               address = castAddress res.booking.fromLocation.address
                             },
+                        time = TimeTimestamp startTime,
                         authorization = Nothing
                       },
                   end =

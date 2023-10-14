@@ -30,7 +30,7 @@ data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     startTime :: UTCTime,
-    validTill :: UTCTime,
+    validTill :: UTCTime, --TODO: Need to make this equal to start time
     riderId :: Id DP.Person,
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
