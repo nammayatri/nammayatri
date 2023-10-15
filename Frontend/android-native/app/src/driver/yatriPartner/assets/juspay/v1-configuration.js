@@ -19,6 +19,7 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
     "imageUploadOptional" : true,
+    "showPaymentDetails" : false,
     "BONUS_EARNED" : "false",
     "clientName" : "Yatri",
     "languageList": [{

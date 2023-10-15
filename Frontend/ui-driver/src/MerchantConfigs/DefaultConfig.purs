@@ -36,6 +36,7 @@ config =
     moveDriverToOfflineInHighDueDaily : false,
     enableSubscriptionPopups : false
   },
+  showPaymentDetails : true,
   rideActionModelConfig : {
     showVehicleVariant : true
   }

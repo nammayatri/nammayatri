@@ -22,6 +22,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
 import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.DefaultConfig as DC
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..))
@@ -83,7 +84,8 @@ initData = {
       , cancellationRate : 0
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
-      }
+      },
+    config : DC.config
     },
 
   props: {
