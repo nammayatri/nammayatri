@@ -159,7 +159,9 @@ data DriverDuesEntity = DriverDuesEntity
     totalRides :: Int,
     planAmount :: HighPrecMoney,
     isSplit :: Bool,
-    offerAndPlanDetails :: Maybe Text
+    offerAndPlanDetails :: Maybe Text,
+    isCoinCleared :: Bool,
+    coinDiscountAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -290,6 +292,8 @@ planSubscribe planId isDashboard (driverId, merchantId, merchantOpCityId) driver
             createdAt = now,
             updatedAt = now,
             mandateSetupDate = Nothing,
+            coinCovertedToCashLeft = 0.0,
+            totalCoinsConvertedCash = 0.0,
             ..
           }
 
@@ -442,7 +446,8 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
             collectedAt = Nothing,
             overlaySent = False,
             badDebtDeclarationDate = Nothing,
-            badDebtRecoveryDate = Nothing
+            badDebtRecoveryDate = Nothing,
+            amountPaidByCoin = Nothing
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
@@ -610,7 +615,9 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
               driverFeeAmount = (\dueDfee -> roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
               createdAt,
               executionAt,
-              feeType
+              feeType,
+              isCoinCleared = driverFee.status == DF.CLEARED_BY_YATRI_COINS,
+              coinDiscountAmount = driverFee.amountPaidByCoin
             }
     )
     driverFees

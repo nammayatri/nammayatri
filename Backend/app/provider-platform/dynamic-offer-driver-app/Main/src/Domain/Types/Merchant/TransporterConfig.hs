@@ -123,6 +123,8 @@ data TransporterConfigD u = TransporterConfig
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
     ratingAsDecimal :: Bool,
+    coinFeature :: Bool,
+    coinConversionRate :: HighPrecMoney,
     refillVehicleModel :: Bool,
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
@@ -130,6 +132,9 @@ data TransporterConfigD u = TransporterConfig
     useWithSnapToRoadFallback :: Bool,
     volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
     driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
+    cancellationTimeDiff :: NominalDiffTime,
+    coinExpireTime :: NominalDiffTime,
+    cancellationDistDiff :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

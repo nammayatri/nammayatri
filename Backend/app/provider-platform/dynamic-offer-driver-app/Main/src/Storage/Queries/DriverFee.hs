@@ -673,7 +673,9 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             feeWithoutDiscount,
             overlaySent,
             badDebtDeclarationDate,
-            badDebtRecoveryDate
+            badDebtRecoveryDate,
+            amountPaidByCoin,
+            overlaySent = overlaySent
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -706,5 +708,6 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.updatedAt = updatedAt,
         BeamDF.overlaySent = overlaySent,
         BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
-        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate
+        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate,
+        BeamDF.amountPaidByCoin = amountPaidByCoin
       }

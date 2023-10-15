@@ -507,6 +507,17 @@ createMapping bookingId rideId merchantId merchantOperatingCityId = do
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]
 
+findTotalRidesInDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> UTCTime -> m [DRide.Ride]
+findTotalRidesInDay (Id driverId) time = do
+  let todayStart = UTCTime (utctDay time) 0
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamR.status $ Se.Eq Ride.COMPLETED,
+          Se.Is BeamR.createdAt $ Se.GreaterThanOrEq todayStart,
+          Se.Is BeamR.driverId $ Se.Eq driverId
+        ]
+    ]
+
 totalRidesByFleetOwner :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
 totalRidesByFleetOwner fleetIdWanted = do
   res <- findAllWithDb [Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted]

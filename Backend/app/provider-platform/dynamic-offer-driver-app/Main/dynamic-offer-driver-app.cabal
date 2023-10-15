@@ -71,6 +71,7 @@ library
       API.UI.CancellationReason
       API.UI.City
       API.UI.Driver
+      API.UI.DriverCoins
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
@@ -143,6 +144,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.City
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
@@ -185,6 +187,9 @@ library
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.City
+      Domain.Types.Coins.CoinHistory
+      Domain.Types.Coins.CoinsConfig
+      Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
       Domain.Types.DailyStats
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
@@ -267,6 +272,8 @@ library
       Domain.Types.Vehicle.Variant
       Domain.Types.Volunteer
       Environment
+      Lib.DriverCoins.Coins
+      Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
@@ -322,6 +329,9 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.Coins.CoinHistory
+      Storage.Beam.Coins.CoinsConfig
+      Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
       Storage.Beam.DailyStats
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
@@ -437,6 +447,9 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.Coins.CoinHistory
+      Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.Coins.PurchaseHistory
       Storage.Queries.DailyStats
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal

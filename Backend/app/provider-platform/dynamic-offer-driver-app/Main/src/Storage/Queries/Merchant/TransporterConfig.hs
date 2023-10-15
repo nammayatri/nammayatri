@@ -129,6 +129,11 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
             badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
             badDebtTimeThreshold = secondsToNominalDiffTime badDebtTimeThreshold,
+            coinFeature = coinFeature,
+            coinConversionRate = coinConversionRate,
+            cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
+            coinExpireTime = secondsToNominalDiffTime coinExpireTime,
+            cancellationDistDiff = cancellationDistDiff,
             ..
           }
     where
@@ -211,7 +216,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
         BeamTC.ratingAsDecimal = ratingAsDecimal,
+        BeamTC.coinFeature = coinFeature,
         BeamTC.refillVehicleModel = refillVehicleModel,
+        BeamTC.coinConversionRate = coinConversionRate,
         BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
         BeamTC.overlayBatchSize = overlayBatchSize,
         BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
@@ -222,6 +229,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.badDebtSchedulerTime = nominalDiffTimeToSeconds badDebtSchedulerTime,
         BeamTC.badDebtBatchSize = badDebtBatchSize,
         BeamTC.badDebtTimeThreshold = nominalDiffTimeToSeconds badDebtTimeThreshold,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt   
+        BeamTC.createdAt = createdAt,  
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
+        BeamTC.cancellationDistDiff = cancellationDistDiff,
+        BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime
       }

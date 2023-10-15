@@ -107,7 +107,12 @@ data TransporterConfigT f = TransporterConfigT
     driverSmsReceivingLimit :: B.C f (Maybe A.Value),
     languagesToBeTranslated :: B.C f [Language],
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    coinFeature :: B.C f Bool,
+    coinConversionRate :: B.C f HighPrecMoney,
+    cancellationTimeDiff :: B.C f Seconds,
+    coinExpireTime :: B.C f Seconds,
+    cancellationDistDiff :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

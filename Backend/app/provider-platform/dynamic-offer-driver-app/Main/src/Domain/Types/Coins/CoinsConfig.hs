@@ -12,24 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.DriverPlan where
+module Domain.Types.Coins.CoinsConfig where
 
-import qualified Domain.Types.Mandate as DM
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Plan as DPlan
-import Kernel.Prelude
-import Kernel.Types.Common
+import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
+import qualified Lib.DriverCoins.Types as DCT
 
-data DriverPlan = DriverPlan
-  { driverId :: Id DP.Person,
-    planId :: Id DPlan.Plan,
-    planType :: DPlan.PaymentMode,
-    mandateId :: Maybe (Id DM.Mandate),
-    mandateSetupDate :: Maybe UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    coinCovertedToCashLeft :: HighPrecMoney,
-    totalCoinsConvertedCash :: HighPrecMoney
+data CoinsConfig = CoinsConfig
+  { id :: Id CoinsConfig,
+    eventFunction :: DCT.DriverCoinsFunctionType,
+    eventName :: Text,
+    merchantId :: Text,
+    merchantOptCityId :: Text,
+    coins :: Int,
+    expirationAt :: Maybe Int,
+    active :: Bool
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
