@@ -19,14 +19,12 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import Domain.Types.Booking as DB
 import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (Meters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
@@ -165,16 +163,11 @@ instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
 
--- TODO the same as DConfirmReq
 data AllocateRentalRideJobData = AllocateRentalRideJobData
-  { bookingId :: Id DB.Booking,
-    vehicleVariant :: VehVar.Variant,
-    driverId :: Maybe Text,
-    customerMobileCountryCode :: Text,
-    customerPhoneNumber :: Text,
-    fromAddress :: DL.LocationAddress,
-    toAddress :: Maybe DL.LocationAddress,
-    mbRiderName :: Maybe Text
+  { bookingId :: Id Booking,
+    baseDistance :: Meters,
+    baseDuration :: Seconds,
+    baseFare :: Money
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

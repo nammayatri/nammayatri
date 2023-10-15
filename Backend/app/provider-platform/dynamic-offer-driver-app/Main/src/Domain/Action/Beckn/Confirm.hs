@@ -272,7 +272,14 @@ handler transporter req validateRes = do
       transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
       let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
       let jobScheduledTime = max 0 $ diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
-      JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards $ mkAllocateRentalRideJobData req
+      let jobData =
+            AllocateRentalRideJobData
+              { bookingId = booking.id,
+                baseDistance = booking.estimatedDistance,
+                baseDuration = booking.estimatedDuration,
+                baseFare = booking.estimatedFare
+              }
+      JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData
       pure $
         DConfirmRes
           { booking = uBooking,
@@ -366,9 +373,6 @@ handler transporter req validateRes = do
           { --TODO: find a way to build it using existing types from Routes
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
-
-    mkAllocateRentalRideJobData :: DConfirmReq -> AllocateRentalRideJobData
-    mkAllocateRentalRideJobData DConfirmReq {..} = AllocateRentalRideJobData {..}
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
