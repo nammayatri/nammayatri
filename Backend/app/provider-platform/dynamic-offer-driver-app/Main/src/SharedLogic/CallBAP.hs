@@ -39,7 +39,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
-import qualified Data.Map as M
+import qualified Data.HashMap as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -157,7 +157,7 @@ sendRideAssignedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    HasField "modelNamesMap" r (M.Map Text Text),
+    HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     MonadReader r m,
@@ -203,24 +203,26 @@ sendRideAssignedUpdateToBAP booking ride = do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
       case mbIsRefilledToday of
-        Just True -> Redis.expire refillKey 28800 $> veh
+        Just True -> Redis.expire refillKey 86400 $> veh
         _ -> do
           driverVehicleIdfyResponse <-
             find
-              ( \a -> case (.registration_number) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< a.idfyResponse) :: Maybe Idfy.VerificationResponse) of
-                  Just registrationNumber -> registrationNumber == veh.registrationNo
-                  Nothing -> False
+              ( \a ->
+                  maybe False ((==) veh.registrationNo) $
+                    (.registration_number)
+                      =<< (.extraction_output)
+                      =<< (.result)
+                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
               )
               <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
           newVehicle <-
-            case (.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse) of
-              Just newModel -> do
-                modelNamesMap <- asks (.modelNamesMap)
-                case M.lookup newModel modelNamesMap of
-                  Just newModelMapped -> QVeh.updateVehicleModel newModelMapped ride.driverId $> updateVehicle veh newModelMapped
-                  Nothing -> QVeh.updateVehicleModel "" ride.driverId $> updateVehicle veh "" -- requirement
-              Nothing -> pure veh
-          Redis.setExp refillKey True 28800
+            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
+              modelNamesHashMap <- asks (.modelNamesHashMap)
+              let modelValueToUpdate = fromMaybe "" $ HM.lookup newModel modelNamesHashMap
+              if modelValueToUpdate == veh.model
+                then pure veh
+                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+          Redis.setExp refillKey True 86400
           pure newVehicle
 
 sendRideStartedUpdateToBAP ::
