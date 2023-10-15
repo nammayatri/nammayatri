@@ -250,7 +250,7 @@ driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.Driver
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset
 
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbRcNumber mbDlNumber fleetOwnerId = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId
 
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId = withFlowHandlerAPI . DDriver.deleteDriver merchantShortId
