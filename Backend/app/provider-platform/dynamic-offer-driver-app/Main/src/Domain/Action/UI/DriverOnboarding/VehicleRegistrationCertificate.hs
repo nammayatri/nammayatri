@@ -35,6 +35,7 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
+import qualified Data.HashMap as HML
 import qualified Data.HashMap.Strict as HM
 import Data.List (find)
 import Data.Text as T hiding (find, length, map, null, zip)
@@ -248,8 +249,9 @@ onVerifyRC verificationReq output = do
       rCConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
       rCInsuranceConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RCInsurance >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RCInsurance))
       mEncryptedRC <- encrypt `mapM` output.registration_number
+      modelNamesHashMap <- asks (.modelNamesHashMap)
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
-      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant <$> mEncryptedRC <*> mbFitnessEpiry
+          mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
@@ -405,10 +407,11 @@ createRC ::
   Id Image.Image ->
   UTCTime ->
   Maybe Vehicle.Variant ->
+  HML.Map Text Text ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
-createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry = do
+createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant modelNamesHashMap edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
@@ -425,7 +428,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry
       vehicleVariant = variant,
       vehicleManufacturer = output.manufacturer <|> output.manufacturer_model,
       vehicleCapacity,
-      vehicleModel = output.m_y_manufacturing <|> output.manufacturer_model,
+      vehicleModel = updateModel =<< (output.manufacturer_model <|> output.m_y_manufacturing),
       vehicleColor = output.color <|> output.colour,
       vehicleEnergyType = output.fuel_type,
       insuranceValidity,
@@ -434,6 +437,8 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry
       createdAt = now,
       updatedAt = now
     }
+  where
+    updateModel modelFromIdfy = Just . fromMaybe "" $ HML.lookup modelFromIdfy modelNamesHashMap
 
 validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
 validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity manufacturer = do

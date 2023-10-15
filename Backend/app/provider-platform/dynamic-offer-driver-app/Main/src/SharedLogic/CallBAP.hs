@@ -37,11 +37,16 @@ import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Control.Lens ((%~))
+import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.HashMap as HM
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
+import qualified Domain.Types.DriverOnboarding.Image as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
@@ -50,8 +55,11 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle as V
 import qualified EulerHS.Types as ET
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -60,7 +68,9 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -147,6 +157,7 @@ sendRideAssignedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
+    HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     MonadReader r m,
@@ -162,8 +173,21 @@ sendRideAssignedUpdateToBAP booking ride = do
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  veh <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  mbTransporterConfig <- CQTC.findByMerchantId booking.providerId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  vehicle <-
+    case mbTransporterConfig of
+      Just transporterConfig ->
+        if transporterConfig.refillVehicleModel
+          then do
+            reffiledVeh <- refillVehicleModel veh
+            pure $
+              case reffiledVeh of
+                Right reffiledVeh' -> reffiledVeh'
+                Left _ -> veh
+          else pure veh
+      Nothing -> pure veh
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
@@ -172,6 +196,34 @@ sendRideAssignedUpdateToBAP booking ride = do
   retryConfig <- asks (.shortDurationRetryCfg)
 
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
+  where
+    refillKey = "REFILLED_" <> ride.driverId.getId
+    updateVehicle V.Vehicle {..} newModel = V.Vehicle {model = newModel, ..}
+    refillVehicleModel veh = try @_ @SomeException do
+      -- TODO: remove later
+      mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
+      case mbIsRefilledToday of
+        Just True -> Redis.expire refillKey 86400 $> veh
+        _ -> do
+          driverVehicleIdfyResponse <-
+            find
+              ( \a ->
+                  maybe False ((==) veh.registrationNo) $
+                    (.registration_number)
+                      =<< (.extraction_output)
+                      =<< (.result)
+                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
+              )
+              <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+          newVehicle <-
+            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
+              modelNamesHashMap <- asks (.modelNamesHashMap)
+              let modelValueToUpdate = fromMaybe "" $ HM.lookup newModel modelNamesHashMap
+              if modelValueToUpdate == veh.model
+                then pure veh
+                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+          Redis.setExp refillKey True 86400
+          pure newVehicle
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,

@@ -89,6 +89,13 @@ updateVehicleName vehicleName (Id driverId) = do
     [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
     [Se.Is BeamV.driverId (Se.Eq driverId)]
 
+updateVehicleModel :: (MonadFlow m) => Text -> Id Person -> m ()
+updateVehicleModel vehicleModel (Id driverId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamV.updatedAt now, Se.Set BeamV.model vehicleModel]
+    [Se.Is BeamV.driverId (Se.Eq driverId)]
+
 deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 
