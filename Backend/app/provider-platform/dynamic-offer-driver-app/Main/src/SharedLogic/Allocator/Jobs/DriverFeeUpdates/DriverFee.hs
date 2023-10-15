@@ -16,6 +16,8 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   ( sendPaymentReminderToDriver,
     unsubscribeDriverForPaymentOverdue,
     calculateDriverFeeForDrivers,
+    mkCoinAdjustedInSubscriptionByDriverIdKey,
+    getCoinAdjustedInSubscriptionByDriverIdKey,
   )
 where
 
@@ -48,7 +50,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (calculatePlatformFeeAttr, roundToHalf)
+import SharedLogic.DriverFee (calculatePlatformFeeAttr, getCoinAdjustedInSubscriptionByDriverIdKey, mkCoinAdjustedInSubscriptionByDriverIdKey, roundToHalf, setCoinToCashUsedAmount)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -69,7 +71,7 @@ sendPaymentReminderToDriver ::
   ) =>
   Job 'SendPaymentReminderToDriver ->
   m ExecutionResult
-sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
       endTime = jobData.endTime
@@ -153,6 +155,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               (mandateSetupDate, mandateId) = case mbDriverPlan of
                 Nothing -> (now, Nothing)
                 Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
+              coinCashLeft = maybe 0 (.coinCovertedToCashLeft) mbDriverPlan
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
 
@@ -176,10 +179,22 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
 
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
+
           unless (totalFee == 0) $ do
             driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
-            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId now
-            updatePendingPayment True (cast driverFee.driverId)
+            if coinCashLeft >= totalFee
+              then do
+                void $ updateCoinToCashByDriverId (cast driverFee.driverId) (-1 * totalFee)
+                setCoinToCashUsedAmount driverFee totalFee
+                QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFee.id] now
+                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing now
+                invoice <- mkInvoiceAgainstDriverFee driverFee (True, paymentMode == AUTOPAY)
+                QINV.create invoice
+              else do
+                when (coinCashLeft > 0) $ updateCoinToCashByDriverId (cast driverFee.driverId) (-1 * coinCashLeft)
+                setCoinToCashUsedAmount driverFee coinCashLeft
+                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) now
+                updatePendingPayment True (cast driverFee.driverId)
 
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
@@ -191,7 +206,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               updateAutoPayToManual driverFee.id
               updateSubscription False (cast driverFee.driverId)
             else do
-              unless (totalFee == 0) $ processDriverFee paymentMode driverFee
+              unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
@@ -226,7 +241,7 @@ processDriverFee paymentMode driverFee = do
     AUTOPAY -> do
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
-      invoice <- mkInvoiceAgainstDriverFee driverFee
+      invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
       QINV.create invoice
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
@@ -277,19 +292,21 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
 
-splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> [DriverFee]
-splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxMandateAmount = do
-  let maxAmount = fromMaybe totalFee maxMandateAmount
+splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
+splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do
+  let maxAmount = fromMaybe totalFee maxAmountPerDriverfeeThreshold
   let numEntities = totalFee / maxAmount
       remainingFee = totalFee `mod'` maxAmount
-      entityList = replicate (floor numEntities) maxAmount ++ [remainingFee | remainingFee > 0]
+      coinDiscount = if remainingFee <= 0 then coinClearedAmount else Nothing
+      entityList = replicate (floor numEntities) (maxAmount, coinDiscount) ++ [(remainingFee, coinClearedAmount) | remainingFee > 0]
    in map
-        ( \fee -> do
+        ( \(fee, coinPaidAmount) -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
             DriverFee
               { platformFee = PlatformFee {fee = platformFee_, ..},
                 feeType = feeType,
                 feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
+                amountPaidByCoin = coinPaidAmount,
                 ..
               }
         )
@@ -303,10 +320,12 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> UTCTime -> m ()
-driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now = do
+driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> Maybe HighPrecMoney -> UTCTime -> m ()
+driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
-  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf totalFee) plan driverFee (roundToHalf <$> (mandate <&> (.maxAmount)))
+  let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf totalFee else roundToHalf <$> (mandate <&> (.maxAmount))
+  let coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
+  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf (totalFee - coinAmountUsed)) plan driverFee amountForSpiltting mbCoinAmountUsed
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
@@ -368,8 +387,9 @@ mkInvoiceAgainstDriverFee ::
   ( MonadFlow m
   ) =>
   DriverFee ->
+  (Bool, Bool) ->
   m INV.Invoice
-mkInvoiceAgainstDriverFee driverFee = do
+mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
   invoiceId <- generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -378,8 +398,8 @@ mkInvoiceAgainstDriverFee driverFee = do
       { id = Id invoiceId,
         invoiceShortId = shortId.getShortId,
         driverFeeId = driverFee.id,
-        invoiceStatus = INV.ACTIVE_INVOICE,
-        paymentMode = INV.AUTOPAY_INVOICE,
+        invoiceStatus = if isCoinCleared then INV.SUCCESS else INV.ACTIVE_INVOICE,
+        paymentMode = if isCoinCleared && not isAutoPay then INV.MANUAL_INVOICE else INV.AUTOPAY_INVOICE,
         bankErrorCode = Nothing,
         bankErrorMessage = Nothing,
         bankErrorUpdatedAt = Nothing,

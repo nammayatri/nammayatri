@@ -61,6 +61,8 @@ data PersonT f = PersonT
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
     faceImageId :: B.C f (Maybe Text),
+    totalEarnedCoins :: B.C f Int,
+    usedCoins :: B.C f Int,
     registrationLat :: B.C f (Maybe Double),
     registrationLon :: B.C f (Maybe Double)
   }

@@ -22,6 +22,7 @@ import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.City as City
 import qualified API.UI.Driver as Driver
+import qualified API.UI.DriverCoins as DriverCoins
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
@@ -79,6 +80,7 @@ type API =
            :<|> RideRoute.API
            :<|> Plan.API
            :<|> KioskLocation.API
+           :<|> DriverCoins.API
            :<|> RideSummary.API
            :<|> City.API
        )
@@ -111,5 +113,6 @@ handler =
     :<|> RideRoute.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
+    :<|> DriverCoins.handler
     :<|> RideSummary.handler
     :<|> City.handler

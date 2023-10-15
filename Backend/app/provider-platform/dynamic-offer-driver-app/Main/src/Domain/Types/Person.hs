@@ -96,6 +96,8 @@ data PersonE e = Person
     alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
     faceImageId :: Maybe (Id M.MediaFile),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    totalEarnedCoins :: Int,
+    usedCoins :: Int,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double
   }

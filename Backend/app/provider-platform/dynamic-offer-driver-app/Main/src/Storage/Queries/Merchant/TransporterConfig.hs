@@ -126,6 +126,11 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
             volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
             driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
+            coinFeature = coinFeature,
+            coinConversionRate = coinConversionRate,
+            cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
+            coinExpireTime = secondsToNominalDiffTime coinExpireTime,
+            cancellationDistDiff = cancellationDistDiff,
             ..
           }
     where
@@ -208,7 +213,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
         BeamTC.ratingAsDecimal = ratingAsDecimal,
+        BeamTC.coinFeature = coinFeature,
         BeamTC.refillVehicleModel = refillVehicleModel,
+        BeamTC.coinConversionRate = coinConversionRate,
         BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
         BeamTC.overlayBatchSize = overlayBatchSize,
         BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
@@ -216,5 +223,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
+        BeamTC.cancellationDistDiff = cancellationDistDiff,
+        BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime
       }

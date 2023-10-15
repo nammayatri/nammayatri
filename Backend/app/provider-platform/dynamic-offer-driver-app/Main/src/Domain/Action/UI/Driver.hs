@@ -1029,6 +1029,8 @@ buildDriver req merchantId merchantOpCityId = do
         SP.alternateMobileNumber = Nothing,
         SP.unencryptedAlternateMobileNumber = Nothing,
         SP.faceImageId = Nothing,
+        SP.totalEarnedCoins = 0,
+        SP.usedCoins = 0,
         SP.registrationLat = Nothing,
         SP.registrationLon = Nothing
       }
@@ -1679,7 +1681,9 @@ data AutoPayInvoiceHistory = AutoPayInvoiceHistory
     amount :: HighPrecMoney,
     executionAt :: UTCTime,
     autoPayStage :: Maybe DDF.AutopayPaymentStage,
-    rideTakenOn :: UTCTime
+    rideTakenOn :: UTCTime,
+    isCoinCleared :: Bool,
+    coinDiscountAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1690,6 +1694,8 @@ data ManualInvoiceHistory = ManualInvoiceHistory
     rideTakenOn :: Maybe UTCTime,
     amount :: HighPrecMoney,
     feeType :: DDF.FeeType,
+    isCoinCleared :: Bool,
+    coinDiscountAmount :: Maybe HighPrecMoney,
     paymentStatus :: INV.InvoiceStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1723,7 +1729,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
   let amount = sum $ mapToAmount allDriverFeeForInvoice
   case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
-    Just _ ->
+    Just dfee ->
       return $
         Just
           ManualInvoiceHistory
@@ -1732,8 +1738,10 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
               rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
               amount,
               createdAt = manualInvoice.createdAt,
-              feeType = if any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
-              paymentStatus = manualInvoice.invoiceStatus
+              feeType = if any (\dfee' -> dfee'.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
+              paymentStatus = manualInvoice.invoiceStatus,
+              isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
+              coinDiscountAmount = dfee.amountPaidByCoin
             }
     Nothing -> return Nothing
   where
@@ -1751,7 +1759,9 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
               amount = sum $ mapToAmount [dfee],
               executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
               autoPayStage = dfee.autopayPaymentStage,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt
+              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
+              isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
+              coinDiscountAmount = dfee.amountPaidByCoin
             }
     Nothing -> return Nothing
   where
@@ -1776,7 +1786,9 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     rideTakenOn :: UTCTime,
     driverFeeAmount :: HighPrecMoney,
     isSplit :: Bool,
-    offerAndPlanDetails :: Maybe Text
+    offerAndPlanDetails :: Maybe Text,
+    isCoinCleared :: Bool,
+    coinDiscountAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1816,7 +1828,9 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
               rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
-              offerAndPlanDetails = driverFee.planOfferTitle
+              offerAndPlanDetails = driverFee.planOfferTitle,
+              isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
+              coinDiscountAmount = driverFee.amountPaidByCoin
             }
     )
     driverFees

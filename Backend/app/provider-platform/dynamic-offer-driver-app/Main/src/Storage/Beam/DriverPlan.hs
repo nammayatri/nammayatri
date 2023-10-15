@@ -22,6 +22,7 @@ module Storage.Beam.DriverPlan where
 import qualified Database.Beam as B
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude
+import Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DriverPlanT f = DriverPlanT
@@ -31,7 +32,9 @@ data DriverPlanT f = DriverPlanT
     mandateId :: B.C f (Maybe Text),
     mandateSetupDate :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    coinCovertedToCashLeft :: B.C f HighPrecMoney,
+    totalCoinsConvertedCash :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 

@@ -243,6 +243,8 @@ makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityI
         unencryptedAlternateMobileNumber = Nothing,
         alternateMobileNumber = Nothing,
         faceImageId = Nothing,
+        totalEarnedCoins = 0,
+        usedCoins = 0,
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon
       }

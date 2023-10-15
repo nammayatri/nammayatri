@@ -579,6 +579,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             billNumber,
             stageUpdatedAt,
             feeWithoutDiscount,
+            amountPaidByCoin,
             overlaySent = overlaySent
           }
 
@@ -610,5 +611,6 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt,
-        BeamDF.overlaySent = overlaySent
+        BeamDF.overlaySent = overlaySent,
+        BeamDF.amountPaidByCoin = amountPaidByCoin
       }

@@ -19,11 +19,14 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
+import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan)
 import EulerHS.Prelude hiding (id, state)
+import GHC.Float (double2Int)
 import GHC.Records.Extra
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverFee as QDF
@@ -161,3 +164,28 @@ calculatePlatformFeeAttr totalFee plan = do
       cgst = HighPrecMoney (toRational plan.cgstPercentage) * platformFee
       sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
   (platformFee, cgst, sgst)
+
+setCoinToCashUsedAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDF.DriverFee -> HighPrecMoney -> m ()
+setCoinToCashUsedAmount driverFee totalFee = do
+  coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)
+  let integralTotalFee = double2Int $ realToFrac totalFee
+  case coinAdjustedInSubscriptionKeyExists of
+    Just _ -> void $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)) (fromIntegral integralTotalFee)
+    Nothing -> setCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId) (fromIntegral integralTotalFee)
+
+mkCoinAdjustedInSubscriptionByDriverIdKey :: Id Person -> Text
+mkCoinAdjustedInSubscriptionByDriverIdKey driverId = "DriverCoinUsedInSubscription:DriverId:" <> driverId.getId
+
+coinToCashProcessingLockKey :: Id Person -> Text
+coinToCashProcessingLockKey (Id driverId) = "CoinToCash:Processing:DriverId" <> driverId
+
+getCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Int)
+getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+
+delCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+
+setCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Integer -> m ()
+setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
+  _ <- Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
+  Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days

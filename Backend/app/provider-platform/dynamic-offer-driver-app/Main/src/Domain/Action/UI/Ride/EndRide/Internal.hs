@@ -60,6 +60,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -125,7 +127,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
-  sendReferralFCM ride mbRiderDetailsId booking.merchantOperatingCityId
+  sendReferralFCM ride booking.providerId mbRiderDetailsId booking.merchantOperatingCityId
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
 
@@ -136,10 +138,11 @@ sendReferralFCM ::
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   Ride.Ride ->
+  Id Merchant ->
   Maybe (Id RD.RiderDetails) ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-sendReferralFCM ride mbRiderDetailsId merchantOpCityId = do
+sendReferralFCM ride merchantId mbRiderDetailsId merchantOpCityId = do
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
@@ -156,6 +159,8 @@ sendReferralFCM ride mbRiderDetailsId merchantOpCityId = do
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+            logDebug "Driver Referral Coin Event"
+            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
@@ -435,6 +440,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         schedulerTryCount = 0,
         feeWithoutDiscount = Nothing, -- Only for NY rn
         overlaySent = False,
+        amountPaidByCoin = Nothing,
         ..
       }
 

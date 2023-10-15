@@ -47,6 +47,7 @@ data DriverFeeT f = DriverFeeT
     autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
     schedulerTryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
+    amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     overlaySent :: B.C f Bool
