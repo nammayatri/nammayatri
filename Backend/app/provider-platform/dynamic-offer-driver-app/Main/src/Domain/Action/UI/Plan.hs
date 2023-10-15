@@ -104,7 +104,8 @@ data PlanFareBreakup = PlanFareBreakup
 data OfferEntity = OfferEntity
   { title :: Maybe Text,
     description :: Maybe Text,
-    tnc :: Maybe Text
+    tnc :: Maybe Text,
+    offerId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -361,9 +362,10 @@ validateInActiveMandateExists driverId driverPlan = do
 
 createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder driverId merchantId plan = do
-  driverManualDuesFees <- QDF.findAllByStatusAndDriverId driverId [DF.PAYMENT_OVERDUE]
-  driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
+  driverManualDuesFees <- if allowAtMerchantLevel then QDF.findAllByStatusAndDriverId driverId [DF.PAYMENT_OVERDUE] else return []
+  driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   now <- getCurrentTime
   let currentDues = calculateDues driverManualDuesFees
   let maxMandateAmount = max plan.maxAmount currentDues
@@ -485,12 +487,18 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
       OfferEntity
         { title = offer.offerDescription.title,
           description = offer.offerDescription.description,
-          tnc = offer.offerDescription.tnc
+          tnc = offer.offerDescription.tnc,
+          offerId = offer.offerId
         }
     makeOfferReq date paymentMode_ transporterConfig = do
+      let baseAmount = case plan.planBaseAmount of
+            PERRIDE_BASE amount -> amount
+            DAILY_BASE amount -> amount
+            WEEKLY_BASE amount -> amount
+            MONTHLY_BASE amount -> amount
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = Payment.INR}
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = Payment.INR}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq
