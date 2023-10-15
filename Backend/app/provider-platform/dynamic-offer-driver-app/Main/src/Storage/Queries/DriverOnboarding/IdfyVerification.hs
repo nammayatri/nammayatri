@@ -35,6 +35,9 @@ findById (Id idfvId) = findOneWithKV [Se.Is BeamIV.id $ Se.Eq idfvId]
 findAllByDriverId :: MonadFlow m => Id Person -> m [IdfyVerification]
 findAllByDriverId (Id driverId) = findAllWithKV [Se.Is BeamIV.driverId $ Se.Eq driverId]
 
+findAllByDriverIdAndDocType :: MonadFlow m => Id Person -> ImageType -> m [IdfyVerification]
+findAllByDriverIdAndDocType (Id driverId) imgType = findAllWithKV [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]
+
 findLatestByDriverIdAndDocType :: MonadFlow m => Id Person -> ImageType -> m (Maybe IdfyVerification)
 findLatestByDriverIdAndDocType (Id driverId) imgType = findAllWithOptionsKV [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing <&> listToMaybe
 

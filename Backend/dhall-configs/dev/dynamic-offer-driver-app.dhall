@@ -209,6 +209,15 @@ let maxMessages
     : Text
     = "1"
 
+let modelNamesMap =
+      [ { mapKey = "MARUTI ALTO (Some random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      , { mapKey = "MARUTI ALTO (another random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -282,4 +291,5 @@ in  { esqDBCfg
     , enableLocationTrackingService = False
     , dontEnableForDb
     , maxMessages
+    , modelNamesMap
     }

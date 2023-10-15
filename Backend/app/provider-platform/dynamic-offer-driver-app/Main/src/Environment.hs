@@ -16,6 +16,7 @@
 module Environment where
 
 import AWS.S3
+import qualified Data.HashMap as HM
 import qualified Data.Map as M
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -126,6 +127,7 @@ data AppCfg = AppCfg
     ltsCfg :: LocationTrackingeServiceConfig,
     enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
+    modelNamesMap :: M.Map Text Text,
     maxMessages :: Text
   }
   deriving (Generic, FromDhall)
@@ -201,7 +203,8 @@ data AppEnv = AppEnv
     ltsCfg :: LocationTrackingeServiceConfig,
     enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
-    maxMessages :: Text
+    maxMessages :: Text,
+    modelNamesHashMap :: HM.Map Text Text
   }
   deriving (Generic)
 
@@ -241,7 +244,7 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {..}
+  return AppEnv {modelNamesHashMap = (HM.fromList $ M.toList modelNamesMap), ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
