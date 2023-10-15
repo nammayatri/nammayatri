@@ -821,3 +821,25 @@ instance IsHTTPError DashboardSMSError where
     DriverSmsReceivingLimitExceeded -> E400
 
 instance IsAPIError DashboardSMSError
+
+data DriverCoinError
+  = CoinServiceUnavailable Text
+  | InsufficientCoins Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverCoinError
+
+instance IsBaseError DriverCoinError where
+  toMessage = \case
+    CoinServiceUnavailable merchantId -> Just ("Coin Service is not available for merchantId " <> show merchantId <> ".")
+    InsufficientCoins driverId -> Just ("Insufficient coin balance for driverId " <> show driverId <> ".")
+
+instance IsHTTPError DriverCoinError where
+  toErrorCode = \case
+    CoinServiceUnavailable _ -> "COIN_SERVICE_UNAVAILABLE"
+    InsufficientCoins _ -> "INSUFFICIENT_COINS"
+  toHttpCode = \case
+    CoinServiceUnavailable _ -> E400
+    InsufficientCoins _ -> E400
+
+instance IsAPIError DriverCoinError

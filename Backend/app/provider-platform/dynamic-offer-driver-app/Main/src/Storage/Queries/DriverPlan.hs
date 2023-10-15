@@ -71,6 +71,46 @@ updateMandateSetupDateByDriverId driverId = do
     ]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
+updateCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateCoinToCashByDriverId driverId amountToAdd = do
+  now <- getCurrentTime
+  mbDriverPlan <- findByDriverId driverId
+  case mbDriverPlan of
+    Just driverPlan -> do
+      updateOneWithKV
+        [ Se.Set BeamDF.coinCovertedToCashLeft $ driverPlan.coinCovertedToCashLeft + amountToAdd,
+          Se.Set BeamDF.updatedAt now
+        ]
+        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
+
+updateTotalCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateTotalCoinToCashByDriverId driverId totalcoinToAdd = do
+  now <- getCurrentTime
+  mbDriverPlan <- findByDriverId driverId
+  case mbDriverPlan of
+    Just driverPlan -> do
+      updateOneWithKV
+        [ Se.Set BeamDF.totalCoinsConvertedCash $ driverPlan.totalCoinsConvertedCash + totalcoinToAdd,
+          Se.Set BeamDF.updatedAt now
+        ]
+        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
+
+updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
+updateCoinFieldsByDriverId driverId amount = do
+  now <- getCurrentTime
+  mbDriverPlan <- findByDriverId driverId
+  case mbDriverPlan of
+    Just driverPlan -> do
+      updateOneWithKV
+        [ Se.Set BeamDF.coinCovertedToCashLeft $ driverPlan.coinCovertedToCashLeft + amount,
+          Se.Set BeamDF.totalCoinsConvertedCash $ driverPlan.totalCoinsConvertedCash + amount,
+          Se.Set BeamDF.updatedAt now
+        ]
+        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
+
 instance FromTType' BeamDF.DriverPlan DriverPlan where
   fromTType' BeamDF.DriverPlanT {..} = do
     pure $
@@ -82,7 +122,9 @@ instance FromTType' BeamDF.DriverPlan DriverPlan where
             mandateId = Id <$> mandateId,
             mandateSetupDate = mandateSetupDate,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            coinCovertedToCashLeft = coinCovertedToCashLeft,
+            totalCoinsConvertedCash = totalCoinsConvertedCash
           }
 
 instance ToTType' BeamDF.DriverPlan DriverPlan where
@@ -94,5 +136,7 @@ instance ToTType' BeamDF.DriverPlan DriverPlan where
         BeamDF.mandateId = getId <$> mandateId,
         BeamDF.mandateSetupDate = mandateSetupDate,
         BeamDF.createdAt = createdAt,
-        BeamDF.updatedAt = updatedAt
+        BeamDF.updatedAt = updatedAt,
+        BeamDF.coinCovertedToCashLeft = coinCovertedToCashLeft,
+        BeamDF.totalCoinsConvertedCash = totalCoinsConvertedCash
       }

@@ -48,6 +48,7 @@ data DriverFee = DriverFee
     autopayPaymentStage :: Maybe AutopayPaymentStage,
     schedulerTryCount :: Int,
     stageUpdatedAt :: Maybe UTCTime,
+    amountPaidByCoin :: Maybe HighPrecMoney,
     feeWithoutDiscount :: Maybe HighPrecMoney,
     overlaySent :: Bool
   }
@@ -60,7 +61,7 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 

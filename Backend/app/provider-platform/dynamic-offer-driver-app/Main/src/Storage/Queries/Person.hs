@@ -511,3 +511,9 @@ findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
           Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
         ]
     ]
+
+updateTotalEarnedCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m ()
+updateTotalEarnedCoins (Id driverId) coinValue = updateWithKV [Se.Set BeamP.totalEarnedCoins coinValue] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateUsedCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m ()
+updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoins usedCoinValue] [Se.Is BeamP.id $ Se.Eq driverId]
