@@ -125,7 +125,8 @@ data AppCfg = AppCfg
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
     enableLocationTrackingService :: Bool,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    modelNamesMap :: M.Map Text Text
   }
   deriving (Generic, FromDhall)
 
@@ -199,7 +200,8 @@ data AppEnv = AppEnv
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
     enableLocationTrackingService :: Bool,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    modelNamesMap :: M.Map Text Text
   }
   deriving (Generic)
 

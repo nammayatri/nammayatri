@@ -197,6 +197,15 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let modelNamesMap =
+      [ { mapKey = "MARUTI ALTO (Some random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      , { mapKey = "MARUTI ALTO (another random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -269,4 +278,5 @@ in  { esqDBCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , enableLocationTrackingService = False
     , dontEnableForDb
+    , modelNamesMap
     }
