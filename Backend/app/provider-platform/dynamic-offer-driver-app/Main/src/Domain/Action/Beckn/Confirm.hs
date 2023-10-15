@@ -86,7 +86,6 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    ride :: Maybe DRide.Ride,
     fromLocation :: DL.Location,
     toLocation :: Maybe DL.Location,
     riderDetails :: DRD.RiderDetails,
@@ -95,8 +94,18 @@ data DConfirmRes = DConfirmRes
     riderName :: Maybe Text,
     vehicleVariant :: VehVar.Variant,
     transporter :: DM.Merchant,
-    driverId :: Maybe Text,
-    driverName :: Maybe Text
+    bookingTypeDetails :: DConfirmResType
+  }
+
+data DConfirmResType
+  = DConfirmResNormalBooking DConfirmResNormalBookingDetails
+  | DConfirmResSpecialZoneBooking
+  | DConfirmResRentalBooking
+
+data DConfirmResNormalBookingDetails = DConfirmResNormalBookingDetails
+  { ride :: DRide.Ride,
+    driverId :: Text,
+    driverName :: Text
   }
 
 handler ::
@@ -191,7 +200,6 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Just ride,
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -199,9 +207,14 @@ handler transporter req quote = do
                 transporter,
                 fromLocation = uBooking.fromLocation,
                 toLocation = Nothing,
-                driverId = Just driver.id.getId,
-                driverName = Just driver.firstName,
-                vehicleVariant = req.vehicleVariant
+                vehicleVariant = req.vehicleVariant,
+                bookingTypeDetails =
+                  DConfirmResNormalBooking
+                    DConfirmResNormalBookingDetails
+                      { ride,
+                        driverId = driver.id.getId,
+                        driverName = driver.firstName
+                      }
               }
         Right _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
@@ -226,7 +239,6 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Nothing,
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -234,20 +246,52 @@ handler transporter req quote = do
                 transporter,
                 fromLocation = uBooking.fromLocation,
                 toLocation = Nothing,
-                driverId = Nothing,
-                driverName = Nothing,
-                vehicleVariant = req.vehicleVariant
+                vehicleVariant = req.vehicleVariant,
+                bookingTypeDetails = DConfirmResSpecialZoneBooking
               }
     DRB.RentalBooking -> do
+      -- otpCode <- case riderDetails.otpCode of
+      --   Nothing -> do
+      --     otpCode <- generateOTPCode
+      --     QRD.updateOtpCode riderDetails.id otpCode
+      --     pure otpCode
+      --   Just otp -> pure otp
+
+      -- critical updates
+      QRB.updateStatus booking.id DRB.CONFIRMED --new status, check where it can affect
+
+      -- non-critical updates
+      when isNewRider $ QRD.create riderDetails
+      QL.updateAddress booking.fromLocation.id req.fromAddress
+      QRB.updateRiderId booking.id riderDetails.id
+      case booking.bookingDetails of
+        DRB.BookingDetailsRental {..} -> do
+          whenJust req.toAddress $ \toAddr -> case rentalToLocation of
+            Just rentalToLocation' -> QL.updateAddress rentalToLocation'.id toAddr
+            Nothing -> error "create toLocation"
+        _ -> do
+          throwError $ InternalError "Expected rental booking details"
+      whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       maxShards <- asks (.maxShards)
       transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
       let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
-      let jobScheduledTime = diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
-      if jobScheduledTime <= 0
-        then error "TODO" -- do the same as for normal booking
-        else do
-          JC.createJobIn @_ @'AllocateRental jobScheduledTime maxShards $ mkAllocateRentalJobData req
-          error "TODO"
+      let jobScheduledTime = max 0 $ diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
+      JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards $ mkAllocateRentalRideJobData req
+      pure $
+        DConfirmRes
+          { booking = uBooking,
+            riderDetails,
+            riderMobileCountryCode = req.customerMobileCountryCode,
+            riderPhoneNumber = req.customerPhoneNumber,
+            riderName = req.mbRiderName,
+            transporter,
+            fromLocation = uBooking.fromLocation,
+            toLocation = Nothing,
+            vehicleVariant = req.vehicleVariant,
+            bookingTypeDetails = DConfirmResRentalBooking
+          }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -329,8 +373,8 @@ handler transporter req quote = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-    mkAllocateRentalJobData :: DConfirmReq -> AllocateRentalJobData
-    mkAllocateRentalJobData DConfirmReq {..} = AllocateRentalJobData {..}
+    mkAllocateRentalRideJobData :: DConfirmReq -> AllocateRentalRideJobData
+    mkAllocateRentalRideJobData DConfirmReq {..} = AllocateRentalRideJobData {..}
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =

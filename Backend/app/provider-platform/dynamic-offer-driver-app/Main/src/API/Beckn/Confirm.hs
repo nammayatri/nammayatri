@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module API.Beckn.Confirm (API, handler) where
 
@@ -19,7 +18,6 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Beam.Functions
@@ -61,10 +59,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-          case dConfirmRes.booking.bookingType of
-            DBooking.NormalBooking -> do
-              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
-              driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+          case dConfirmRes.bookingTypeDetails of
+            DConfirm.DConfirmResNormalBooking details -> do
+              let ride = details.ride
+              let driverId = details.driverId
               --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
               driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
               -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
@@ -76,13 +74,12 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   void $
                     BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
               DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-            DBooking.SpecialZoneBooking -> do
+            _ -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler' dConfirmRes transporter) $ do
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-            DBooking.RentalBooking -> undefined
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc

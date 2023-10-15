@@ -33,6 +33,7 @@ import Tools.Beam.UtilsTH
 
 data BookingStatus
   = NEW
+  | CONFIRMED
   | TRIP_ASSIGNED
   | COMPLETED
   | CANCELLED
@@ -42,13 +43,16 @@ $(mkBeamInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 
-data BookingDetails = BookingDetailsOnDemand {
-  specialZoneOtpCode :: Maybe Text,
-  specialLocationTag :: Maybe Text,
-  toLocation :: DLoc.Location
- } | BookingDetailsRental {
-  rentalToLocation :: Maybe DLoc.Location
- } deriving (Generic)
+data BookingDetails
+  = BookingDetailsOnDemand
+      { specialZoneOtpCode :: Maybe Text,
+        specialLocationTag :: Maybe Text,
+        toLocation :: DLoc.Location
+      }
+  | BookingDetailsRental
+      { rentalToLocation :: Maybe DLoc.Location
+      }
+  deriving (Generic)
 
 data Booking = Booking
   { id :: Id Booking,
@@ -82,7 +86,7 @@ data Booking = Booking
   }
   deriving (Generic)
 
-data BookingType = SpecialZoneBooking | NormalBooking |  RentalBooking
+data BookingType = SpecialZoneBooking | NormalBooking | RentalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BookingType)

@@ -41,7 +41,7 @@ data AllocatorJobType
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
-  | AllocateRental
+  | AllocateRentalRide
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -58,7 +58,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
-  restoreAnyJobInfo SAllocateRental jobData = AnyJobInfo <$> restoreJobInfo SAllocateRental jobData
+  restoreAnyJobInfo SAllocateRentalRide jobData = AnyJobInfo <$> restoreJobInfo SAllocateRentalRide jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -166,7 +166,7 @@ instance JobInfoProcessor 'SendOverlay
 type instance JobContent 'SendOverlay = SendOverlayJobData
 
 -- TODO the same as DConfirmReq
-data AllocateRentalJobData = AllocateRentalJobData
+data AllocateRentalRideJobData = AllocateRentalRideJobData
   { bookingId :: Id DB.Booking,
     vehicleVariant :: VehVar.Variant,
     driverId :: Maybe Text,
@@ -178,6 +178,6 @@ data AllocateRentalJobData = AllocateRentalJobData
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-instance JobInfoProcessor 'AllocateRental
+instance JobInfoProcessor 'AllocateRentalRide
 
-type instance JobContent 'AllocateRental = AllocateRentalJobData
+type instance JobContent 'AllocateRentalRide = AllocateRentalRideJobData
