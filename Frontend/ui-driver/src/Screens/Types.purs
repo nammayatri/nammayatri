@@ -282,7 +282,8 @@ type DriverProfileScreenData = {
   fromHomeScreen :: Boolean,
   profileImg :: Maybe String,
   payerVpa :: String,
-  autoPayStatus :: AutoPayStatus
+  autoPayStatus :: AutoPayStatus,
+  config :: AppConfig
 }
 
 type RcData = {

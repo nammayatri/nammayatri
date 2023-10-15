@@ -268,7 +268,7 @@ profileView push state =
                 , infoView state push
                 ]
             , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
-            , if state.props.screenType == ST.DRIVER_DETAILS then payment push state else dummyTextView
+            , if state.props.screenType == ST.DRIVER_DETAILS && state.data.config.showPaymentDetails then payment push state else dummyTextView
             , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
             , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
             , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView

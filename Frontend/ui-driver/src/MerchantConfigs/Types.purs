@@ -14,7 +14,8 @@ type AppConfig =
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
     profile :: ProfileConfig,
-    enablePurpleRideBanner :: Boolean
+    enablePurpleRideBanner :: Boolean,
+    showPaymentDetails :: Boolean
   } 
 
 type Language =  {

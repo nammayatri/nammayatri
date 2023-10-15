@@ -798,7 +798,7 @@ driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
-  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{ props{ showBookingOptionForTaxi = config.profile.bookingOptionMenuForTaxi } })
+  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{ data{config = config},props{ showBookingOptionForTaxi = config.profile.bookingOptionMenuForTaxi } })
   action <- UI.driverProfileScreen
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
