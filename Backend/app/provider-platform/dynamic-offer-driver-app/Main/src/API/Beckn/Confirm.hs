@@ -55,10 +55,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
       let context = req.context
       now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+      (transporter, validateRes) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+          dConfirmRes <- DConfirm.handler transporter dConfirmReq validateRes
           case dConfirmRes.bookingTypeDetails of
             DConfirm.DConfirmResNormalBooking details -> do
               let ride = details.ride

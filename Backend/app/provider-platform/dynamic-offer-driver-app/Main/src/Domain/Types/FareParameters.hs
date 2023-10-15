@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Domain.Types.FareParameters where
 
@@ -40,8 +39,7 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsRentalSlabDetails = FParamsRentalSlabDetails
-  {
-    extraRentalKmFare :: Money,
+  { extraRentalKmFare :: Money,
     extraRentalHourFare :: Money
   }
   deriving (Generic, Show, Eq, PrettyShow)
@@ -62,7 +60,6 @@ data FParamsSlabDetails = FParamsSlabDetails
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 
 data FareParametersType = Progressive | Slab | Rental
- 
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
