@@ -130,7 +130,7 @@ fareSum fareParams = do
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
 pureFareSum fareParams = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee, extraRentalFare) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
   fareParams.baseFare
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
@@ -139,7 +139,6 @@ pureFareSum fareParams = do
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
-    + extraRentalFare
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
@@ -162,12 +161,11 @@ calculateFareParameters params = do
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
-      (partOfNightShiftCharge, notPartOfNightShiftCharge, _, rentalExtraFare) = countFullFareOfParamsDetails fareParametersDetails
+      (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
-          + rentalExtraFare
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       fullRideCostN {-without govtCharges and platformFee-} =
@@ -280,10 +278,10 @@ calculateFareParameters params = do
               sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
 
-countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money, Money)
+countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
 countFullFareOfParamsDetails = \case
-  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst), 0)
+  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
+  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
 
 isNightShift ::
   DFP.NightShiftBounds ->
