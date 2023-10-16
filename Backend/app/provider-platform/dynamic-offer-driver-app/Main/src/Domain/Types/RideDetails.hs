@@ -30,7 +30,8 @@ data RideDetailsE e = RideDetails
     vehicleColor :: Maybe Text,
     vehicleVariant :: Maybe SV.Variant,
     vehicleModel :: Maybe Text,
-    vehicleClass :: Maybe Text
+    vehicleClass :: Maybe Text,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic)
 

@@ -31,7 +31,8 @@ data RideDetailsT f = RideDetailsT
     vehicleColor :: B.C f (Maybe Text),
     vehicleVariant :: B.C f (Maybe SV.Variant),
     vehicleModel :: B.C f (Maybe Text),
-    vehicleClass :: B.C f (Maybe Text)
+    vehicleClass :: B.C f (Maybe Text),
+    fleetOwnerId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
