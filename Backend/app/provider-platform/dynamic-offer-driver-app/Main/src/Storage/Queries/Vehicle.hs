@@ -48,7 +48,6 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.color color,
           Se.Set BeamV.energyType energyType,
           Se.Set BeamV.registrationCategory registrationCategory,
-          Se.Set BeamV.fleetOwnerId fleetOwnerId,
           Se.Set BeamV.updatedAt updatedAt
         ]
         [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
@@ -56,12 +55,6 @@ upsert a@Vehicle {..} = do
 
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
-
-findByFleetOwnerId :: (MonadFlow m) => Text -> m [Vehicle]
-findByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq (Just fleetOwnerId)]
-
-findByVehicleNoAndFleetOwnerId :: (MonadFlow m) => Text -> Text -> m (Maybe Vehicle)
-findByVehicleNoAndFleetOwnerId registrationNo fleetOwnerId = findOneWithKV [Se.And [Se.Is BeamV.registrationNo $ Se.Eq registrationNo, Se.Is BeamV.fleetOwnerId $ Se.Eq (Just fleetOwnerId)]]
 
 updateVehicleRec :: MonadFlow m => Vehicle -> m ()
 updateVehicleRec vehicle = do
@@ -134,9 +127,6 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id mercha
 findByRegistrationNo :: MonadFlow m => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
 
-findAllByFleetOwnerId :: MonadFlow m => Text -> m [Vehicle]
-findAllByFleetOwnerId fleetOwnerId = findAllWithKV [Se.Is BeamV.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
-
 instance FromTType' BeamV.Vehicle Vehicle where
   fromTType' BeamV.VehicleT {..} = do
     pure $
@@ -156,7 +146,6 @@ instance FromTType' BeamV.Vehicle Vehicle where
             energyType = energyType,
             registrationCategory = registrationCategory,
             vehicleClass = vehicleClass,
-            fleetOwnerId = fleetOwnerId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -178,7 +167,6 @@ instance ToTType' BeamV.Vehicle Vehicle where
         BeamV.energyType = energyType,
         BeamV.registrationCategory = registrationCategory,
         BeamV.vehicleClass = vehicleClass,
-        BeamV.fleetOwnerId = fleetOwnerId,
         BeamV.createdAt = createdAt,
         BeamV.updatedAt = updatedAt
       }

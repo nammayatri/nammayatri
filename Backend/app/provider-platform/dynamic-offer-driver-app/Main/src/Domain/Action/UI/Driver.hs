@@ -1053,7 +1053,6 @@ buildVehicle req personId merchantId = do
         SV.energyType = Nothing,
         SV.registrationNo = req.registrationNo,
         SV.registrationCategory = Nothing,
-        SV.fleetOwnerId = Nothing,
         SV.vehicleClass = "3WT",
         SV.createdAt = now,
         SV.updatedAt = now

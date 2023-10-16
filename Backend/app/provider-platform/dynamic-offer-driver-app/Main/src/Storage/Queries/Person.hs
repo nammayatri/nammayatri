@@ -166,6 +166,7 @@ data FullDriver = FullDriver
     info :: DriverInformation,
     vehicle :: Vehicle
   }
+  deriving (Generic)
 
 findAllDriversByIdsFirstNameAsc ::
   (Functor m, MonadFlow m, LT.HasLocationService m r, CoreMetrics m) =>

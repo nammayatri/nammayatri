@@ -20,17 +20,22 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
+import "lib-dashboard" Tools.Error
 
 type API =
   "driver"
@@ -149,4 +154,7 @@ verify :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.AuthVerifyReq ->
 verify merchantShortId apiTokenInfo authId req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verify) authId req
+    encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+    role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+    let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verify) authId mbFleet apiTokenInfo.personId.getId req

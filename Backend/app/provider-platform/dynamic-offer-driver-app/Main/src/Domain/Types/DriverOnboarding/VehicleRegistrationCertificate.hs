@@ -41,6 +41,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -67,6 +68,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
@@ -92,8 +94,8 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Maybe Text -> Vehicle
-makeVehicleFromRC now driverId merchantId certificateNumber rc fleetOwnerId =
+makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc =
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -108,7 +110,6 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc fleetOwnerId =
       registrationNo = certificateNumber,
       registrationCategory = Nothing,
       vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
-      fleetOwnerId = fleetOwnerId,
       vehicleName = Nothing,
       createdAt = now,
       updatedAt = now
