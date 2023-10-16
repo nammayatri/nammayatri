@@ -50,7 +50,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -83,15 +83,15 @@ createRide' = createWithKV
 
 create :: MonadFlow m => Ride -> m ()
 create ride = do
-  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
+  SL.createLocation ride.fromLocation
+  SL.createLocation ride.toLocation
   createRide' ride
 
 createRide :: MonadFlow m => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
+  SL.createPickupLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
+    >> SL.createDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
+    >> create ride
 
 findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
@@ -484,8 +484,8 @@ createMapping bookingId rideId = do
   when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
   let toLocMap = maximumBy (comparing (.order)) toLocationMappings
 
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
-  toLocationRideMappings <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+  fromLocationRideMapping <- SL.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
+  toLocationRideMappings <- SL.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
 
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]

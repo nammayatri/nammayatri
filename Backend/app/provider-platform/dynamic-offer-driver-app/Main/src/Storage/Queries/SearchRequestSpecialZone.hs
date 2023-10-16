@@ -19,7 +19,6 @@ import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
-import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -27,26 +26,23 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import qualified Storage.Queries.SearchRequest as QSL
 
 createSearchRequestSpecialZone' :: MonadFlow m => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone' = createWithKV
 
 create :: MonadFlow m => SearchRequestSpecialZone -> m ()
 create srsz = do
-  _ <- whenNothingM_ (QL.findById srsz.fromLocation.id) $ do QL.create srsz.fromLocation
-  _ <- whenNothingM_ (QL.findById srsz.toLocation.id) $ do QL.create srsz.toLocation
-  createSearchRequestSpecialZone' srsz
+  SL.createLocation srsz.fromLocation >> SL.createLocation srsz.toLocation >> createSearchRequestSpecialZone' srsz
 
 createSearchRequestSpecialZone :: MonadFlow m => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
+  SL.createPickupLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+    >> SL.createDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+    >> create searchRequest
 
 findById :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
@@ -74,14 +70,7 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
       if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
         then do
           logInfo "Accessing Search Request Location Table"
-          pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
-          QLM.create pickupLocMapping
-
-          dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
+          SL.backfillLocationAndLocationMapping fromLocationId toLocationId id DLM.SEARCH_REQUEST
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
               toLocationMappings = filter (\loc -> loc.order /= 0) mappings

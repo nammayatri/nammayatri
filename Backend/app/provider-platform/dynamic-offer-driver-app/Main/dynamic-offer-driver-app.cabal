@@ -301,7 +301,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
-      SharedLogic.LocationMapping
+      SharedLogic.Location
       SharedLogic.Merchant
       SharedLogic.MessageBuilder
       SharedLogic.Payment

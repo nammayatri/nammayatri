@@ -211,7 +211,7 @@ library
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
-      SharedLogic.LocationMapping
+      SharedLogic.Location
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder

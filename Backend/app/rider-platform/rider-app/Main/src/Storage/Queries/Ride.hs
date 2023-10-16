@@ -27,7 +27,6 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -35,7 +34,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
@@ -50,19 +49,15 @@ createRide' = createWithKV
 
 create :: MonadFlow m => Ride -> m ()
 create ride = do
-  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenJust ride.toLocation $ \location -> processLocation location
+  SL.createLocation ride.fromLocation
+  whenJust ride.toLocation $ \location -> SL.createLocation location
   createRide' ride
-  where
-    processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 createRide :: MonadFlow m => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE) ride.toLocation
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
-  create ride
+  SL.createPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
+    >> maybe (pure ()) (\detail -> SL.createDropLocationMapping detail.id ride.id.getId DLM.RIDE) ride.toLocation
+    >> create ride
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   { dwTable1 :: f (B.TableEntity table1),
@@ -327,14 +322,14 @@ createMapping bookingId rideId = do
 
   fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
 
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
+  fromLocationRideMapping <- SL.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
   QLM.create fromLocationRideMapping
 
   toLocationRideMappings <-
     if not (null toLocationMappings)
       then do
         let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+        toLocationRideMapping <- SL.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
         QLM.create toLocationRideMapping
         return [toLocationRideMapping]
       else return []

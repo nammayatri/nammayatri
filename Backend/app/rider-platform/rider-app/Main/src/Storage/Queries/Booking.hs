@@ -18,18 +18,15 @@ module Storage.Queries.Booking where
 import Control.Applicative
 import Data.Ord
 import qualified Database.Beam as B
-import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -37,12 +34,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
-import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -55,25 +51,22 @@ createBooking' = createWithKV
 
 create :: MonadFlow m => Booking -> m ()
 create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
+  SL.createLocation dBooking.fromLocation
   _ <- case dBooking.bookingDetails of
-    OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
+    OneWayDetails toLoc -> SL.createLocation toLoc.toLocation
     RentalDetails _ -> pure ()
-    DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
+    DriverOfferDetails toLoc -> SL.createLocation toLoc.toLocation
+    OneWaySpecialZoneDetails toLoc -> SL.createLocation toLoc.toLocation
   void $ createBooking' dBooking
 
 createBooking :: MonadFlow m => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
-  mbToLocationMap <- case booking.bookingDetails of
-    DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
-    DRB.RentalDetails _ -> return Nothing
-    DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
-    DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
-
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
+  SL.createPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
+  case booking.bookingDetails of
+    DRB.OneWayDetails detail -> SL.createDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
+    DRB.RentalDetails _ -> return ()
+    DRB.DriverOfferDetails detail -> SL.createDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
+    DRB.OneWaySpecialZoneDetails detail -> SL.createDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
   create booking
 
 updateStatus :: MonadFlow m => Id Booking -> BookingStatus -> m ()
@@ -236,10 +229,10 @@ instance FromTType' BeamB.Booking Booking where
         then do
           -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
           logInfo "Accessing Booking Location Table"
-          pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id
+          pickupLoc <- SL.upsertFromLocationAndMappingForOldData fromLocationId id DLM.BOOKING
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> do
-              upsertToLocationAndMappingForOldData toLocationId id
+              void $ SL.upsertToLocationAndMappingForOldData toLocationId id DLM.BOOKING
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
             DFF.RENTAL -> do
               qd <- getRentalDetails rentalSlabId
@@ -247,10 +240,10 @@ instance FromTType' BeamB.Booking Booking where
                 Nothing -> throwError (InternalError "No Rental Details present")
                 Just a -> pure a
             DFF.DRIVER_OFFER -> do
-              upsertToLocationAndMappingForOldData toLocationId id
+              void $ SL.upsertToLocationAndMappingForOldData toLocationId id DLM.BOOKING
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
             DFF.ONE_WAY_SPECIAL_ZONE -> do
-              upsertToLocationAndMappingForOldData toLocationId id
+              void $ SL.upsertToLocationAndMappingForOldData toLocationId id DLM.BOOKING
               DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
           return (pickupLoc, bookingDetails)
         else do
@@ -370,28 +363,3 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        ..
-      }
-
-upsertFromLocationAndMappingForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
-upsertFromLocationAndMappingForOldData locationId bookingId = do
-  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
-  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING
-  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
-  return pickupLoc
-
-upsertToLocationAndMappingForOldData :: MonadFlow m => Maybe Text -> Text -> m ()
-upsertToLocationAndMappingForOldData toLocationId bookingId = do
-  toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-  dropLoc <- buildLocation toLocation
-  toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING
-  void $ QL.create dropLoc >> QLM.create toLocationMapping

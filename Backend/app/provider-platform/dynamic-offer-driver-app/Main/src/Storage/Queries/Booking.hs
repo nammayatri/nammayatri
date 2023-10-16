@@ -18,23 +18,19 @@ module Storage.Queries.Booking where
 
 import Data.Ord
 import Domain.Types.Booking
-import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.DriverQuote as DDQ
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
@@ -45,15 +41,15 @@ createBooking' = createWithKV
 
 create :: MonadFlow m => Booking -> m ()
 create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
-  _ <- whenNothingM_ (QL.findById dBooking.toLocation.id) $ do QL.create dBooking.toLocation
+  SL.createLocation dBooking.fromLocation
+  SL.createLocation dBooking.toLocation
   createBooking' dBooking
 
 createBooking :: MonadFlow m => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
-  toLocationMaps <- SLM.buildDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
+  SL.createPickupLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
+    >> SL.createDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING
+    >> create booking
 
 findById :: MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -132,14 +128,7 @@ instance FromTType' BeamB.Booking Booking where
       if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
         then do
           logInfo "Accessing Booking Location Table"
-          pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING
-          QLM.create pickupLocMapping
-
-          dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
+          SL.backfillLocationAndLocationMapping fromLocationId toLocationId id DLM.BOOKING
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
               toLocationMappings = filter (\loc -> loc.order /= 0) mappings
@@ -227,27 +216,3 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        address = mkLocationAddress address,
-        ..
-      }
-
-mkLocationAddress :: DBBL.LocationAddress -> DL.LocationAddress
-mkLocationAddress DBBL.LocationAddress {..} =
-  DL.LocationAddress
-    { fullAddress = Nothing,
-      ..
-    }
-
-upsertLocationForOldData :: MonadFlow m => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
-upsertLocationForOldData locationId bookingId = do
-  loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "Location Id Not Found in Booking Location Table")
-  location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
-  void $ QL.create location
-  return location

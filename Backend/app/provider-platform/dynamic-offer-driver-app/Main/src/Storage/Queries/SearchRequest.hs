@@ -16,37 +16,31 @@
 module Storage.Queries.SearchRequest where
 
 import Data.Ord
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.SearchRequest as Domain
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
-import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Location as SL
 import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import qualified Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
 createDSReq' :: MonadFlow m => SearchRequest -> m ()
 createDSReq' = createWithKV
 
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
-  _ <- whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
-  _ <- whenNothingM_ (QL.findById dsReq.toLocation.id) $ do QL.create dsReq.toLocation
-  createDSReq' dsReq
+  SL.createLocation dsReq.fromLocation >> SL.createLocation dsReq.toLocation >> createDSReq' dsReq
 
 createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
+  SL.createPickupLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+    >> SL.createDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+    >> create searchRequest
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -74,14 +68,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
       if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
         then do
           logInfo "Accessing Search Request Location Table"
-          pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
-          QLM.create pickupLocMapping
-
-          dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
+          SL.backfillLocationAndLocationMapping fromLocationId toLocationId id DLM.SEARCH_REQUEST
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
               toLocationMappings = filter (\loc -> loc.order /= 0) mappings
@@ -139,25 +126,3 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
-buildLocation DSSL.SearchReqLocation {..} =
-  return $
-    DL.Location
-      { id = cast id,
-        address =
-          DL.LocationAddress
-            { fullAddress = full_address,
-              ..
-            },
-        ..
-      }
-
-upsertLocationForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
-upsertLocationForOldData locationId searchReqId = do
-  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "LocationId Not Found in Search Request Location Table")
-  location <- maybe (throwError $ InternalError $ "Location not found in SearchRequest for Search Request Id:" <> show searchReqId) buildLocation loc
-  void $ QL.create location
-  return location
