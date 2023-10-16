@@ -71,7 +71,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, dashedLine;
-        LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag , rentalBookingDateAndTime;
+        LinearLayout customerTipBlock, accessibilityTag, customerTipTag, rideTypeTag, rentalBookingDateAndTime;
         CardView destinationIcon;
 
         public SheetViewHolder(@NonNull View itemView) {

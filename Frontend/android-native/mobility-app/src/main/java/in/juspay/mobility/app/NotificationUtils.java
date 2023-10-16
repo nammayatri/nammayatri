@@ -86,7 +86,6 @@ public class NotificationUtils {
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
-
     public static  String RENTAL_ALLOCATION_TYPE = "NEW_RENTAL_RIDE_AVAILABLE";
     public static String TRIP_CHANNEL_ID = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
@@ -123,7 +122,6 @@ public class NotificationUtils {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
             f.setTimeZone(TimeZone.getTimeZone("IST"));
             String currTime = f.format(new Date());
-            System.out.println("Inside entity_payload " + entity_payload);
             String notificationType = data.getString("notification_type");
             if (ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
                 System.out.println("The remove notification cleare "+data.getString("entity_ids"));
@@ -314,7 +312,6 @@ public class NotificationUtils {
                     sheetData.putString("notificationType" , notificationType);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
-                    System.out.println(entity_payload);
                 } catch (Exception e) {
                     System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayExceptionParams = new Bundle();

@@ -224,5 +224,7 @@ public class SheetModel {
         return durationToPickup;
     }
 
-    public String getNotificationType(){return notificationType;}
+    public String getNotificationType(){
+        return notificationType;
+    }
 }

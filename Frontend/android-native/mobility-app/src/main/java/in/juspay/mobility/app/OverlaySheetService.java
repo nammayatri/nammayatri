@@ -98,7 +98,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
-    private TextView indicatorTip1, indicatorTip2, indicatorTip3 , rentalIndicator;
+    private TextView indicatorTip1, indicatorTip2, indicatorTip3, rentalIndicator;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList, vehicleVariantList;
@@ -107,7 +107,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
-
     private  String notificationType ="";
 
     @Override
@@ -278,7 +277,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
-
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(view -> {
@@ -949,11 +947,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
             rentalIndicator = floatyView.findViewById(R.id.rental_view_0);
-          
             if(notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")) rentalIndicator.setVisibility(View.VISIBLE);
             if(!notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")) indicatorList.get(0).setBackgroundColor(R.color.white);
-
-
             for (int i = 0; i < 3; i++) {
                 if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
                     if(!(notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")  && i == 0))
