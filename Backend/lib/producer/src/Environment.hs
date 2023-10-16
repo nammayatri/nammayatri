@@ -50,6 +50,7 @@ data AppCfg = AppCfg
     reviverInterval :: Milliseconds,
     reviveThreshold :: Seconds,
     maxShards :: Int,
+    metricsPort :: Int,
     schedulerType :: SchedulerType,
     tables :: Tables
   }

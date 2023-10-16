@@ -60,4 +60,6 @@ in  { loggerConfig =
     , schedulerSetName = "Scheduled_Jobs"
     , streamName = "Available_Jobs"
     , maxThreads = +5
+    , block = +10000
+    , readCount = +1
     }

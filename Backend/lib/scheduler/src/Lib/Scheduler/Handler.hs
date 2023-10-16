@@ -29,6 +29,7 @@ import qualified Data.Time as T hiding (getCurrentTime)
 import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.LoopGracefully (loopGracefully)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -45,6 +46,7 @@ data SchedulerHandle t = SchedulerHandle
     getReadyTasks :: SchedulerM [(AnyJob t, BS.ByteString)],
     markAsComplete :: Text -> Id AnyJob -> SchedulerM (),
     markAsFailed :: Text -> Id AnyJob -> SchedulerM (),
+    getReadyTask :: SchedulerM [(AnyJob t, BS.ByteString)],
     updateErrorCountAndFail :: Text -> Id AnyJob -> Int -> SchedulerM (),
     reSchedule :: Text -> AnyJob t -> UTCTime -> SchedulerM (),
     updateFailureCount :: Text -> Id AnyJob -> Int -> SchedulerM (),
@@ -53,10 +55,15 @@ data SchedulerHandle t = SchedulerHandle
 
 handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
 handler hnd = do
+  schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
-  executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
-  mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
-  handlerLoop hnd executionChannels
+  case schedulerType of
+    RedisBased -> do
+      mapConcurrently (const $ loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
+    DbBased -> do
+      executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
+      mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
+      loopGracefully [dbBasedHandlerLoop hnd executionChannels]
   where
     executeTaskInChan :: Chan (AnyJob t) -> SchedulerM ()
     executeTaskInChan ch = L.runIO (readChan ch) >>= runTask >> executeTaskInChan ch
@@ -67,44 +74,39 @@ handler hnd = do
       registerExecutionResult hnd anyJob res
       releaseLock parentJobId
 
-handlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
-handlerLoop hnd executionChannels = do
+dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
+dbBasedHandlerLoop hnd executionChannels = do
   logInfo "Starting runner iteration 1"
-  schedulerType <- asks (.schedulerType)
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
-  withLogTag iterSessionId $ do
-    logInfo "Starting runner iteration"
-    case schedulerType of
-      RedisBased -> runnerIterationRedis hnd executionChannels
-      DbBased -> runnerIteration hnd executionChannels
+  withLogTag iterSessionId $ logInfo "Starting runner iteration"
+  runnerIteration hnd executionChannels
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
   threadDelaySec (loopIntervalSec - diff)
-  handlerLoop hnd executionChannels
+
+-- dbBasedHandlerLoop hnd executionChannels
 
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
-runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
-runnerIterationRedis SchedulerHandle {..} executionChannels = do
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
+  logInfo "Starting runner iteration"
   key <- asks (.streamName)
   groupName <- asks (.groupName)
-  readyTasks <- getReadyTasks
-  logTagDebug "All Tasks - Count" . show $ length readyTasks
+  readyTasks <- getReadyTask
   logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) readyTasks
   filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
   let (filteredTasks', recordIds) = foldl (\(ftAcc, rIdAcc) (task, recordId) -> (task : ftAcc, recordId : rIdAcc)) ([], []) filteredTasks
   logTagDebug "Available tasks - Count" . show $ length filteredTasks
   logTagDebug "Available tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) filteredTasks
-  mapConcurrently writeToChan $ zip filteredTasks' $ cycle executionChannels
+  mapM_ runTask filteredTasks'
+  runnerIterationRedis hnd runTask
   unless (null recordIds) do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
-  where
-    writeToChan :: (AnyJob t, Chan (AnyJob t)) -> SchedulerM ()
-    writeToChan (job, ch) = L.runIO $ writeChan ch job
 
 runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
 runnerIteration SchedulerHandle {..} executionChannels = do
@@ -185,6 +187,7 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
 registerExecutionResult :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> ExecutionResult -> SchedulerM ()
 registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   let jobType' = show (fromSing $ jobType jobInfo)
+  logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "

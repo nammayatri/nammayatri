@@ -23,7 +23,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow ()
 import Kernel.Types.Id
 import Kernel.Types.MonadGuid
-import Kernel.Utils.Common (Forkable (fork), GuidLike (generateGUID), Milliseconds (Milliseconds), MonadTime (getCurrentTime), fromMaybeM, getCurrentTimestamp, logDebug, threadDelayMilliSec)
+import Kernel.Utils.Common (Forkable (fork), GuidLike (generateGUID), Milliseconds (Milliseconds), MonadTime (getCurrentTime), fromMaybeM, getCurrentTimestamp, logDebug, logError, threadDelayMilliSec)
 import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
@@ -31,28 +31,40 @@ import Lib.Scheduler.Types as ST
 import qualified Sequelize as Se
 import SharedLogic.Allocator
 
+getShouldRunReviverKey :: Text
+getShouldRunReviverKey = "SHOULD_RUN_REVIVER"
+
+producerLockKey :: Text
+producerLockKey = "Producer:Lock:key"
+
+reviverLockKey :: Text
+reviverLockKey = "Reviver:Lock:Key"
+
 runProducer :: Flow ()
 runProducer = do
-  begTime <- getCurrentTimestamp
-  producerTimestampKey <- asks (.producerTimestampKey)
-  startTime <- getTime begTime producerTimestampKey
-  endTime <- getCurrentTimestamp
-  Hedis.set producerTimestampKey endTime
-  setName <- asks (.schedulerSetName)
-  currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore setName startTime endTime
-  logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
-  batchSize <- asks (.batchSize)
-  let jobChunks = splitIntoBatches batchSize currentJobs
-  logDebug $ "Job chunks produced to be inserted into stream : " <> show jobChunks
-  result <- insertIntoStream jobChunks
-  logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
-  _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore setName startTime endTime
-  endTime <- getCurrentTimestamp
-  let diff = endTime - begTime
-  waitTimeMilliSec <- asks (.waitTimeMilliSec)
-  threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
-  fork "" $ addGenericLatency "producer" $ fromIntegral $ fromEnum diff
-  runProducer
+  Hedis.whenWithLockRedis producerLockKey 10 $ do
+    someErr <-
+      try @_ @SomeException $ do
+        begTime <- getCurrentTimestamp
+        producerTimestampKey <- asks (.producerTimestampKey)
+        startTime <- getTime begTime producerTimestampKey
+        endTime <- getCurrentTimestamp
+        setName <- asks (.schedulerSetName)
+        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore setName startTime endTime
+        logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
+        logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
+        Hedis.set producerTimestampKey endTime
+        result <- insertIntoStream currentJobs
+        logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
+        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore setName startTime endTime
+        endTime <- getCurrentTimestamp
+        let diff = endTime - begTime
+        waitTimeMilliSec <- asks (.waitTimeMilliSec)
+        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
+        fork "" $ addGenericLatency "producer" $ fromIntegral $ fromEnum diff
+    case someErr of
+      Left err -> logError $ show err
+      Right _ -> pure ()
 
 -- data ReviverHandler t = >
 --   { getAllPendingJobs' :: Flow [AnyJob t],
@@ -60,16 +72,12 @@ runProducer = do
 --   }
 -- TODO : This will be used to make it generic
 
-getShouldRunReviverKey :: Text
-getShouldRunReviverKey = "ShouldRunReviver"
-
 runReviver :: Flow ()
 runReviver = do
   reviverInterval <- asks (.reviverInterval)
   shouldRunReviver :: (Maybe Bool) <- Hedis.get getShouldRunReviverKey
-  when (shouldRunReviver == Just True) $ Hedis.whenWithLockRedis "Reviver:Lock:Key" 300 runReviver'
+  when (shouldRunReviver == Just True) $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
   threadDelayMilliSec reviverInterval
-  runReviver
 
 runReviver' :: Flow ()
 runReviver' = do
@@ -79,44 +87,45 @@ runReviver' = do
   let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
   logDebug $ "Total number of pendingJobs in DB : " <> show (length pendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
   updateStatusOfJobs Revived $ map fst jobsIds
-  forM_ pendingJobs $ \(AnyJob x) -> do
-    now <- getCurrentTime
-    uuid <- generateGUIDText
-    maxShards <- asks (.maxShards)
-    let newid :: (Id AnyJob) = Id uuid
-    (AnyJobInfo jobInfo) :: AnyJobInfo AllocatorJobType <- fromMaybeM (InvalidRequest "jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
-    let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
-    let newJob =
-          Job
-            { id = newid,
-              parentJobId = x.id,
-              scheduledAt = now,
-              jobInfo = jobInfo,
-              shardId = shardId,
-              maxErrors = 5,
-              createdAt = now,
-              updatedAt = now,
-              currErrors = 0,
-              status = Pending
-            }
-    createWithKVScheduler $ AnyJob newJob
-    logDebug $ "Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
+  newJobsToExecute <-
+    forM pendingJobs $ \(AnyJob x) -> do
+      now <- getCurrentTime
+      uuid <- generateGUIDText
+      maxShards <- asks (.maxShards)
+      let newid :: (Id AnyJob) = Id uuid
+      (AnyJobInfo jobInfo) :: AnyJobInfo AllocatorJobType <- fromMaybeM (InvalidRequest "jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
+      let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
+      let newJob =
+            Job
+              { id = newid,
+                parentJobId = x.id,
+                scheduledAt = now,
+                jobInfo = jobInfo,
+                shardId = shardId,
+                maxErrors = 5,
+                createdAt = now,
+                updatedAt = now,
+                currErrors = 0,
+                status = Pending
+              }
+      createWithKVScheduler $ AnyJob newJob
+      logDebug $ "Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
+      pure (AnyJob newJob)
 
-  batchSize <- asks (.batchSize)
-  let jobChunks = map (map (BSL.toStrict . Ae.encode)) $ splitIntoBatches batchSize pendingJobs
-  logDebug $ "Job chunks produced to be inserted into stream of reviver: " <> show jobChunks
-  result <- insertIntoStream jobChunks
+  let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
+  logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
+  result <- insertIntoStream newJobsToExecute_
   logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
 
-insertIntoStream :: [[B.ByteString]] -> Flow ()
-insertIntoStream jobChunks = do
-  forM_ jobChunks $ \chunk -> do
+insertIntoStream :: [B.ByteString] -> Flow ()
+insertIntoStream jobs = do
+  forM_ jobs $ \job -> do
     streamName <- asks (.streamName)
     entryId <- asks (.entryId)
     eqId <- generateGUID
     let eqIdByteString = TE.encodeUtf8 eqId
-    let chunk_ = B.concat chunk
-    let fieldValue = [(eqIdByteString, chunk_)]
+    let job_ = job
+    let fieldValue = [(eqIdByteString, job_)]
     Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
 
 splitIntoBatches :: Int -> [a] -> [[a]]
