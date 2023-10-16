@@ -175,7 +175,7 @@ paymentList push state =
                   , width MATCH_PARENT
                   , gravity CENTER_VERTICAL
                   , margin $ MarginBottom 6
-                  ][ commonTV push item.description Color.black700 (FontStyle.body2 TypoGraphy) 0 LEFT true
+                  ][ commonTV push item.description Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
                   , commonTV push item.ridesTakenDate Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
                   , linearLayout
                       [ height WRAP_CONTENT
@@ -390,7 +390,7 @@ transactionDetails push state visibility' =
                 , padding $ PaddingVertical 8 8
                 ](DA.mapWithIndex (\ index item ->
                   transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) (item.val /= "") $ case item.key of
-                    "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing}]) DA.!! 0)) else rightItem push "N/A" false false
+                    "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] state.data.gradientConfig) DA.!! 0)) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")

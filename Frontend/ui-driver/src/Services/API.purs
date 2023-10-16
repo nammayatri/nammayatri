@@ -2487,9 +2487,11 @@ newtype DriverDuesEntity = DriverDuesEntity {
 }
 
 newtype OfferEntity = OfferEntity {
+  offerId :: String,
   title :: Maybe String,
   description :: Maybe String,
-  tnc :: Maybe String
+  tnc :: Maybe String,
+  gradient :: Maybe (Array String)
 }
 
 newtype PromotionPopupConfig = PromotionPopupConfig {

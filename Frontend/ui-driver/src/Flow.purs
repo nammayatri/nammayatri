@@ -590,8 +590,6 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      
-
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -1350,6 +1348,8 @@ permissionsScreenFlow event activeRideResp = do
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ RideHistoryScreenStateType (\ rideHistoryScreen -> rideHistoryScreen { data {config = config}} )
   flow <- UI.rideHistory
   case flow of
     REFRESH state -> do
@@ -1739,8 +1739,9 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
+  config <- getAppConfig Constants.appConfig
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
-  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}, data{subscriptionConfig = config.subscriptionConfig}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
     GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN -> do
@@ -2168,7 +2169,7 @@ clearPendingDuesFlow showLoader = do
                                                                                         ]
             getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
             case getDriverInfoApiResp of
-              Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just resp}
+              Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
               Left _ -> pure unit
             updateDriverDataToStates
             pure unit
@@ -2214,8 +2215,15 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
+
           case statusResp.status of
-            PS.CHARGED -> setSubscriptionStatus Success statusResp.status planCardConfig
+            PS.CHARGED -> do
+                setSubscriptionStatus Success statusResp.status planCardConfig
+                getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+                case getDriverInfoApiResp of
+                  Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+                  Left _ -> pure unit
+                updateDriverDataToStates
             PS.AUTHORIZATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.AUTHENTICATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.JUSPAY_DECLINED -> setSubscriptionStatus Failed statusResp.status planCardConfig
@@ -2235,7 +2243,7 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
       getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
       case getDriverInfoApiResp of
-        Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just resp}
+        Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
       updateDriverDataToStates
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup}})
@@ -2258,7 +2266,7 @@ paymentHistoryFlow = do
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp))}
+              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig)}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
@@ -2364,7 +2372,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   appConfig <- getAppConfig Constants.appConfig 
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerDeadline}}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2381,7 +2389,7 @@ subScriptionFlow = do
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity}})
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.gradientConfig}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
@@ -2541,7 +2549,7 @@ changeDriverStatus status = do
   void $ Remote.driverActiveInactiveBT (show isDriverActive) qParam
   when (driverGoHomeInfo.status == Just "ACTIVE" && status == Offline) do
     void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
-    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = isDriverActive, driverStatusSet = status}})
   updateDriverStatusGlobal qParam isDriverActive
   void $ setValueToLocalStore DRIVER_STATUS if any ( _ == status) [Online, Silent] then "true" else "false"
@@ -2557,7 +2565,7 @@ getDriverInfoDataFromCache (GlobalState globalState) = do
     pure driverInfoResp
   else do
     driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq {})
-    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just $ driverInfoResp}
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
     pure driverInfoResp
 
 getDriverStatesFromCache :: GlobalState -> FlowBT String DriverProfileStatsResp
@@ -2567,7 +2575,7 @@ getDriverStatesFromCache (GlobalState globalState) = do
     pure driverStats
   else do
     driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverRideStats = Just $ driverStats}
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just $ driverStats}
     pure driverStats
 
 updateDriverStatusGlobal :: String -> Boolean -> FlowBT String Unit
@@ -2589,6 +2597,8 @@ driverRideRatingFlow = do
 notificationFlow :: FlowBT String Unit
 notificationFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ NotificationsScreenStateType (\ notificationScreen -> notificationScreen { config = config} )
   screenAction <- UI.notifications
   case screenAction of
     REFRESH_SCREEN state -> do
@@ -2779,15 +2789,17 @@ updateBannerAndPopupFlags = do
       freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
       shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
       autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
-      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
-                              true, true, _  -> FREE_TRIAL_BANNER
-                              _, false, true -> do
-                                          if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-                                          else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-                                          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
-                                          else NO_SUBSCRIPTION_BANNER
-                              true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
-                              _, _, _        -> NO_SUBSCRIPTION_BANNER
+      autopayBannerType = if subscriptionConfig.enableSubscriptionPopups then
+                            case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
+                                true, true, _  -> FREE_TRIAL_BANNER
+                                _, false, true -> do
+                                            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
+                                            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
+                                            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+                                            else NO_SUBSCRIPTION_BANNER
+                                true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
+                                _, _, _        -> NO_SUBSCRIPTION_BANNER
+                          else NO_SUBSCRIPTION_BANNER
       subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
                                   true, _, true -> case freeTrialDays of
                                                       _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
