@@ -41,7 +41,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, null, traverse_)
+import EulerHS.Prelude hiding (id, null, sum, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -53,6 +53,7 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD

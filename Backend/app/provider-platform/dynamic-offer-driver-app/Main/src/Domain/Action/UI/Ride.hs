@@ -347,7 +347,8 @@ otpRideCreate driver otpCode booking = do
             vehicleColor = Just vehicle.color,
             vehicleVariant = Just vehicle.variant,
             vehicleModel = Just vehicle.model,
-            vehicleClass = Nothing
+            vehicleClass = Nothing,
+            fleetOwnerId = Nothing
           }
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
