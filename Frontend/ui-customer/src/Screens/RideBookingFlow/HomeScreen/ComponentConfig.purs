@@ -37,6 +37,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.RentalFareBreakupScreen as RentalFareBreakupScreen
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
@@ -226,6 +227,58 @@ whereToButtonConfig state =
       , id = "WheretoButton"
       }
   in primaryButtonConfig'
+
+bookARentalButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+bookARentalButtonConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = ("Book a Rental")
+        , width = MATCH_PARENT
+        , gravity = LEFT
+        , color = Color.black800
+        , accessibilityHint = "Book a Rental : Button"
+        }
+      , height = V 48
+      , gravity = CENTER_VERTICAL
+      , cornerRadius = 8.0
+      , margin = (Margin 16 12 16 0)
+      , isClickable = true
+      , isPrefixImage = true
+      , background = Color.blue600
+      , prefixImageConfig
+        { imageUrl = "ny_ic_timer_clock," <> (getAssetStoreLink FunctionCall) <> "ny_ic_timer_clock.png"
+        , height = V 16
+        , width = V 21
+        , margin = (Margin 17 0 17 0)
+        }
+      , id = "bookARentalButton"
+      }
+  in primaryButtonConfig'
+
+rentalConfirmAndBookConfig :: ST.HomeScreenState -> PrimaryButton.Config 
+rentalConfirmAndBookConfig state = 
+  let
+    config =PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = (getString CONFIRM_AND_BOOK)
+        , width = MATCH_PARENT
+        , gravity = CENTER_HORIZONTAL
+        , color = state.data.config.primaryTextColor
+        , accessibilityHint = "Confirm & Book : Button"
+        }
+      , height = V 60
+      , gravity = CENTER_VERTICAL
+      , cornerRadius = 8.0
+      , margin = Margin 16 0 16 16
+      , isClickable = true
+      , isPrefixImage = true
+      , background = state.data.config.primaryBackground
+      , id = "rentalConfirmAndBookButton"
+      }
+    in primaryButtonConfig'
 
 primaryButtonRequestRideConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonRequestRideConfig state =
@@ -711,6 +764,7 @@ driverInfoCardViewState state = { props:
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
+                                  , rentalStage : state.props.rentalStage
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -856,7 +910,17 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
+                                    , rentalStage : state.props.rentalStage
+                                    , bookingStage : state.props.bookingStage
+                                    , rentalData : state.props.rentalData
+                                    , config : state.data.config
                                     }
+                              
+rentalFareBreakupScreenViewState :: ST.HomeScreenState -> RentalFareBreakupScreen.RentalFareBreakupScreenState
+rentalFareBreakupScreenViewState state = { rentalStage: state.props.rentalStage
+                                         , specialZoneQuoteList: state.data.specialZoneQuoteList
+                                         , homeScreenConfig: state.data.config
+}
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = { source: state.data.source
@@ -1010,7 +1074,8 @@ chooseYourRideConfig state = ChooseYourRide.config
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
-    nearByDrivers = state.data.nearByDrivers
+    nearByDrivers = state.data.nearByDrivers,
+    rentalStage = state.props.rentalStage
   }
 
 
@@ -1234,3 +1299,55 @@ getFareUpdatedString diffInDist = do
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
                                                         _       -> "your ride was " <> dist <> " km longer")
+
+primaryButtonConfirmAndBookConfig :: ST.HomeScreenState -> PrimaryButton.Config
+primaryButtonConfirmAndBookConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString CONFIRM_AND_BOOK)
+          , color = state.data.config.primaryTextColor
+          , accessibilityHint = "Confirm And Book : Button"
+          }
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
+        , margin = (Margin 16 8 16 14)
+        , id = "ConfirmAndBookButton"
+        , background = state.data.config.primaryBackground
+        }
+  in
+    primaryButtonConfig'
+
+rentalPackageConfig :: ST.HomeScreenState -> PopUpModal.Config
+rentalPackageConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , margin = MarginHorizontal 16 16
+  , buttonLayoutMargin = Margin 16 0 16 20
+  , topTitle {
+      margin = Margin 16 24 16 16
+    , color = Color.blue600
+    , gravity = LEFT
+    , text = "Rental Package"
+  }
+  , secondaryText {
+      text = "Final fare will be based on the actual duration, rounded up to the nearest hour OR the trip duration you select (whichever is higher)."
+    , margin = Margin 16 0 16 24
+    , color = Color.black650
+    , gravity = LEFT
+  }
+  , option1 {
+      text = "Got it!"
+    , strokeColor = Color.white900
+    , color = Color.blue800
+  }
+  , option2 {
+    visibility = false
+  }
+  , backgroundClickable = true
+  , dismissPopup = true
+  , cornerRadius = (Corners 15.0 true true true true)
+  }
+  in popUpConfig'

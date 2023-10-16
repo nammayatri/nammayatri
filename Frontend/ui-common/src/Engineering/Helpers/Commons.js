@@ -188,6 +188,14 @@ function setTextImpl(id, text, pos) {
   }
 }
 
+export const clearFocus = function(id) {
+  if (__OS === "ANDROID") {
+    // var cmd = "clear_focus=ctx->findViewById:i_" + id + ";";
+    // Android.runInUI(cmd, null);
+    window.Android.runInUI("set_view=ctx->findViewById:i_"+id+";get_view->clearFocus;",null);
+  }
+}
+
 export const countDown = function (countDownTime) {
   return function (id) {
     return function (cb) {
@@ -333,6 +341,12 @@ export const getPastWeeks = function (count) {
     return result.reverse();
   } catch (e) {
     console.log("error in getPastWeeks", e);
+  }
+};
+
+export const isSame = function (a) {
+  return function (b) {
+    return a.toString() === b.toString();
   }
 };
 

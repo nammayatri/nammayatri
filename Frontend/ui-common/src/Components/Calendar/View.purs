@@ -36,8 +36,9 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
-
 import Data.Number (min)
+import Debug
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
@@ -253,6 +254,8 @@ weekView push config =
 
 datesRowView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 datesRowView push config =
+  let _ = spy "debug cal config" config
+  in
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT

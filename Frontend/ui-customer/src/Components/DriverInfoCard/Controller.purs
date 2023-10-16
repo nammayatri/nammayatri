@@ -17,7 +17,7 @@ module Components.DriverInfoCard.Controller where
 
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SearchResultType)
+import Screens.Types(RentalStage(..), Stage(..), ZoneType(..), SearchResultType)
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
 import MerchantConfig.Types
@@ -56,7 +56,8 @@ type DriverInfoCardProps =
     estimatedTime :: String,
     zoneType :: ZoneType,
     isChatOpened :: Boolean,
-    chatcallbackInitiated :: Boolean
+    chatcallbackInitiated :: Boolean,
+    rentalStage :: RentalStage
   }
 
 type DriverInfoCardData =

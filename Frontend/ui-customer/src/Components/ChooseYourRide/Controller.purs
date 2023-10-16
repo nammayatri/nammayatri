@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types
+import Screens.Types (RentalStage(..))
 
 data Action
   = NoAction
@@ -18,6 +19,7 @@ type Config
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
     , nearByDrivers :: Maybe Int
+    , rentalStage :: RentalStage
     }
 
 config :: Config
@@ -28,4 +30,5 @@ config =
   , quoteList: []
   , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
+  , rentalStage: NotRental
   }

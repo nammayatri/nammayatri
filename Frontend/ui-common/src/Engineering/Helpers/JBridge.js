@@ -447,6 +447,19 @@ export const datePicker = function (label)
   };
 };
 
+export const dateAndTimePicker = function (label)
+{return function (cb)
+  {return function (action)
+    {return function () {
+      var callback = callbackMapper.map(function (resp, year, month, date) {
+        cb(action(resp)(year)(month)(date))();
+      });
+      return window.JBridge.dateAndTimePicker(callback,label);
+      };
+    };
+  };
+};
+
 export const setFCMToken = function (cb) {
   return function (action) {
     return function () {

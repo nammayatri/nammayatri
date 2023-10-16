@@ -1444,6 +1444,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region DATE / TIME UTILS
+
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void timePicker(final String callback) {
@@ -1511,6 +1512,145 @@ public class MobilityCommonBridge extends HyperBridge {
         int idPickerInput = Resources.getSystem().getIdentifier("numberpicker_input", "id", "android");
         TextView input = spinner.findViewById(idPickerInput);
         input.setImeOptions(imeOption);
+    }
+
+    @JavascriptInterface
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @SuppressLint("DiscouragedApi")
+    public void dateAndTimePicker(final String callback, String label) {
+        // val currentDateTime = Calendar.getInstance()
+        // val startYear = currentDateTime.get(Calendar.YEAR)
+        // val startMonth = currentDateTime.get(Calendar.MONTH)
+        // val startDay = currentDateTime.get(Calendar.DAY_OF_MONTH)
+        // val startHour = currentDateTime.get(Calendar.HOUR_OF_DAY)
+        // val startMinute = currentDateTime.get(Calendar.MINUTE)
+
+        // DatePickerDialog(requireContext(), DatePickerDialog.OnDateSetListener { _, year, month, day ->
+        //     TimePickerDialog(requireContext(), TimePickerDialog.OnTimeSetListener { _, hour, minute ->
+        //         val pickedDateTime = Calendar.getInstance()
+        //         pickedDateTime.set(year, month, day, hour, minute)
+        //         doSomethingWith(pickedDateTime)
+        //     }, startHour, startMinute, false).show()
+        // }, startYear, startMonth, startDay).show()
+
+
+
+        ExecutorManager.runOnMainThread(new Runnable() {
+            @Override
+            public void run() {
+                final Calendar c = Calendar.getInstance();
+                int mYear = c.get(Calendar.YEAR);
+                int mMonth = c.get(Calendar.MONTH);
+                int mDate = c.get(Calendar.DATE);
+                int mHour = c.get(Calendar.HOUR);
+                int mMins = c.get(Calendar.MINUTE);
+                int datePickerTheme = AlertDialog.THEME_HOLO_LIGHT;
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) datePickerTheme = 0;
+
+                DatePickerDialog datePickerDialog = new DatePickerDialog(bridgeComponents.getActivity(), datePickerTheme, (dateAndTimePicker, year, month, date) -> {
+                    if (callback != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d,%d);",
+                                callback, "SELECTED", year, month, date);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                }, mYear, mMonth, mDate) {
+
+                    final int month = getContext().getResources().getIdentifier("month", "id", "android");
+                    final String[] monthNumbers =
+                            {
+                                    "Jan (01)",
+                                    "Feb (02)",
+                                    "Mar (03)",
+                                    "April (04)",
+                                    "May (05)",
+                                    "June (06)",
+                                    "July (07)",
+                                    "Aug (08)",
+                                    "Sept (09)",
+                                    "Oct (10)",
+                                    "Nov (11)",
+                                    "Dec (12)"
+                            };
+
+                    @Override
+                    public void onDateChanged(@NonNull DatePicker view, int y, int m, int d) {
+                        super.onDateChanged(view, y, m, d);
+                        try {
+                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                if (month != 0) {
+                                    NumberPicker monthPicker = findViewById(month);
+                                    if (monthPicker != null) {
+                                        monthPicker.setDisplayedValues(monthNumbers);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(DTUTILS, "Error in onDateChanged : " + e);
+                        }
+                    }
+
+                    @Override
+                    protected void onCreate(Bundle savedInstanceState) {
+                        super.onCreate(savedInstanceState);
+                        try {
+                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                if (month != 0) {
+                                    NumberPicker monthPicker = findViewById(month);
+                                    if (monthPicker != null) {
+                                        monthPicker.setDisplayedValues(monthNumbers);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(DTUTILS, "Error in Date onCreate : " + e);
+                        }
+                    }
+                };
+                datePickerDialog.setOnCancelListener(var1 -> {
+                    if (callback != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s',%d,%d,%d);",
+                                callback, "CANCELLED", 0, 0, 0);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+                datePickerDialog.setOnDismissListener(var1 -> {
+                    if (callback != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d,%d);",
+                                callback,"DISMISSED", 0, 0, 0);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+
+                switch (label) {
+                    case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
+                        Calendar maxDateDOB = Calendar.getInstance();
+                        maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
+                        maxDateDOB.set(Calendar.MONTH, mMonth);
+                        maxDateDOB.set(Calendar.YEAR, mYear - 18);
+                        datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
+                        break;
+                    case DatePickerLabels.MAXIMUM_PRESENT_DATE:
+                        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
+                        break;
+                }
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
+                    datePickerDialog.setTitle(bridgeComponents.getContext().getString(R.string.select_date));
+                else datePickerDialog.setTitle("");
+                datePickerDialog.show();
+                final char[] dateOrder =
+                        {
+                                'd',
+                                'm',
+                                'y'
+                        };
+                try {
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
+                        reOrderSpinners(datePickerDialog, dateOrder);
+                } catch (Exception e) {
+                    Log.e(DTUTILS, "Error in reOrdering spinners : " + e);
+                }
+            }
+        });
     }
 
     @JavascriptInterface

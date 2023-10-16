@@ -93,6 +93,8 @@ foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import clearFocus :: String -> Unit
+foreign import isSame :: forall a b. a -> b -> Boolean
 
 
 os :: String

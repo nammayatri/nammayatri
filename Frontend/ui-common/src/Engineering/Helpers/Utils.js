@@ -113,3 +113,16 @@ export const getCurrentDay = function (dummy) {
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
            isInRange : false, isStart: false , isEnd: false }
 }
+
+export const getDayBeforeOrAfter = function (utc) {
+  return function (daysToSkip) {
+    return function (dayBefore) {
+      let date = new Date();
+      date.setDate(date.getDate() + daysToSkip * (dayBefore ? -1 : 1));
+      let ans = { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
+      isInRange : false, isStart: false , isEnd: false };
+      console.log("debug ans", ans);
+      return ans;
+    }
+  }
+}

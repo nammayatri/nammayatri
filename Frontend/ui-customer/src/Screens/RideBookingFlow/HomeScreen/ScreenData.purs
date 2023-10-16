@@ -15,12 +15,12 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), CalendarModalDateObject)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), RentalStage(..), BookingStage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -87,7 +87,60 @@ initData = {
     , messageToBeSent : ""
     , nearByPickUpPoints : []
     , polygonCoordinates : ""
-    , specialZoneQuoteList : []
+    , specialZoneQuoteList : [ {
+            activeIndex: 0
+          , basePrice: 254
+          , capacity: "Economical, 4 people"
+          , id: "d1b6e3e0-6075-49f1-abb9-28bfb1a4b353"
+          , index: 0
+          , isBookingOption: false
+          , isCheckBox: false
+          , isEnabled: true
+          , isSelected: false
+          , maxPrice: 123
+          , price: "₹254"
+          , searchResultType: CV.QUOTES
+          , showInfo: false
+          , vehicleImage: "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png"
+          , vehicleType: ""
+          , vehicleVariant: "TAXI"
+          },
+          {
+            activeIndex: 0
+          , basePrice: 292
+          , capacity: "Comfy, 4 people"
+          , id: "cd47110c-a5f4-41a7-bee8-724242850a2d"
+          , index: 1
+          , isBookingOption: false
+          , isCheckBox: false
+          , isEnabled: true
+          , isSelected: false
+          , maxPrice: 123
+          , price: "₹292"
+          , searchResultType: CV.QUOTES
+          , showInfo: false
+          , vehicleImage: "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+          , vehicleType: ""
+          , vehicleVariant: "TAXI_PLUS"
+          },
+          { activeIndex: 0
+          , basePrice: 582
+          , capacity: "Spacious · 6 people"
+          , id: "39ea627a-a7e2-41f9-976a-545d34833c08"
+          , index: 1
+          , isBookingOption: false
+          , isCheckBox: false
+          , isEnabled: true
+          , isSelected: false
+          , maxPrice: 123
+          , price: "₹582"
+          , searchResultType: CV.QUOTES
+          , showInfo: false
+          , vehicleImage: "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png"
+          , vehicleType: ""
+          , vehicleVariant: "SUV"
+          }
+        ]
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
     , selectedEstimatesObject : {
@@ -133,6 +186,7 @@ initData = {
       rideRequestFlow : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
+    , bookingStage : NormalBooking
     , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing
@@ -226,6 +280,23 @@ initData = {
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
+    , rentalStage : NotRental
+    , showRentalPackagePopup : false
+    , rentalData :
+        { selectedDate : ""
+        , selectedTime : ""
+        , showDatePopup : false
+        , quoteList : []
+        , dateConfig :
+            { weeks : []
+            , startDate : Nothing
+            , endDate : Nothing
+            , selectedTimeSpan : dummyDateConfig
+            , pastLimit : dummyDateConfig
+            , futureLimit : dummyDateConfig
+            , selectedDay : Nothing
+            }
+        }
     }
 }
 
@@ -447,3 +518,6 @@ dummyFareBreakUp = FareBreakupAPIEntity{
   amount : 0,
   description : "fare"
 }
+
+dummyDateConfig :: CalendarModalDateObject
+dummyDateConfig = {date : 0, isInRange : false, isStart : false, isEnd : false, utcDate : "", shortMonth : "", year : 0, intMonth : 0}

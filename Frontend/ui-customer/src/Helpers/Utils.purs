@@ -52,7 +52,8 @@ import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
-import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, clearFocus) as ReExport
+import Engineering.Helpers.Utils (getWeeksInMonth, getCurrentDay, getDayBeforeOrAfter) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)

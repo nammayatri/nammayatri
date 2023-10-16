@@ -81,6 +81,7 @@ view push state =
             , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
             ]
         ]
+     , rentalPackageView push state
      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -161,6 +162,7 @@ view push state =
                     )(const NoAction)
                 ][]
             ]]
+        
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -209,6 +211,7 @@ view push state =
           ][ textView $
              [ width WRAP_CONTENT
              , height WRAP_CONTENT
+             , textSize FontSize.a_12
              , color $ state.secondaryText.color
              , gravity $ state.secondaryText.gravity
              , textFromHtml state.secondaryText.text
@@ -593,3 +596,41 @@ youtubeData state mediaType =
   , videoId: getVideoID state.mediaUrl
   , videoType: mediaType
   }
+
+rentalPackageView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalPackageView push state =
+  linearLayout [
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , accessibility DISABLE_DESCENDANT
+    , orientation HORIZONTAL
+    , color Color.blue600
+    ][ textView $
+      [ textSize FontSize.a_22
+      , margin (Margin 16 24 16 16)
+      , color Color.black800
+      , gravity LEFT
+      , text "Rental package"
+      ] <> (FontStyle.h1 LanguageStyle) 
+      , imageView
+        [ height state.coverImageConfig.height
+        , width state.coverImageConfig.width
+        , margin state.coverImageConfig.margin
+        , padding state.coverImageConfig.padding
+        , imageWithFallback state.coverImageConfig.imageUrl
+        , visibility state.coverImageConfig.visibility
+        ]
+      ]
+    -- , linearLayout 
+    --   [ height WRAP_CONTENT 
+    --   , width MATCH_PARENT
+    --   , margin (Margin 16 12 16 12)
+    --   , 
+    --   ]
+  ]

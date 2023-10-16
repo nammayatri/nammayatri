@@ -63,4 +63,5 @@ config =
   , selectRange : false
   }
 
+dummyDateItem :: CalendarModalDateObject
 dummyDateItem = {date : 0, isInRange : false, isStart : false, isEnd : false, utcDate : "", shortMonth : "", year : 0, intMonth : 0}

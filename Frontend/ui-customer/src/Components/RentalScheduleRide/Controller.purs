@@ -13,50 +13,25 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.SearchLocationModel.Controller where
+module Components.RentalScheduleRide.Controller where
 
-import Components.Calendar as Calendar
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBarController
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
-import Screens.Types (RentalStage(..), SearchLocationModelType, LocationListItemState, LocItemType(..), BookingStage(..), RentalConfig(..))
+import Screens.Types (RentalStage(..), SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Foreign.Object (Object)
 import Foreign (Foreign)
-import Components.ChooseYourRide as ChooseYourRide
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
-import Components.ChooseVehicle.Controller as ChooseVehicle
 
 data Action = GoBack
-            | NoAction
-            | SourceChanged String
-            | DestinationChanged String
-            | SourceClear
-            | UpdateSource Number Number String
-            | DestinationClear
-            | SetLocationOnMap
-            | SetCurrentLocation
-            | EditTextFocusChanged String Boolean
-            | LocationListItemActionController LocationListItem.Action
-            | PrimaryButtonActionController PrimaryButton.Action
-            | DebounceCallBack String Boolean
-            | SavedAddressClicked LocationTagBarController.Action
-            | UpdateCurrentLocation String String
-            | RecenterCurrentLocation
-            | RentalScheduleAction
-            | TimePicker Int Int
-            | CalendarAction Calendar.Action
-            | FocusDateAndTime
-            | ChooseYourRideAction ChooseYourRide.Action
-            | ChooseVehicleAC ChooseVehicle.Action
-            | RentalConfirmAndBookAction PrimaryButton.Action
-            | EditDate
+            | PrimaryButtonActionController PrimaryButtonController.Action
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -68,17 +43,9 @@ type SearchLocationModelState = {
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
-  , appConfig :: AppConfig
+  , homeScreenConfig :: AppConfig
   , logField :: Object Foreign
-  , crossBtnSrcVisibility :: Boolean
-  , crossBtnDestVisibility :: Boolean
-  , isAutoComplete :: Boolean
-  , showLoader :: Boolean
-  , prevLocation :: String
   , rentalStage :: RentalStage
-  , bookingStage :: BookingStage
-  , rentalData :: RentalConfig
-  , config :: AppConfig
 }
 
 dummy_data :: Array LocationListItemState
@@ -159,67 +126,3 @@ dummy_data = [
     , actualDistance : 0
     }
 ]
-
-chooseYourRideConfig :: ChooseYourRide.Config
-chooseYourRideConfig = ChooseYourRide.config
-  {
-    rideDistance = "abc",
-    rideDuration = "def",
-    quoteList = [ {
-            activeIndex: 0
-          , basePrice: 254
-          , capacity: "Economical, 4 people"
-          , id: "d1b6e3e0-6075-49f1-abb9-28bfb1a4b353"
-          , index: 0
-          , isBookingOption: false
-          , isCheckBox: false
-          , isEnabled: true
-          , isSelected: false
-          , maxPrice: 123
-          , price: "₹254"
-          , searchResultType: CV.QUOTES
-          , showInfo: false
-          , vehicleImage: "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png"
-          , vehicleType: ""
-          , vehicleVariant: "TAXI"
-          },
-          {
-            activeIndex: 0
-          , basePrice: 292
-          , capacity: "Comfy, 4 people"
-          , id: "cd47110c-a5f4-41a7-bee8-724242850a2d"
-          , index: 1
-          , isBookingOption: false
-          , isCheckBox: false
-          , isEnabled: true
-          , isSelected: false
-          , maxPrice: 123
-          , price: "₹292"
-          , searchResultType: CV.QUOTES
-          , showInfo: false
-          , vehicleImage: "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
-          , vehicleType: ""
-          , vehicleVariant: "TAXI_PLUS"
-          },
-          { activeIndex: 0
-          , basePrice: 582
-          , capacity: "Spacious · 6 people"
-          , id: "39ea627a-a7e2-41f9-976a-545d34833c08"
-          , index: 2
-          , isBookingOption: false
-          , isCheckBox: false
-          , isEnabled: true
-          , isSelected: false
-          , maxPrice: 123
-          , price: "₹582"
-          , searchResultType: CV.QUOTES
-          , showInfo: false
-          , vehicleImage: "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png"
-          , vehicleType: ""
-          , vehicleVariant: "SUV"
-          }
-        ],
-    showTollExtraCharges = false,
-    nearByDrivers = Nothing,
-    rentalStage = NotRental
-  }
