@@ -664,7 +664,6 @@ const tamilStrings = {
   NO_AUTOMATIC_PAYMENTS_DESC : "உங்களின் ஆட்டோ டெபிட்  பரிவர்த்தனை விவரங்கள் வசூலிக்கப்பட்டவுடன் இங்கே தோன்றும்",
   NO_MANUAL_PAYMENTS_DESC : "பாக்கிகளை செலுத்த உங்கள் பரிவர்த்தனை விவரங்கள் ஏதேனும் இருந்தால் இங்கே தோன்றும்.",
   PAYMENT_HISTORY : "கட்டண வரலாறு",
-  DO_A_ONE_TIME_SETTLEMENT : "ஒரு முறை பணம் செலுத்துங்கள்",
   TAP_A_PLAN_TO_VIEW_DETAILS : "விவரங்களைப் பார்க்க ஒரு திட்டத்தைத் அழுத்தவும்",
   HOW_IT_WORKS : "<u> மேலும் விவரம் </u>",
   ZERO_COMMISION : "ஜீரோ கமிஷன்",

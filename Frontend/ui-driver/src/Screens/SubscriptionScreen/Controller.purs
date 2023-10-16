@@ -55,7 +55,7 @@ instance loggableAction :: Loggable Action where
 data Action = BackPressed
             | AfterRender
             | BottomNavBarAction BottomNavBar.Action
-            | OneTimeSettlement
+            | OneTimeSettlement PrimaryButton.Action
             | SwitchPlan PrimaryButton.Action
             | JoinPlanAC PrimaryButton.Action
             | ManagePlanAC
@@ -226,7 +226,7 @@ eval (RetryPaymentAC PrimaryButton.OnClick) state =
     Mb.Just "AUTOPAY_REGISTRATION" -> updateAndExit state $ SubscribeAPI state
     _ -> continueWithCmd state [ pure $ ResumeAutoPay PrimaryButton.OnClick]
 
-eval OneTimeSettlement state = exit $ ClearDues state
+eval (OneTimeSettlement PrimaryButton.OnClick) state = updateAndExit state $ ClearDues state
 
 eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 

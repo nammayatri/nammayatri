@@ -2134,9 +2134,9 @@ homeScreenFlow = do
       homeScreenFlow
   homeScreenFlow
 
-clearPendingDuesFlow :: FlowBT String Unit
-clearPendingDuesFlow = do
-  void $ lift $ lift $ toggleLoader true
+clearPendingDuesFlow :: Boolean -> FlowBT String Unit
+clearPendingDuesFlow showLoader = do
+  void $ lift $ lift $ toggleLoader showLoader
   liftFlowBT $ runEffectFn1 initiatePP unit
   clearduesResp' <- lift $ lift $ Remote.cleardues ""
   case clearduesResp' of
@@ -2163,6 +2163,11 @@ clearPendingDuesFlow = do
             _<- pure $ cleverTapEvent "ny_driver_clear_dues" $ [ {key : "due_amount", value : unsafeToForeign innerpayload.amount},
                                                                                          {key : "clearence_type", value : unsafeToForeign "manual"}
                                                                                         ]
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            case getDriverInfoApiResp of
+              Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+              Left _ -> pure unit
+            updateDriverDataToStates
             pure unit
           let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
@@ -2225,6 +2230,11 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
       _ <- pure $ JB.metaLogEvent "ny_driver_subscription_success"
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+      case getDriverInfoApiResp of
+        Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+        Left _ -> pure unit
+      updateDriverDataToStates
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup}})
     Failed -> do
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title
@@ -2446,7 +2456,7 @@ subScriptionFlow = do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
     SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity false
-    CLEAR_DUES_ACT -> clearPendingDuesFlow
+    CLEAR_DUES_ACT -> clearPendingDuesFlow false
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location

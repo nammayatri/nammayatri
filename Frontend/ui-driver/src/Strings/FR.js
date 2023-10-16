@@ -521,7 +521,6 @@ const frenchStrings = {
   NO_AUTOMATIC_PAYMENTS_DESC : "Votre historique de paiement automatique apparaîtra ici une fois que vous serez facturé pour la même chose",
   NO_MANUAL_PAYMENTS_DESC : "Votre historique de paiement pour la compensation des cotisations apparaîtra ici, le cas échéant.",
   PAYMENT_HISTORY : "Historique des paiements",
-  DO_A_ONE_TIME_SETTLEMENT : "Effectuer un règlement unique",
   TAP_A_PLAN_TO_VIEW_DETAILS : "Appuyez sur un plan pour afficher les détails",
   HOW_IT_WORKS : "Comment ça marche ?",
   ZERO_COMMISION : "ZERO commission",
