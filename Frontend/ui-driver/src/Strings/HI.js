@@ -692,7 +692,6 @@ const hindiStrings = {
   NO_AUTOMATIC_PAYMENTS_DESC : "आपका ऑटोपे इतिहास आपसे शुल्क लेने के बाद यहां दिखाई देगा",
   NO_MANUAL_PAYMENTS_DESC : "शेष राशि चुकाने के लिए आपका भुगतान इतिहास, यदि कोई हो, यहां दिखाई देगा।",
   PAYMENT_HISTORY : "भुगतान इतिहास",
-  DO_A_ONE_TIME_SETTLEMENT : "एकमुश्त निपटान करें",
   TAP_A_PLAN_TO_VIEW_DETAILS : "विवरण देखने के लिए किसी योजना पर टैप करें",
   HOW_IT_WORKS : "यह कैसे काम करता है?",
   ZERO_COMMISION : "शून्य कमीशन",

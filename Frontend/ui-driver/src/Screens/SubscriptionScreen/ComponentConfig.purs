@@ -73,6 +73,24 @@ clearDueButtonConfig state = let
       }
   in primaryButtonConfig'
 
+settlementButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+settlementButtonConfig state = let
+    config = PrimaryButton.config
+    buttonText = getString ONE_TIME_SETTLEMENT
+    primaryButtonConfig' = config 
+      { textConfig { text = buttonText, color = Color.black700 }
+      , isClickable = true
+      , alpha = if true then 1.0 else 0.6
+      , height = (V 48)
+      , cornerRadius = 8.0
+      , id = "OneTimeSettlementButton"
+      , enableLoader = JB.getBtnLoader "OneTimeSettlementButton"
+      , margin = (Margin 16 0 16 12)
+      , background = Color.white900
+      , stroke = "1," <> Color.black500
+      }
+  in primaryButtonConfig'
+
 retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 retryPaymentButtonConfig state =
   let
