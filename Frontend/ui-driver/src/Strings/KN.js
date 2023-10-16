@@ -662,7 +662,6 @@ const kannadaStrings = {
   NO_AUTOMATIC_PAYMENTS_DESC : "ಒಮ್ಮೆ ನಿಮಗೆ ಶುಲ್ಕ ವಿಧಿಸಿದರೆ ನಿಮ್ಮ ಸ್ವಯಂ ಪಾವತಿ ಇತಿಹಾಸವು ಇಲ್ಲಿ ಗೋಚರಿಸುತ್ತದೆ",
   NO_MANUAL_PAYMENTS_DESC : "ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಲು ನಿಮ್ಮ ಪಾವತಿ ಇತಿಹಾಸವು ಯಾವುದಾದರೂ ಇದ್ದರೆ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
   PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸ",
-  DO_A_ONE_TIME_SETTLEMENT : "ಒಂದು ಬಾರಿ ಪರಿಹಾರವನ್ನು ಮಾಡಿ",
   TAP_A_PLAN_TO_VIEW_DETAILS : "ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಯೋಜನೆಯನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ",
   HOW_IT_WORKS : "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ?",
   ZERO_COMMISION : "ZERO ಕಮಿಷನ್",

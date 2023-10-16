@@ -700,7 +700,6 @@ const bengaliStrings = {
 	NO_AUTOMATIC_PAYMENTS_DESC : "আপনার অটোপেই ইতিহাস এখানে প্রদর্শিত হবে একবার আপনি একই জন্য চার্জ করা হলে",
 	NO_MANUAL_PAYMENTS_DESC : "বকেয়া পরিশোধের জন্য আপনার অর্থপ্রদানের ইতিহাস এখানে প্রদর্শিত হবে, যদি থাকে।",
 	PAYMENT_HISTORY : "পেমেন্ট ইতিহাস",
-	DO_A_ONE_TIME_SETTLEMENT : "এককালীন নিষ্পত্তি করুন",
 	PLANS : "যোগ দিন",
   	PLAN : "পরিকল্পনা",
   	DAY : "দিন",
