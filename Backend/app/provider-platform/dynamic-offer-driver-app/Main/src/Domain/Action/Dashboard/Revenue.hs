@@ -30,20 +30,27 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as KS
-import Kernel.Utils.Common (HighPrecMoney)
+import Kernel.Utils.Common (HighPrecMoney, fromMaybeM)
 import Kernel.Utils.SlidingWindowCounters
 import Kernel.Utils.Time
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Storage.Queries.DriverFee (findAllByStatus, findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
 import Storage.Queries.Volunteer (findAllByPlace)
+import Tools.Error
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
 getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
-  now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
-  let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0 -- can be in common
-      from = fromMaybe defaultFrom mbFrom
-      to = fromMaybe now mbTo
+  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let defaultFrom = UTCTime (fromGregorian 2020 1 1) (realToFrac transporterConfig.driverPaymentCycleStartTime) -- can be in common
+      from = case mbFrom of
+        Nothing -> defaultFrom
+        Just from_ -> addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) (UTCTime (utctDay from_) (realToFrac transporterConfig.driverPaymentCycleStartTime))
+      to = case mbTo of
+        Nothing -> now
+        Just to_ -> UTCTime (utctDay to_) (realToFrac transporterConfig.driverPaymentCycleStartTime)
   allDriverFee <- findAllByTimeMerchantAndStatus merchant.id from to [PAYMENT_PENDING, PAYMENT_OVERDUE, EXEMPTED, CLEARED, COLLECTED_CASH]
   let clearedFees = getFeeWithStatus [CLEARED] allDriverFee
       pendingFees = getFeeWithStatus [PAYMENT_PENDING] allDriverFee
