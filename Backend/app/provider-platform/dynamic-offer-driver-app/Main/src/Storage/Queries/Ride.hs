@@ -231,7 +231,7 @@ updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
 updateOdometerEndReading rideId meters = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamR.odometerEndReading (Meters <$> meters),
+    [ Se.Set BeamR.odometerEndReading meters,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -256,7 +256,7 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Meters -> m ()
+updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
 updateOdometerStartReading rideId reading = do
   now <- getCurrentTime
   updateOneWithKV

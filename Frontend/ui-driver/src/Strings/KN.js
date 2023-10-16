@@ -908,5 +908,9 @@ const kannadaStrings = {
   AC_CAB : "ಎಸಿ ಕ್ಯಾಬ್",
   AC_SUV : "ಎಸಿ ಎಸ್ಯುವಿ",
   DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ",
-  WHAT_ARE_PURPLE_RIDES : "ಪರ್ಪಲ್ ರೈಡ್ಸ್ ಎಂದರೇನು?"
+  WHAT_ARE_PURPLE_RIDES : "ಪರ್ಪಲ್ ರೈಡ್ಸ್ ಎಂದರೇನು?",
+  ECONOMICAL : "ಆರ್ಥಿಕ",
+	SPACIOUS : "ವಿಶಾಲವಾದ",
+	COMFY : "ಆರಾಮದಾಯಕ",
+	PEOPLE : "ಜನರು"
 }

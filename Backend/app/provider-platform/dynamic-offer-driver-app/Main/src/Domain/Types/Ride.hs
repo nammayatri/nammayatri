@@ -54,8 +54,8 @@ data SpecificRideDetails
       }
   | RideDetailsRental
       { rentalToLocation :: Maybe DL.Location,
-        odometerStartReading :: Maybe Meters,
-        odometerEndReading :: Maybe Meters,
+        odometerStartReading :: Maybe Int,
+        odometerEndReading :: Maybe Int,
         endRideOtp :: Maybe Text
       }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

@@ -936,5 +936,9 @@ const hindiStrings = {
   AC_SUV : "एसी एसयूवी",
   DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन",
   LOW_DUES_CLEAR_POPUP_DESC : "नॉन-स्टॉप सवारी का आनंद लेने के लिए अभी अपना बकाया भुगतान करें",
-  WHAT_ARE_PURPLE_RIDES : "पर्पल सवारी क्या है?"
+  WHAT_ARE_PURPLE_RIDES : "पर्पल सवारी क्या है?",
+  ECONOMICAL : "किफ़ायती",
+	SPACIOUS : "विशाल",
+	COMFY : "आरामदायक",
+	PEOPLE : "लोग"
 }

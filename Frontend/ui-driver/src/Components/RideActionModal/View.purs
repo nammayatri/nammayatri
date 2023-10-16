@@ -17,7 +17,7 @@ module Components.RideActionModal.View where
 
 import Common.Types.App
 import PrestoDOM.Animation as PrestoAnim
-import Animation (scaleYAnimWithDuration)
+import Animation (scaleYAnimWithDelay)
 import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
 import Components.SeparatorView.View as SeparatorView
@@ -363,6 +363,7 @@ sourceAndDestinationView push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginVertical 24 24
+    , afterRender push $ const NoAction
     ][  sourceDestinationImageView config
       , sourceDestinationTextView push config
       ]
@@ -370,7 +371,7 @@ sourceAndDestinationView push config =
 startRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 startRide push config =
   PrestoAnim.animationSet
-  [ scaleYAnimWithDuration 1
+  [ scaleYAnimWithDelay (getAnimationDelay config)
   ]$ linearLayout
   [ width MATCH_PARENT
   , height (V 50)
@@ -380,11 +381,13 @@ startRide push config =
   , onClick push (const $ StartRide)
   , pivotY 0.0
   , onAnimationEnd push $ const NoAction
+  , afterRender push $ const NoAction
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString START_RIDE)
       , color Color.white900
+      , afterRender push $ const NoAction
       , padding (Padding 0 0 0 4)
       ] <> FontStyle.subHeading1 TypoGraphy
       )
@@ -399,12 +402,14 @@ endRide push config =
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push (const $ EndRide)
+  , afterRender push $ const NoAction
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString END_RIDE)
       , color Color.white900
       , padding (Padding 0 0 0 4)
+      , afterRender push $ const NoAction
       ] <> FontStyle.subHeading1 TypoGraphy
       )
   ]
@@ -442,7 +447,7 @@ customerNameView push config =
       , width  WRAP_CONTENT
       , orientation VERTICAL
       , gravity START
-      ][  textView $
+      ]$[  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ getTitle config
@@ -450,8 +455,7 @@ customerNameView push config =
           , ellipsize true
           , singleLine false
           ] <> FontStyle.subHeading2 TypoGraphy
-        , arrivedButtonView push config
-        ]
+        ] <> if config.isDriverArrived then [arrivedButtonView push config] else [dummyView push config]
     ]
 
 estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -532,6 +536,7 @@ rideInfoView push config =
     , stroke ("1," <> Color.grey900)
     , cornerRadius 8.0
     , padding (Padding 16 16 5 16)
+    , afterRender push $ const NoAction
     ][ estimatedFareView push config
      , separator true
      , totalDistanceView push config
@@ -585,6 +590,7 @@ sourceDestinationTextView push config =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
+    , afterRender push $ const NoAction
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -593,6 +599,7 @@ sourceDestinationTextView push config =
         , color Color.black800
         , ellipsize true
         , singleLine true
+        , afterRender push $ const NoAction
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -603,6 +610,7 @@ sourceDestinationTextView push config =
         , margin (MarginBottom 25)
         , ellipsize true
         , singleLine true
+        , afterRender push $ const NoAction
         ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
       ]
@@ -619,6 +627,7 @@ arrivedButtonView push config =
   , background if config.notifiedCustomer then Color.grey700 else Color.white900
   , padding (Padding 10 7 12 7)
   , margin (MarginTop 12)
+  , afterRender push $ const NoAction
   , onClick (\action -> do
       if config.notifiedCustomer then pure unit
         else do
@@ -666,6 +675,14 @@ lineImageView val =
     , width $ V 15
     , imageUrl "ic_line"
     , margin $ MarginLeft 7
+    ]
+
+dummyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+dummyView push config =
+  textView
+    [ afterRender push $ const NoAction
+    , width $ V 0
+    , height $ V 0
     ]
 
 destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -719,3 +736,6 @@ separatorConfig =
 
 isSpecialRide :: Config -> Boolean
 isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
+
+getAnimationDelay :: Config -> Int
+getAnimationDelay config = 50

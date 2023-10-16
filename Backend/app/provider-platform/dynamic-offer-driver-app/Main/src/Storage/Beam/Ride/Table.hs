@@ -51,8 +51,8 @@ data RideT f = RideT
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
     driverGoHomeRequestId :: B.C f (Maybe Text),
-    odometerStartReading :: B.C f (Maybe Meters),
-    odometerEndReading :: B.C f (Maybe Meters),
+    odometerStartReading :: B.C f (Maybe Int),
+    odometerEndReading :: B.C f (Maybe Int),
     endRideOtp :: B.C f (Maybe Text),
     rideType :: B.C f Domain.RideType
   }

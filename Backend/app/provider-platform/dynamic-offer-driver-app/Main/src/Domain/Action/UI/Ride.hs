@@ -310,10 +310,10 @@ otpRideCreate driver otpCode booking = do
                     uiDistanceCalculationWithoutAccuracy = Nothing
                   }
               )
-            DRB.BookingDetailsRental {} ->
+            DRB.BookingDetailsRental {..} ->
               ( DRide.RENTAL,
                 DRide.RideDetailsRental
-                  { rentalToLocation = Nothing,
+                  { rentalToLocation = rentalToLocation,
                     odometerStartReading = Nothing,
                     odometerEndReading = Nothing,
                     endRideOtp = Nothing

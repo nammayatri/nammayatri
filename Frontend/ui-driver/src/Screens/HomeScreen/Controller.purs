@@ -412,10 +412,16 @@ eval (PaymentPendingPopupAC PopUpModal.OnButton1Click) state = do
     let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
     exit $ ClearPendingDues state {props{subscriptionPopupType = ST.GO_ONLINE_BLOCKER}}
   else do
-    _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
-    _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
-    let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
-    exit $ SubscriptionScreen state {props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} 
+    if state.props.subscriptionPopupType == ST.SOFT_NUDGE_POPUP then do
+      _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
+      _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+      let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_payment_pending_soft_nudge_plan"
+      pure unit
+    else if state.props.subscriptionPopupType == ST.LOW_DUES_CLEAR_POPUP then do
+        _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+        pure unit
+    else pure unit
+    exit $ SubscriptionScreen state
 
 eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
   if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
@@ -674,7 +680,7 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status
   if status == "EXPIRED" && seconds == 0 then do
     _ <- pure $ clearTimer timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
-    else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = (seconds+1), timerID = timerID, continueEnabled = false}}}
+    else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions

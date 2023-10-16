@@ -299,14 +299,8 @@ handler transporter req quote = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            rideDetails = rideDetails,
-            rideType = rideType
-            -- driverDeviatedFromRoute = Just False,
-            -- numberOfSnapToRoadCalls = Nothing,
-            -- numberOfDeviation = Nothing,
-            -- uiDistanceCalculationWithAccuracy = Nothing,
-            -- uiDistanceCalculationWithoutAccuracy = Nothing,
-            -- driverGoHomeRequestId = ghrId
+            rideType = rideType,
+            rideDetails = rideDetails
           }
 
     buildTrackingUrl rideId = do

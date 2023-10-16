@@ -292,7 +292,7 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (getVariantRideType state.data.vehicleType) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV (getVehicleCapacity state.data.vehicleType (Just state.data.vehicleCapacity)) FontSize.a_12 FontStyle.body3 Color.black650
+            , customTV (getVehicleCapacity state.data.vehicleType) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]

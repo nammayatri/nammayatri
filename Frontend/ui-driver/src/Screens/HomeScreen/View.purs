@@ -17,7 +17,6 @@ module Screens.HomeScreen.View where
 
 import Screens.HomeScreen.ComponentConfig
 
-import Animation (scaleYAnimWithDuration)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
@@ -76,7 +75,7 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (DisabilityType(..), DriverStatus(..), DriverStatusResult(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), PillButtonState(..), SubscriptionBannerType(..), TimerStatus(..), LocalStoreSubscriptionInfo)
 import Screens.Types as ST
@@ -127,7 +126,7 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
-                                if (initialState.data.peekHeight == 0) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
+                                if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.chatcallbackInitiated) then do
@@ -162,7 +161,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
-                                if (initialState.data.peekHeight == 0) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
+                                if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -187,10 +186,10 @@ screen initialState =
           pure $ pure unit
         )
   ]
-  , eval : (\state  action -> do
+  , eval : (\action state -> do
       let _ = spy "HomeScreen state -----" state
       let _ = spy "HomeScreen--------action" action
-      eval state action)
+      eval action state)
   }
 
 
@@ -1189,9 +1188,9 @@ rideActionModelView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
-          , peakHeight $ state.data.peekHeight
+          , peakHeight $ if (DA.elem state.data.peekHeight [518,470,0]) || state.data.peekHeight < 450 then getPeekHeight state else state.data.peekHeight
           , topShift 0.0
-          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
+          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then
                 RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
                 else linearLayout[][]
         ]

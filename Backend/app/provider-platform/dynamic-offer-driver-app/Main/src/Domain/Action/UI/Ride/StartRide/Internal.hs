@@ -36,7 +36,7 @@ startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamF
 startRideTransaction driverId ride booking firstPoint odometerStartReading = do
   when (booking.bookingType == SRB.RentalBooking) $ do
     unless (isJust odometerStartReading) $ throwError InvalidRideRequest
-    void $ QRide.updateOdometerStartReading ride.id (Meters <$> odometerStartReading)
+    void $ QRide.updateOdometerStartReading ride.id odometerStartReading
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = booking.providerId}
   QRide.updateStatus ride.id SRide.INPROGRESS
   QRide.updateStartTimeAndLoc ride.id firstPoint

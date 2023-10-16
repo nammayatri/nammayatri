@@ -13,6 +13,8 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Helpers.Utils (getVehicleVariantImage)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -53,18 +55,15 @@ downgradeOptionsConfig vehicles vehicleType =
     , isCheckBox = true
     , vehicleVariant = vehicleType
     , isBookingOption = true
-    , capacity = getVehicleCapacity vehicleType Nothing
+    , capacity = getVehicleCapacity vehicleType
     , isSelected = (fromMaybe dummyVehicleP $ (filter (\item -> item.vehicleName == vehicleType) vehicles) !! 0 ).isSelected
     }
 
-getVehicleCapacity :: String -> Maybe Int -> String
-getVehicleCapacity vehicleType capacity = case vehicleType of
-  "SEDAN" -> "Comfy, upto " <> (show (fromMaybe 4 capacity)) <> " people"
-  "SUV" -> "Spacious, upto " <> (show (fromMaybe 6 capacity)) <> " people"
-  "HATCHBACK" -> "Easy on wallet, upto " <> (show (fromMaybe 4 capacity)) <> " people"
-  "TAXI_PLUS" -> "Comfy, upto " <>  (show (fromMaybe 4 capacity)) <> " people"
-  "TAXI" -> "Economical, upto " <> (show (fromMaybe 4 capacity)) <> " people"
-  _ -> "Comfy, upto " <> (show (fromMaybe 4 capacity)) <> " people"
+getVehicleCapacity :: String -> String
+getVehicleCapacity vehicleType = case vehicleType of
+  "TAXI" -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
+  "SUV"  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
+  _      -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
 
 dummyVehicleP :: VehicleP
 dummyVehicleP = {
