@@ -33,7 +33,15 @@ type API =
     :<|> Common.GenerateAadhaarOtpAPI
     :<|> Common.VerifyAadhaarOtpAPI
     :<|> Common.AuthAPI
-    :<|> Common.VerifyAPI
+    :<|> VerifyAPI
+
+type VerifyAPI =
+  Capture "authId" Text
+    :> Capture "mbFleet" Bool
+    :> Capture "fleetOwnerId" Text
+    :> "verify"
+    :> ReqBody '[JSON] Common.AuthVerifyReq
+    :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -71,5 +79,5 @@ verifyAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.verifyAad
 auth :: ShortId DM.Merchant -> Common.AuthReq -> FlowHandler Common.AuthRes
 auth merchantShortId = withFlowHandlerAPI . DReg.auth merchantShortId
 
-verify :: Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
-verify authId = withFlowHandlerAPI . DReg.verify authId
+verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
+verify authId mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req

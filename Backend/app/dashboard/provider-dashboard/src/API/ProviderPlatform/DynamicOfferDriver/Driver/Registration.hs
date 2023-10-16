@@ -29,6 +29,8 @@ import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -149,4 +151,7 @@ verify :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.AuthVerifyReq ->
 verify merchantShortId apiTokenInfo authId req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verify) authId req
+    encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+    role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+    let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verify) authId mbFleet apiTokenInfo.personId req

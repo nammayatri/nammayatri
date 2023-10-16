@@ -47,6 +47,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProd
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
+import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation as FleetDriverAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
@@ -101,6 +102,7 @@ data UpdateModel
   | CancellationReasonUpdate
   | DriverFlowStatusUpdate
   | DriverBlockReasonUpdate
+  | FleetDriverAssociationUpdate
   | DriverFeeUpdate
   | DriverInformationUpdate
   | DriverLocationUpdate
@@ -186,6 +188,7 @@ getTagUpdate CallStatusUpdate = "CallStatusOptions"
 getTagUpdate CancellationReasonUpdate = "CancellationReasonOptions"
 getTagUpdate DriverFlowStatusUpdate = "DriverFlowStatusOptions"
 getTagUpdate DriverBlockReasonUpdate = "DriverBlockReasonOptions"
+getTagUpdate FleetDriverAssociationUpdate = "FleetDriverAssociationOptions"
 getTagUpdate DriverFeeUpdate = "DriverFeeOptions"
 getTagUpdate DriverInformationUpdate = "DriverInformationOptions"
 getTagUpdate DriverLocationUpdate = "DriverLocationOptions"
@@ -270,6 +273,7 @@ parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
 parseTagUpdate "CancellationReasonOptions" = return CancellationReasonUpdate
 parseTagUpdate "DriverFlowStatusOptions" = return DriverFlowStatusUpdate
 parseTagUpdate "DriverBlockReasonOptions" = return DriverBlockReasonUpdate
+parseTagUpdate "FleetDriverAssociationOptions" = return FleetDriverAssociationUpdate
 parseTagUpdate "DriverFeeOptions" = return DriverFeeUpdate
 parseTagUpdate "DriverInformationOptions" = return DriverInformationUpdate
 parseTagUpdate "DriverLocationOptions" = return DriverLocationUpdate
@@ -355,6 +359,7 @@ data DBUpdateObject
   | CancellationReasonOptions UpdateModel [Set Postgres CancellationReason.CancellationReasonT] (Where Postgres CancellationReason.CancellationReasonT)
   | DriverFlowStatusOptions UpdateModel [Set Postgres DriverFlowStatus.DriverFlowStatusT] (Where Postgres DriverFlowStatus.DriverFlowStatusT)
   | DriverBlockReasonOptions UpdateModel [Set Postgres DriverBlockReason.DriverBlockReasonT] (Where Postgres DriverBlockReason.DriverBlockReasonT)
+  | FleetDriverAssociationOptions UpdateModel [Set Postgres DFleetDriverAssociation.FleetDriverAssociationT] (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeOptions UpdateModel [Set Postgres DriverFee.DriverFeeT] (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationOptions UpdateModel [Set Postgres DriverInformation.DriverInformationT] (Where Postgres DriverInformation.DriverInformationT)
   | DriverLocationOptions UpdateModel [Set Postgres DriverLocation.DriverLocationT] (Where Postgres DriverLocation.DriverLocationT)
@@ -464,6 +469,9 @@ instance FromJSON DBUpdateObject where
       DriverBlockReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverBlockReasonOptions updateModel updVals whereClause
+      FleetDriverAssociationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FleetDriverAssociationOptions updateModel updVals whereClause
       DriverFeeUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverFeeOptions updateModel updVals whereClause

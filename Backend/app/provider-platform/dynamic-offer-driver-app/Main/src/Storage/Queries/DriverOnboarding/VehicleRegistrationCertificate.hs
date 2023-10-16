@@ -46,6 +46,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
           Se.Set BeamVRC.verificationStatus verificationStatus,
           Se.Set BeamVRC.failedRules failedRules,
+          Se.Set BeamVRC.fleetOwnerId fleetOwnerId,
           Se.Set BeamVRC.updatedAt updatedAt
         ]
         [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
@@ -53,6 +54,12 @@ upsert a@VehicleRegistrationCertificate {..} = do
 
 findById :: MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
 findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
+
+updateFleetOwnerId :: MonadFlow m => Id VehicleRegistrationCertificate -> Maybe Text -> m ()
+updateFleetOwnerId (Id rcId) fleetOwnerId =
+  updateWithKV
+    [Se.Set BeamVRC.fleetOwnerId fleetOwnerId]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
 
 findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
@@ -71,6 +78,14 @@ findByRCAndExpiry certNumber expiry = do
 
 findAllById :: MonadFlow m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
+
+findAllByFleetOwnerId :: MonadFlow m => Text -> Int -> Int -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerId fleetOwnerId limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
+    (Se.Desc BeamVRC.updatedAt)
+    (Just limit)
+    (Just offset)
 
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
@@ -98,6 +113,7 @@ instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCe
             vehicleColor = vehicleColor,
             vehicleEnergyType = vehicleEnergyType,
             verificationStatus = verificationStatus,
+            fleetOwnerId = fleetOwnerId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -122,6 +138,7 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.vehicleColor = vehicleColor,
         BeamVRC.vehicleEnergyType = vehicleEnergyType,
         BeamVRC.verificationStatus = verificationStatus,
+        BeamVRC.fleetOwnerId = fleetOwnerId,
         BeamVRC.createdAt = createdAt,
         BeamVRC.updatedAt = updatedAt
       }
