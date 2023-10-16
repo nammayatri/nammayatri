@@ -93,10 +93,11 @@ data DriversAPIs = DriversAPIs
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    getAllVehicleForFleet :: Text -> Euler.EulerClient Driver.ListVehicleRes,
-    fleetUnlinkVehicle :: Text -> Text -> Maybe Text -> Text -> Euler.EulerClient APISuccess,
+    getAllVehicleForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.ListVehicleRes,
+    getAllDriverForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.FleetListDriverRes,
+    fleetUnlinkVehicle :: Text -> Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
     fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
-    fleetStats :: Text -> Euler.EulerClient Driver.FleetStatsRes,
+    fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
@@ -106,7 +107,8 @@ data DriversAPIs = DriversAPIs
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
     getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
-    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate
+    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
+    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -166,7 +168,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
     auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
-    verify :: Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
+    verify :: Text -> Bool -> Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
   }
 
 data MessageAPIs = MessageAPIs
@@ -277,9 +279,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> addVehicle
       :<|> addVehicleForFleet
       :<|> getAllVehicleForFleet
+      :<|> getAllDriverForFleet
       :<|> fleetUnlinkVehicle
       :<|> fleetRemoveVehicle
-      :<|> fleetStats
+      :<|> fleetRemoveDriver
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
@@ -289,7 +292,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> incrementDriverGoToCount
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
-      :<|> updateSubscriptionDriverFeeAndInvoice = driversClient
+      :<|> updateSubscriptionDriverFeeAndInvoice
+      :<|> setVehicleDriverRcStatusForFleet = driversClient
 
     rideList
       :<|> rideStart

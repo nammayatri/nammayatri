@@ -36,6 +36,7 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (CancellationReasonDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("CancellationReason" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverFlowStatusDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverFlowStatus" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverBlockReasonDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverBlockReason" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FleetDriverAssociationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FleetDriverAssociation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverFeeDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverFee" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverInformationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverInformation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (AadhaarOtpReqDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("AadhaarOtpReq" :: Text) =<< dbConf

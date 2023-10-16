@@ -33,6 +33,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("CancellationReason" :: Text) [(obj, val, entryId, CancellationReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverFlowStatus" :: Text) [(obj, val, entryId, DriverFlowStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverFlowStatusObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverBlockReason" :: Text) [(obj, val, entryId, DriverBlockReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverBlockReasonObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("FleetDriverAssociation" :: Text) [(obj, val, entryId, DriverBlockReasonObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverBlockReasonObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverFee" :: Text) [(obj, val, entryId, DriverFeeObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverFeeObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverInformation" :: Text) [(obj, val, entryId, DriverInformationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverInformationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("AadhaarOtpReq" :: Text) [(obj, val, entryId, AadhaarOtpReqObject obj) | (CreateDBCommand entryId _ _ _ _ (AadhaarOtpReqObject obj), val) <- cmds]

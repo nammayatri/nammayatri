@@ -43,6 +43,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProd
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
+import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation as FleetDriverAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
@@ -94,6 +95,7 @@ data DBCreateObject
   | CancellationReasonObject CancellationReason.CancellationReason
   | DriverFlowStatusObject DriverFlowStatus.DriverFlowStatus
   | DriverBlockReasonObject DriverBlockReason.DriverBlockReason
+  | FleetDriverAssociationObject FleetDriverAssociation.FleetDriverAssociation
   | DriverFeeObject DriverFee.DriverFee
   | DriverInformationObject DriverInformation.DriverInformation
   | AadhaarOtpReqObject AadhaarOtpReq.AadhaarOtpReq
@@ -181,6 +183,7 @@ modelName (CallStatusObject _) = "CallStatus"
 modelName (CancellationReasonObject _) = "CancellationReason"
 modelName (DriverFlowStatusObject _) = "DriverFlowStatus"
 modelName (DriverBlockReasonObject _) = "DriverBlockReason"
+modelName (FleetDriverAssociationObject _) = "FleetDriverAssociation"
 modelName (DriverFeeObject _) = "DriverFee"
 modelName (DriverInformationObject _) = "DriverInformation"
 modelName (AadhaarOtpReqObject _) = "AadhaarOtpReq"

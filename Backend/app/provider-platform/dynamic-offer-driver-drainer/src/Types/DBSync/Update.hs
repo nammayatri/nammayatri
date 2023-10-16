@@ -46,6 +46,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProd
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
+import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation as FleetDriverAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
@@ -100,6 +101,7 @@ data UpdateModel
   | CancellationReasonUpdate
   | DriverFlowStatusUpdate
   | DriverBlockReasonUpdate
+  | FleetDriverAssociationUpdate
   | DriverFeeUpdate
   | DriverInformationUpdate
   | AadhaarOtpReqUpdate
@@ -184,6 +186,7 @@ getTagUpdate CallStatusUpdate = "CallStatusOptions"
 getTagUpdate CancellationReasonUpdate = "CancellationReasonOptions"
 getTagUpdate DriverFlowStatusUpdate = "DriverFlowStatusOptions"
 getTagUpdate DriverBlockReasonUpdate = "DriverBlockReasonOptions"
+getTagUpdate FleetDriverAssociationUpdate = "FleetDriverAssociationOptions"
 getTagUpdate DriverFeeUpdate = "DriverFeeOptions"
 getTagUpdate DriverInformationUpdate = "DriverInformationOptions"
 getTagUpdate AadhaarOtpReqUpdate = "AadhaarOtpReqOptions"
@@ -267,6 +270,7 @@ parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
 parseTagUpdate "CancellationReasonOptions" = return CancellationReasonUpdate
 parseTagUpdate "DriverFlowStatusOptions" = return DriverFlowStatusUpdate
 parseTagUpdate "DriverBlockReasonOptions" = return DriverBlockReasonUpdate
+parseTagUpdate "FleetDriverAssociationOptions" = return FleetDriverAssociationUpdate
 parseTagUpdate "DriverFeeOptions" = return DriverFeeUpdate
 parseTagUpdate "DriverInformationOptions" = return DriverInformationUpdate
 parseTagUpdate "AadhaarOtpReqOptions" = return AadhaarOtpReqUpdate
@@ -351,6 +355,7 @@ data DBUpdateObject
   | CancellationReasonOptions UpdateModel [Set Postgres CancellationReason.CancellationReasonT] (Where Postgres CancellationReason.CancellationReasonT)
   | DriverFlowStatusOptions UpdateModel [Set Postgres DriverFlowStatus.DriverFlowStatusT] (Where Postgres DriverFlowStatus.DriverFlowStatusT)
   | DriverBlockReasonOptions UpdateModel [Set Postgres DriverBlockReason.DriverBlockReasonT] (Where Postgres DriverBlockReason.DriverBlockReasonT)
+  | FleetDriverAssociationOptions UpdateModel [Set Postgres FleetDriverAssociation.FleetDriverAssociationT] (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeOptions UpdateModel [Set Postgres DriverFee.DriverFeeT] (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationOptions UpdateModel [Set Postgres DriverInformation.DriverInformationT] (Where Postgres DriverInformation.DriverInformationT)
   | AadhaarOtpReqOptions UpdateModel [Set Postgres AadhaarOtpReq.AadhaarOtpReqT] (Where Postgres AadhaarOtpReq.AadhaarOtpReqT)
@@ -459,6 +464,9 @@ instance FromJSON DBUpdateObject where
       DriverBlockReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverBlockReasonOptions updateModel updVals whereClause
+      FleetDriverAssociationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FleetDriverAssociationOptions updateModel updVals whereClause
       DriverFeeUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverFeeOptions updateModel updVals whereClause
