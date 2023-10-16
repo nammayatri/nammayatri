@@ -29,6 +29,7 @@ data Action = Support
             | BannerAction Banner.Action
             
 type Config = {
+  isDriver :: Boolean,
   topCard :: TopCard,
   customerIssueCard :: CustomerIssueCard,
   customerBottomCard :: CustomerBottomCard,
@@ -62,6 +63,7 @@ instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericE
 
 config :: Config 
 config = {
+  isDriver : true,
   topCard : {
     title : "",
     finalAmount : 0,

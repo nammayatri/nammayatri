@@ -1125,6 +1125,7 @@ rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config
 rideCompletedCardConfig state = let
   config  = RideCompletedCard.config 
   config' = config{
+        isDriver = false,
         customerIssueCard{
           reportIssueView = state.data.ratingViewState.openReportIssue,
           issueFaced = state.data.ratingViewState.issueFacedView,
