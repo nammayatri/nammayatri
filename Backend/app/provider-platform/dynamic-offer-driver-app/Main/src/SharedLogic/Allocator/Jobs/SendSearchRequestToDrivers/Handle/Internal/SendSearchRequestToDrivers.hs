@@ -19,6 +19,7 @@ where
 
 import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -37,7 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, logInfo)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (Search, getPoolBatchNum)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -58,40 +59,54 @@ sendSearchRequestToDrivers ::
     EncFlow m r
   ) =>
   DSR.SearchRequest ->
-  DST.SearchTry ->
+  SearchDetails ->
   Maybe DFP.DriverExtraFeeBounds ->
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
-  batchNumber <- getPoolBatchNum searchTry.id
+  let (searchId, vehVariant, searchTryId, searchReqTag, mbBookingId, startTime) = case searchDetails of
+        OnDemandSearchDetails {searchTry} -> (cast @DST.SearchTry @Search searchTry.id, searchTry.vehicleVariant, Just searchTry.id, DSR.ON_DEMAND, Nothing, searchTry.startTime)
+        RentalSearchDetails {booking} -> (cast @DSR.SearchRequest @Search searchReq.id, booking.vehicleVariant, Nothing, DSR.RENTAL, Just booking.id, booking.startTime)
+  batchNumber <- getPoolBatchNum searchId
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
-  DS.driverScoreEventHandler
-    DST.OnNewSearchRequestForDrivers
-      { driverPool = driverPool,
-        merchantId = searchReq.providerId,
-        searchReq = searchReq,
-        searchTry = searchTry,
-        validTill = validTill,
-        batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-      }
-
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
+  case searchDetails of
+    OnDemandSearchDetails {searchTry} -> do
+      DS.driverScoreEventHandler
+        DST.OnNewSearchRequestForDrivers
+          { driverPool = driverPool,
+            merchantId = searchReq.providerId,
+            searchReq = searchReq,
+            searchTry = searchTry,
+            validTill = validTill,
+            batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+          }
+    RentalSearchDetails {} -> pure () -- FIXME do we need driverScoreEventHandler for rentals?
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill searchReqTag searchTryId mbBookingId startTime) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  case searchDetails of
+    OnDemandSearchDetails {searchTry} -> do
+      whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $
+        QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+      forM_ searchRequestsForDrivers $ \sReqFD -> do
+        QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
+    RentalSearchDetails {} -> do
+      whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $
+        QSRD.setInactiveBySRId searchReq.id -- inactive previous request by drivers so that they can make new offers.
+      forM_ searchRequestsForDrivers $ \sReqFD -> do
+        QDFS.updateStatus sReqFD.driverId DDFS.GOT_RENTAL_SEARCH_REQUEST {searchRequestId = searchReq.id, validTill = sReqFD.searchRequestValidTill}
+
   _ <- QSRD.createMany searchRequestsForDrivers
-  forM_ searchRequestsForDrivers $ \sReqFD -> do
-    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchDetails bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds vehVariant
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
@@ -105,9 +120,13 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       ) =>
       Int ->
       UTCTime ->
+      DSR.SearchRequestTag ->
+      Maybe (Id DST.SearchTry) ->
+      Maybe (Id DB.Booking) ->
+      UTCTime ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber validTill dpwRes = do
+    buildSearchRequestForDriver batchNumber validTill searchRequestTag searchTryId bookingId startTime dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -116,8 +135,10 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
             SearchRequestForDriver
               { id = guid,
                 requestId = searchReq.id,
-                searchTryId = searchTry.id,
-                startTime = searchTry.startTime,
+                searchRequestTag,
+                searchTryId,
+                bookingId,
+                startTime,
                 merchantId = Just searchReq.providerId,
                 searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,

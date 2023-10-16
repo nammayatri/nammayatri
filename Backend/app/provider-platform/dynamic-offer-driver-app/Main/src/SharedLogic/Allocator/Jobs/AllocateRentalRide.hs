@@ -12,20 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
+module SharedLogic.Allocator.Jobs.AllocateRentalRide where
 
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
+-- import Kernel.Types.Error
+
+-- import qualified Storage.Queries.SearchTry as QST
+
 import qualified Domain.Types.SearchRequestForDriver as DSRD
-import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -37,12 +40,12 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-sendSearchRequestToDrivers ::
+allocateRentalRide ::
   ( EncFlow m r,
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
@@ -55,20 +58,22 @@ sendSearchRequestToDrivers ::
     MonadFlow m,
     LT.HasLocationService m r
   ) =>
-  Job 'SendSearchRequestToDriver ->
+  Job 'AllocateRentalRide ->
   m ExecutionResult
-sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
-  let searchTryId = jobData.searchTryId
-  searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  -- searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-  -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  searchReq <- B.runInReplica $ QSR.findById jobData.searchRequestId >>= fromMaybeM (SearchRequestNotFound jobData.searchRequestId.getId)
+  booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
+  driverPoolConfig <- getDriverPoolConfig merchant.id booking.estimatedDistance -- jobData.estimatedRideDistance
   goHomeCfg <- CQGHC.findByMerchantId merchant.id
-  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
+  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq booking merchant Nothing goHomeCfg
   return res
+
+-- TODO remove redundant:
+-- EsqDBFlow m r,
+-- EsqLocDBFlow m r,
+-- EsqLocRepDBFlow m r,
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -84,21 +89,21 @@ sendSearchRequestToDrivers' ::
   ) =>
   DriverPoolConfig ->
   SearchRequest ->
-  SearchTry ->
+  DB.Booking ->
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
   GoHomeConfig ->
   m (ExecutionResult, Bool)
-sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
-    searchId = cast @SearchTry @I.Search searchTry.id
-    searchDetails = DSRD.OnDemandSearchDetails {searchTry}
+    searchId = cast @SearchRequest @I.Search searchReq.id
+    searchDetails = DSRD.RentalSearchDetails {booking}
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchId,
-          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchId searchTry.vehicleVariant,
+          isReceivedMaxDriverQuotes = pure $ booking.status /= DB.SCHEDULED,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchId booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchId driverPoolConfig.singleBatchProcessTime,
@@ -109,6 +114,6 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
-          isSearchTryValid = I.isSearchTryValid searchTry.id,
-          cancelSearchTry = I.cancelSearchTry searchTry.id
+          isSearchTryValid = pure True,
+          cancelSearchTry = pure () -- I.cancelSearchTry bookingId -- FIXME cancelBooking ??
         }

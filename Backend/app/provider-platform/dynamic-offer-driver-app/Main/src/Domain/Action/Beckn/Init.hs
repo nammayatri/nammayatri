@@ -169,7 +169,7 @@ handler merchantId req initReq = do
     InitRentalReq -> do
       case initReq of
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
-          booking <- buildRentalBooking rentalQuote searchRequest rentalQuote.id.getId now DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          booking <- buildRentalBooking rentalQuote searchRequest now DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
           return (booking, Nothing, Nothing)
         _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
@@ -300,7 +300,6 @@ handler merchantId req initReq = do
       ) =>
       DQR.QuoteRental ->
       DSR.SearchRequest ->
-      Text ->
       UTCTime ->
       DRB.BookingType ->
       UTCTime ->
@@ -308,7 +307,7 @@ handler merchantId req initReq = do
       Maybe Text ->
       Maybe Text ->
       m DRB.Booking
-    buildRentalBooking rentalQuote searchRequest quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
       exophone <- findRandomExophone merchantId
       let bookingDetails =
@@ -350,6 +349,7 @@ handler merchantId req initReq = do
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            quoteId = rentalQuote.id.getId,
             ..
           }
 

@@ -76,14 +76,14 @@ setBatchDurationLock ::
   ( MonadFlow m,
     HedisFlow m r
   ) =>
-  Id SearchTry ->
+  Id Search ->
   Seconds ->
   m (Maybe UTCTime)
-setBatchDurationLock searchRequestId singleBatchProcessTime = do
+setBatchDurationLock searchId singleBatchProcessTime = do
   now <- getCurrentTime
-  res <- Hedis.setNxExpire (getId searchRequestId) (fromIntegral singleBatchProcessTime) now
+  res <- Hedis.setNxExpire (getId searchId) (fromIntegral singleBatchProcessTime) now
   if not res
-    then do Hedis.get (getId searchRequestId)
+    then do Hedis.get (getId searchId)
     else return Nothing
 
 createRescheduleTime ::

@@ -64,6 +64,9 @@ deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDQ.driverId (Se.Eq driv
 findAllBySTId :: MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]]
 
+-- findAllBySRId :: MonadFlow m => Id DSR.SearchRequest -> m [Domain.DriverQuote]
+-- findAllBySRId (Id searchReqId) = findAllWithKV [Se.And [Se.Is BeamDQ.requestId $ Se.Eq searchReqId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]]
+
 countAllBySTId :: MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId), Se.Is BeamDQ.status $ Se.Eq Domain.Active]] <&> length
 

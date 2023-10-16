@@ -22,12 +22,15 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Money, Seconds)
+import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
+
+-- import qualified Domain.Types.Vehicle.Variant as DVeh
 
 data AllocatorJobType
   = SendSearchRequestToDriver
@@ -163,11 +166,15 @@ instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
 
+-- fetch these fields from booking itself?
 data AllocateRentalRideJobData = AllocateRentalRideJobData
   { bookingId :: Id Booking,
-    baseDistance :: Meters,
-    baseDuration :: Seconds,
-    baseFare :: Money
+    searchRequestId :: Id DSR.SearchRequest
+    -- vehicleVariant :: DVeh.Variant,
+    -- baseDistance :: Meters,
+    -- baseDuration :: Seconds,
+    -- baseFare :: Money,
+    -- startTime :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

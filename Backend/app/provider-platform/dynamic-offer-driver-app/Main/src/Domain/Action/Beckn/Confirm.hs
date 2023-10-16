@@ -24,6 +24,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.QuoteRental as DQR
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
@@ -64,6 +65,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QuoteRental as QQR
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
@@ -186,11 +188,12 @@ handler transporter req validateRes = do
       for_ driverSearchReqs $ \driverReq -> do
         let driverId = driverReq.driverId
         unless (driverId == driver.id) $ do
-          DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchTryId
-          DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
-          _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
-          driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
+          forM_ driverReq.searchTryId $ \searchTryId -> do
+            DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) searchTryId
+            DP.removeSearchReqIdFromMap transporter.id driverId searchTryId
+            _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
+            driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+            Notify.notifyDriverClearedFare transporter.id driverId searchTryId driverQuote.estimatedFare driver_.deviceToken
 
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
@@ -243,7 +246,7 @@ handler transporter req validateRes = do
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails = DConfirmResSpecialZoneBooking
           }
-    DConfirmRentalBookingValidateRes -> do
+    DConfirmRentalBookingValidateRes quote -> do
       -- otpCode <- case riderDetails.otpCode of
       --   Nothing -> do
       --     otpCode <- generateOTPCode
@@ -252,7 +255,7 @@ handler transporter req validateRes = do
       --   Just otp -> pure otp
 
       -- critical updates
-      QRB.updateStatus booking.id DRB.CONFIRMED --new status, check where it can affect
+      QRB.updateStatus booking.id DRB.SCHEDULED -- TODO check we do not block customer
 
       -- non-critical updates
       when isNewRider $ QRD.create riderDetails
@@ -275,9 +278,12 @@ handler transporter req validateRes = do
       let jobData =
             AllocateRentalRideJobData
               { bookingId = booking.id,
-                baseDistance = booking.estimatedDistance,
-                baseDuration = booking.estimatedDuration,
-                baseFare = booking.estimatedFare
+                searchRequestId = quote.searchRequestId
+                -- vehicleVariant = booking.vehicleVariant,
+                -- startTime = booking.startTime,
+                -- baseDistance = booking.estimatedDistance,
+                -- baseDuration = booking.estimatedDuration,
+                -- baseFare = booking.estimatedFare
               }
       JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData
       pure $
@@ -486,7 +492,7 @@ cancelBooking booking mbDriver transporter = do
 data DConfirmValidateRes
   = DConfirmNormalBookingValidateRes DPerson.Person DDQ.DriverQuote
   | DConfirmSpecialZoneBookingValidateRes DQSZ.QuoteSpecialZone
-  | DConfirmRentalBookingValidateRes
+  | DConfirmRentalBookingValidateRes DQR.QuoteRental
 
 validateRequest ::
   ( CacheFlow m r,
@@ -531,4 +537,6 @@ validateRequest subscriber transporterId req now = do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
       return (transporter, DConfirmSpecialZoneBookingValidateRes quoteSpecialZone)
-    DRB.RentalBooking -> pure (transporter, DConfirmRentalBookingValidateRes)
+    DRB.RentalBooking -> do
+      quoteRental <- QQR.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+      pure (transporter, DConfirmRentalBookingValidateRes quoteRental)
