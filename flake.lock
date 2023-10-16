@@ -229,7 +229,9 @@
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
         "nixpkgs-21_11": "nixpkgs-21_11",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
-        "process-compose-flake": "process-compose-flake",
+        "process-compose-flake": [
+          "process-compose-flake"
+        ],
         "systems": "systems",
         "treefmt-nix": "treefmt-nix"
       },
@@ -258,7 +260,7 @@
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_2",
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
-        "process-compose-flake": "process-compose-flake_2",
+        "process-compose-flake": "process-compose-flake_3",
         "systems": "systems_2",
         "treefmt-nix": "treefmt-nix_2"
       },
@@ -287,7 +289,7 @@
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_3",
         "nixpkgs-21_11": "nixpkgs-21_11_3",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_3",
-        "process-compose-flake": "process-compose-flake_3",
+        "process-compose-flake": "process-compose-flake_4",
         "systems": "systems_3",
         "treefmt-nix": "treefmt-nix_3"
       },
@@ -2037,6 +2039,40 @@
         "url": "http://download.geofabrik.de/asia/india/southern-zone-230801.osm.pbf"
       }
     },
+    "passetto": {
+      "inputs": {
+        "flake-parts": [
+          "common",
+          "flake-parts"
+        ],
+        "haskell-flake": [
+          "common",
+          "haskell-flake"
+        ],
+        "nixpkgs": [
+          "common",
+          "nixpkgs"
+        ],
+        "process-compose-flake": "process-compose-flake",
+        "services-flake": [
+          "services-flake"
+        ]
+      },
+      "locked": {
+        "lastModified": 1697383560,
+        "narHash": "sha256-tuzZypruMM2yBPYZXUWNsv2QIRV9PSuDLhPgYfne4HE=",
+        "owner": "nammayatri",
+        "repo": "passetto",
+        "rev": "8fd1b2b10c89c6cbfa026bef048c975f0dfb646c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "ref": "nixify",
+        "repo": "passetto",
+        "type": "github"
+      }
+    },
     "passetto-hs": {
       "flake": false,
       "locked": {
@@ -2230,11 +2266,11 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1687298948,
-        "narHash": "sha256-7Lu4/odCkkwrzR8Mo+3D+URv4oLap8WWLESzi/75eb0=",
+        "lastModified": 1695992918,
+        "narHash": "sha256-5tHNbk0ldLUjAqKRZog/3asiVvkD51VGK9TvwzUBs38=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "5bdb90b85642901cf9a5dccfe8c907091c261604",
+        "rev": "1ebecb83f15736f5d4ae3feb01a8391977dd71da",
         "type": "github"
       },
       "original": {
@@ -2244,6 +2280,21 @@
       }
     },
     "process-compose-flake_2": {
+      "locked": {
+        "lastModified": 1695992918,
+        "narHash": "sha256-5tHNbk0ldLUjAqKRZog/3asiVvkD51VGK9TvwzUBs38=",
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "rev": "1ebecb83f15736f5d4ae3feb01a8391977dd71da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "type": "github"
+      }
+    },
+    "process-compose-flake_3": {
       "locked": {
         "lastModified": 1680797953,
         "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
@@ -2258,7 +2309,7 @@
         "type": "github"
       }
     },
-    "process-compose-flake_3": {
+    "process-compose-flake_4": {
       "locked": {
         "lastModified": 1687298948,
         "narHash": "sha256-7Lu4/odCkkwrzR8Mo+3D+URv4oLap8WWLESzi/75eb0=",
@@ -2330,6 +2381,9 @@
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
         "osrm-pbf": "osrm-pbf",
+        "passetto": "passetto",
+        "process-compose-flake": "process-compose-flake_2",
+        "services-flake": "services-flake",
         "shared-kernel": "shared-kernel"
       }
     },
@@ -2347,6 +2401,21 @@
         "owner": "juspay",
         "repo": "haskell-sequelize",
         "rev": "dc01b0f9e6ba5a51dd8f9d0744a549dc9c0ba244",
+        "type": "github"
+      }
+    },
+    "services-flake": {
+      "locked": {
+        "lastModified": 1696703188,
+        "narHash": "sha256-nX6n4/BNeTzVaPMhEKeKHociyAJh9vo4F2W5UoY/ffM=",
+        "owner": "juspay",
+        "repo": "services-flake",
+        "rev": "c56d39116cbe835229e26171c8405cd311be067f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "repo": "services-flake",
         "type": "github"
       }
     },
