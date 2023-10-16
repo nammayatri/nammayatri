@@ -34,7 +34,7 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
-import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber)
+import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -247,6 +247,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       exit $ GoToReferralScreen
     "Join" -> do 
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"

@@ -44,14 +44,14 @@ import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC, getPixels, getDeviceDefaultDensity)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, openUrlInApp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-import Language.Strings (getString, getEN)
 import Engineering.Helpers.Utils (saveObject)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
@@ -388,6 +388,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ GoToReferralScreen
     "Join" -> do
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
@@ -437,7 +438,7 @@ eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
 
 eval (PaymentPendingPopupAC PopUpModal.OnSecondaryTextClick) state = do
   continueWithCmd state [do
-    _ <- openUrlInApp $ "https://www.youtube.com/shorts/x9cJN78j9V8"
+    _ <- openUrlInApp $ state.data.config.subscriptionConfig.overlayYoutubeLink
     pure NoAction
   ]
   

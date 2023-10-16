@@ -30,7 +30,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig)
+import MerchantConfig.Types (AppConfig, GradientConfig, SubscriptionConfig, BottomNavConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -506,6 +506,7 @@ type RideHistoryScreenStateProps = {
 type RideHistoryScreenStateData = {
     pastDays :: Int
   , paymentHistory :: PaymentHistoryModelState
+  , config :: AppConfig
 }
 
 data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC
@@ -999,7 +1000,10 @@ type BottomNavBarState = {
 type NavIcons = {
   activeIcon :: String,
   defaultIcon :: String,
-  text :: String
+  text :: String,
+  screenName :: ScreenName,
+  showNewBanner :: Boolean,
+  isVisible :: Boolean
 }
  -- ######################################  TripDetailsScreenState   ######################################
 
@@ -1163,7 +1167,8 @@ type OnBoardingSubscriptionScreenState = {
 
 type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
-  selectedPlanItem :: Maybe PlanCardConfig
+  selectedPlanItem :: Maybe PlanCardConfig,
+  subscriptionConfig :: SubscriptionConfig
 }
 
 type OnBoardingSubscriptionScreenProps = {
@@ -1393,7 +1398,8 @@ type NotificationsScreenState = {
   notifsDetailModelVisibility :: Visibility,
   loadMore :: Boolean,
   selectedNotification :: Maybe String,
-  deepLinkActivated :: Boolean
+  deepLinkActivated :: Boolean,
+  config :: AppConfig
 }
 
 type NotificationCardState = {
@@ -1591,7 +1597,9 @@ type SubscriptionScreenData = {
   paymentMode :: String,
   planId :: String,
   orderId :: Maybe String,
-  errorMessage :: String
+  errorMessage :: String,
+  config :: SubscriptionConfig,
+  bottomNavConfig :: BottomNavConfig
 }
 
 type AutoPayDetails = {
@@ -1645,7 +1653,8 @@ type JoinPlanData = {
 
 type JoinPlanProps = {
   paymentMode :: String,
-  selectedPlanItem :: Maybe PlanCardConfig
+  selectedPlanItem :: Maybe PlanCardConfig,
+  isIntroductory :: Boolean
 }
 
 type ManagePlanData = {
@@ -1772,7 +1781,8 @@ type PaymentHistoryScreenData = {
   transactionDetails :: TransactionInfo,
   planData :: PlanCardConfig,
   autoPayList :: Array PaymentListItem,
-  manualPayList :: Array PaymentListItem
+  manualPayList :: Array PaymentListItem,
+  gradientConfig :: Array GradientConfig
 }
 
 type TransactionInfo = {

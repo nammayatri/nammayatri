@@ -155,7 +155,7 @@ rideListView rideListItem push state =
               )
           ]
       ]
-  , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
+  , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)
   ]
 
 paymentHistoryModel :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
@@ -171,7 +171,7 @@ paymentHistoryModel push state =
   , clickable true
   , visibility $ if state.props.showPaymentHistory then VISIBLE else GONE
   ]$[ PaymentHistoryModel.view (push <<< PaymentHistoryModelAC) state.data.paymentHistory
-    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)]
+    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)]
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 headerView push state =

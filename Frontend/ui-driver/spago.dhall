@@ -46,6 +46,7 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "monoid-extras"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

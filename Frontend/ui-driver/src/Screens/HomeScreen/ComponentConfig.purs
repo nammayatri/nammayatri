@@ -423,7 +423,7 @@ offerConfigParams state = PromotionPopupConfig $ {
   description : getString JOIN_THE_UNLIMITED_PLAN,
   imageUrl : "ny_ic_limited_time_offer,",
   buttonText : getString JOIN_NOW,
-  heading : getString NAMMA_YATRI_PLANS
+  heading : getString MY_PLAN_TITLE
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
@@ -1050,6 +1050,7 @@ getRideCompletedConfig state = let
                       {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },
                       {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW}
                     ]
+  pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
     primaryButtonConfig {
       width = MATCH_PARENT,
@@ -1124,7 +1125,7 @@ getRideCompletedConfig state = let
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
       id = "renderQRViewOnRideComplete",
       vpa = payerVpa,
-      vpaIcon = (Const.getPspIcon payerVpa),
+      vpaIcon = pspIcon <> "," <> (getAssetStoreLink FunctionCall) <> pspIcon <> ".png",
       collectCashText = getString OR_COLLECT_CASH_DIRECTLY
     },
     noVpaCard {

@@ -1645,11 +1645,15 @@ export const deletePopUpCallBack = function (dummy) {
 export const startLottieProcess = function (configObj) {
   var rawJson = configObj.rawJson;
   var lottieName = "";
-  var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
-  if (JBridge.isFilePresentDeep) {
-    lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+  if (!configObj.forceToUseRemote) {
+    var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
+    if (JBridge.isFilePresentDeep) {
+      lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    } else {
+      lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    }
   } else {
-    lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    lottieName = rawJson;
   }
   try {
     if (window.__OS == "IOS") {

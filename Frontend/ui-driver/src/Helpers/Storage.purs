@@ -110,6 +110,7 @@ data KeyStore = USER_NAME
                 | TRIP_DISTANCE
                 | TRIP_STATUS
                 | TRIP_STARTED
+                | TIMES_OPENED_NEW_SUBSCRIPTION
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -126,6 +127,9 @@ deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKe
 
 setValueToLocalNativeStore :: KeyStore -> String -> FlowBT String Unit
 setValueToLocalNativeStore keyStore val = void $ lift $ lift $ pure $ JBridge.setEnvInNativeSharedPrefKeys (show keyStore) val
+
+setValueToLocalStoreEffect :: KeyStore -> String -> Effect Unit
+setValueToLocalStoreEffect keyStore val = JBridge.setEnvInNativeSharedPrefKeysImpl (show keyStore) val
 
 getValueToLocalNativeStore :: KeyStore -> String
 getValueToLocalNativeStore = JBridge.getKeyInNativeSharedPrefKeys <<< show

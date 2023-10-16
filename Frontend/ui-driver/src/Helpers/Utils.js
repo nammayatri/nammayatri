@@ -1039,3 +1039,10 @@ export const getDeviceDefaultDensity = function (){
     return window.JBridge.getDensity() * 160;
   }
 }
+export const getValueFromLocalStore = function (key){
+    return JBridge.getFromSharedPrefs(key);
+}
+export const setValueToLocalStore = function (key,value){
+  JBridge.setInSharedPrefs(key, value);
+}
+

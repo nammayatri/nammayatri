@@ -167,6 +167,8 @@ updateDetailsView state push =
 
 renderQRView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
 renderQRView state push =
+  let pspIcon = (Const.getPspIcon state.data.payerVpa)
+  in
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -212,7 +214,7 @@ renderQRView state push =
               width $ V 24
             , height  $ V 24
             , margin $ MarginRight 6
-            , imageWithFallback $ (Const.getPspIcon state.data.payerVpa)
+            , imageWithFallback $ pspIcon <> "," <> (getAssetStoreLink FunctionCall) <> pspIcon <> ".png"
           ]
           , textView $ [
             text state.data.payerVpa

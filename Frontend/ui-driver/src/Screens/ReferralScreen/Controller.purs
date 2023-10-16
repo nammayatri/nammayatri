@@ -30,7 +30,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR)
+import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
@@ -300,6 +300,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ GoToNotifications state
     "Join" -> do
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"

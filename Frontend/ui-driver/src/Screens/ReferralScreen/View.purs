@@ -747,7 +747,7 @@ bottomNavBarView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN)]
+  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN state.data.config.bottomNavConfig)]
 
 
 commonView :: forall w . (Action -> Effect Unit) -> String -> String -> String -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
