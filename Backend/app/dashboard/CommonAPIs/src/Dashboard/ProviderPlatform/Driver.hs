@@ -438,6 +438,7 @@ data DriverInfoRes = DriverInfoRes
     mobileCountryCode :: Maybe Text,
     enabled :: Bool,
     blocked :: Bool,
+    blockedReason :: Maybe Text,
     verified :: Bool,
     subscribed :: Bool,
     canDowngradeToSedan :: Bool,
