@@ -560,6 +560,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         mobileCountryCode = person.mobileCountryCode,
         enabled = info.enabled,
         blocked = info.blocked,
+        blockedReason = info.blockedReason,
         verified = info.verified,
         subscribed = info.subscribed,
         onboardingDate = info.lastEnabledOn,
