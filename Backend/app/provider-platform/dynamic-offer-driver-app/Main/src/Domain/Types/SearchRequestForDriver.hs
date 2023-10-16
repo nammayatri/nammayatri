@@ -127,79 +127,50 @@ data SearchDetails
       { booking :: DB.Booking
       }
 
--- TODO remove duplication
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> SearchDetails -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant = do
-  let (reqId, searchRequestTag, baseFare', customerExtraFee, distance, duration) = case searchDetails of
+  let (searchId, searchRequestTag, baseFare, customerExtraFee, distance, duration, newToLocation, specialLocationTag) = case searchDetails of
         OnDemandSearchDetails {searchTry} -> do
-          (cast @DST.SearchTry @Search searchTry.id, DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, searchRequest.searchRequestDetails.estimatedDistance, Nothing)
+          let searchId' = cast @DST.SearchTry @Search searchTry.id
+              distance' = searchRequest.searchRequestDetails.estimatedDistance
+              newToLocation' = Just $ searchRequest.searchRequestDetails.toLocation
+              specialLocationTag' = searchRequest.searchRequestDetails.specialLocationTag
+          (searchId', DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newToLocation', specialLocationTag')
         RentalSearchDetails {booking} -> do
-          (cast @DSR.SearchRequest @Search nearbyReq.requestId, DSR.RENTAL, booking.estimatedFare, Nothing, booking.estimatedDistance, Just booking.estimatedDuration)
-  case searchRequest.tag of
-    DSR.ON_DEMAND ->
-      SearchRequestForDriverAPIEntity
-        { searchRequestId = reqId,
-          searchTryId = reqId,
-          searchRequestTag,
-          bapName = bapMetadata <&> (.name),
-          bapLogo = bapMetadata <&> (.logoUrl),
-          startTime = nearbyReq.startTime,
-          searchRequestValidTill = nearbyReq.searchRequestValidTill,
-          distanceToPickup = nearbyReq.actualDistanceToPickup,
-          durationToPickup = nearbyReq.durationToPickup,
-          baseFare = baseFare',
-          customerExtraFee,
-          fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
-          toLocation = Just $ convertDomainType searchRequest.searchRequestDetails.toLocation,
-          newFromLocation = searchRequest.searchRequestDetails.fromLocation,
-          newToLocation = Just $ searchRequest.searchRequestDetails.toLocation,
-          distance,
-          driverLatLong =
-            LatLong
-              { lat = fromMaybe 0.0 nearbyReq.lat,
-                lon = fromMaybe 0.0 nearbyReq.lon
-              },
-          driverMinExtraFee = nearbyReq.driverMinExtraFee,
-          driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-          rideRequestPopupDelayDuration = delayDuration,
-          specialLocationTag = searchRequest.searchRequestDetails.specialLocationTag,
-          disabilityTag = searchRequest.disabilityTag,
-          keepHiddenForSeconds = keepHiddenForSeconds,
-          goHomeRequestId = nearbyReq.goHomeRequestId,
-          ..
-        }
-    DSR.RENTAL ->
-      SearchRequestForDriverAPIEntity
-        { searchRequestId = reqId,
-          searchTryId = reqId,
-          searchRequestTag,
-          bapName = bapMetadata <&> (.name),
-          bapLogo = bapMetadata <&> (.logoUrl),
-          startTime = nearbyReq.startTime,
-          searchRequestValidTill = nearbyReq.searchRequestValidTill,
-          distanceToPickup = nearbyReq.actualDistanceToPickup,
-          durationToPickup = nearbyReq.durationToPickup,
-          baseFare = baseFare',
-          customerExtraFee,
-          fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
-          toLocation = Nothing,
-          newFromLocation = searchRequest.searchRequestDetails.fromLocation,
-          newToLocation = Nothing,
-          distance,
-          driverLatLong =
-            LatLong
-              { lat = fromMaybe 0.0 nearbyReq.lat,
-                lon = fromMaybe 0.0 nearbyReq.lon
-              },
-          driverMinExtraFee = nearbyReq.driverMinExtraFee,
-          driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-          rideRequestPopupDelayDuration = delayDuration,
-          specialLocationTag = Nothing,
-          disabilityTag = searchRequest.disabilityTag,
-          keepHiddenForSeconds = keepHiddenForSeconds,
-          goHomeRequestId = nearbyReq.goHomeRequestId,
-          ..
-        }
+          let searchId' = cast @DSR.SearchRequest @Search nearbyReq.requestId
+              distance' = booking.estimatedDistance
+          (searchId', DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, Nothing, Nothing)
+  SearchRequestForDriverAPIEntity
+    { searchRequestId = searchId,
+      searchTryId = searchId,
+      searchRequestTag,
+      bapName = bapMetadata <&> (.name),
+      bapLogo = bapMetadata <&> (.logoUrl),
+      startTime = nearbyReq.startTime,
+      searchRequestValidTill = nearbyReq.searchRequestValidTill,
+      distanceToPickup = nearbyReq.actualDistanceToPickup,
+      durationToPickup = nearbyReq.durationToPickup,
+      baseFare = baseFare,
+      customerExtraFee,
+      fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
+      toLocation = convertDomainType <$> newToLocation,
+      newFromLocation = searchRequest.searchRequestDetails.fromLocation,
+      newToLocation,
+      distance,
+      driverLatLong =
+        LatLong
+          { lat = fromMaybe 0.0 nearbyReq.lat,
+            lon = fromMaybe 0.0 nearbyReq.lon
+          },
+      driverMinExtraFee = nearbyReq.driverMinExtraFee,
+      driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+      rideRequestPopupDelayDuration = delayDuration,
+      specialLocationTag,
+      disabilityTag = searchRequest.disabilityTag,
+      keepHiddenForSeconds = keepHiddenForSeconds,
+      goHomeRequestId = nearbyReq.goHomeRequestId,
+      ..
+    }
 
 convertDomainType :: DLoc.Location -> DSSL.SearchReqLocation
 convertDomainType DLoc.Location {..} =
