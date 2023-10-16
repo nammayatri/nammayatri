@@ -26,12 +26,14 @@ import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
 
 type API =
   "bap"
-    :> Capture "merchantId" (ShortId DMerchant.Merchant)
+    :> Capture "merchantId city" (ShortId DMerchant.Merchant)
+    :> Capture "city" City.City
     :> ( Customer.API
            :<|> Booking.API
            :<|> Merchant.API
@@ -41,10 +43,10 @@ type API =
        )
 
 handler :: FlowServer API
-handler merchantId =
-  Customer.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
-    :<|> Ride.handler merchantId
-    :<|> RideBooking.handler merchantId
-    :<|> IssueList.handler merchantId
+handler merchantId city =
+  Customer.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> RideBooking.handler merchantId city
+    :<|> IssueList.handler merchantId city

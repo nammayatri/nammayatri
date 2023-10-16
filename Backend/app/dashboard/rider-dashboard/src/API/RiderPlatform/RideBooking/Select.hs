@@ -24,6 +24,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -44,12 +45,12 @@ type API =
              :> BAP.CustomerCancelSearchAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callSelect merchantId
-    :<|> callSelectList merchantId
-    :<|> callSelectResult merchantId
-    :<|> callCancelSearch merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callSelect merchantId city
+    :<|> callSelectList merchantId city
+    :<|> callSelectResult merchantId city
+    :<|> callCancelSearch merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -62,26 +63,26 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.SelectAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callSelect :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect merchantShortId apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
+callSelect merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.EstimatesEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.select.rSelect) personId estimateId
 
-callSelectList :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-callSelectList merchantShortId apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callSelectList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
+callSelectList merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId (.rideBooking.select.selectList) personId estimateId
 
-callSelectResult :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-callSelectResult merchantShortId apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callSelectResult :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
+callSelectResult merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId (.rideBooking.select.selectResult) personId estimateId
 
-callCancelSearch :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-callCancelSearch merchantShortId apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callCancelSearch :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
+callCancelSearch merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.CancelSearchEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.select.cancelSearch) personId estimateId

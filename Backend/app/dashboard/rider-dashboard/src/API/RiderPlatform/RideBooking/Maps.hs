@@ -22,6 +22,7 @@ import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -40,11 +41,11 @@ type API =
              :> BAP.RideGetPlaceNameAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callAutoComplete merchantId
-    :<|> callGetPlaceDetails merchantId
-    :<|> callGetPlaceName merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callAutoComplete merchantId city
+    :<|> callGetPlaceDetails merchantId city
+    :<|> callGetPlaceName merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -57,23 +58,23 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MapsAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callAutoComplete :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-callAutoComplete merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callAutoComplete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
+callAutoComplete merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.AutoCompleteEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.maps.autoComplete) personId req
 
-callGetPlaceDetails :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-callGetPlaceDetails merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callGetPlaceDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
+callGetPlaceDetails merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.GetPlaceDetailsEndPoints apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.maps.getPlaceDetails) personId req
 
-callGetPlaceName :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-callGetPlaceName merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callGetPlaceName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
+callGetPlaceName merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.GetPlaceNameEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.maps.getPlaceName) personId req

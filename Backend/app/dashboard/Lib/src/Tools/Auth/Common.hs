@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, AuthFlow) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, AuthFlow) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -21,6 +21,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -37,25 +38,26 @@ type AuthFlow m r =
 verifyPerson ::
   (AuthFlow m r, Redis.HedisFlow m r) =>
   RegToken ->
-  m (Id DP.Person, Id DMerchant.Merchant)
+  m (Id DP.Person, Id DMerchant.Merchant, City.City)
 verifyPerson token = do
   key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   mbTuple <- getKeyRedis key
-  (personId, merchantId) <- case mbTuple of
-    Just (personId, merchantId) -> return (personId, merchantId)
+  (personId, merchantId, city) <- case mbTuple of
+    Just (personId, merchantId, city) -> return (personId, merchantId, city)
     Nothing -> do
       sr <- verifyToken token
       let personId = sr.personId
       let merchantId = sr.merchantId
-      setExRedis key (personId, merchantId) authTokenCacheExpiry
-      return (personId, merchantId)
-  return (personId, merchantId)
+      let city = sr.operatingCity
+      setExRedis key (personId, merchantId, city) authTokenCacheExpiry
+      return (personId, merchantId, city)
+  return (personId, merchantId, city)
   where
-    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
+    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant, City.City))
     getKeyRedis = Redis.get
 
-    setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant) -> Int -> m ()
+    setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant, City.City) -> Int -> m ()
     setExRedis = Redis.setExp
 
 authTokenCacheKey ::
@@ -91,7 +93,7 @@ validateToken sr = do
     Esq.runTransaction $
       QR.deleteById sr.id
     Utils.throwError TokenExpired
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId sr.personId sr.merchantId
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity sr.personId sr.merchantId sr.operatingCity
   when (isNothing mbMerchantAccess) $ do
     Esq.runTransaction $
       QR.deleteById sr.id
@@ -121,6 +123,21 @@ cleanCachedTokensByMerchantId ::
   m ()
 cleanCachedTokensByMerchantId personId merchantId = do
   regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId
+  for_ regTokens $ \regToken -> do
+    key <- authTokenCacheKey regToken.token
+    void $ Redis.del key
+
+cleanCachedTokensByMerchantIdAndCity ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  Id DMerchant.Merchant ->
+  City.City ->
+  m ()
+cleanCachedTokensByMerchantIdAndCity personId merchantId city = do
+  regTokens <- QR.findAllByPersonIdAndMerchantIdAndCity personId merchantId city
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key

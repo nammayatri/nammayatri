@@ -32,12 +32,14 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscri
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
 
 type API =
   "driver-offer"
     :> Capture "merchantId" (ShortId DM.Merchant)
+    :> Capture "city" City.City
     :> ( Driver.API
            :<|> Ride.API
            :<|> Subscription.API
@@ -53,16 +55,16 @@ type API =
        )
 
 handler :: FlowServer API
-handler merchantId =
-  Driver.handler merchantId
-    :<|> Ride.handler merchantId
-    :<|> Subscription.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
-    :<|> Message.handler merchantId
-    :<|> DriverReferral.handler merchantId
-    :<|> DriverRegistration.handler merchantId
-    :<|> Issue.handler merchantId
-    :<|> Volunteer.handler merchantId
-    :<|> Revenue.handler merchantId
-    :<|> Overlay.handler merchantId
+handler merchantId city =
+  Driver.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> Subscription.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Message.handler merchantId city
+    :<|> DriverReferral.handler merchantId city
+    :<|> DriverRegistration.handler merchantId city
+    :<|> Issue.handler merchantId city
+    :<|> Volunteer.handler merchantId city
+    :<|> Revenue.handler merchantId city
+    :<|> Overlay.handler merchantId city

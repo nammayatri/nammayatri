@@ -24,6 +24,7 @@ import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -37,7 +38,7 @@ type API =
     :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CONFIRM
     :> BAP.CustomerConfirmAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler = callConfirm
 
 buildTransaction ::
@@ -51,9 +52,9 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.ConfirmAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callConfirm :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
-callConfirm merchantShortId apiTokenInfo personId quoteId mbMerchantPaymentId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callConfirm :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
+callConfirm merchantShortId opCity apiTokenInfo personId quoteId mbMerchantPaymentId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.ConfirmEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rideBooking.confirm.rconfirm) personId quoteId mbMerchantPaymentId

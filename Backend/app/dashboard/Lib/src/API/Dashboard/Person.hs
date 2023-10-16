@@ -44,12 +44,17 @@ type API =
              :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
-             :> "assignMerchantAccess"
+             :> "assignMerchantCityAccess"
              :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "resetMerchantAccess"
+             :> ReqBody '[JSON] DPerson.MerchantAccessReq
+             :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personid" (Id DP.Person)
+             :> "resetMerchantCityAccess"
              :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
            :<|> "create"
@@ -96,6 +101,7 @@ handler =
       :<|> assignRole
       :<|> assignMerchantAccess
       :<|> resetMerchantAccess
+      :<|> resetMerchantCityAccess
       :<|> createPerson
       :<|> changeEmailByAdmin
       :<|> changePasswordByAdmin
@@ -125,6 +131,10 @@ assignMerchantAccess tokenInfo personId =
 resetMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
 resetMerchantAccess tokenInfo personId =
   withFlowHandlerAPI . DPerson.resetMerchantAccess tokenInfo personId
+
+resetMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
+resetMerchantCityAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.resetMerchantCityAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =

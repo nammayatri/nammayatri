@@ -23,6 +23,7 @@ import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -50,7 +51,8 @@ data ApiPayload (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix
 
 data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: City.City
   }
 
 instance VerificationMethod VerifyApi where
@@ -73,10 +75,11 @@ verifyApi ::
   RegToken ->
   m ApiTokenInfo
 verifyApi requiredAccessLevel token = do
-  (personId, merchantId) <- Common.verifyPerson token
+  (personId, merchantId, city) <- Common.verifyPerson token
   verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
-  pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant}
+  -- VAIBHAVD :: Check if city is associated to merchant?
+  pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant, city = city}
 
 instance
   forall (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType).

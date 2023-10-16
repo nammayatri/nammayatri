@@ -24,6 +24,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
@@ -71,41 +72,41 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo mbDid =
   T.buildTransaction (DT.SubscriptionAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) mbDid Nothing T.emptyRequest
 
-handler :: ShortId DMerchant.Merchant -> FlowServer API
-handler merchantId =
-  planList merchantId
-    :<|> planSelect merchantId
-    :<|> planSuspend merchantId
-    :<|> planSubscribe merchantId
-    :<|> currentPlan merchantId
+handler :: ShortId DMerchant.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  planList merchantId city
+    :<|> planSelect merchantId city
+    :<|> planSuspend merchantId city
+    :<|> planSubscribe merchantId city
+    :<|> currentPlan merchantId city
 
-planList :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.PlanListAPIRes
-planList merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+planList :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.PlanListAPIRes
+planList merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId (.subscription.planList) driverId
 
-planSelect :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> Id DPlan.Plan -> FlowHandler APISuccess
-planSelect merchantShortId apiTokenInfo driverId planId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+planSelect :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Id DPlan.Plan -> FlowHandler APISuccess
+planSelect merchantShortId opCity apiTokenInfo driverId planId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction SD.SelectPlanEndpoint apiTokenInfo (Just driverId)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.subscription.planSelect) driverId planId
 
-planSuspend :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-planSuspend merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+planSuspend :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+planSuspend merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction SD.SuspendPlanEndpoint apiTokenInfo (Just driverId)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.subscription.planSuspend) driverId
 
-planSubscribe :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
-planSubscribe merchantShortId apiTokenInfo driverId planId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+planSubscribe :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
+planSubscribe merchantShortId opCity apiTokenInfo driverId planId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction SD.SubscribePlanEndpoint apiTokenInfo (Just driverId)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.subscription.planSubscribe) driverId planId
 
-currentPlan :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.CurrentPlanRes
-currentPlan merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+currentPlan :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.CurrentPlanRes
+currentPlan merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId (.subscription.currentPlan) driverId

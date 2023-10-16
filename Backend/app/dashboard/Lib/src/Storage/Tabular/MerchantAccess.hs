@@ -22,6 +22,7 @@ module Storage.Tabular.MerchantAccess where
 import qualified Domain.Types.MerchantAccess as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
@@ -33,11 +34,12 @@ mkPersist
       id Text
       personId PersonTId
       merchantId MerchantTId
+      operatingCity City
       secretKey Text Maybe
       is2faEnabled Bool
       createdAt UTCTime
       Primary id
-      Unique (MerchantAccessPersonId, MerchantAccessMerchantId)
+      UniquePersonIdOperatingCityMerchantId personId operatingCity merchantId
       deriving Generic
     |]
 

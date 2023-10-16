@@ -71,5 +71,7 @@ enable2fa = withFlowHandlerAPI . DReg.enable2fa
 switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI . DReg.switchMerchant token
 
+-- VAIBHAVD : SWITCH CITIES REQ?
+
 registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
 registerFleetOwner = withFlowHandlerAPI . DReg.registerFleetOwner

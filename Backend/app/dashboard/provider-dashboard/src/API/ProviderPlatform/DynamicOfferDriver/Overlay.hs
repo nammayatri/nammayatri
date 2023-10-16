@@ -26,6 +26,7 @@ import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
@@ -63,13 +64,13 @@ type ScheduleOverlayAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'OVERLAY 'SCHEDULE_OVERLAY
     :> DOverlay.ScheduleOverlayAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  createOverlay merchantId
-    :<|> deleteOverlay merchantId
-    :<|> listOverlay merchantId
-    :<|> overlayInfo merchantId
-    :<|> scheduleOverlay merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  createOverlay merchantId city
+    :<|> deleteOverlay merchantId city
+    :<|> listOverlay merchantId city
+    :<|> overlayInfo merchantId city
+    :<|> scheduleOverlay merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -82,33 +83,33 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.OverlayAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
-createOverlay :: ShortId DM.Merchant -> ApiTokenInfo -> DTOverlay.CreateOverlayReq -> FlowHandler APISuccess
-createOverlay merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+createOverlay :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.CreateOverlayReq -> FlowHandler APISuccess
+createOverlay merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction DOverlay.CreateOverlayEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.overlay.createOverlay) req
 
-deleteOverlay :: ShortId DM.Merchant -> ApiTokenInfo -> DTOverlay.DeleteOverlayReq -> FlowHandler APISuccess
-deleteOverlay merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+deleteOverlay :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.DeleteOverlayReq -> FlowHandler APISuccess
+deleteOverlay merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction DOverlay.DeleteOverlayEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.overlay.deleteOverlay) req
 
-listOverlay :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler DTOverlay.ListOverlayResp
-listOverlay merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+listOverlay :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler DTOverlay.ListOverlayResp
+listOverlay merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId (.overlay.listOverlay)
 
-overlayInfo :: ShortId DM.Merchant -> ApiTokenInfo -> DTOverlay.OverlayInfoReq -> FlowHandler DTOverlay.OverlayInfoResp
-overlayInfo merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+overlayInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.OverlayInfoReq -> FlowHandler DTOverlay.OverlayInfoResp
+overlayInfo merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId (.overlay.overlayInfo) req
 
-scheduleOverlay :: ShortId DM.Merchant -> ApiTokenInfo -> DTOverlay.ScheduleOverlay -> FlowHandler APISuccess
-scheduleOverlay merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+scheduleOverlay :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.ScheduleOverlay -> FlowHandler APISuccess
+scheduleOverlay merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction DOverlay.ScheduleOverlayEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.overlay.scheduleOverlay) req

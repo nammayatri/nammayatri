@@ -25,6 +25,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
@@ -39,7 +40,8 @@ data FleetOwnerLoginReq = FleetOwnerLoginReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: Text,
-    otp :: Maybe Text
+    otp :: Maybe Text,
+    city :: City.City
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

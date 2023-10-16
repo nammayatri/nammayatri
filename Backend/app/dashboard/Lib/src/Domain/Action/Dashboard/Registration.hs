@@ -29,6 +29,7 @@ import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -52,14 +53,16 @@ data LoginReq = LoginReq
   { email :: Maybe Text,
     password :: Text,
     merchantId :: ShortId DMerchant.Merchant,
-    otp :: Maybe Text
+    otp :: Maybe Text,
+    city :: City.City
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data Enable2FAReq = Enable2FAReq
   { email :: Text,
     password :: Text,
-    merchantId :: ShortId DMerchant.Merchant
+    merchantId :: ShortId DMerchant.Merchant,
+    city :: City.City
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -90,7 +93,8 @@ data FleetRegisterReq = FleetRegisterReq
     lastName :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    merchantId :: ShortId DMerchant.Merchant
+    merchantId :: ShortId DMerchant.Merchant,
+    city :: City.City
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -110,7 +114,7 @@ login LoginReq {..} = do
     throwError $ InvalidRequest "Server for this merchant is not available"
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
-  generateLoginRes person merchant otp
+  generateLoginRes person merchant otp city
 
 switchMerchant ::
   ( EsqDBFlow m r,
@@ -128,7 +132,7 @@ switchMerchant authToken SwitchMerchantReq {..} = do
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginRes person merchant otp
+  generateLoginRes person merchant otp authToken.city
 
 generateLoginRes ::
   ( EsqDBFlow m r,
@@ -139,13 +143,14 @@ generateLoginRes ::
   DP.Person ->
   DMerchant.Merchant ->
   Maybe Text ->
+  City.City ->
   m LoginRes
-generateLoginRes person merchant otp = do
-  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
+generateLoginRes person merchant otp city = do
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
   (isToken, msg) <- check2FA _merchantAccess merchant otp
   token <-
     if isToken
-      then generateToken person.id merchant.id
+      then generateToken person.id merchant.id city
       else pure ""
   pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
 
@@ -183,7 +188,7 @@ enable2fa ::
 enable2fa Enable2FAReq {..} = do
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
   Esq.runTransaction $
     MA.updatePerson2faForMerchant person.id merchant.id key
@@ -197,17 +202,18 @@ generateToken ::
   ) =>
   Id DP.Person ->
   Id DMerchant.Merchant ->
+  City.City ->
   m Text
-generateToken personId merchantId = do
-  findPreviousToken <- QR.findByPersonIdAndMerchantId personId merchantId
+generateToken personId merchantId city = do
+  findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchantId city
   case findPreviousToken of
     Just regToken -> pure $ regToken.token
     Nothing -> do
-      regToken <- buildRegistrationToken personId merchantId
+      regToken <- buildRegistrationToken personId merchantId city
       -- this function uses tokens from db, so should be called before transaction
-      Auth.cleanCachedTokensByMerchantId personId merchantId
+      Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
       DB.runTransaction $ do
-        QR.deleteAllByPersonIdAndMerchantId personId merchantId
+        QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
         QR.create regToken
       pure $ regToken.token
 
@@ -222,8 +228,8 @@ logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
-  Auth.cleanCachedTokensByMerchantId personId tokenInfo.merchantId
-  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId)
+  Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
+  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city)
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
@@ -241,8 +247,8 @@ logoutAllMerchants tokenInfo = do
   DB.runTransaction (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully from all servers"
 
-buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DR.RegistrationToken
-buildRegistrationToken personId merchantId = do
+buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken
+buildRegistrationToken personId merchantId city = do
   rtid <- generateGUID
   token <- generateGUID
   now <- getCurrentTime
@@ -252,7 +258,8 @@ buildRegistrationToken personId merchantId = do
         token = token,
         personId = personId,
         merchantId = merchantId,
-        createdAt = now
+        createdAt = now,
+        operatingCity = city
       }
 
 registerFleetOwner ::
@@ -273,7 +280,7 @@ registerFleetOwner req = do
   availableServers <- asks (.dataServers)
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
-  merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id
+  merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id req.city
   Esq.runTransaction $ do
     QP.create fleetOwner
     QAccess.create merchantAccess
