@@ -41,6 +41,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -67,6 +68,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)

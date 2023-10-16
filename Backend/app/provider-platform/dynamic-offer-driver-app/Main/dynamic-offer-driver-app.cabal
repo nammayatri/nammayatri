@@ -207,6 +207,7 @@ library
       Domain.Types.FareProduct
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FleetVehicleAssociation
       Domain.Types.Geometry
       Domain.Types.GoHomeConfig
       Domain.Types.Invoice
@@ -352,6 +353,7 @@ library
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
+      Storage.Beam.FleetDriverAssociation
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
@@ -478,6 +480,7 @@ library
       Storage.Queries.Feedback.Feedback
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
+      Storage.Queries.FleetDriverAssociation
       Storage.Queries.Geometry
       Storage.Queries.GoHomeConfig
       Storage.Queries.Instances.DriverInformation

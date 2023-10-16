@@ -106,7 +106,9 @@ data DriversAPIs = DriversAPIs
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
     getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
-    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate
+    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
+    getAllDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DriverVehicleAssociationRes,
+    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Common.RCStatusReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -166,7 +168,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
     auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
-    verify :: Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
+    verify :: Text -> Registration.AuthVerifyReq -> Maybe Bool -> Text -> Euler.EulerClient APISuccess
   }
 
 data MessageAPIs = MessageAPIs
@@ -289,7 +291,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> incrementDriverGoToCount
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
-      :<|> updateSubscriptionDriverFeeAndInvoice = driversClient
+      :<|> updateSubscriptionDriverFeeAndInvoice
+      :<|> getAllDriverVehicleAssociation = driversClient
 
     rideList
       :<|> rideStart

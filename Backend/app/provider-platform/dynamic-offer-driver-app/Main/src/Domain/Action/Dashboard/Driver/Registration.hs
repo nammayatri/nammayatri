@@ -33,6 +33,7 @@ import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
+import qualified Domain.Types.FleetDriverAssociation as FDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
@@ -43,6 +44,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
+import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Tools.AadhaarVerification as AadhaarVerification
 
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
@@ -148,10 +150,10 @@ auth merchantShortId req = do
       Nothing
   pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
 
-verify :: Text -> Common.AuthVerifyReq -> Flow APISuccess
-verify authId req = do
+verify :: Text -> Common.AuthVerifyReq -> Bool -> Text -> Flow APISuccess
+verify authId req mbFleet fleetOwnerId = do
   let regId = Id authId :: Id SR.RegistrationToken
-  _ <-
+  res <-
     DReg.verify
       regId
       DReg.AuthVerifyReq
@@ -159,6 +161,9 @@ verify authId req = do
           deviceToken = req.deviceToken,
           whatsappNotificationEnroll = Nothing
         }
+  when mbFleet $ do
+    assoc <- FDV.makeFleetVehicleDriverAssociation res.person.id fleetOwnerId
+    QFDV.create assoc
   pure Success
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes

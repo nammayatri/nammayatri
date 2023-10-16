@@ -54,6 +54,12 @@ upsert a@VehicleRegistrationCertificate {..} = do
 findById :: MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
 findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
 
+updateFleetOwnerId :: MonadFlow m => Id VehicleRegistrationCertificate -> Maybe Text -> m ()
+updateFleetOwnerId (Id rcId) fleetOwnerId =
+  updateWithKV
+    [Se.Set BeamVRC.fleetOwnerId fleetOwnerId]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
+
 findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
@@ -98,6 +104,7 @@ instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCe
             vehicleColor = vehicleColor,
             vehicleEnergyType = vehicleEnergyType,
             verificationStatus = verificationStatus,
+            fleetOwnerId = fleetOwnerId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -122,6 +129,7 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.vehicleColor = vehicleColor,
         BeamVRC.vehicleEnergyType = vehicleEnergyType,
         BeamVRC.verificationStatus = verificationStatus,
+        BeamVRC.fleetOwnerId = fleetOwnerId,
         BeamVRC.createdAt = createdAt,
         BeamVRC.updatedAt = updatedAt
       }

@@ -71,5 +71,5 @@ verifyAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.verifyAad
 auth :: ShortId DM.Merchant -> Common.AuthReq -> FlowHandler Common.AuthRes
 auth merchantShortId = withFlowHandlerAPI . DReg.auth merchantShortId
 
-verify :: Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
-verify authId = withFlowHandlerAPI . DReg.verify authId
+verify :: Text -> Common.AuthVerifyReq -> Bool -> Text -> FlowHandler APISuccess
+verify authId mbFleet fleetOwnerId = withFlowHandlerAPI . DReg.verify authId mbFleet fleetOwnerId

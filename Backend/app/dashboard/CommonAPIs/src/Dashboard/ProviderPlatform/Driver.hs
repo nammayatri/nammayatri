@@ -55,6 +55,7 @@ data DriverEndpoint
   | UpdateDriverHomeLocationEndpoint
   | IncrementDriverGoToCountEndPoint
   | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
+  | SetVehicleDriverRcStatusForFleetEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -501,7 +502,8 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleModel :: Maybe Text,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
-    verificationStatus :: VerificationStatus
+    verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text
     -- createdAt :: UTCTime, -- do we need it?
     -- updatedAt UTCTime,
   }
@@ -862,3 +864,37 @@ data InvoiceInfoToUpdate = InvoiceInfoToUpdate
 
 instance HideSecrets SubscriptionDriverFeesAndInvoicesToUpdate where
   hideSecrets = identity
+
+-- get driver vehicle association  for fleet  ------------------------------------------
+
+type GetAllDriverVehicleAssociationForFleetAPI =
+  "fleet"
+    :> "getAllDriverVehicleAssociation"
+    :> QueryParam "mblimit" Int
+    :> QueryParam "mboffset" Int
+    :> Get '[JSON] DriverVehicleAssociationRes
+
+newtype DriverVehicleAssociationRes = DriverVehicleAssociationRes
+  {assoc :: [DriverVehicleAssociationEntity]}
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data DriverVehicleAssociationEntity = DriverVehicleAssociationEntity
+  { driverId :: Text,
+    vehicleNo :: Maybe Text,
+    driverName :: Text,
+    variant :: Maybe Reexport.Variant,
+    status :: VehicleLinkStatus
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data VehicleLinkStatus = Active | InActive | UnAssigned
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+-- set vehicle Driver RC status for fleet  ------------------------------------------
+
+type SetVehicleDriverRcStatusForFleetAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleet"
+    :> "vehicleDriverRCstatus"
+    :> ReqBody '[JSON] RCStatusReq
+    :> Post '[JSON] APISuccess
