@@ -92,7 +92,7 @@ sendSearchRequestToDrivers' ::
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
-    searchId = cast @SearchTry @I.Search searchTry.id
+    searchId = cast @SearchTry @DSRD.Search searchTry.id
     searchDetails = DSRD.OnDemandSearchDetails {searchTry}
     handle =
       Handle

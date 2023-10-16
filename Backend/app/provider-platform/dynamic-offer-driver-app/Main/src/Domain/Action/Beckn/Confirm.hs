@@ -30,7 +30,9 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -193,7 +195,7 @@ handler transporter req validateRes = do
             DP.removeSearchReqIdFromMap transporter.id driverId searchTryId
             _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
             driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-            Notify.notifyDriverClearedFare transporter.id driverId searchTryId driverQuote.estimatedFare driver_.deviceToken
+            Notify.notifyDriverClearedFare transporter.id driverId (cast @DST.SearchTry @DSRD.Search searchTryId) driverQuote.estimatedFare driver_.deviceToken
 
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
@@ -279,11 +281,6 @@ handler transporter req validateRes = do
             AllocateRentalRideJobData
               { bookingId = booking.id,
                 searchRequestId = quote.searchRequestId
-                -- vehicleVariant = booking.vehicleVariant,
-                -- startTime = booking.startTime,
-                -- baseDistance = booking.estimatedDistance,
-                -- baseDuration = booking.estimatedDuration,
-                -- baseFare = booking.estimatedFare
               }
       JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData
       pure $

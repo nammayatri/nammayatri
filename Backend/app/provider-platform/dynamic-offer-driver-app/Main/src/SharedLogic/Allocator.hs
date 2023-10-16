@@ -30,8 +30,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
--- import qualified Domain.Types.Vehicle.Variant as DVeh
-
 data AllocatorJobType
   = SendSearchRequestToDriver
   | SendPaymentReminderToDriver
@@ -170,11 +168,6 @@ type instance JobContent 'SendOverlay = SendOverlayJobData
 data AllocateRentalRideJobData = AllocateRentalRideJobData
   { bookingId :: Id Booking,
     searchRequestId :: Id DSR.SearchRequest
-    -- vehicleVariant :: DVeh.Variant,
-    -- baseDistance :: Meters,
-    -- baseDuration :: Seconds,
-    -- baseFare :: Money,
-    -- startTime :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

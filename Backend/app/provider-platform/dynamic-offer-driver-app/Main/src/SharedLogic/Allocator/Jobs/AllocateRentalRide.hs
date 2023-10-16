@@ -20,10 +20,6 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
--- import Kernel.Types.Error
-
--- import qualified Storage.Queries.SearchTry as QST
-
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
@@ -65,12 +61,12 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   searchReq <- B.runInReplica $ QSR.findById jobData.searchRequestId >>= fromMaybeM (SearchRequestNotFound jobData.searchRequestId.getId)
   booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig merchant.id booking.estimatedDistance -- jobData.estimatedRideDistance
+  driverPoolConfig <- getDriverPoolConfig merchant.id booking.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantId merchant.id
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq booking merchant Nothing goHomeCfg
   return res
 
--- TODO remove redundant:
+-- TODO remove redundant constraints everywhere:
 -- EsqDBFlow m r,
 -- EsqLocDBFlow m r,
 -- EsqLocRepDBFlow m r,
@@ -97,7 +93,7 @@ sendSearchRequestToDrivers' ::
 sendSearchRequestToDrivers' driverPoolConfig searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
-    searchId = cast @SearchRequest @I.Search searchReq.id
+    searchId = cast @SearchRequest @DSRD.Search searchReq.id
     searchDetails = DSRD.RentalSearchDetails {booking}
     handle =
       Handle

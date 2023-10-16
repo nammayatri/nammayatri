@@ -109,6 +109,7 @@ import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
@@ -1103,7 +1104,6 @@ getNearbySearchRequests (driverId, merchantId) = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
-      -- let mbSearchTryId = nearbyReq.searchTryId
       case nearbyReq.searchRequestTag of
         DSR.ON_DEMAND -> do
           searchTryId <- nearbyReq.searchTryId & fromMaybeM (InternalError "searchRequestForDriver field not present for ON_DEMAND tag: searchTryId")
@@ -1297,10 +1297,12 @@ respondQuote (driverId, _) req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        let searchTryId = fromMaybe (cast @DSR.SearchRequest @DST.SearchTry driverReq.requestId) driverReq.searchTryId -- FIXME use generic Search type here
+        let searchId = case driverReq.searchTryId of
+              Just searchTryId -> cast @DST.SearchTry @DSRD.Search searchTryId
+              Nothing -> cast @DSR.SearchRequest @DSRD.Search driverReq.requestId
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        Notify.notifyDriverClearedFare orgId driverReq.driverId searchTryId driverQuote.estimatedFare driver_.deviceToken
+        Notify.notifyDriverClearedFare orgId driverReq.driverId searchId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>

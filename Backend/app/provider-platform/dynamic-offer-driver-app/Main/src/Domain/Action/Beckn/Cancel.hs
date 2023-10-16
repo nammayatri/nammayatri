@@ -27,6 +27,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -144,8 +145,10 @@ cancelSearch merchantId req searchRequestId = do
     _ <- QDQ.setInactiveBySRId searchRequestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-      let searchTryId = fromMaybe (cast @DSR.SearchRequest @DST.SearchTry driverReq.requestId) driverReq.searchTryId -- FIXME use generic Search type
-      Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchTryId
+      let searchId = case driverReq.searchTryId of
+            Just searchTryId -> cast @DST.SearchTry @DSRD.Search searchTryId
+            Nothing -> cast @DSR.SearchRequest @DSRD.Search driverReq.requestId
+      Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchId
 
 validateCancelSearchRequest ::
   ( EsqDBFlow m r

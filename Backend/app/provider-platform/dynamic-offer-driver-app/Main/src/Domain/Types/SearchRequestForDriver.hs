@@ -86,10 +86,13 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show, PrettyShow)
 
+-- SearchTry for ON_DEMAND case, SearchRequest for RENTAL case
+data Search
+
 -- FIXME use Id Search
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Text, --Id DST.SearchTry, -- TODO: Deprecated, to be removed
-    searchTryId :: Text, -- Id DST.SearchTry, Id DST.SearchTry for Normal case, Id DST.SearchRequest for Rental case
+  { searchRequestId :: Id Search, -- TODO: Deprecated, to be removed
+    searchTryId :: Id Search,
     searchRequestTag :: DSR.SearchRequestTag,
     bapName :: Maybe Text,
     bapLogo :: Maybe BaseUrl,
@@ -122,10 +125,6 @@ data SearchDetails
       {searchTry :: DST.SearchTry}
   | RentalSearchDetails
       { booking :: DB.Booking
-      -- vehicleVariant :: DVeh.Variant,
-      -- baseDistance :: Meters,
-      -- baseDuration :: Seconds,
-      -- baseFare :: Money
       }
 
 -- TODO remove duplication
@@ -133,9 +132,9 @@ makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchReque
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant = do
   let (reqId, searchRequestTag, baseFare', customerExtraFee, distance, duration) = case searchDetails of
         OnDemandSearchDetails {searchTry} -> do
-          (searchTry.id.getId, DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, searchRequest.searchRequestDetails.estimatedDistance, Nothing)
+          (cast @DST.SearchTry @Search searchTry.id, DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, searchRequest.searchRequestDetails.estimatedDistance, Nothing)
         RentalSearchDetails {booking} -> do
-          (nearbyReq.requestId.getId, DSR.RENTAL, booking.estimatedFare, Nothing, booking.estimatedDistance, Just booking.estimatedDuration)
+          (cast @DSR.SearchRequest @Search nearbyReq.requestId, DSR.RENTAL, booking.estimatedFare, Nothing, booking.estimatedDistance, Just booking.estimatedDuration)
   case searchRequest.tag of
     DSR.ON_DEMAND ->
       SearchRequestForDriverAPIEntity
