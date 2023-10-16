@@ -520,6 +520,7 @@ aadhaarVerificationFlow = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
+      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       _ <- pure $ firebaseLogEvent "logout"
       pure $ factoryResetApp ""
       loginFlow
@@ -1339,6 +1340,8 @@ permissionsScreenFlow event = do
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ RideHistoryScreenStateType (\ rideHistoryScreen -> rideHistoryScreen { data {config = config}} )
   flow <- UI.rideHistory
   case flow of
     REFRESH state -> do
@@ -2060,7 +2063,7 @@ homeScreenFlow = do
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       homeScreenFlow
-    CLEAR_PENDING_DUES -> clearPendingDuesFlow
+    CLEAR_PENDING_DUES -> clearPendingDuesFlow true
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
@@ -2108,9 +2111,9 @@ homeScreenFlow = do
       homeScreenFlow
   homeScreenFlow
 
-clearPendingDuesFlow :: FlowBT String Unit
-clearPendingDuesFlow = do
-  void $ lift $ lift $ toggleLoader true
+clearPendingDuesFlow :: Boolean -> FlowBT String Unit
+clearPendingDuesFlow showLoader = do
+  void $ lift $ lift $ toggleLoader showLoader
   liftFlowBT $ runEffectFn1 initiatePP unit
   clearduesResp' <- lift $ lift $ Remote.cleardues ""
   case clearduesResp' of
@@ -2137,6 +2140,11 @@ clearPendingDuesFlow = do
             _<- pure $ cleverTapEvent "ny_driver_clear_dues" $ [ {key : "due_amount", value : unsafeToForeign innerpayload.amount},
                                                                                          {key : "clearence_type", value : unsafeToForeign "manual"}
                                                                                         ]
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            case getDriverInfoApiResp of
+              Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+              Left _ -> pure unit
+            updateDriverDataToStates
             pure unit
           let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
@@ -2180,8 +2188,15 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
+
           case statusResp.status of
-            PS.CHARGED -> setSubscriptionStatus Success statusResp.status planCardConfig
+            PS.CHARGED -> do
+                setSubscriptionStatus Success statusResp.status planCardConfig
+                getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+                case getDriverInfoApiResp of
+                  Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+                  Left _ -> pure unit
+                updateDriverDataToStates
             PS.AUTHORIZATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.AUTHENTICATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.JUSPAY_DECLINED -> setSubscriptionStatus Failed statusResp.status planCardConfig
@@ -2219,7 +2234,7 @@ paymentHistoryFlow = do
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp))}
+              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig)}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
@@ -2325,7 +2340,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   appConfig <- getAppConfig Constants.appConfig 
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerDeadline}}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2342,7 +2357,7 @@ subScriptionFlow = do
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity}})
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.gradientConfig}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
@@ -2420,7 +2435,7 @@ subScriptionFlow = do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
     SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity false
-    CLEAR_DUES_ACT -> clearPendingDuesFlow
+    CLEAR_DUES_ACT -> clearPendingDuesFlow false
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location
@@ -2530,6 +2545,8 @@ driverRideRatingFlow = do
 notificationFlow :: FlowBT String Unit
 notificationFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ NotificationsScreenStateType (\ notificationScreen -> notificationScreen { config = config} )
   screenAction <- UI.notifications
   case screenAction of
     REFRESH_SCREEN state -> do

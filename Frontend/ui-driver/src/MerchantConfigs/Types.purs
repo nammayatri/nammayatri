@@ -16,7 +16,8 @@ type AppConfig =
     profile :: ProfileConfig,
     enablePurpleRideBanner :: Boolean,
     showPaymentDetails :: Boolean,
-    gotoConfig :: GotoConfig
+    gotoConfig :: GotoConfig,
+    bottomNavConfig :: BottomNavConfig
   } 
 
 type Language =  {
@@ -36,13 +37,35 @@ type SubscriptionConfig =  {
   showDUOfferBanner :: Boolean,
   offerBannerValidTill :: String,
   offerBannerDeadline :: String,
-  currentPlanCacheExpTime :: Int,
   lowDuesLimit :: Number,
   maxDuesLimit :: Number,
   highDueWarningLimit :: Number,
   moveDriverToOfflineInHighDueDaily :: Boolean,
-  enableSubscriptionPopups :: Boolean
+  enableSubscriptionPopups :: Boolean,
+  faqLink :: String,
+  supportNumber :: String,
+  whatsappSupportLink :: String,
+  myPlanYoutubeLink :: String,
+  overlayYoutubeLink :: String,
+  enableIntroductoryView :: Boolean,
+  optionsMenuItems :: SubscriptionOptionsMenuItems,
+  gradientConfig :: Array GradientConfig
  }
+
+type SubscriptionOptionsMenuItems = {
+  managePlan :: Boolean,
+  paymentHistory :: Boolean,
+  viewFaqs :: Boolean,
+  callSupport :: Boolean,
+  chatSupport :: Boolean,
+  kioskLocation :: Boolean,
+  viewAutopayDetails :: Boolean
+}
+
+type GradientConfig = {
+  id :: String,
+  colors :: Array String
+}
 
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
@@ -58,4 +81,17 @@ type ProfileConfig = {
 
 type GotoConfig = {
   maxGotoLocations :: Int
+}
+
+type BottomNavConfig = {
+  home :: BottomNavItemConfig,
+  rideHistory :: BottomNavItemConfig,
+  subscription :: BottomNavItemConfig,
+  referral :: BottomNavItemConfig,
+  notifications :: BottomNavItemConfig
+}
+
+type BottomNavItemConfig = {
+  showNew :: Boolean,
+  isVisible :: Boolean
 }

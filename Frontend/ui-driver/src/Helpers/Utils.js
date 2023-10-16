@@ -1066,3 +1066,12 @@ export const istToUtcDate = function (dateStr) {
     console.error("Error in istToUtcDate " + err);
   }
 };
+
+export const getValueFromLocalStore = function (key){
+    return JBridge.getFromSharedPrefs(key);
+}
+
+export const setValueToLocalStore = function (key,value){
+  JBridge.setInSharedPrefs(key, value);
+}
+

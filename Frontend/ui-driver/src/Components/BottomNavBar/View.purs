@@ -19,6 +19,7 @@ import Common.Types.App
 import Components.BottomNavBar.Controller
 
 import Data.Array (mapWithIndex)
+import Data.Monoid.Split (Split(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
@@ -29,6 +30,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
@@ -43,7 +46,6 @@ view push state =
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , padding (PaddingVertical 10 10)
        , stroke ("1,"<> Color.grey900)
        , background Color.white900
        ](mapWithIndex
@@ -52,13 +54,25 @@ view push state =
           [ width WRAP_CONTENT
           , height MATCH_PARENT
           , weight 1.0
-          , orientation VERTICAL
           , gravity CENTER
+          , orientation VERTICAL
           , onClick push (const (OnNavigate item.text))
-          ][ linearLayout
+          ][ textView $
+             [ text $ " " <> getString NEW_ <> "✨"
+             , background Color.blue800
+             , color Color.white900
+             , cornerRadii $ Corners 6.0 false false true true
+             , gravity CENTER
+             , padding $ PaddingVertical 1 1
+             , margin $ MarginHorizontal 6 6
+             , width MATCH_PARENT
+             , visibility if item.showNewBanner then VISIBLE else GONE
+             ] <> FontStyle.body18 TypoGraphy
+            , linearLayout
               [ width $ V 60
               , height WRAP_CONTENT
               , gravity CENTER
+              , padding $ PaddingVertical (if item.showNewBanner then 0 else 10) 10
               , orientation VERTICAL
               ][ if ((item.text == "Alert") && ((getValueToLocalNativeStore ALERT_RECEIVED) == "true") && state.activeIndex /= 3) then
                     lottieLoaderView state push state.activeIndex item.text
@@ -68,21 +82,21 @@ view push state =
                     , height (V 24)
                     , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
                     ]
-           , textView (
-             [ weight 1.0
-             , height WRAP_CONTENT
-             , gravity CENTER_HORIZONTAL
-             , maxLines 1
-             , color if index == state.activeIndex then Color.black else Color.black600
-             , text case item.text of
-                      "Home"          -> getString HOME
-                      "Rides"         -> getString RIDES
-                      "Rankings"      -> getString RANKINGS
-                      "Profile"       -> getString PROFILE
-                      "Alert"         -> getString MESSAGES
-                      "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
-                      _               -> ""
-             ] <> FontStyle.tags TypoGraphy)
+                  , textView (
+                    [ weight 1.0
+                    , height WRAP_CONTENT
+                    , gravity CENTER_HORIZONTAL
+                    , maxLines 1
+                    , color if index == state.activeIndex then Color.black else Color.black600
+                    , text case item.text of
+                              "Home"          -> getString HOME
+                              "Rides"         -> getString RIDES
+                              "Rankings"      -> getString RANKINGS
+                              "Profile"       -> getString PROFILE
+                              "Alert"         -> getString MESSAGES
+                              "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
+                              _               -> ""
+                    ] <> FontStyle.tags TypoGraphy)
                 ]
            ]
          ) state.navButton

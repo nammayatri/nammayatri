@@ -49,12 +49,27 @@ commonConfig =
             showDUOfferBanner : false,
             offerBannerValidTill : "",
             offerBannerDeadline : "",
-            currentPlanCacheExpTime : 3600,
             lowDuesLimit : 25.0,
             maxDuesLimit : 100.0,
             highDueWarningLimit : 75.0,
             moveDriverToOfflineInHighDueDaily : false,
-            enableSubscriptionPopups : false
+            enableSubscriptionPopups : false,
+            supportNumber : "",
+            faqLink : "",
+            whatsappSupportLink : "",
+            myPlanYoutubeLink : "",
+            overlayYoutubeLink : "",
+            enableIntroductoryView : false,
+            optionsMenuItems : {
+              managePlan : false,
+              paymentHistory : false,
+              viewFaqs : false,
+              callSupport : false,
+              chatSupport : false,
+              kioskLocation : false,
+              viewAutopayDetails : false
+            },
+            gradientConfig : []
         }
         , navigationAppConfig : {
             android : {  
@@ -78,4 +93,26 @@ commonConfig =
         , gotoConfig : {
             maxGotoLocations : 5
         }
+        , bottomNavConfig : {
+              home : 
+                { isVisible : true,
+                  showNew : false
+                },
+              rideHistory : 
+                { isVisible : true,
+                  showNew : false
+                },
+              subscription : 
+                { isVisible : false,
+                  showNew : false
+                },
+              referral : 
+                { isVisible : true,
+                  showNew : false
+                },
+              notifications :
+                { isVisible : true,
+                  showNew : false
+                }
+            }
         }

@@ -1,22 +1,24 @@
 module Screens.OnBoardingSubscriptionScreen.Controller where
 
 import Prelude
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
-import Screens.Types (OnBoardingSubscriptionScreenState)
-import Screens (ScreenName(..), getScreen)
+
+import Components.PrimaryButton as PrimaryButton
+import Data.Array ((!!))
+import Data.Maybe (Maybe(..), isJust, fromMaybe)
+import Debug (spy)
+import Engineering.Helpers.Commons (convertUTCtoISC)
+import JBridge as JB
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import MerchantConfig.Utils (getValueFromConfig)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
+import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.Types (OnBoardingSubscriptionScreenState)
+import Screens.Types (PlanCardConfig)
 import Services.API (UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalStore)
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
-import Engineering.Helpers.Commons (convertUTCtoISC)
-import Debug(spy)
-import Components.PrimaryButton as PrimaryButton
-import JBridge as JB
-import Screens.Types (PlanCardConfig)
-import Data.Array((!!))
-import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import Data.Maybe (Maybe(..), isJust, fromMaybe)
 
 
 instance showAction :: Show Action where
@@ -51,8 +53,9 @@ eval NoAction state = continue state
 eval GoToHomeScreen state = exit GoToHome
 eval (LoadPlans plans) state = do
     let (UiPlansResp planResp) = plans
+        config = getValueFromConfig "subscriptionConfig"
     _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
-    let planList = planListTransformer plans
+    let planList = planListTransformer plans false config.gradientConfig 
     continue state { data{ plansList = planList , selectedPlanItem = (planList !! 0)}}
 eval (SelectPlan config ) state = continue state {data { selectedPlanItem = Just config }}
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ StartFreeTrialExit state

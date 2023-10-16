@@ -41,7 +41,7 @@ import Font.Style (Style(..))
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (map, not, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>))
+import Prelude (map, not, show, unit, ($), (&&), (*), (+), (/), (/=), (==), (>), (||))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getPromoConfig)
@@ -72,6 +72,21 @@ clearDueButtonConfig state = let
       , margin = (Margin 16 12 16 12)
       }
   in primaryButtonConfig'
+
+settlementButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+settlementButtonConfig state = 
+    PrimaryButton.config
+    { textConfig { text = getString ONE_TIME_SETTLEMENT, color = Color.black700 }
+      , isClickable = true
+      , alpha = if true then 1.0 else 0.6
+      , height = (V 48)
+      , cornerRadius = 8.0
+      , id = "OneTimeSettlementButton"
+      , enableLoader = JB.getBtnLoader "OneTimeSettlementButton"
+      , margin = (Margin 16 0 16 12)
+      , background = Color.white900
+      , stroke = "1," <> Color.black500
+    }
 
 retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 retryPaymentButtonConfig state =
@@ -182,6 +197,7 @@ joinPlanButtonConfig state = let
       , alpha = if isNothing state.props.joinPlanProps.selectedPlanItem then 0.6 else 1.0
       , height = (V 48)
       , cornerRadius = 8.0
+      , visibility = if state.data.config.enableIntroductoryView then GONE else VISIBLE
       , id = "JoinPlanPrimaryButton"
       , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
       , margin = (MarginBottom 16)
@@ -380,24 +396,26 @@ tryAgainButtonConfig state = let
 
 optionsMenuConfig :: ST.SubscriptionScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = 
+  let optionsMenuItems = state.data.config.optionsMenuItems
+  in
   OptionsMenuConfig.config {
   menuItems = [
-    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : true},
-    {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : true},
-    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  false},
-    -- {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true}, -- TODO:: Removed for some time
-    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : false},
-    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true}],
+    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
+    {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
+    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
+    {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
+    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
+    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
+    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,
   menuExpanded = state.props.optionsMenuState /= ALL_COLLAPSED,
-  width = 170,
+  width = WRAP_CONTENT,
   marginRight = 16,
-  itemHeight = 50,
-  itemPadding = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
   cornerRadius = 4.0
-
 }
 
 clearManualDuesBtn :: ST.SubscriptionScreenState -> PrimaryButton.Config
@@ -416,7 +434,7 @@ clearManualDuesBtn state = let
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
 getHeaderConfig subView isManualPayDue isMultiDueType = 
   case subView of
-    ST.JoinPlan    -> {title : (getString NAMMA_YATRI_PLANS), actionText : getString SUPPORT, backbutton : false}
+    ST.JoinPlan    -> {title : (getString MY_PLAN_TITLE), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
@@ -426,7 +444,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
                                           true, false -> AUTOPAY_DUE_DETAILS
                                           true, true -> MANUAL_DUE_DETAILS
                                           _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
-    _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
+    _           -> {title : (getString MY_PLAN_TITLE), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
@@ -440,7 +458,7 @@ dueDetailsListState state =
     {
       date : convertUTCtoISC item.tripDate "Do MMM YYYY",
       planType : planOfferData.plan,
-      offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing}]) DA.!! 0,
+      offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing, offerId : "", gradient : Nothing}] state.data.config.gradientConfig) DA.!! 0 ,
       noOfRides : item.noOfRides,
       totalEarningsOfDay : item.earnings,
       dueAmount : item.amount,
