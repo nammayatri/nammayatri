@@ -47,6 +47,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProd
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
+import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation as FleetDriverAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
@@ -100,6 +101,7 @@ data DeleteModel
   | CancellationReasonDelete
   | DriverFlowStatusDelete
   | DriverBlockReasonDelete
+  | FleetDriverAssociationDelete
   | DriverFeeDelete
   | DriverInformationDelete
   | DriverLocationDelete
@@ -185,6 +187,7 @@ getTagDelete CallStatusDelete = "CallStatusOptions"
 getTagDelete CancellationReasonDelete = "CancellationReasonOptions"
 getTagDelete DriverFlowStatusDelete = "DriverFlowStatusOptions"
 getTagDelete DriverBlockReasonDelete = "DriverBlockReasonOptions"
+getTagDelete FleetDriverAssociationDelete = "FleetDriverAssociationOptions"
 getTagDelete DriverFeeDelete = "DriverFeeOptions"
 getTagDelete DriverInformationDelete = "DriverInformationOptions"
 getTagDelete DriverLocationDelete = "DriverLocationOptions"
@@ -351,6 +354,7 @@ data DBDeleteObject
   | CancellationReasonDeleteOptions DeleteModel (Where Postgres CancellationReason.CancellationReasonT)
   | DriverFlowStatusDeleteOptions DeleteModel (Where Postgres DriverFlowStatus.DriverFlowStatusT)
   | DriverBlockReasonDeleteOptions DeleteModel (Where Postgres DriverBlockReason.DriverBlockReasonT)
+  | FleetDriverAssociationDeleteOptions DeleteModel (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeDeleteOptions DeleteModel (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationDeleteOptions DeleteModel (Where Postgres DriverInformation.DriverInformationT)
   | DriverLocationDeleteOptions DeleteModel (Where Postgres DriverLocation.DriverLocationT)
@@ -460,6 +464,9 @@ instance FromJSON DBDeleteObject where
       DriverBlockReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverBlockReasonDeleteOptions deleteModel whereClause
+      FleetDriverAssociationDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ FleetDriverAssociationDeleteOptions deleteModel whereClause
       DriverFeeDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverFeeDeleteOptions deleteModel whereClause

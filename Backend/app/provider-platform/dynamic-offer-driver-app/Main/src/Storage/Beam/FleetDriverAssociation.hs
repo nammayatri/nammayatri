@@ -13,42 +13,31 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Storage.Beam.Vehicle where
+module Storage.Beam.FleetDriverAssociation where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Vehicle as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
+--import qualified Domain.Types.FleetDriverAssociation as FleetDriverAssociation
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data VehicleT f = VehicleT
-  { driverId :: B.C f Text,
-    merchantId :: B.C f Text,
-    variant :: B.C f Variant.Variant,
-    model :: B.C f Text,
-    color :: B.C f Text,
-    vehicleName :: B.C f (Maybe Text),
-    registrationNo :: B.C f Text,
-    capacity :: B.C f (Maybe Int),
-    category :: B.C f (Maybe Domain.Category),
-    make :: B.C f (Maybe Text),
-    size :: B.C f (Maybe Text),
-    energyType :: B.C f (Maybe Text),
-    registrationCategory :: B.C f (Maybe Domain.RegistrationCategory),
-    vehicleClass :: B.C f Text,
+data FleetDriverAssociationT f = FleetDriverAssociationT
+  { id :: B.C f Text,
+    driverId :: B.C f Text,
+    fleetOwnerId :: B.C f Text,
+    isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table VehicleT where
-  data PrimaryKey VehicleT f
+instance B.Table FleetDriverAssociationT where
+  data PrimaryKey FleetDriverAssociationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . driverId
+  primaryKey = Id . id
 
-type Vehicle = VehicleT Identity
+type FleetDriverAssociation = FleetDriverAssociationT Identity
 
-$(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
+$(enableKVPG ''FleetDriverAssociationT ['id] [])
 
-$(mkTableInstances ''VehicleT "vehicle")
+$(mkTableInstances ''FleetDriverAssociationT "fleet_driver_vehicle_association")

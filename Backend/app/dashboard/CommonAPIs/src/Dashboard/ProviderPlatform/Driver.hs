@@ -55,6 +55,8 @@ data DriverEndpoint
   | UpdateDriverHomeLocationEndpoint
   | IncrementDriverGoToCountEndPoint
   | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
+  | SetVehicleDriverRcStatusForFleetEndpoint
+  | FleetUnlinkVehicleEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -501,7 +503,8 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleModel :: Maybe Text,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
-    verificationStatus :: VerificationStatus
+    verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text
     -- createdAt :: UTCTime, -- do we need it?
     -- updatedAt UTCTime,
   }
@@ -671,8 +674,8 @@ instance HideSecrets AddVehicleReq where
 type AddVehicleForFleetAPI =
   Capture "mobileNo" Text
     :> QueryParam "countryCode" Text
-    :> "addVehicle"
     :> "fleet"
+    :> "addVehicle"
     :> ReqBody '[JSON] AddVehicleReq
     :> Post '[JSON] APISuccess
 
@@ -681,8 +684,10 @@ type AddVehicleForFleetAPI =
 -- get vehicle for fleet  ------------------------------------------
 
 type GetAllVehicleForFleetAPI =
-  "getAllVehicle"
-    :> "fleet"
+  "fleet"
+    :> "getAllVehicle"
+    :> QueryParam "mblimit" Int
+    :> QueryParam "mboffset" Int
     :> Get '[JSON] ListVehicleRes
 
 newtype ListVehicleRes = ListVehicleRes
@@ -690,25 +695,45 @@ newtype ListVehicleRes = ListVehicleRes
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 data VehicleAPIEntity = VehicleAPIEntity
-  { driverId :: Text,
-    variant :: Reexport.Variant,
-    model :: Text,
-    color :: Text,
-    vehicleName :: Maybe Text,
+  { variant :: Maybe Reexport.Variant,
+    model :: Maybe Text,
+    color :: Maybe Text,
     registrationNo :: Text
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
----------------------------------------------------------
+-- get All driver for fleet  ------------------------------------------
+
+type GetAllDriverForFleetAPI =
+  "fleet"
+    :> "getAllDriver"
+    :> QueryParam "mblimit" Int
+    :> QueryParam "mboffset" Int
+    :> Get '[JSON] FleetListDriverRes
+
+newtype FleetListDriverRes = FleetListDriverRes
+  {fleetDriversInfos :: [FleetDriversAPIEntity]}
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data FleetDriversAPIEntity = FleetDriversAPIEntity
+  { driverId :: Id Driver,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+-------------------------------------------------------
 
 -- unlink vehicle ---------------------------------------
 
 type FleetUnlinkVehicleAPI =
   Capture "vehicleNo" Text
-    :> QueryParam "countryCode" Text
-    :> Capture "driverMobileNo" Text
-    :> "unlink"
+    :> Capture "driverId" (Id Driver)
     :> "fleet"
+    :> "unlink"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
@@ -716,31 +741,21 @@ type FleetUnlinkVehicleAPI =
 
 type FleetRemoveVehicleAPI =
   Capture "vehicleNo" Text
-    :> "remove"
     :> "fleet"
+    :> "remove"
+    :> "vehicle"
+    :> Post '[JSON] APISuccess
+
+-- remove fleet vehicle ---------------------------------------
+
+type FleetRemoveDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleet"
+    :> "remove"
+    :> "driver"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
--- fleet driver stats ---------------------------------------
-
-type FleetStatsAPI =
-  "stats"
-    :> "fleet"
-    :> Get '[JSON] FleetStatsRes
-
-data FleetStatsRes = FleetStatsRes
-  { vehiclesInFleet :: Int,
-    totalRidesCompleted :: Int,
-    totalEarnings :: HighPrecMoney,
-    totalConversionPer :: Double,
-    totalAcceptancePer :: Double,
-    totalCancellationPer :: Double,
-    vehicleStats :: [FleetVehicleStatsListItem]
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data Vehicle
-
 data DriverMode
   = ONLINE
   | OFFLINE
@@ -862,3 +877,10 @@ data InvoiceInfoToUpdate = InvoiceInfoToUpdate
 
 instance HideSecrets SubscriptionDriverFeesAndInvoicesToUpdate where
   hideSecrets = identity
+
+type SetVehicleDriverRcStatusForFleetAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleet"
+    :> "vehicleDriverRCstatus"
+    :> ReqBody '[JSON] RCStatusReq
+    :> Post '[JSON] APISuccess

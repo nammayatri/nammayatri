@@ -72,6 +72,7 @@ import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.FleetDriverAssociation as FDVAQ
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.Vehicle as VQuery
@@ -121,7 +122,15 @@ verifyRC ::
   Maybe Vehicle.Variant -> -- in case hardcoded variant passed from dashboard, then ignore variant coming from IDFY
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVariant = do
+  -- TODO: check if verifyRC is coming from fleet, check personId should be part of that fleet else throw error
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbFleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey vehicleRegistrationCertNumber
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+    isFleetDriver <- FDVAQ.findByDriverIdAndFleetOwnerId personId fleetOwnerId
+    case isFleetDriver of
+      Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before adding a vehicle with them")
+      Just fleetDriver -> do
+        unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
@@ -170,10 +179,13 @@ verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVa
             now <- getCurrentTime
             when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
               createRCAssociation person.id vehicleRC
+            RCQuery.updateFleetOwnerId vehicleRC.id mbFleetOwnerId
           Nothing -> do
             -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
             if isNothing dateOfRegistration
-              then createRCAssociation person.id vehicleRC
+              then do
+                createRCAssociation person.id vehicleRC
+                RCQuery.updateFleetOwnerId vehicleRC.id mbFleetOwnerId
               else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
       Nothing ->
         verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
@@ -251,15 +263,18 @@ onVerifyRC verificationReq output = do
       mEncryptedRC <- encrypt `mapM` output.registration_number
       modelNamesHashMap <- asks (.modelNamesHashMap)
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
-          mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
+      fleetOwnerId <- case output.registration_number of
+        Just regNum -> Just <$> Redis.safeGet (makeFleetOwnerKey regNum)
+        _ -> return Nothing
+      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry <*> fleetOwnerId
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
-
           -- linking to driver
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" output.registration_number))
           driverRCAssoc <- Domain.makeRCAssociation person.id rc.id (convertTextToUTC (Just "2099-12-12"))
           DAQuery.create driverRCAssoc
+          whenJust output.registration_number $ \num -> Redis.del $ makeFleetOwnerKey num
           return Ack
         _ -> return Ack
 
@@ -352,13 +367,11 @@ activateRC driverId merchantId now rc = do
   where
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
-      fleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
       transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
           DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi
-      Redis.del $ makeFleetOwnerKey rcNumber
-      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc fleetOwnerId
+      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()
@@ -410,8 +423,9 @@ createRC ::
   HML.Map Text Text ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
+  Maybe Text ->
   Domain.VehicleRegistrationCertificate
-createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant modelNamesHashMap edl expiry = do
+createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant modelNamesHashMap edl expiry mbFleetOwnerId = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
@@ -433,6 +447,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant modelNames
       vehicleEnergyType = output.fuel_type,
       insuranceValidity,
       verificationStatus,
+      fleetOwnerId = mbFleetOwnerId,
       failedRules = [],
       createdAt = now,
       updatedAt = now

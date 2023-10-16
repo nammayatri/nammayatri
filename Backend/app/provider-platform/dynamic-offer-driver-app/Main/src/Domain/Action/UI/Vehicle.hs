@@ -125,8 +125,7 @@ updateVehicle admin driverId req = do
                 size = req.size <|> vehicle.size,
                 energyType = req.energyType <|> vehicle.energyType,
                 registrationNo = fromMaybe vehicle.registrationNo req.registrationNo,
-                registrationCategory = req.registrationCategory <|> vehicle.registrationCategory,
-                fleetOwnerId = req.fleetOwnerId <|> vehicle.fleetOwnerId
+                registrationCategory = req.registrationCategory <|> vehicle.registrationCategory
                }
 
   _ <- QV.updateVehicleRec updatedVehicle
