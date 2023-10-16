@@ -15,16 +15,16 @@
 
 module Components.OptionsMenu.Controller where
 
+import Common.Types.App (LazyCheck(..))
 import Data.Generic.Rep (class Generic)
-import Prelude ((<>), class Eq)
 import Font.Size as FontSize
-import Language.Strings (getString)
-import Language.Types(STR(..))
 import Font.Style as FontStyle
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude ((<>), class Eq)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
+import Screens.Types (IssueInfo(..), IssueModalType(..))
 import Styles.Colors as Color
-import Common.Types.App(LazyCheck(..))
-import Screens.Types (IssueInfo(..),IssueModalType(..))
 
 data Action = ItemClick String
               | BackgroundClick
@@ -42,10 +42,10 @@ type Config = {
     menuBackgroundColor :: String,
     gravity :: Gravity,
     menuExpanded :: Boolean,
-    width :: Int,
+    width :: Length,
     marginRight :: Int,
-    itemHeight :: Int,
-    itemPadding :: Int,
+    itemHeight :: Length,
+    itemPadding :: Padding,
     cornerRadius :: Number
 }
 
@@ -56,9 +56,9 @@ config = {
   menuBackgroundColor : Color.white900,
   gravity : RIGHT,
   menuExpanded : false,
-  width : 170,
+  width : V 170,
   marginRight : 16,
-  itemHeight : 50,
-  itemPadding : 16,
+  itemHeight : V 50,
+  itemPadding : Padding 16 16 16 16,
   cornerRadius : 4.0
 }

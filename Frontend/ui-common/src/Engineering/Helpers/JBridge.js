@@ -1711,10 +1711,14 @@ export const startLottieProcess = function (configObj) {
   const rawJson = configObj.rawJson;
   let lottieName = "";
   const fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
-  if (JBridge.isFilePresentDeep) {
-    lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+  if (!configObj.forceToUseRemote) {
+    if (JBridge.isFilePresentDeep) {
+      lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    } else {
+      lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    }
   } else {
-    lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    lottieName = rawJson;
   }
   try {
     if (window.__OS == "IOS") {

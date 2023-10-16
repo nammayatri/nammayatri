@@ -59,7 +59,7 @@ import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, 
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
+import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
@@ -118,6 +118,7 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
+foreign import setValueToLocalStore :: Fn2 String String Unit
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 
@@ -465,3 +466,14 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
+
+incrementValueOfLocalStoreKey :: KeyStore -> Effect Unit
+incrementValueOfLocalStoreKey key = do
+  let value = fromString $ runFn1 getValueToLocalNativeStore key
+  case value of
+    Just val -> do
+      let _ = runFn2 setValueToLocalStore (show key) (show (val + 1))
+      pure unit
+    Nothing -> do
+      let _ = runFn2 setValueToLocalStore (show key) "1"  
+      pure unit

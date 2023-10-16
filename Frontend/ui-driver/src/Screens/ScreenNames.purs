@@ -15,6 +15,11 @@
 
 module Screens where
 
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Prelude (class Eq, class Show)
+
+
 data ScreenName = SPLASH_SCREEN
                 | CHOOSE_LANGUAGE_SCREEN
                 | ENTER_MOBILE_NUMBER_SCREEN
@@ -52,6 +57,9 @@ data ScreenName = SPLASH_SCREEN
                 | SUBSCRIPTION_SCREEN
                 | ONBOARDING_SUBSCRIPTION_SCREEN
                 | DRIVER_SAVED_LOCATION_SCREEN
+
+derive instance genericScreenName :: Generic ScreenName _
+instance eqScreenName :: Eq ScreenName where eq = genericEq
 
 getScreen :: ScreenName -> String
 getScreen str = case str of

@@ -65,7 +65,7 @@ rideHistory = do
       App.BackT $ App.NoBack <$> (pure $ SELECTED_TAB updatedState)
     OpenPaymentHistoryScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ OPEN_PAYMENT_HISTORY updatedState)
+      App.BackT $ App.NoBack <$> (pure $ OPEN_PAYMENT_HISTORY updatedState)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ (RIDE_HISTORY_NAV GoToSubscription))

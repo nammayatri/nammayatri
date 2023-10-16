@@ -92,6 +92,9 @@ yellow100 = "#FFFDF7"
 green100 :: Color
 green100 = "#F8FCF9"
 
+green300 :: Color
+green300 = "#DDFFEB"
+
 dustyRed :: Color
 dustyRed = "#BF4A4E"
 
@@ -106,6 +109,9 @@ floralWhite = "#FFFAEE"
 
 orange900 :: Color
 orange900 = "#FF8533"
+
+orange200 :: Color
+orange200 = "#FFE7C2"
 
 pickledBlue :: Color
 pickledBlue = "#29334A"

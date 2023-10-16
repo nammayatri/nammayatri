@@ -56,7 +56,7 @@ view push config =
         background config.menuBackgroundColor
       , orientation VERTICAL
       , height WRAP_CONTENT
-      , width $ V config.width
+      , width config.width
       , margin $ MarginRight config.marginRight
       , cornerRadius config.cornerRadius
       ](map (\item -> 
@@ -70,7 +70,7 @@ view push config =
                 ][
                   linearLayout[
                     gravity CENTER_VERTICAL
-                    , padding $ Padding config.itemPadding config.itemPadding config.itemPadding config.itemPadding
+                    , padding config.itemPadding
                     , height WRAP_CONTENT
                   ][
                     imageView [

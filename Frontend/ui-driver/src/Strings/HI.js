@@ -682,7 +682,7 @@ const hindiStrings = {
   NO_MANUAL_PAYMENTS_DESC : "शेष राशि चुकाने के लिए आपका भुगतान इतिहास, यदि कोई हो, यहां दिखाई देगा।",
   PAYMENT_HISTORY : "भुगतान इतिहास",
   TAP_A_PLAN_TO_VIEW_DETAILS : "विवरण देखने के लिए किसी योजना पर टैप करें",
-  HOW_IT_WORKS : "यह कैसे काम करता है?",
+  HOW_IT_WORKS : "ऑटोपे कैसे काम करता है?",
   ZERO_COMMISION : "शून्य कमीशन",
   EARN_TODAY_PAY_TOMORROW : "आज कमाएँ, कल भुगतान करें",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "भुगतान केवल तभी करें जब आप सवारी लें",
@@ -719,7 +719,7 @@ const hindiStrings = {
   REFRESH_STR : "स्थिति जाँचिए",
   TRANSACTION_DETAILS : "लेनदेन विवरण",
   RIDE_DETAILS : "सवारी विवरण",
-  NAMMA_YATRI_PLANS : "नम्मा यात्री प्लान्स",
+  MY_PLAN_TITLE : "नम्मा यात्री प्लान्स",
   SWITCH_TO : "{} योजना पर स्विच करें",
   PLEASE_TRY_AGAIN : "कृपया पुन: प्रयास करें",
   PLAN_NOT_FOUND : "योजना नहीं मिली",
@@ -991,6 +991,11 @@ const hindiStrings = {
   LOCATION_ALREADY_EXISTS : "स्थान पहले से मौजूद है",
   MIN_LEFT : "मिनट शेष",
   GOTO_LOC_REACHED : "“गो-टू” स्थान पर पहुँच गया!",
+  GET_READY_FOR_YS_SUBSCRIPTION : "यात्री साथी योजनाओं के लिए तैयार हो जाएं!",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
+  GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
+  NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
 }
 
 

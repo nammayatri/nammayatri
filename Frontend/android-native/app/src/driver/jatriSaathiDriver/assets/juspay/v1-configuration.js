@@ -6,7 +6,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER"],
+    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN", "OFFER_CARD_BANNER_TITLE"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -20,7 +20,6 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
     "imageUploadOptional" : true,
-    "showPaymentDetails" : false,
     "clientName" : "Yatri Sathi",
     "languageList": [{
         "name": "English",
@@ -48,7 +47,10 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
       "EARNED_ON_APP" : "Earned on YS",
       "TRAVELLED_ON_APP" : "Travelled On Yatri Sathi",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours."
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
+      "MY_PLAN_TITLE" : "Yatri Sathi Plans",
+      "CHOOSE_YOUR_PLAN" : "Start your Plan Now!",
+      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -59,7 +61,10 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस पास के सभी टैक्सियों को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
       "EARNED_ON_APP" : "YS पर अर्जित मूल्य",
       "TRAVELLED_ON_APP" : "यात्री साथी पर तय की गई दूरी",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।"
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
+      "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
+      "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!",
+      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -70,18 +75,10 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷",
       "EARNED_ON_APP" : "YS এ অর্জিত মূল্য",
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।"
-    },
-    "tamilStrings": {
-      "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
-      "ABOUT_TEXT": "யாத்ரி சதி பார்ட்னர் என்பது ஓட்டுநர்களை ரைடர்களுடன் இணைக்க ஒரு திறந்த தளமாகும். முன்மொழியப்பட்ட விரும்பிய கட்டணங்களுடன் ரைடர்களைக் கண்டறிவதைப் பயன்பாடானது ஓட்டுநர்களுக்கு வசதியாக்குகிறது. சவாரி அடிப்படையிலான கமிஷன் இல்லை, மாதாந்திர சந்தா வடிவத்தில் சிறிய தொகையை செலுத்துங்கள்",
-      "NEED_IT_TO_ENABLE_LOCATION": "பயன்பாடு மூடப்பட்டிருந்தாலும் அல்லது பயன்பாட்டில் இல்லாவிட்டாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தைக் கண்காணிக்க உங்கள் இருப்பிடத்தைப் பகிர்வதை இயக்க, யாத்ரி சதி டிரைவர் இருப்பிடத் தரவைச் சேகரிக்கிறார்.",
-      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "ஜாத்ரி சதி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?",
-      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம், டாக்சிகள் மூலம் அருகிலுள்ள அனைத்தையும் வரைபடமாக்குவதற்கும், விரைவான பயணத்தைப் பெறுவதற்கும் எங்கள் அமைப்புக்கு உதவுகிறது.",
-      "EARNED_ON_APP" : "YS இல் சம்பாதித்தது",
-      "TRAVELLED_ON_APP" : "Yatri Sathitraல் பயணம்",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் பிரச்சினையை விவரிக்கவும். யாத்ரி சதி அதை 24 மணி நேரத்திற்குள் தீர்க்க முயற்சிப்பார்."
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
+      "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
+      "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!",
+      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -94,7 +91,21 @@ window.getMerchantConfig = function () {
     , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "completePaymentPopup" : true
+      "completePaymentPopup" : true,
+      "supportNumber" : "033-44400030",
+      "maxDuesLimit" : 500.0,
+      "faqLink" : "https://yatrisathi.in/plans/",
+      "optionsMenuItems" : {
+        "viewFaqs" : true,
+        "viewAutopayDetails" : true
+      },
+      "offerBannerConfig" : {
+        "showDUOfferBanner" : true,
+        "offerBannerValidTill" : "2023-11-01T00:00:00",
+        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
+      },
+      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]}]
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
@@ -105,5 +116,11 @@ window.getMerchantConfig = function () {
     , "profileVerification" : {
       "aadharVerificationRequired" : true
     } 
+    , "bottomNavConfig" : {
+          "subscription" : 
+            { "isVisible" : true,
+              "showNew" : true
+            }
+        }
   })
 }

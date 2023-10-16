@@ -513,7 +513,7 @@ const frenchStrings = {
   NO_MANUAL_PAYMENTS_DESC : "Votre historique de paiement pour la compensation des cotisations apparaîtra ici, le cas échéant.",
   PAYMENT_HISTORY : "Historique des paiements",
   TAP_A_PLAN_TO_VIEW_DETAILS : "Appuyez sur un plan pour afficher les détails",
-  HOW_IT_WORKS : "Comment ça marche ?",
+  HOW_IT_WORKS : "Comment fonctionne le paiement automatique ?",
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Gagnez aujourd'hui, payez demain",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Ne payez que si vous faites des trajets",
@@ -551,7 +551,7 @@ const frenchStrings = {
   REFRESH_STR : "Actualiser",
   TRANSACTION_DETAILS : "Détails de la transaction",
   RIDE_DETAILS : "Détails du trajet",
-  NAMMA_YATRI_PLANS : "À propos de nous",
+  MY_PLAN_TITLE : "À propos de nous",
   SWITCH_TO : "Passer à {}",
   PLEASE_TRY_AGAIN : "Veuillez réessayer",
   PLAN_NOT_FOUND : "Plan introuvable",
@@ -723,15 +723,18 @@ const frenchStrings = {
   DOWNGRADE_VEHICLE : "véhicule déclassé",
   WHAT_ARE_PURPLE_RIDES : "Qu'est-ce que les Purple Rides ?",
   ECONOMICAL : "Économique",
-  SPACIOUS : "Spacieux",
-  COMFY : "Confortable",
-  PEOPLE : "personnes"
-}
-
-export function getStringValue(key) {
-  if (key in frenchStrings) {
-    return frenchStrings[key];
-  }
-  console.error(key + " not found in englishStrings");
-  return "";
+	SPACIOUS : "Spacieux",
+	COMFY : "Confortable",
+	PEOPLE : "personnes",
+  WHAT_ARE_PURPLE_RIDES : "Qu'est-ce que les Purple Rides ?",
+  GET_READY_FOR_YS_SUBSCRIPTION : "Préparez-vous pour les plans Yatri Sathi !",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "Inscrivez-vous tôt pour bénéficier d'offres spéciales",
+  GUARANTEED_FIXED_PRICE : "Prix fixe garanti jusqu'au 1er janvier 2025",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "L'offre de lancement sera bientôt annoncée !",
+  NO_CHARGES_TILL : "Aucun frais jusqu'au 31 décembre",
+  DO_YOU_WANT_TO_CANCEL : "Voulez-vous annuler",
+  DO_YOU_WANT_TO_CANCEL_DESC : "Vous avez déjà un plan actif. Voulez-vous annuler le plan actif et rejoindre le nouveau plan ?",
+  NO : "Non",
+  YES_CANCEL : "Oui, annuler",
+  AUTOPAY_CANCELLED : "Paiement automatique annulé"
 }

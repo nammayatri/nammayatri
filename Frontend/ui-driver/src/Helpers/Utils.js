@@ -1070,3 +1070,8 @@ export const istToUtcDate = function (dateStr) {
     console.error("Error in istToUtcDate " + err);
   }
 };
+
+export const setValueToLocalStore = function (key,value){
+  JBridge.setInSharedPrefs(key, value);
+}
+
