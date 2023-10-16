@@ -32,60 +32,87 @@ view config push =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , clickable true
-  ][  scrollView
+  , background Color.white900
+  ] $ [  mainView config push 
+    , stickyButtonView config push 
+  ] <> if config.customerIssueCard.reportIssueView then [reportIssueView config push] else []
+    <> if config.showContactSupportPopUp then [contactSupportPopUpView config push] else []
+
+mainView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+mainView config push = 
+  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
-      , background Color.grey700
-      ][ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ][ topCardView config push
+      , orientation VERTICAL
+      ][ topGradientView config push 
         , bottomCardView config push
       ]
-      ]
-      , if config.isPrimaryButtonSticky then 
-        relativeLayout
+
+topGradientView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+topGradientView config push = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 16 16
+    , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
+    ][  topPillAndSupportView config push
+      , priceAndDistanceUpdateView config push 
+      , whiteHorizontalLine config
+      , rideDetailsButtonView config push 
+    ]
+
+topPillAndSupportView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+topPillAndSupportView config push = 
+  relativeLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , weight 1.0
-        , cornerRadii $ Corners 16.0 true true false false
-        , background Color.white900
-        , layoutGravity "bottom"
-        , alignParentBottom "true,-1"
-        , padding $ Padding 16 16 16 16
-        ][ PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
-        else linearLayout [visibility GONE][]
-    , if config.customerIssueCard.reportIssueView then reportIssueView config push else dummyTextView
-    , if config.showContactSupportPopUp then contactSupportPopUpView config push else dummyTextView
-  ]
-  
-topCardView :: forall w. Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-topCardView config push =
-  linearLayout
-  --(
-    [ width MATCH_PARENT
+        , padding $ PaddingTop safeMarginTop
+        ][linearLayout[
+            width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER 
+          , margin $ MarginTop 5
+          ] $ if config.topCard.topPill.visible then [topPillView config push] else []
+        , linearLayout [
+            width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity RIGHT
+          ][imageView
+              [ height $ V 40
+              , width $ V 40
+              , accessibility config.accessibility
+              , accessibilityHint "Contact Support : Button"
+              , imageWithFallback if config.theme == LIGHT then ("ny_ic_black_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_black_headphone.png") else ("ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png")
+              , onClick push $ const Support
+              ]
+            ]
+        ]
+topPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+topPillView config push = 
+  linearLayout[
+    width WRAP_CONTENT
   , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 16 16 16 16
-  , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
+  , background config.topCard.topPill.background
   , gravity CENTER
-  ][  relativeLayout
+  , padding $ Padding 16 6 16 10
+  , cornerRadius 22.0
+  ][
+    textView $ [
+      text config.topCard.topPill.text
+    , color config.topCard.topPill.textColor 
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+
+priceAndDistanceUpdateView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+priceAndDistanceUpdateView config push = 
+  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , padding $ PaddingTop safeMarginTop
-      ][linearLayout[
-          width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER 
-        , margin $ MarginTop 5
-        ][if config.topCard.topPill.visible then topPillView config push else dummyTextView]
-        , if config.enableContactSupport then  contactSupportView config push else dummyTextView ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , weight 1.0
       , orientation VERTICAL
       , gravity CENTER
+      , layoutGravity "center_vertical"
       ][  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -116,101 +143,103 @@ topCardView config push =
               ] <> (FontStyle.title1 TypoGraphy)
           ]
         , pillView config push
-
       ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height $ V 1
-      , background Color.white900
-      ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin $ MarginTop 10
-      , gravity CENTER_VERTICAL
-      , onClick push $ const RideDetails
-      , accessibility config.accessibility
-      , accessibilityHint "Ride Details : Button"
-      ][  textView $
-          [ height WRAP_CONTENT
-          , text config.topCard.bottomText
-          , color $ if config.theme == LIGHT then Color.black700 else Color.white900
-          , weight 1.0
-          ] <> (FontStyle.body2 TypoGraphy)
-        , imageView
-          [ width $ V 18
-          , height $ V 18
-          , accessibility DISABLE
-          , imageWithFallback $ if config.theme == LIGHT then ("ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png") else ("ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png")
-          ]
-      ]
-  ]
 
-contactSupportView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-contactSupportView config push = 
+pillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+pillView config push =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , gravity RIGHT
-  ][  imageView
-      [ height $ V 40
-      , width $ V 40
-      , accessibility config.accessibility
-      , accessibilityHint "Contact Support : Button"
-      , imageWithFallback $ if config.theme == LIGHT then ("ny_ic_black_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_black_headphone.png") else ("ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png")
-      , onClick push $ const Support
-      ]
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , padding config.topCard.infoPill.padding
+    , margin config.topCard.infoPill.margin
+    , background config.topCard.infoPill.background
+    , alpha config.topCard.infoPill.alpha
+    , cornerRadius config.topCard.infoPill.cornerRadius
+    , gravity CENTER
+    , stroke config.topCard.infoPill.stroke
+    , visibility config.topCard.infoPill.visible
+    ]
+    [ imageView
+        [ width $ V 20
+        , height $ V 20
+        , imageWithFallback config.topCard.infoPill.image 
+        , visibility config.topCard.infoPill.imageVis
+        , margin $ MarginRight 12
+        ]
+    , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , text config.topCard.infoPill.text 
+        , color config.topCard.infoPill.color
+        ] <> (FontStyle.getFontStyle config.topCard.infoPill.fontStyle LanguageStyle)
+    ]
+
+rideDetailsButtonView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideDetailsButtonView config push = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT 
+  , layoutGravity "bottom"
+  ][
+    linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ MarginTop 10
+          , gravity CENTER_VERTICAL
+          , onClick push $ const RideDetails
+          , accessibility config.accessibility
+          , accessibilityHint "Ride Details : Button"
+          ][  textView $
+              [ height WRAP_CONTENT
+              , text config.topCard.bottomText
+              , color $ if config.theme == LIGHT then Color.black700 else Color.white900
+              , weight 1.0
+              ] <> (FontStyle.body2 TypoGraphy)
+            , imageView
+              [ width $ V 18
+              , height $ V 18
+              , accessibility DISABLE
+              , imageWithFallback $ if config.theme == LIGHT then ("ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png") else ("ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png")
+              ]
+          ]
   ]
+
+-------------------------------- Top Card Ends --------------------------------------------------------------------------------------------------------------------------------------------
 
 bottomCardView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomCardView config push =
-   scrollView
-  [ width  MATCH_PARENT
-  , height  MATCH_PARENT
-  , background Color.grey700
-  ]
-  [linearLayout
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 16 16 16 70
-  , background Color.grey700
+  , background if config.isDriver then Color.grey700 else Color.white900
   , gravity CENTER
-  , weight 1.0
-  ][  if config.customerIssueCard.issueFaced then customerIssueView config push
-        else if config.customerBottomCard.visible then customerBottomCardView config push
-          else dummyTextView
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      ](map (\item -> getViewsByOrder config item push) config.viewsByOrder)
-    , if not config.isPrimaryButtonSticky then 
-      linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , weight 1.0
-      , gravity BOTTOM
-      , padding $ PaddingBottom safeMarginBottom
-      ][ PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
-      else linearLayout [] []
-  ]
+  ] if config.isDriver then  [driverSideBottomCardsView config push] else [customerSideBottomCardsView config push]
+
+customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+customerSideBottomCardsView config push = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , gravity CENTER
+  ][
+    customerIssueView config push
+  , customerRatingDriverView config push
   ]
 
-getViewsByOrder :: forall w. Config -> RideCompletedElements -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-getViewsByOrder config item push = 
-  case item of 
-    BANNER -> rideEndBannerView config.bannerConfig push
-    QR_VIEW -> driverUpiQrCodeView config push
-    NO_VPA_VIEW -> noVpaView config
-    BADGE_CARD -> badgeCardView config push
-    DRIVER_BOTTOM_VIEW -> driverBottomCardView config push
 
+---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerIssueView config push =
   scrollView [
-    width MATCH_PARENT ,
-    height WRAP_CONTENT
+    width MATCH_PARENT 
+  , height WRAP_CONTENT
+  , visibility $ if config.customerIssueCard.issueFaced then VISIBLE else GONE
   ][
     linearLayout
     [ width MATCH_PARENT
@@ -292,20 +321,10 @@ yesNoRadioButton config push =
       ]
     ) [(config.customerIssueCard.yesText), (config.customerIssueCard.noText)])
 
-commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
-commonTextView config push text' color' fontStyle marginTop =
-  textView $
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , text text'
-  , color color'
-  , gravity CENTER
-  , margin $ MarginTop marginTop
-  ] <> fontStyle
 
-
-customerBottomCardView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-customerBottomCardView config push =
+------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------
+customerRatingDriverView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+customerRatingDriverView config push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -313,13 +332,14 @@ customerBottomCardView config push =
   , cornerRadius 8.0
   , stroke $ "1,"<>Color.grey800
   , padding $ Padding 10 10 10 10
+  , margin $ MarginBottom 24
   , gravity CENTER
   ][ imageView [
       imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_avatar.png"
       , height $ V 56
       , width $ V 56
     ]
-    , commonTextView config push ( config.customerBottomCard.title) Color.black800 (FontStyle.h3 TypoGraphy) 10
+    , commonTextView config push config.customerBottomCard.title Color.black800 (FontStyle.h3 TypoGraphy) 10
     , commonTextView config push config.customerBottomCard.subTitle Color.black800 (FontStyle.paragraphText TypoGraphy) 10
     , linearLayout
       [ height WRAP_CONTENT
@@ -342,47 +362,165 @@ customerBottomCardView config push =
               ]
           ]) [1,2,3,4,5])
   ]
+------------------------------------- Driver Side Bottom Cards View --------------------------------------------------------------------------------------------------------------------------------------------------------------
+driverSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverSideBottomCardsView config push = 
+  scrollView[
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  ][
+    linearLayout[
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.grey700
+    , gravity CENTER
+    , visibility $ if config.isDriver then VISIBLE else GONE 
+    ] $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
+  ]
 
-reportIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-reportIssueView  config push =
+
+getViewsByOrder :: forall w. Config -> RideCompletedElements -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+getViewsByOrder config item push = 
+  case item of 
+    BANNER -> rideEndBannerView config.bannerConfig push
+    QR_VIEW -> driverUpiQrCodeView config push
+    NO_VPA_VIEW -> noVpaView config
+    BADGE_CARD -> badgeCardView config push
+    DRIVER_BOTTOM_VIEW -> driverFareBreakUpView config push
+
+
+------------------------------------ (Driver Card 1) rideEndBannerView -------------------------------------------------------------------------------------------------------------------------
+rideEndBannerView :: forall w. BannerConfig.Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideEndBannerView config push =
   linearLayout
     [ height MATCH_PARENT
+    , width  MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , visibility if config.isBanner then VISIBLE else GONE
+    , gravity BOTTOM
+    , weight 1.0
+    ][
+        Banner.view (push <<< BannerAction) (config)
+    ]
+
+------------------------------------- (Driver Card 2) driverUpiQrCodeView --------------------------------------------------------------------------------------------------------------
+driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+driverUpiQrCodeView config push = 
+  linearLayout 
+    [
+      height WRAP_CONTENT
     , width MATCH_PARENT
-    ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (config.customerIssueCard.reportIssuePopUpConfig)]
-
-
-pillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-pillView config push =
-  linearLayout
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , padding config.topCard.infoPill.padding
-    , margin config.topCard.infoPill.margin
-    , background config.topCard.infoPill.background
-    , alpha config.topCard.infoPill.alpha
-    , cornerRadius config.topCard.infoPill.cornerRadius
+    , background Color.white900
+    , orientation VERTICAL
+    , cornerRadius 16.0
     , gravity CENTER
-    , stroke config.topCard.infoPill.stroke
-    , visibility config.topCard.infoPill.visible
+    , margin $ MarginBottom 24
+    ][linearLayout 
+    [
+      height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.yellow800
+    , orientation VERTICAL
+    , gravity CENTER
+    , cornerRadii $ Corners 16.0 true true false false
+    , padding $ PaddingVertical 15 12
     ]
-    [ imageView
-        [ width $ V 20
-        , height $ V 20
-        , imageWithFallback config.topCard.infoPill.image 
-        , visibility config.topCard.infoPill.imageVis
-        , margin $ MarginRight 12
-        ]
-    , textView $
-        [ height WRAP_CONTENT
+    [
+      textView $ [
+        text config.driverUpiQrCard.text
+        , margin $ MarginBottom 8
+      ] <> (FontStyle.body2 TypoGraphy)
+      , linearLayout [
+          height WRAP_CONTENT
         , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , text config.topCard.infoPill.text 
-        , color config.topCard.infoPill.color
-        ] <> (FontStyle.getFontStyle config.topCard.infoPill.fontStyle LanguageStyle)
+        , background Color.white900
+        , cornerRadius 28.0
+        , stroke $ "1," <> Color.grey900
+        , gravity CENTER
+      ][
+        imageView [
+          width $ V 24
+        , height  $ V 24
+        , margin $ Margin 5 5 5 5
+        , imageWithFallback config.driverUpiQrCard.vpaIcon
+        ]
+        , textView $ [
+          text config.driverUpiQrCard.vpa
+          , margin $ MarginHorizontal 5 5
+        ] <> FontStyle.body2 TypoGraphy
+      ]
+      ]
+      , imageView [
+          height $ V 165
+        , width $ V 165
+        , margin $ MarginVertical 8 13
+        , id $ getNewIDWithTag config.driverUpiQrCard.id
+        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
+      ]
     ]
 
-driverBottomCardView ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-driverBottomCardView config push = 
+--------------------------------------------------- (Driver Card 3) noVpaView --------------------------------------------------------------------------------------------------------------------------------------------
+noVpaView :: forall w. Config -> PrestoDOM (Effect Unit) w 
+noVpaView config = 
+   linearLayout 
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.yellow800
+    , stroke $ "1," <> Color.yellow500
+    , cornerRadius 16.0
+    , gravity CENTER
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginBottom 24
+    ][
+        imageView
+        [ height $ V 24
+        , width $ V 24
+        , margin $ MarginVertical 8 13
+        , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
+        ]
+      , textView $
+        [ text config.noVpaCard.title
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ PaddingLeft 8
+        , color Color.black800
+        ] <> FontStyle.body2 TypoGraphy
+    ]
+---------------------------------------------- (Driver Card 5) badgeCardView ------------------------------------------------------------------------------------------------------------------------------------------
+badgeCardView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+badgeCardView config push = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , gravity CENTER 
+  , background config.badgeCard.background
+  , cornerRadius 8.0
+  , margin $ MarginBottom 24 
+  ][
+    imageView[
+      imageWithFallback config.badgeCard.image
+    , height config.badgeCard.imageHeight
+    , width config.badgeCard.imageWidth
+    , margin $ MarginTop 15
+    ]
+  , textView $ [
+      text config.badgeCard.text1 
+    , color config.badgeCard.text1Color
+    ] <> FontStyle.body1 TypoGraphy
+  , textView $ [
+      text config.badgeCard.text2
+    , color config.badgeCard.text2Color
+    , margin $ MarginBottom 24
+    ] <> FontStyle.body4 TypoGraphy
+  ]
+
+---------------------------------------------- (Driver Card 6) driverFareBreakUpView  ------------------------------------------------------------------------------------------------------------------------------------------
+driverFareBreakUpView ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+driverFareBreakUpView config push = 
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -390,7 +528,7 @@ driverBottomCardView config push =
   , stroke ("1," <> Color.grey900)
   , orientation HORIZONTAL
   , cornerRadius 8.0
-  , margin $ MarginVertical 14 24
+  , margin $ MarginBottom 24
   , padding $ Padding 12 12 12 12
   , gravity CENTER
   ][
@@ -444,12 +582,45 @@ driverBottomCardView config push =
       ]
   ]
 
+stickyButtonView ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+stickyButtonView config push = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , weight 1.0
+  , cornerRadii $ Corners 16.0 true true false false
+  , background Color.white900
+  , layoutGravity "bottom"
+  , alignParentBottom "true,-1"
+  , padding $ Padding 16 16 16 16
+  ][PrimaryButton.view (push <<< SkipButtonActionController) (config.primaryButtonConfig)]
+
+reportIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+reportIssueView  config push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (config.customerIssueCard.reportIssuePopUpConfig)]
+
 contactSupportPopUpView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 contactSupportPopUpView config push = 
   linearLayout [
     width MATCH_PARENT,
     height MATCH_PARENT
   ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig]
+
+--------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
+commonTextView config push text' color' fontStyle marginTop =
+  textView $
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity CENTER
+  , margin $ MarginTop marginTop
+  ] <> fontStyle
+
 
 horizontalLine :: forall w. PrestoDOM (Effect Unit) w 
 horizontalLine = 
@@ -468,152 +639,10 @@ dummyTextView =
     , height $ V 0
     ][]
 
-badgeCardView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-badgeCardView config push = 
-  linearLayout[
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , gravity CENTER 
-  , background config.badgeCard.background
-  , cornerRadius 8.0
-  ][
-    imageView[
-      imageWithFallback config.badgeCard.image
-    , height config.badgeCard.imageHeight
-    , width config.badgeCard.imageWidth
-    , margin $ MarginTop 15
-    ]
-  , textView $ [
-      text config.badgeCard.text1 
-    , color config.badgeCard.text1Color
-    ] <> FontStyle.body1 TypoGraphy
-  , textView $ [
-      text config.badgeCard.text2
-    , color config.badgeCard.text2Color
-    , margin $ MarginBottom 24
-    ] <> FontStyle.body4 TypoGraphy
-  ]
-
-driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-driverUpiQrCodeView config push = 
-  linearLayout 
-    [
-      height WRAP_CONTENT
-    , width MATCH_PARENT
-    , background Color.white900
-    , orientation VERTICAL
-    , cornerRadius 16.0
-    , gravity CENTER
-    , margin $ MarginBottom 8
-    ][linearLayout 
-    [
-      height MATCH_PARENT
-    , width MATCH_PARENT
-    , background Color.yellow800
-    , orientation VERTICAL
-    , gravity CENTER
-    , cornerRadii $ Corners 16.0 true true false false
-    , padding $ PaddingVertical 15 12
-    ]
-    [
-      textView $ [
-        text config.driverUpiQrCard.text
-        , margin $ MarginBottom 8
-      ] <> (FontStyle.body2 TypoGraphy)
-      , linearLayout [
-          height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , background Color.white900
-        , cornerRadius 28.0
-        , stroke $ "1," <> Color.grey900
-        , gravity CENTER
-      ][
-        imageView [
-          width $ V 24
-        , height  $ V 24
-        , margin $ Margin 5 5 5 5
-        , imageWithFallback config.driverUpiQrCard.vpaIcon
-        ]
-        , textView $ [
-          text config.driverUpiQrCard.vpa
-          , margin $ MarginHorizontal 5 5
-        ] <> FontStyle.body2 TypoGraphy
-      ]
-      ]
-      , imageView [
-          height $ V 165
-        , width $ V 165
-        , margin $ MarginVertical 8 13
-        , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-      ]
-    ]
-
-collectCashView ::forall w. String -> PrestoDOM (Effect Unit) w 
-collectCashView title = 
+whiteHorizontalLine :: forall w . Config -> PrestoDOM (Effect Unit) w
+whiteHorizontalLine config = 
   linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , padding $ PaddingVertical 4 14
-    , gravity CENTER
-    ][
-      textView $
-        [ text title
-        ]  <> FontStyle.body5 TypoGraphy
-    ]
-
-noVpaView :: forall w. Config -> PrestoDOM (Effect Unit) w 
-noVpaView config = 
-   linearLayout 
-    [
-      height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , background Color.yellow800
-    , stroke $ "1," <> Color.yellow500
-    , cornerRadius 16.0
-    , gravity CENTER
-    , padding $ Padding 16 16 16 16
-    , margin $ MarginBottom 26
-    ][
-        imageView
-        [ height $ V 24
-        , width $ V 24
-        , margin $ MarginVertical 8 13
-        , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
-        ]
-      , textView $
-        [ text config.noVpaCard.title
-        , height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , padding $ PaddingLeft 8
-        , color Color.black800
-        ] <> FontStyle.body2 TypoGraphy
-    ]
-
-topPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-topPillView config push = 
-  linearLayout[
-    width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , background config.topCard.topPill.background
-  , gravity CENTER
-  , padding $ Padding 16 6 16 10
-  , cornerRadius 22.0
-  ][
-    textView $ [
-      text config.topCard.topPill.text
-    , color config.topCard.topPill.textColor 
-    ] <> FontStyle.body1 TypoGraphy
-  ]
-
-rideEndBannerView :: forall w. BannerConfig.Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rideEndBannerView config push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width  MATCH_PARENT
-    , orientation VERTICAL
-    , visibility if config.isBanner then VISIBLE else GONE
-    ][
-        Banner.view (push <<< BannerAction) (config)
-    ]
+    [ width MATCH_PARENT
+    , height $ V 1
+    , background if config.isDriver then Color.white900 else Color.black800
+    ][]
