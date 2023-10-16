@@ -17,6 +17,7 @@ module Screens.RideHistoryScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 import Prelude ((-))
 import Resource.Constants (tripDatesCount)
 import Screens.Types (AnimationState(..), RideHistoryScreenState)
@@ -74,6 +75,7 @@ initData = {
   , paymentHistory : {
     paymentHistoryList : []
   }
+  , config  : DC.config
   }
   , props : {
     showDatePicker : false

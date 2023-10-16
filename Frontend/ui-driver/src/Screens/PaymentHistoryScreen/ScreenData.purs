@@ -19,6 +19,7 @@ import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
 import Services.API (AutopayPaymentStage(..), FeeType(..))
+import MerchantConfig.DefaultConfig as DC
 
 initData :: PaymentHistoryScreenState
 initData = {
@@ -36,7 +37,8 @@ initData = {
             feeType : AUTOPAY_PAYMENT,
             numOfDriverFee : 0
         },
-        planData : dummyPlanConfig
+        planData : dummyPlanConfig,
+        gradientConfig : []
     },
 
     props: {

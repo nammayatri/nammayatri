@@ -197,7 +197,7 @@ headerLayout push state =
         ]
       ]
     ]
-  , commonTV push (getString NAMMAYATRI_PLANS) Color.white900 FontStyle.h1 LEFT 20 NoAction false
+  , commonTV push (getString MY_PLAN_TITLE) Color.white900 FontStyle.h1 LEFT 20 NoAction false
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w

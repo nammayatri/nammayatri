@@ -23,14 +23,15 @@ import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Engineering.Helpers.Utils (saveObject)
+import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getDistanceBwCordinates, getFixedTwoDecimals)
+import Helpers.Utils (getAssetStoreLink, getDistanceBwCordinates, getFixedTwoDecimals)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||))
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -42,7 +43,6 @@ import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocati
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
-import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -124,35 +124,34 @@ eval BackPressed state =
   else if state.props.subView == DueDetails then do
     let subView' = if state.props.myPlanProps.multiTypeDues then DuesView else MyPlan
     continue state{props { subView = subView'}, data{myPlanData{selectedDue = ""}}}
-  else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
+  else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
-  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal && not state.data.config.enableIntroductoryView && state.data.config.enableSubscriptionPopups then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
 
 eval ToggleDueDetailsView state = continue state {props {myPlanProps { isDueViewExpanded = not state.props.myPlanProps.isDueViewExpanded}}}
 
-eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
-  let merchant = getMerchant FunctionCall
-  continueWithCmd state{props{optionsMenuState = ALL_COLLAPSED}} [do
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = 
+  continueWithCmd state{props{optionsMenuState = ALL_COLLAPSED}} [
     case item of 
       "manage_plan" -> pure ManagePlanAC 
       "payment_history" -> pure ViewPaymentHistory 
       "call_support" -> pure CallSupport
       "chat_for_help" -> do
-          _ <- openUrlInApp "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86"
+          _ <- openUrlInApp state.data.config.whatsappSupportLink
           pure NoAction
       "view_faq" -> do
-          _ <- openUrlInApp "https://nammayatri.in/plans/"
+          _ <- openUrlInApp state.data.config.faqLink
           pure NoAction
       "find_help_centre" -> pure ViewHelpCentre
+      "view_autopay_details" -> pure ViewAutopayDetails
       _ -> pure NoAction
   ]
 
-eval (OptionsMenuAction (OptionsMenu.BackgroundClick)) state = do
-  _ <- pure $ spy "menu background clicked" ""
+eval (OptionsMenuAction (OptionsMenu.BackgroundClick)) state = 
   continue state{props{optionsMenuState = ALL_COLLAPSED}}
 
 eval (SwitchPlan PrimaryButton.OnClick) state = do
@@ -235,7 +234,7 @@ eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   let newState = state{props{optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   if screen == "Join" then continue state
-  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && state.data.config.enableSubscriptionPopups then do 
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
@@ -263,10 +262,10 @@ eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans,
+      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.enableIntroductoryView state.data.config.gradientConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans else state.props.joinPlanProps.selectedPlanItem}} }
+            joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -283,18 +282,32 @@ eval (LoadMyPlans plans) state = do
                               Mb.Nothing -> Mb.Nothing
           isOverdue = planEntity.currentDues >= planEntity.totalPlanCreditLimit
           multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
-          newState = state{ 
-            props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
-            data{ orderId = currentPlanResp.orderId, 
-                  planId = planEntity.id, myPlanData{
-                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized,
-                      maxDueAmount = planEntity.totalPlanCreditLimit,
-                      totalDueAmount = planEntity.currentDues,
-                      manualDueAmount = planEntity.currentDues - planEntity.autopayDues,
-                      autoPayDueAmount = planEntity.autopayDues ,
-                      autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
-                      lowAccountBalance = requiredBalance,
-                      dueItems = constructDues planEntity.dues}}}
+          newState = if state.data.config.enableSubscriptionPopups then 
+                        state{ 
+                            props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
+                            data { orderId = currentPlanResp.orderId, 
+                                  planId = planEntity.id, 
+                                  myPlanData {
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.gradientConfig,
+                                      maxDueAmount = planEntity.totalPlanCreditLimit,
+                                      totalDueAmount = planEntity.currentDues,
+                                      manualDueAmount = planEntity.currentDues - planEntity.autopayDues,
+                                      autoPayDueAmount = planEntity.autopayDues ,
+                                      autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
+                                      lowAccountBalance = requiredBalance,
+                                      dueItems = constructDues planEntity.dues
+                                  }}
+                         }
+                     else state{ 
+                            props{ showShimmer = false, subView = MyPlan , lastPaymentType = currentPlanResp.lastPaymentType}, 
+                            data { orderId = currentPlanResp.orderId, 
+                                  planId = planEntity.id, 
+                                  myPlanData {
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.gradientConfig,
+                                      maxDueAmount = planEntity.totalPlanCreditLimit,
+                                      autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus
+                                  }}
+                          }
       _ <- pure $ setCleverTapUserProp [{key : "Plan", value : unsafeToForeign planEntity.name},
                                         {key : "Subscription Offer", value : unsafeToForeign (map (\(OfferEntity offer) -> offer.title) planEntity.offers)},
                                         {key : "Driver Due Amount" , value : unsafeToForeign (planEntity.currentDues)},
@@ -307,6 +320,8 @@ eval (LoadMyPlans plans) state = do
       case currentPlanResp.mandateDetails of 
         Mb.Nothing -> continue newState
         Mb.Just (MandateData mandateDetails) -> do
+          let payerVpa = (Mb.fromMaybe "" mandateDetails.payerVpa)
+              pspLogo = Const.getPspIcon payerVpa <> "," <> (getAssetStoreLink FunctionCall) <> (Const.getPspIcon payerVpa) <> ".png"
           _ <- pure $ setCleverTapUserProp [{key : "Mandate status", value : unsafeToForeign mandateDetails.status},
                                             {key : "Autopay Max Amount Register", value : unsafeToForeign mandateDetails.maxAmount},
                                             {key : "Payment method" , value : unsafeToForeign $ if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"},
@@ -318,7 +333,7 @@ eval (LoadMyPlans plans) state = do
                 }
               , autoPayDetails {
                   detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                , pspLogo = Const.getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
+                , pspLogo = pspLogo
                 , payerUpiId = mandateDetails.payerVpa
                 }
               }
@@ -341,7 +356,7 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
       else updateAndExit updateState $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer "08069490091" false
+  _ <- pure $ showDialer state.data.config.supportNumber false
   continue state
 
 eval (CallHelpCenter phone) state = do

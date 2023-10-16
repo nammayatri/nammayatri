@@ -24,14 +24,15 @@ import Engineering.Helpers.Commons (convertUTCtoISC)
 import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Types (GradientConfig)
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getFeeBreakup, getPromoConfig)
 import Screens.Types (PromoConfig)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 
-buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> ST.TransactionInfo
-buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
+buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> ST.TransactionInfo
+buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig =
     let filteredDriverFees = if (resp.feeType == AUTOPAY_REGISTRATION && length resp.driverFeeInfo > 1)  then filter (\ (API.DriverFeeInfoEntity driverFee) -> driverFee.driverFeeAmount > 0.0) resp.driverFeeInfo else resp.driverFeeInfo
         (API.DriverFeeInfoEntity driverFee') = case (filteredDriverFees !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
@@ -111,7 +112,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                             {
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
                                 planType : planOfferData.plan,
-                                offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing}]) !! 0,
+                                offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] gradientConfig) !! 0,
                                 noOfRides : driverFee.totalRides,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,

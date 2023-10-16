@@ -106,7 +106,7 @@ view notificationListItem push state =
                     ]
                   , loadMoreView push state
                 ]
-          , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN)
+          , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN state.config.bottomNavConfig)
           ]
       ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 

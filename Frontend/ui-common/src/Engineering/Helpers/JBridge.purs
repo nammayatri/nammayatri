@@ -250,6 +250,7 @@ type LottieAnimationConfig = {
   , scaleType :: String
   , minProgress :: Number
   , maxProgress :: Number
+  , forceToUseRemote :: Boolean
 }
 
 lottieAnimationConfig :: LottieAnimationConfig
@@ -261,6 +262,7 @@ lottieAnimationConfig = {
   , scaleType : "DEFAULT"
   , minProgress : 0.0
   , maxProgress : 1.0
+  , forceToUseRemote : false
 }
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
