@@ -31,6 +31,34 @@ create = createWithKV
 findById :: MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 
+totalRidesByFleetOwner :: MonadFlow m => Maybe Text -> m Int
+totalRidesByFleetOwner fleetIdWanted = do
+  res <- findAllWithKV [Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted]
+  pure $ length res
+
+totalRidesByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
+totalRidesByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
+  res <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted,
+            Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNumberWanted
+          ]
+      ]
+  pure $ length res
+
+totalRidesByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Text -> m Int
+totalRidesByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverNameWanted = do
+  res <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted,
+            Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNumberWanted,
+            Se.Is BeamRD.driverName $ Se.Eq driverNameWanted
+          ]
+      ]
+  pure $ length res
+
 instance FromTType' BeamRD.RideDetails RideDetails where
   fromTType' BeamRD.RideDetailsT {..} = do
     pure $
@@ -44,7 +72,8 @@ instance FromTType' BeamRD.RideDetails RideDetails where
             vehicleColor = vehicleColor,
             vehicleVariant = vehicleVariant,
             vehicleModel = vehicleModel,
-            vehicleClass = vehicleClass
+            vehicleClass = vehicleClass,
+            fleetOwnerId = fleetOwnerId
           }
 
 instance ToTType' BeamRD.RideDetails RideDetails where
@@ -59,5 +88,6 @@ instance ToTType' BeamRD.RideDetails RideDetails where
         BeamRD.vehicleColor = vehicleColor,
         BeamRD.vehicleVariant = vehicleVariant,
         BeamRD.vehicleModel = vehicleModel,
-        BeamRD.vehicleClass = vehicleClass
+        BeamRD.vehicleClass = vehicleClass,
+        BeamRD.fleetOwnerId = fleetOwnerId
       }
