@@ -332,7 +332,8 @@ buildRideDetails ride driver = do
         vehicleColor = Just vehicle.color,
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
-        vehicleClass = Nothing
+        vehicleClass = Nothing,
+        fleetOwnerId = Nothing
       }
 
 cancelBooking ::
