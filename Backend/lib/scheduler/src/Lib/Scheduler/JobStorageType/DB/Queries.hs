@@ -17,6 +17,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
@@ -26,9 +27,10 @@ import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVSche
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (Log, MonadFlow, MonadTime (getCurrentTime))
-import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Error (throwError)
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table hiding (Id)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
@@ -134,6 +136,9 @@ getReadyTasks mbMaxShards = do
       Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
   res <- findAllWithOptionsKVScheduler [Se.And ([Se.Is BeamST.status $ Se.Eq Pending, Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc now)] <> [Se.Is BeamST.shardId $ Se.Eq shardId | isJust mbMaxShards])] (Se.Asc BeamST.scheduledAt) Nothing Nothing
   return $ zip res (map (const "rndm") [1 .. length res])
+
+getReadyTask :: (MonadThrow m, Log m) => m [(AnyJob t, BS.ByteString)]
+getReadyTask = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
 
 updateStatus ::
   MonadFlow m =>

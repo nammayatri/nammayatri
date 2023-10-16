@@ -35,6 +35,8 @@ let schedulerConfig =
       , schedulerSetName = "Scheduled_Jobs"
       , streamName = "Available_Jobs"
       , maxThreads = +10
+      , block = +10000
+      , readCount = +1
       }
 
 in  { appCfg =

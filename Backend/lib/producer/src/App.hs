@@ -22,7 +22,8 @@ import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Prelude
-import Kernel.Types.Common (fork)
+import Kernel.Tools.LoopGracefully (loopGracefully)
+import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
@@ -32,6 +33,7 @@ import qualified Producer.Flow as PF
 startProducer :: IO ()
 startProducer = do
   appCfg :: AppCfg <- readDhallConfigDefault "producer"
+  Metrics.serve (appCfg.metricsPort)
   appEnv <- buildAppEnv appCfg
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
   startProducerWithEnv flowRt appCfg appEnv
@@ -50,5 +52,4 @@ startProducerWithEnv flowRt appCfg appEnv@AppEnv {} = do
         appCfg.tables
     )
   runFlowR flowRt appEnv $ do
-    fork "Running Reviver" PF.runReviver
-    PF.runProducer
+    loopGracefully [PF.runReviver, PF.runProducer]

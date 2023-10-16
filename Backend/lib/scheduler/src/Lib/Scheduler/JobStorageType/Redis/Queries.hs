@@ -93,6 +93,37 @@ getReadyTasks _ = do
       logDebug $ "error" <> T.pack err
       return []
 
+getReadyTask ::
+  ( JobExecutor r m,
+    JobProcessor t,
+    HasField "version" r DeploymentVersion,
+    HasField "block" r Integer,
+    HasField "readCount" r Integer
+  ) =>
+  m [(AnyJob t, BS.ByteString)]
+getReadyTask = do
+  key <- asks (.streamName)
+  groupName <- asks (.groupName)
+  let lastEntryId :: Text = "$"
+  version <- asks (.version)
+  let consumerName = version.getDeploymentVersion
+  let nextId :: Text = ">"
+  block <- asks (.block)
+  readCount <- asks (.readCount)
+  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
+  unless isGroupExist $ do
+    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
+  let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
+  let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
+  let textJob = map snd result
+  let parsedJobs = map (DA.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
+  case sequence parsedJobs of
+    Right jobs -> return $ zip jobs recordIds
+    Left err -> do
+      logDebug $ "error" <> T.pack err
+      return []
+
 updateStatus :: (JobExecutor r m) => JobStatus -> Id AnyJob -> m ()
 updateStatus _ _ = pure ()
 

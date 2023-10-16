@@ -127,6 +127,24 @@ getReadyTasks mbMaxShards = do
     RedisBased -> RQ.getReadyTasks mbMaxShards
     DbBased -> DBQ.getReadyTasks mbMaxShards
 
+getReadyTask ::
+  forall t m r.
+  ( FromTType'' BeamST.SchedulerJob (AnyJob t),
+    JobExecutor r m,
+    JobProcessor t,
+    HasField "version" r DeploymentVersion,
+    MonadThrow m,
+    Log m,
+    HasField "block" r Integer,
+    HasField "readCount" r Integer
+  ) =>
+  m [(AnyJob t, BS.ByteString)]
+getReadyTask = do
+  schedulerType <- asks (.schedulerType)
+  case schedulerType of
+    RedisBased -> RQ.getReadyTask
+    DbBased -> DBQ.getReadyTask
+
 updateStatus :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool)) => Text -> JobStatus -> Id AnyJob -> m ()
 updateStatus jobType status id = do
   schedulerType <- asks (.schedulerType)

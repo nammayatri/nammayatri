@@ -38,6 +38,7 @@ schedulerHandle loggerRes =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
       getReadyTasks = return [],
+      getReadyTask = return [],
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
