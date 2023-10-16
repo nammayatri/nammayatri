@@ -24,6 +24,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import Storage.Queries.FareParameters.FareParametersProgressiveDetails as QFPPD
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
+import Storage.Queries.FareParameters.FareParametersRentalDetails as QFPRD
+import qualified Storage.Queries.FareParameters.FareParametersRentalDetails as BeamFPRD
 import Storage.Queries.FareParameters.FareParametersSlabDetails as QFPSD
 import qualified Storage.Queries.FareParameters.FareParametersSlabDetails as BeamFPSD
 
@@ -33,6 +35,7 @@ create fareParameters = do
   case fareParameters.fareParametersDetails of
     ProgressiveDetails fppdt -> QFPPD.create (fareParameters.id, fppdt)
     SlabDetails fpsdt -> QFPSD.create (fareParameters.id, fpsdt)
+    RentalDetails fprdt -> QFPRD.create (fareParameters.id, fprdt)
 
 findById :: MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
@@ -53,6 +56,11 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           mFullFPSD <- BeamFPSD.findById' (Id id)
           case mFullFPSD of
             Just (_, fPSD) -> return (Just $ SlabDetails fPSD)
+            Nothing -> return Nothing
+        Rental -> do
+          mFullFPRD <- BeamFPRD.findById' (Id id)
+          case mFullFPRD of
+            Just (_, fPRD) -> return (Just $ RentalDetails fPRD)
             Nothing -> return Nothing
     case mFareParametersDetails of
       Just fareParametersDetails -> do

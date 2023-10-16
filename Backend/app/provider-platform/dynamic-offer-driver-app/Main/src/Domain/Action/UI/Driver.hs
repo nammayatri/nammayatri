@@ -1215,7 +1215,13 @@ respondQuote (driverId, _) req = do
                   waitingTime = Nothing,
                   driverSelectedFare = mbOfferedFare,
                   customerExtraFee = searchTry.customerExtraFee,
-                  nightShiftCharge = Nothing
+                  nightShiftCharge = Nothing, -- FIX ME: Params below me are for rentals
+                  rideStartTime = Nothing,
+                  rideEndTime = Nothing,
+                  actualDistance = Nothing,
+                  chargedDuration = 0,
+                  nightShiftOverlapChecking = Nothing,
+                  now = now
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
@@ -1316,6 +1322,7 @@ getStats (driverId, merchantId) date = do
                       ( \x -> case fareParametersDetails x of
                           ProgressiveDetails det -> Just (deadKmFare det)
                           SlabDetails _ -> Nothing
+                          RentalDetails _ -> Nothing
                       )
                 )
                   fareParameters
