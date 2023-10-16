@@ -9,6 +9,7 @@ window.version = __VERSION__;
 console.warn("Hello World MASTER ONE");
 let previousDateObject = new Date();
 const refreshThreshold = 30;
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 loadConfig();
 
 let eventObject = {
@@ -268,7 +269,7 @@ var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
   logger.enableLogger();
 }else{
-  logger.disableLogger();
+  // logger.disableLogger();
 }
 
 function loadConfig() {
