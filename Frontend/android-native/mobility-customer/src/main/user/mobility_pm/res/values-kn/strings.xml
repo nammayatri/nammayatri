@@ -44,5 +44,10 @@
     <string name="and">ಮತ್ತು</string>
     <string name="tip_included">" ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!"</string>
     <string name="no_enabled_browser">ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಯಾವುದೇ ಸಕ್ರಿಯಗೊಳಿಸಿದ ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ, ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅಥವಾ ಸ್ಥಾಪಿಸಿ</string>
-
+    <string name="qr_for_your_vpa_is_downloaded">ನಿಮ್ಮ vpa ಗಾಗಿ QR ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="invoice_downloaded">ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="driver_receipt_downloaded">ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="driver_receipt_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="invoice_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
+    <string name="qr_downloaded">Qr ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ !!!</string>
 </resources>
