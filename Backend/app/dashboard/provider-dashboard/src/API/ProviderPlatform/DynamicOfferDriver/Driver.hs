@@ -75,6 +75,8 @@ type API =
            :<|> FleetUnlinkVehicleAPI
            :<|> FleetRemoveVehicleAPI
            :<|> FleetRemoveDriverAPI
+           :<|> FleetTotalEarningAPI
+           :<|> FleetVehicleEarningAPI
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
@@ -216,6 +218,22 @@ type FleetRemoveDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_REMOVE_DRIVER
     :> Common.FleetRemoveDriverAPI
 
+type FleetTotalEarningAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_TOTAL_EARNING
+    :> Common.FleetTotalEarningAPI
+
+type FleetVehicleEarningAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_VEHICLE_EARNING
+    :> Common.FleetVehicleEarningAPI
+
+type FleetTotalEarningAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_TOTAL_EARNING
+    :> Common.FleetTotalEarningAPI
+
+type FleetVehicleEarningAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'FLEET_VEHICLE_EARNING
+    :> Common.FleetVehicleEarningAPI
+
 type UpdateDriverNameAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
@@ -283,6 +301,8 @@ handler merchantId =
     :<|> fleetUnlinkVehicle merchantId
     :<|> fleetRemoveVehicle merchantId
     :<|> fleetRemoveDriver merchantId
+    :<|> fleetTotalEarning merchantId
+    :<|> fleetVehicleEarning merchantId
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
@@ -483,6 +503,26 @@ fleetRemoveDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> 
 fleetRemoveDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetRemoveDriver) apiTokenInfo.personId.getId driverId
+
+fleetTotalEarning :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetTotalEarning) apiTokenInfo.personId.getId
+
+fleetVehicleEarning :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Maybe Text -> FlowHandler Common.FleetEarningRes
+fleetVehicleEarning merchantShortId apiTokenInfo vehicleNo mbDriverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetVehicleEarning) apiTokenInfo.personId.getId vehicleNo mbDriverId
+
+fleetTotalEarning :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetTotalEarning) apiTokenInfo.personId.getId
+
+fleetVehicleEarning :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Maybe Text -> FlowHandler Common.FleetEarningRes
+fleetVehicleEarning merchantShortId apiTokenInfo vehicleNo mbDriverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetVehicleEarning) apiTokenInfo.personId.getId vehicleNo mbDriverId
 
 updateDriverName :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do

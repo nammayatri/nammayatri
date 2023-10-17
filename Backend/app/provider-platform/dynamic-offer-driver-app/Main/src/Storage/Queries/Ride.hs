@@ -499,12 +499,11 @@ totalEarningsByFleetOwner fleetIdWanted = do
       B.select $
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          ride' <- B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-          pure ride'
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> catMaybes (DR.fare <$> catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
 totalEarningsByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
@@ -514,12 +513,11 @@ totalEarningsByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
       B.select $
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          ride' <- B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-          pure ride'
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> catMaybes (DR.fare <$> catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Text -> m Int
 totalEarningsByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverNameWanted = do
@@ -529,12 +527,11 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted d
       B.select $
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted) B.&&?. (BeamRD.driverName rideDetails'' B.==?. B.val_ driverNameWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          ride' <- B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-          pure ride'
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> catMaybes (DR.fare <$> catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do

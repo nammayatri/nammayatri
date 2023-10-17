@@ -799,6 +799,27 @@ data FleetVehicleStatsListItem = FleetVehicleStatsListItem
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+type FleetTotalEarningAPI =
+  "fleet"
+    :> "totalEarning"
+    :> Get '[JSON] FleetEarningRes
+
+type FleetVehicleEarningAPI =
+  "fleet"
+    :> "vehicleEarning"
+    :> Capture "vehicleNo" Text
+    :> QueryParam "driverId" Text
+    :> Get '[JSON] FleetEarningRes
+
+data FleetEarningRes = FleetEarningRes
+  { totalRides :: Int,
+    totalEarning :: Int,
+    vehicleNo :: Maybe Text,
+    driverId :: Maybe Text,
+    driverName :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
 ---------------------------------------------------------
 -- update driver name -----------------------------------
 
