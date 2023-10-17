@@ -30,9 +30,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
-import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
-import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -73,7 +71,9 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchTry as QST
 import Storage.Queries.Vehicle as QVeh
+import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
@@ -190,12 +190,11 @@ handler transporter req validateRes = do
       for_ driverSearchReqs $ \driverReq -> do
         let driverId = driverReq.driverId
         unless (driverId == driver.id) $ do
-          forM_ driverReq.searchTryId $ \searchTryId -> do
-            DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) searchTryId
-            DP.removeSearchReqIdFromMap transporter.id driverId searchTryId
-            _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
-            driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-            Notify.notifyDriverClearedFare transporter.id driverId (cast @DST.SearchTry @DSRD.Search searchTryId) driverQuote.estimatedFare driver_.deviceToken
+          DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchTryId
+          DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
+          _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
+          driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
@@ -249,13 +248,6 @@ handler transporter req validateRes = do
             bookingTypeDetails = DConfirmResSpecialZoneBooking
           }
     DConfirmRentalBookingValidateRes quote -> do
-      -- otpCode <- case riderDetails.otpCode of
-      --   Nothing -> do
-      --     otpCode <- generateOTPCode
-      --     QRD.updateOtpCode riderDetails.id otpCode
-      --     pure otpCode
-      --   Just otp -> pure otp
-
       -- critical updates
       QRB.updateStatus booking.id DRB.SCHEDULED -- TODO check we do not block customer
 
@@ -275,11 +267,13 @@ handler transporter req validateRes = do
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       maxShards <- asks (.maxShards)
       transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+      searchTry <- QST.findActiveTryByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
       let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
       let jobScheduledTime = max 0 $ diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
       let jobData =
             AllocateRentalRideJobData
-              { bookingId = booking.id,
+              { searchTryId = searchTry.id,
+                bookingId = booking.id,
                 searchRequestId = quote.searchRequestId
               }
       JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData

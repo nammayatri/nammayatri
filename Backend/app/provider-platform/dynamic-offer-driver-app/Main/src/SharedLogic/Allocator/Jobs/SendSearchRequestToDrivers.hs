@@ -26,7 +26,6 @@ import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -92,16 +91,15 @@ sendSearchRequestToDrivers' ::
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
-    searchId = cast @SearchTry @DSRD.Search searchTry.id
     searchDetails = DSRD.OnDemandSearchDetails {searchTry}
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchId,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchId searchTry.vehicleVariant,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id searchTry.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchId driverPoolConfig.singleBatchProcessTime,
+          setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle

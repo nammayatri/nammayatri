@@ -32,7 +32,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequestForDriver as DSRD
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -42,8 +42,8 @@ data FlowStatus
   | ACTIVE
   | SILENT
   | GOT_SEARCH_REQUEST
-      { requestId :: Id DSRD.Search, -- TODO: deprecated, to be removed
-        searchTryId :: Id DSRD.Search,
+      { requestId :: Id DST.SearchTry, -- TODO: deprecated, to be removed
+        searchTryId :: Id DST.SearchTry,
         validTill :: UTCTime
       }
   | OFFERED_QUOTE

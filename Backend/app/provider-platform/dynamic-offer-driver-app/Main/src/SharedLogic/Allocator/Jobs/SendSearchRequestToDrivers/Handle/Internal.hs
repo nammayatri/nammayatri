@@ -24,7 +24,6 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
 where
 
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
@@ -76,7 +75,7 @@ setBatchDurationLock ::
   ( MonadFlow m,
     HedisFlow m r
   ) =>
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   Seconds ->
   m (Maybe UTCTime)
 setBatchDurationLock searchId singleBatchProcessTime = do

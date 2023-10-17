@@ -28,7 +28,6 @@ import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
-import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -71,17 +70,15 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   now <- getCurrentTime
-  let (searchId, vehVariant, searchTryId, searchReqTag, mbBookingId, startTime, singleBatchProcessTime) = case searchDetails of
+  let (searchTryId', vehVariant, searchReqTag, mbBookingId, startTime, singleBatchProcessTime) = case searchDetails of
         OnDemandSearchDetails {searchTry} -> do
-          let searchId' = cast @DST.SearchTry @DSRD.Search searchTry.id
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTime
-          (searchId', searchTry.vehicleVariant, Just searchTry.id, DSR.ON_DEMAND, Nothing, searchTry.startTime, singleBatchProcessTime')
-        RentalSearchDetails {booking} -> do
-          let searchId' = cast @DSR.SearchRequest @DSRD.Search searchReq.id
+          (searchTry.id, searchTry.vehicleVariant, DSR.ON_DEMAND, Nothing, searchTry.startTime, singleBatchProcessTime')
+        RentalSearchDetails {booking, searchTryId} -> do
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTimeRental
-          (searchId', booking.vehicleVariant, Nothing, DSR.RENTAL, Just booking.id, booking.startTime, singleBatchProcessTime')
+          (searchTryId, booking.vehicleVariant, DSR.RENTAL, Just booking.id, booking.startTime, singleBatchProcessTime')
   let validTill = fromIntegral singleBatchProcessTime `addUTCTime` now
-  batchNumber <- getPoolBatchNum searchId
+  batchNumber <- getPoolBatchNum searchTryId'
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   case searchDetails of
     OnDemandSearchDetails {searchTry} -> do
@@ -95,7 +92,7 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
             batchProcessTime = fromIntegral singleBatchProcessTime
           }
     RentalSearchDetails {} -> pure () -- FIXME do we need driverScoreEventHandler for rentals?
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill searchReqTag searchTryId mbBookingId startTime) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill searchReqTag searchTryId' mbBookingId startTime) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   case searchDetails of
     OnDemandSearchDetails {searchTry} -> do
@@ -107,7 +104,7 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
   _ <- QSRD.createMany searchRequestsForDrivers
 
   forM_ searchRequestsForDrivers $ \sReqFD -> do
-    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchId, searchTryId = searchId, validTill = sReqFD.searchRequestValidTill}
+    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId', searchTryId = searchTryId', validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
@@ -123,7 +120,7 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
       Int ->
       UTCTime ->
       DSR.SearchRequestTag ->
-      Maybe (Id DST.SearchTry) ->
+      Id DST.SearchTry ->
       Maybe (Id DB.Booking) ->
       UTCTime ->
       DriverPoolWithActualDistResult ->

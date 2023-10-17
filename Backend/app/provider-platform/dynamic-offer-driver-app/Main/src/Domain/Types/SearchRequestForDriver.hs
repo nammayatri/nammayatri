@@ -55,7 +55,7 @@ data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     requestId :: Id DSR.SearchRequest,
     searchRequestTag :: DSR.SearchRequestTag,
-    searchTryId :: Maybe (Id DST.SearchTry),
+    searchTryId :: Id DST.SearchTry,
     bookingId :: Maybe (Id DB.Booking), -- only for rental case
     merchantId :: Maybe (Id DM.Merchant),
     startTime :: UTCTime,
@@ -86,13 +86,10 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show, PrettyShow)
 
--- SearchTry for ON_DEMAND case, SearchRequest for RENTAL case
-data Search
-
 -- FIXME use Id Search
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Id Search, -- TODO: Deprecated, to be removed
-    searchTryId :: Id Search,
+  { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
+    searchTryId :: Id DST.SearchTry,
     searchRequestTag :: DSR.SearchRequestTag,
     bapName :: Maybe Text,
     bapLogo :: Maybe BaseUrl,
@@ -124,25 +121,24 @@ data SearchDetails
   = OnDemandSearchDetails
       {searchTry :: DST.SearchTry}
   | RentalSearchDetails
-      { booking :: DB.Booking
+      { searchTryId :: Id DST.SearchTry,
+        booking :: DB.Booking
       }
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> SearchDetails -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant = do
-  let (searchId, searchRequestTag, baseFare, customerExtraFee, distance, duration, newToLocation, specialLocationTag) = case searchDetails of
+  let (searchRequestTag, baseFare, customerExtraFee, distance, duration, newToLocation, specialLocationTag) = case searchDetails of
         OnDemandSearchDetails {searchTry} -> do
-          let searchId' = cast @DST.SearchTry @Search searchTry.id
-              distance' = searchRequest.searchRequestDetails.estimatedDistance
+          let distance' = searchRequest.searchRequestDetails.estimatedDistance
               newToLocation' = Just $ searchRequest.searchRequestDetails.toLocation
               specialLocationTag' = searchRequest.searchRequestDetails.specialLocationTag
-          (searchId', DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newToLocation', specialLocationTag')
+          (DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newToLocation', specialLocationTag')
         RentalSearchDetails {booking} -> do
-          let searchId' = cast @DSR.SearchRequest @Search nearbyReq.requestId
-              distance' = booking.estimatedDistance
-          (searchId', DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, Nothing, Nothing)
+          let distance' = booking.estimatedDistance
+          (DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, Nothing, Nothing)
   SearchRequestForDriverAPIEntity
-    { searchRequestId = searchId,
-      searchTryId = searchId,
+    { searchRequestId = nearbyReq.searchTryId,
+      searchTryId = nearbyReq.searchTryId,
       searchRequestTag,
       bapName = bapMetadata <&> (.name),
       bapLogo = bapMetadata <&> (.logoUrl),

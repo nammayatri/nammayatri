@@ -22,6 +22,7 @@ import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.SearchRequestForDriver as DSRD
+import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
@@ -347,7 +348,7 @@ notifyDriverClearedFare ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   Money ->
   Maybe FCM.FCMRecipientToken ->
   m ()
@@ -380,7 +381,7 @@ notifyOnCancelSearchRequest ::
   Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   m ()
 notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchTryId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)

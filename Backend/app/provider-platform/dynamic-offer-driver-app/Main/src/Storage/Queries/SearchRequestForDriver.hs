@@ -44,7 +44,7 @@ findAllActiveBySTId :: MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamSRFD.searchTryId $ Se.Eq (Just searchTryId),
+        [ Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId,
           Se.Is BeamSRFD.status $ Se.Eq Domain.Active
         ]
     ]
@@ -62,7 +62,7 @@ findAllActiveWithoutRespBySearchTryId :: MonadFlow m => Id SearchTry -> m [Searc
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
   findAllWithKV
     [ Se.And
-        ( [Se.Is BeamSRFD.searchTryId $ Se.Eq (Just searchTryId)]
+        ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
             <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
             <> [Se.Is BeamSRFD.response $ Se.Eq Nothing]
         )
@@ -82,7 +82,7 @@ findByDriverAndSearchTryId :: MonadFlow m => Id Person -> Id SearchTry -> m (May
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
-        ( [Se.Is BeamSRFD.searchTryId $ Se.Eq (Just searchTryId)]
+        ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
             <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
             <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
         )
@@ -115,11 +115,11 @@ deleteByDriverId (Id personId) = do
 
 setInactiveBySTId :: MonadFlow m => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = do
-  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq $ Just searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
   mapM_ (\s -> void $ L.runKVDB meshConfig.kvRedis $ L.srem (TE.encodeUtf8 $ BeamSRFD.searchReqestForDriverkey $ getId $ Domain.driverId s) [TE.encodeUtf8 $ getId $ Domain.id s]) srfds -- this will remove the key from redis
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
-    [Se.Is BeamSRFD.searchTryId (Se.Eq $ Just searchTryId)]
+    [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
 setInactiveBySRId :: MonadFlow m => Id SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = do
@@ -143,7 +143,7 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
           { id = Id id,
             requestId = Id requestId,
             searchRequestTag,
-            searchTryId = Id <$> searchTryId,
+            searchTryId = Id searchTryId,
             merchantId = Id <$> merchantId,
             bookingId = Id <$> bookingId,
             startTime = startTime,
@@ -179,7 +179,7 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
       { BeamSRFD.id = getId id,
         BeamSRFD.requestId = getId requestId,
         BeamSRFD.searchRequestTag = searchRequestTag,
-        BeamSRFD.searchTryId = getId <$> searchTryId,
+        BeamSRFD.searchTryId = getId searchTryId,
         BeamSRFD.merchantId = getId <$> merchantId,
         BeamSRFD.bookingId = getId <$> bookingId,
         BeamSRFD.startTime = startTime,

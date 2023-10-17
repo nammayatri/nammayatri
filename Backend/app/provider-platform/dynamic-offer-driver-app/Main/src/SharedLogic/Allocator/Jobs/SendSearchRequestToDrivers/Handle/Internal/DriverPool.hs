@@ -33,7 +33,7 @@ import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestForDriver as DSRD
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
@@ -58,14 +58,14 @@ isBatchNumExceedLimit ::
     CacheFlow m r
   ) =>
   DriverPoolConfig ->
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   m Bool
 isBatchNumExceedLimit driverPoolConfig searchId = do
   let maxNumberOfBatches = driverPoolConfig.maxNumberOfBatches
   currentBatchNum <- getPoolBatchNum searchId
   return $ currentBatchNum >= maxNumberOfBatches
 
-previouslyAttemptedDriversKey :: Id DSRD.Search -> Text
+previouslyAttemptedDriversKey :: Id DST.SearchTry -> Text
 previouslyAttemptedDriversKey searchId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchId.getId
 
 prepareDriverPoolBatch ::
@@ -79,7 +79,7 @@ prepareDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   DVeh.Variant ->
   PoolBatchNum ->
   GoHomeConfig ->
@@ -273,7 +273,7 @@ splitSilentDriversAndSortWithDistance drivers = do
 previouslyAttemptedDrivers ::
   ( Redis.HedisFlow m r
   ) =>
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
 previouslyAttemptedDrivers searchTryId = do
   Redis.withCrossAppRedis $
@@ -410,7 +410,7 @@ randomizeAndLimitSelection ::
   m [DriverPoolWithActualDistResult]
 randomizeAndLimitSelection = randomizeList
 
-poolBatchNumKey :: Id DSRD.Search -> Text
+poolBatchNumKey :: Id DST.SearchTry -> Text
 poolBatchNumKey searchId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchId.getId
 
 poolRadiusStepKey :: Id DSR.SearchRequest -> Text
@@ -439,7 +439,7 @@ getNextDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   DVeh.Variant ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
@@ -448,7 +448,7 @@ getNextDriverPoolBatch driverPoolConfig searchReq searchId vehicleVariant goHome
   incrementBatchNum searchId
   prepareDriverPoolBatch driverPoolConfig searchReq searchId vehicleVariant batchNum goHomeConfig
 
-getPoolBatchNum :: (Redis.HedisFlow m r) => Id DSRD.Search -> m PoolBatchNum
+getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchId = do
   res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchId)
   case res of
@@ -461,7 +461,7 @@ getPoolBatchNum searchId = do
 incrementBatchNum ::
   ( Redis.HedisFlow m r
   ) =>
-  Id DSRD.Search ->
+  Id DST.SearchTry ->
   m ()
 incrementBatchNum searchId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchId)
@@ -488,15 +488,15 @@ incrementPoolRadiusStep searchReqId = do
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
 
-driverRequestCountKey :: Id DSRD.Search -> Id Driver -> Text
+driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> Text
 driverRequestCountKey searchId driverId = "Driver-Request-Count-Key:SearchTryId-" <> searchId.getId <> ":DriverId-" <> driverId.getId
 
-checkRequestCount :: Redis.HedisFlow m r => Id DSRD.Search -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount :: Redis.HedisFlow m r => Id DST.SearchTry -> Id Driver -> DriverPoolConfig -> m Bool
 checkRequestCount searchId driverId driverPoolConfig =
   maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit)
     <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchId driverId))
 
-incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSRD.Search -> m ()
+incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DST.SearchTry -> m ()
 incrementDriverRequestCount finalPoolBatch searchId = do
   CM.mapM_
     ( \dpr ->

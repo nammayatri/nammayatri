@@ -37,7 +37,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
     requestId :: B.C f Text,
     searchRequestTag :: B.C f DSR.SearchRequestTag,
-    searchTryId :: B.C f (Maybe Text),
+    searchTryId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
     bookingId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
