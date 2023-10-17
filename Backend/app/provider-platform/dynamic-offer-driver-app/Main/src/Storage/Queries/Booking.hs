@@ -64,7 +64,6 @@ createBooking booking = do
       fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
       QLM.create fromLocationMap >> create booking
 
-
 findById :: MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
@@ -156,9 +155,10 @@ instance FromTType' BeamB.Booking Booking where
               fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
               fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
               return (fl, Nothing)
-        let bookingDetails = BookingDetailsRental {
-          rentalToLocation = tl
-         }
+        let bookingDetails =
+              BookingDetailsRental
+                { rentalToLocation = tl
+                }
         if isJust fp
           then
             pure $
@@ -221,11 +221,12 @@ instance FromTType' BeamB.Booking Booking where
               let toLocMap = maximumBy (comparing (.order)) toLocationMappings
               tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
               return (fl, tl)
-        let bookingDetails = BookingDetailsOnDemand {
-          specialLocationTag = specialLocationTag,
-          specialZoneOtpCode = specialZoneOtpCode,
-          toLocation = tl
-         }
+        let bookingDetails =
+              BookingDetailsOnDemand
+                { specialLocationTag = specialLocationTag,
+                  specialZoneOtpCode = specialZoneOtpCode,
+                  toLocation = tl
+                }
         if isJust fp
           then
             pure $
@@ -333,7 +334,6 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }
-
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location

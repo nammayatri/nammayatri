@@ -200,8 +200,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
                     toLocation = searchReq.searchRequestDetails.toLocation,
                     merchantId = searchReq.providerId
                   }
-            DSR.RENTAL -> pure []  -- RENTAL
-
+            DSR.RENTAL -> pure [] -- RENTAL
         calcDriverPool radiusStep = do
           let vehicleVariant = searchTry.vehicleVariant
               merchantId = searchReq.providerId

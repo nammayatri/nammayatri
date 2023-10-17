@@ -27,6 +27,7 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
+import Data.Time (localTimeToUTC, utc)
 import qualified Data.Time.Clock.POSIX as Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -36,8 +37,6 @@ import qualified Kernel.Types.Beckn.ReqTypes as API
 import Kernel.Utils.Example (Example (example))
 import qualified Kernel.Utils.SignatureAuth as S
 import System.Directory (removeFile)
-import Data.Time (localTimeToUTC, utc)
-
 
 data RequestForLoadTest = RequestForLoadTest
   { rawRequest :: !Text,
@@ -101,16 +100,17 @@ generateSearchRequest = do
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
                                   },
-                                  time = API.TimeTimestamp $ localTimeToUTC utc currentTime
+                              time = API.TimeTimestamp $ localTimeToUTC utc currentTime
                             },
-                        end = Just $
-                          API.StopInfo
-                            { location =
-                                API.Location
-                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
-                                    address = Nothing
-                                  }
-                            },
+                        end =
+                          Just $
+                            API.StopInfo
+                              { location =
+                                  API.Location
+                                    { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                      address = Nothing
+                                    }
+                              },
                         tags = Nothing,
                         customer = Nothing
                         -- API.Tags

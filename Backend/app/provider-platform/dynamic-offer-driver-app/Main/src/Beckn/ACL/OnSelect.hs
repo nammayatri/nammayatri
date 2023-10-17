@@ -84,9 +84,10 @@ mkFulfillment dReq quote = do
                 time = OS.TimeTimestamp dReq.now
               },
           end =
-            Just $ OS.StopInfo
-              { location = makeLocation toLocation
-              },
+            Just $
+              OS.StopInfo
+                { location = makeLocation toLocation
+                },
           vehicle =
             OS.Vehicle
               { category = castVariant quote.vehicleVariant

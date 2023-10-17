@@ -145,7 +145,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           ..
         }
     DSR.RENTAL ->
-        SearchRequestForDriverAPIEntity
+      SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
           bapName = bapMetadata <&> (.name),

@@ -32,6 +32,7 @@ import qualified Data.Time as Time
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import Domain.Types.DriverOnboarding.DriverRCAssociation
@@ -69,7 +70,6 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
 import Tools.Error
-import qualified Domain.Types.Booking as DBooking
 
 ---------------------------------------------------------------------
 rideList ::

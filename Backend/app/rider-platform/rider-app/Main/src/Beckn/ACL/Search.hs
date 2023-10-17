@@ -112,11 +112,13 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
           { location = mkLocation origin,
             time = Search.TimeTimestamp startTime
           }
-      endLocation = destination <&> (\dest ->
-        Search.StopInfo
-          { location = mkLocation dest
-          }
-        )
+      endLocation =
+        destination
+          <&> ( \dest ->
+                  Search.StopInfo
+                    { location = mkLocation dest
+                    }
+              )
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,

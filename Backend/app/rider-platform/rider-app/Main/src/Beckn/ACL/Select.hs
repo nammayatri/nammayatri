@@ -68,9 +68,10 @@ buildOrder res = do
                     time = Select.TimeTimestamp currentTime
                   },
               end =
-                Just $ Select.StopInfo
-                  { location = end
-                  },
+                Just $
+                  Select.StopInfo
+                    { location = end
+                    },
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
               _type = Select.RIDE

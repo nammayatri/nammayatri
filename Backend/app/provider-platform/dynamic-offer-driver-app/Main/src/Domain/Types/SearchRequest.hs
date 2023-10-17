@@ -22,23 +22,22 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Tools.Maps as Maps
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Tools.Maps as Maps
 
-
-data SearchRequestDetails =
-  SearchRequestDetailsOnDemand {
-      fromLocation :: DLoc.Location,
-      toLocation :: DLoc.Location,
-      estimatedDistance :: Meters,
-      estimatedDuration :: Seconds,
-      specialLocationTag :: Maybe Text,
-      autoAssignEnabled :: Maybe Bool
+data SearchRequestDetails
+  = SearchRequestDetailsOnDemand
+      { fromLocation :: DLoc.Location,
+        toLocation :: DLoc.Location,
+        estimatedDistance :: Meters,
+        estimatedDuration :: Seconds,
+        specialLocationTag :: Maybe Text,
+        autoAssignEnabled :: Maybe Bool
       }
-    | SearchRequestDetailsRental {
-        rentalFromLocation :: DLoc.Location
-       }
-    deriving (Generic,Show)
+  | SearchRequestDetailsRental
+      { rentalFromLocation :: DLoc.Location
+      }
+  deriving (Generic, Show)
 
 data SearchRequestTag = ON_DEMAND | RENTAL
   deriving stock (Show, Eq, Read, Ord, Generic)
@@ -62,4 +61,4 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime,
     tag :: SearchRequestTag
   }
-  deriving (Generic,Show)
+  deriving (Generic, Show)

@@ -5,7 +5,9 @@ module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
 where
 
 import qualified Data.HashMap.Strict as HashMap
+import Data.List (unzip7, zip7)
 import qualified Data.Maybe as Mb
+import qualified Domain.Types.Booking as DB
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -26,8 +28,6 @@ import qualified Storage.Queries.DriverQuote.Internal as Int
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
-import qualified Domain.Types.Booking as DB
-import Data.List (zip7, unzip7)
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -62,10 +62,13 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
   drivers' <- Int.getDrivers vehicles'
   driverQuote' <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers'
   bookingInfo' <- Int.getBookingInfo driverQuote'
-  let bookingLocationIds' = bookingInfo' <&> (\booking -> case booking.bookingDetails of
-        DB.BookingDetailsOnDemand {toLocation} -> Just toLocation.id
-        DB.BookingDetailsRental _ -> Nothing )
-  let (driverLocs, driverInfos, vehicles, drivers, driverQuote, bookingInfo, bookingLocationIds) = unzip7 $ map (\(a,b,c,d,e,f,g) -> (a,b,c,d,e,f,fromJust g)) $ filter (\(_,_,_,_,_,_,x) -> isJust x) $ zip7 driverLocs' driverInfos' vehicles' drivers' driverQuote' bookingInfo' bookingLocationIds'
+  let bookingLocationIds' =
+        bookingInfo'
+          <&> ( \booking -> case booking.bookingDetails of
+                  DB.BookingDetailsOnDemand {toLocation} -> Just toLocation.id
+                  DB.BookingDetailsRental _ -> Nothing
+              )
+  let (driverLocs, driverInfos, vehicles, drivers, driverQuote, bookingInfo, bookingLocationIds) = unzip7 $ map (\(a, b, c, d, e, f, g) -> (a, b, c, d, e, f, fromJust g)) $ filter (\(_, _, _, _, _, _, x) -> isJust x) $ zip7 driverLocs' driverInfos' vehicles' drivers' driverQuote' bookingInfo' bookingLocationIds'
   bookingLocation <- QL.getBookingLocs bookingLocationIds
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
