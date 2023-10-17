@@ -133,8 +133,7 @@ listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone
   customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildCustomerListItem customers
   let count = length items
-  totalCount <- runInReplica $ QP.countCustomers merchant.id
-  let summary = Common.Summary {totalCount, count}
+  let summary = Common.Summary {totalCount = 10000, count}
   pure Common.CustomerListRes {totalItems = count, summary, customers = items}
   where
     maxLimit = 20
