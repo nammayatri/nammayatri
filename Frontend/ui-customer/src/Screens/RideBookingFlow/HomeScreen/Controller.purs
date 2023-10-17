@@ -2217,7 +2217,9 @@ estimatesFlow estimatedQuotes state = do
                                   , vehicleVariant : ""
                                   }
                                   ,
-                      showPreferences = isTipEnabled state }
+                      showPreferences = isTipEnabled state,
+                      selectedEstimatesObject = estimatesInfo.defaultQuote
+                      }
             , props { estimateId = estimatesInfo.estimateId, currentStage = SettingPrice, showRateCardIcon = estimatesInfo.showRateCardIcon, zoneType = estimatesInfo.zoneType}
             }
   else do

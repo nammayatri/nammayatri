@@ -150,8 +150,8 @@ cancelAppConfig state = let
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
         imageUrl = if state.data.driverInfoCardState.distance <= 500
-                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near_auto" else "ny_ic_driver_near," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near"
-                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto,"  <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started_auto" else "ny_ic_driver_started," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started"
+                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near_auto.png" else "ny_ic_driver_near," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near.png"
+                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto,"  <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started_auto.png" else "ny_ic_driver_started," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
