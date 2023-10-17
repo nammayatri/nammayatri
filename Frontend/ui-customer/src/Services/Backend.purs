@@ -103,7 +103,7 @@ withAPIResult url f flow = do
 
             _ <- (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "") $> errResp
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
-            if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
+            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
                 _ <- liftFlow $ stopChatListenerService
@@ -130,7 +130,7 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "code" codeMessage
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             _ <- pure $ printLog "message" userMessage
-            if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
+            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore REGISTRATION_APPROVED
                 lift $ lift $ liftFlow $ stopChatListenerService
@@ -139,32 +139,6 @@ withAPIResultBT url f errorHandler flow = do
                         pure unit
                     else pure unit
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
-
-withAPIResultBT' url enableCache key f errorHandler flow = do
-    let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-    let end = getTime unit
-    _ <- pure $ printLog "withAPIResultBT' url" url
-    case resp of
-        Right res -> if enableCache then do
-                        _ <- pure $ setKeyInSharedPrefKeys key (toString (encode res))
-                        (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end 200  "SUCCESS" url "" "")) $> res
-                        else (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end 200  "SUCCESS" url "" "")) $> res
-        Left  (err) -> do
-            _ <- pure $ toggleBtnLoader "" false
-            _ <- pure $ printLog "Err Code" (err.code)
-            _ <- pure $ printLog "Err" err
-            let errResp = err.response
-            let codeMessage = decodeError errResp.errorMessage "errorCode"
-            _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeError errResp.errorMessage "errorMessage"
-
-            if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
-                deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore REGISTRATION_APPROVED
-                pure $ factoryResetApp ""
-                  else pure unit
-            (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
