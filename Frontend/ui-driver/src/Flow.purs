@@ -575,8 +575,7 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      
-
+      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -687,6 +686,7 @@ addVehicleDetailsflow addRcFromProf = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
+      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_  "logout"
       loginFlow
@@ -789,6 +789,7 @@ applicationSubmittedFlow screenType = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
+      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -827,6 +828,7 @@ driverProfileFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
+      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow

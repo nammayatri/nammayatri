@@ -258,12 +258,12 @@ popupModalConfig state = let
       },
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
-          Mb.Just SuccessPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
-          Mb.Just SwitchedPlan -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
-          Mb.Just FailedPopup -> "ny_failed,"
-          Mb.Just DuesClearedPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
-          Mb.Just CancelAutoPay -> "ny_ic_pause_autopay,"
-          Mb.Just PaymentSuccessPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+          Mb.Just SuccessPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
+          Mb.Just SwitchedPlan -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
+          Mb.Just FailedPopup -> "ny_failed," <> (HU.getAssetStoreLink FunctionCall) <> "ny_failed.png"
+          Mb.Just DuesClearedPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
+          Mb.Just CancelAutoPay -> "ny_ic_pause_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_pause_autopay.png"
+          Mb.Just PaymentSuccessPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
           Mb.Just SupportPopup -> ""
           Mb.Nothing -> ""
       , visibility = case state.props.popUpState of
@@ -355,7 +355,7 @@ confirmCancelPopupConfig state = let
       , margin = MarginLeft 12
       },
       coverImageConfig {
-        imageUrl = "ny_ic_pause_autopay,"
+        imageUrl = "ny_ic_pause_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_pause_autopay.png"
       , visibility = VISIBLE
       , width = V 265
       , height = V 265
