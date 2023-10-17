@@ -25,7 +25,6 @@ import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import Environment
 import EulerHS.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as C hiding (Offset)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
@@ -49,7 +48,7 @@ createOrUpdateDriverAvailability merchantId driverId lastAvailableTimeCacheKey (
             ..
           }
   Redis.setExp lastAvailableTimeCacheKey (lastAvailableTime, False) 28800 -- 8 hours
-  DB.runNoTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
+  Q.createOrUpdateDriverAvailability newAvailabilityEntry
   Redis.setExp lastAvailableTimeCacheKey (lastAvailableTime, True) 28800 -- 8 hours
 
 calculateAvailableTime :: T.MerchantId -> T.DriverId -> [UTCTime] -> Flow ()

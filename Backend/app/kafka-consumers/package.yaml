@@ -75,6 +75,13 @@ dependencies:
   - esqueleto
   - template-haskell
   - sessionizer-metrics
+  - unordered-containers
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - postgresql-simple
+  - sequelize
 
 ghc-options:
   - -Wall
