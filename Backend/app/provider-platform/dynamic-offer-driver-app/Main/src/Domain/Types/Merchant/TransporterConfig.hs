@@ -97,6 +97,7 @@ data TransporterConfigD u = TransporterConfig
     openMarketUnBlocked :: Bool,
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
+    rentalRequests :: Bool,
     ratingAsDecimal :: Bool
   }
   deriving (Generic, Show)

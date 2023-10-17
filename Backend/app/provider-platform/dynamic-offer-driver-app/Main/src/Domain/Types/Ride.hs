@@ -55,9 +55,9 @@ data SpecificRideDetails
   | RideDetailsRental
       { rentalToLocation :: Maybe DL.Location,
         odometerStartReadingImagePath :: Maybe Text,
-        odometerStartReading :: Maybe Int,
+        odometerStartReading :: Maybe Centesimal,
         odometerEndReadingImagePath :: Maybe Text,
-        odometerEndReading :: Maybe Int,
+        odometerEndReading :: Maybe Centesimal,
         endRideOtp :: Maybe Text
       }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
@@ -92,6 +92,15 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rideDetails :: SpecificRideDetails,
-    rideType :: RideType
+    rideType :: RideType,
+    driverDeviatedFromRoute :: Maybe Bool,
+    numberOfSnapToRoadCalls :: Maybe Int,
+    numberOfDeviation :: Maybe Bool,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal,
+    endRideOtp :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

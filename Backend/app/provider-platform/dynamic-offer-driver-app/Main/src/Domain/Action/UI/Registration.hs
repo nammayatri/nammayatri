@@ -198,7 +198,7 @@ createDriverDetails personId merchantId = do
             updatedAt = now,
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
-            optForRental = False
+            optForRental = transporterConfig.rentalRequests
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

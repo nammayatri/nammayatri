@@ -81,7 +81,7 @@ type API =
              :> MandatoryQueryParam "active" Bool
              :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
-             :<|> "setRental"
+             :<|> "enableRental"
                :> TokenAuth
                :> MandatoryQueryParam "flag" Bool -- add it in rental search
                :> Post '[JSON] APISuccess

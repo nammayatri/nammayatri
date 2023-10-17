@@ -19,6 +19,7 @@ module SharedLogic.FareCalculator
     fareSum,
     pureFareSum,
     CalculateFareParametersParams (..),
+    RentalRideParams (..),
     calculateFareParameters,
     isNightShift,
     timeZoneIST,
@@ -149,31 +150,39 @@ data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
     distance :: Meters,
     rideTime :: UTCTime,
-    endRideTime :: Maybe UTCTime,
     waitingTime :: Maybe Minutes,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
     nightShiftCharge :: Maybe Money,
-    rideStartTime :: Maybe UTCTime,
-    rideEndTime :: Maybe UTCTime,
-    actualDistance :: Maybe Int,
-    chargedDuration :: Int,
-    nightShiftOverlapChecking :: Maybe Bool,
-    now :: UTCTime
+    rentalRideParams :: Maybe RentalRideParams
+  }
+
+data RentalRideParams = RentalRideParams
+  { rideStartTime :: Maybe UTCTime,
+    rideEndTime :: UTCTime,
+    actualDistanceInKm :: Int,
+    chargedDurationInHr :: Int,
+    nightShiftOverlapChecking :: Bool,
+    timeDiffFromUtc :: Seconds
   }
 
 calculateFareParameters ::
-  (Log m, MonadGuid m, MonadThrow m) =>
+  (Log m, MonadGuid m, MonadThrow m, MonadTime m) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle variant " +|| params.farePolicy.vehicleVariant ||+ ""
   let fp = params.farePolicy
   id <- generateGUID
-  let isNightShiftChargeIncluded = case (params.rideEndTime, params.rideStartTime) of
-        (Just endTime, Just startTime) -> if params.nightShiftOverlapChecking == Just True then Just $ isNightAllowanceApplicable fp.nightShiftBounds (utctDay endTime) startTime params.now else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
-        _ -> Just False
-      (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+  now <- getCurrentTime
+  (rideStartTime, rideEndTime) <- case params.rentalRideParams of
+    Just params_ -> pure (params_.rideStartTime, Just params_.rideEndTime)
+    _ -> pure (Nothing, Nothing)
+  let timeDiffFromUtc = maybe 19800 (.timeDiffFromUtc) (params.rentalRideParams)
+  isNightShiftChargeIncluded <- case (rideEndTime, rideStartTime) of
+    (Just endTime, Just startTime) -> if maybe False (.nightShiftOverlapChecking) (params.rentalRideParams) then pure $ Just $ isNightAllowanceApplicable fp.nightShiftBounds endTime startTime now timeDiffFromUtc else pure $ isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
+    _ -> pure (Just False)
+  let (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
@@ -221,11 +230,12 @@ calculateFareParameters params = do
       DFP.RentalDetails det -> processFPRentalDetails det
 
     processFPRentalDetails DFP.FPRentalDetails {..} = do
-      let fareByTime = Money $ params.chargedDuration * perHourCharge.getMoney
-          extraKm = case params.actualDistance of
+      let chargedDuration = maybe 0 (.chargedDurationInHr) (params.rentalRideParams)
+          fareByTime = Money $ chargedDuration * perHourCharge.getMoney
+          extraKm = case (.actualDistanceInKm) <$> params.rentalRideParams of
             Nothing -> 0
-            Just dist -> dist - (params.chargedDuration * perHourFreeKms)
-          distanceBuffer = DFP.findFPRentalDetailsByDuration params.chargedDuration distanceBuffers
+            Just dist -> dist - (chargedDuration * perHourFreeKms)
+          distanceBuffer = DFP.findFPRentalDetailsByDuration chargedDuration distanceBuffers
           extraDistFare = if extraKm > distanceBuffer.bufferKms then Money (extraKm * perExtraKmRate.getMoney) else 0
       ( baseFare,
         nightShiftCharge,
@@ -340,16 +350,18 @@ isTimeWithinBounds startTime endTime time =
       (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
     else startTime < time && time < endTime
 
-isNightAllowanceApplicable :: Maybe DFP.NightShiftBounds -> Day -> UTCTime -> UTCTime -> Bool
-isNightAllowanceApplicable nightShiftBounds rideEndDate tripStartTime now = do
+isNightAllowanceApplicable :: Maybe DFP.NightShiftBounds -> UTCTime -> UTCTime -> UTCTime -> Seconds -> Bool
+isNightAllowanceApplicable nightShiftBounds tripEndTime tripStartTime now timeDiffFromUtc = do
+  let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
+      localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
   case nightShiftBounds of
     Nothing -> False
     Just bounds -> do
       let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
           nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
       if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
-        then isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 0
-        else isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now (-1) 0 || isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 1
+        then isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now 0 0
+        else isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now (-1) 0 || isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now 0 1
 
 isNightShiftOverlap :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
 isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now startAdd endAdd = do

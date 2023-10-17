@@ -614,7 +614,7 @@ createDriverDetails personId adminId merchantId = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             payerVpa = Nothing,
-            optForRental = False,
+            optForRental = transporterConfig.rentalRequests,
             lastEnabledOn = Just now,
             enabledAt = Just now,
             createdAt = now,
@@ -1218,13 +1218,7 @@ respondQuote (driverId, _) req = do
                       driverSelectedFare = mbOfferedFare,
                       customerExtraFee = searchTry.customerExtraFee,
                       nightShiftCharge = Nothing,
-                      endRideTime = Nothing,
-                      rideStartTime = Nothing,
-                      rideEndTime = Nothing,
-                      actualDistance = Nothing,
-                      chargedDuration = 0,
-                      nightShiftOverlapChecking = Just False,
-                      now = now
+                      rentalRideParams = Nothing
                     }
               driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
               triggerQuoteEvent QuoteEventData {quote = driverQuote}

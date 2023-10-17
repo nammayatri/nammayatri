@@ -113,7 +113,7 @@ type RideEndAPI =
 
 data EndRideReq = EndRideReq
   { point :: Maybe LatLong,
-    odometerEndReading :: Maybe Int,
+    odometerEndReading :: Maybe Centesimal,
     endRideOtp :: Maybe Text
   }
   deriving stock (Show, Generic)

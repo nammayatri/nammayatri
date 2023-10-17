@@ -364,7 +364,16 @@ otpRideCreate driver otpCode booking = do
             createdAt = now,
             updatedAt = now,
             rideDetails = rideDetails,
-            rideType = rideType
+            rideType = rideType,
+            driverDeviatedFromRoute = Nothing, -- FIX ME
+            numberOfSnapToRoadCalls = Nothing,
+            numberOfDeviation = Nothing,
+            uiDistanceCalculationWithAccuracy = Nothing,
+            uiDistanceCalculationWithoutAccuracy = Nothing,
+            driverGoHomeRequestId = Nothing,
+            odometerStartReading = Nothing,
+            odometerEndReading = Nothing,
+            endRideOtp = Nothing
           }
 
     buildTrackingUrl rideId = do

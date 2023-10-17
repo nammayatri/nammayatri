@@ -106,7 +106,7 @@ type API =
 data StartRideReq = StartRideReq
   { rideOtp :: Text,
     point :: LatLong,
-    odometerStartReading :: Maybe Int
+    odometerStartReading :: Maybe Centesimal
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -114,7 +114,7 @@ data EndRideReq = EndRideReq
   { point :: LatLong,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    odometerEndReading :: Maybe Int,
+    odometerEndReading :: Maybe Centesimal,
     endRideOtp :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

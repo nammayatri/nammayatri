@@ -302,13 +302,16 @@ handler transporter req quote = do
             createdAt = now,
             updatedAt = now,
             rideDetails = rideDetails,
-            rideType = rideType
-            -- driverDeviatedFromRoute = Just False,
-            -- numberOfSnapToRoadCalls = Nothing,
-            -- numberOfDeviation = Nothing,
-            -- uiDistanceCalculationWithAccuracy = Nothing,
-            -- uiDistanceCalculationWithoutAccuracy = Nothing,
-            -- driverGoHomeRequestId = ghrId
+            rideType = rideType,
+            driverDeviatedFromRoute = Just False,
+            numberOfSnapToRoadCalls = Nothing,
+            numberOfDeviation = Nothing,
+            uiDistanceCalculationWithAccuracy = Nothing,
+            uiDistanceCalculationWithoutAccuracy = Nothing,
+            driverGoHomeRequestId = _ghrId,
+            odometerEndReading = Nothing,
+            odometerStartReading = Nothing,
+            endRideOtp = Just endRideOtp
           }
 
     buildTrackingUrl rideId = do

@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+-- remove this after resolving comments
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Ride where
@@ -241,7 +243,7 @@ updateOdometerEndReadingImagePath rideId endReadingImage = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Centesimal -> m ()
 updateOdometerEndReading rideId meters = do
   now <- getCurrentTime
   updateOneWithKV
@@ -270,7 +272,7 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Centesimal -> m ()
 updateOdometerStartReading rideId reading = do
   now <- getCurrentTime
   updateOneWithKV
@@ -278,15 +280,6 @@ updateOdometerStartReading rideId reading = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-
--- updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m()
--- updateOdometerEndReading rideId reading = do
---   now <- getCurrentTime
---   updateOneWithKV
---     [ Se.Set BeamR.odometerEndReading reading,
---       Se.Set BeamR.updatedAt now
---     ]
---     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 updateStatusByIds :: MonadFlow m => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
@@ -587,6 +580,7 @@ instance FromTType' BeamR.Ride Ride where
                 fareParametersId = Id <$> fareParametersId,
                 trackingUrl = tUrl,
                 rideDetails = details,
+                driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
                 ..
               }
       RENTAL -> do
@@ -597,7 +591,7 @@ instance FromTType' BeamR.Ride Ride where
         tUrl <- parseBaseUrl trackingUrl
         let details =
               RideDetailsRental
-                { DRide.rentalToLocation = Nothing,
+                { DRide.rentalToLocation = Nothing, -- FIX ME: Why are these fields in both ride and rideDetails? Please remove redundancy
                   endRideOtp = endRideOtp,
                   odometerStartReading = odometerStartReading,
                   odometerEndReading = odometerEndReading,
@@ -617,6 +611,7 @@ instance FromTType' BeamR.Ride Ride where
                 fareParametersId = Id <$> fareParametersId,
                 trackingUrl = tUrl,
                 rideDetails = details,
+                driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
                 ..
               }
 
@@ -643,7 +638,7 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.tripEndLat = lat <$> tripEndPos,
             BeamR.tripStartLon = lon <$> tripStartPos,
             BeamR.tripEndLon = lon <$> tripEndPos,
-            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+            BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             BeamR.fareParametersId = getId <$> fareParametersId,
             BeamR.distanceCalculationFailed = distanceCalculationFailed,
             BeamR.createdAt = createdAt,
@@ -681,7 +676,7 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.tripEndLat = lat <$> tripEndPos,
             BeamR.tripStartLon = lon <$> tripStartPos,
             BeamR.tripEndLon = lon <$> tripEndPos,
-            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+            BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             BeamR.fareParametersId = getId <$> fareParametersId,
             BeamR.distanceCalculationFailed = distanceCalculationFailed,
             BeamR.createdAt = createdAt,

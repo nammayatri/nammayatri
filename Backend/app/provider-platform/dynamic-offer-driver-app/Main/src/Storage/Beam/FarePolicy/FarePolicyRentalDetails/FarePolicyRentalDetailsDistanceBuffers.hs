@@ -19,11 +19,12 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
+import Kernel.Utils.Time (Seconds)
 import Tools.Beam.UtilsTH
 
 data FarePolicyRentalDetailsDistanceBuffersT f = FarePolicyRentalDetailsDistanceBuffersT
   { farePolicyId :: B.C f Text,
-    rideDuration :: B.C f Int, -- TODO Later: Make diffTime
+    rideDuration :: B.C f Seconds,
     bufferKms :: B.C f Int
   }
   deriving (Generic, B.Beamable)

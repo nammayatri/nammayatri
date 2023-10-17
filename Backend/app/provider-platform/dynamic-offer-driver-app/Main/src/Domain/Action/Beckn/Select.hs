@@ -98,13 +98,7 @@ handler merchant sReq estimate = do
                   driverSelectedFare = Nothing,
                   customerExtraFee = sReq.customerExtraFee,
                   nightShiftCharge = Nothing,
-                  endRideTime = Nothing, -- Need to check this
-                  rideStartTime = Nothing,
-                  rideEndTime = Nothing,
-                  actualDistance = Nothing,
-                  chargedDuration = 0,
-                  nightShiftOverlapChecking = Nothing,
-                  now = now
+                  rentalRideParams = Nothing
                 }
           let estimatedFare = fareSum fareParams
               pureEstimatedFare = pureFareSum fareParams

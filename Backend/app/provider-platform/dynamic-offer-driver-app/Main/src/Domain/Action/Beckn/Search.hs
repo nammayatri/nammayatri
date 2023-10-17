@@ -215,17 +215,11 @@ handler merchant sReq' =
                       { farePolicy = farePolicy,
                         distance = result.distance,
                         rideTime = sReq.pickupTime,
-                        endRideTime = Nothing,
                         waitingTime = Nothing,
                         driverSelectedFare = Nothing,
                         customerExtraFee = Nothing,
                         nightShiftCharge = Nothing,
-                        rideStartTime = Nothing,
-                        rideEndTime = Nothing,
-                        actualDistance = Nothing,
-                        chargedDuration = 0,
-                        nightShiftOverlapChecking = Nothing,
-                        now = now
+                        rentalRideParams = Nothing
                       }
                 buildSpecialZoneQuote
                   searchRequestSpecialZone
@@ -271,17 +265,11 @@ handler merchant sReq' =
                   { farePolicy = farePolicy,
                     distance = rentalslab.startDistance,
                     rideTime = sReq.pickupTime,
-                    endRideTime = Nothing,
                     waitingTime = Nothing,
                     driverSelectedFare = Nothing,
                     customerExtraFee = Nothing,
-                    nightShiftCharge = Nothing, -- Params below me are for rentals
-                    rideStartTime = Nothing,
-                    rideEndTime = Nothing,
-                    actualDistance = Nothing,
-                    chargedDuration = 0,
-                    nightShiftOverlapChecking = Nothing,
-                    now = now
+                    nightShiftCharge = Nothing,
+                    rentalRideParams = Nothing
                   }
             buildRentalQuote
               rentalSearchReq
@@ -289,22 +277,20 @@ handler merchant sReq' =
               merchant.id
               rentalslab.startDistance
               farePolicy.vehicleVariant
-              (maybe (Seconds 1000) Seconds rentalslab.maxDuration)
-        -- let z = concat listOfRentalQuotes
+              (Seconds 1000) -- FIX ME: use correct table
+              -- let z = concat listOfRentalQuotes
         for_ listOfRentalQuotes QQuoteRental.create
         return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuotes), Nothing)
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
   where
-    listAllTheRentalSlabs farePolicies =
-      concat $
-        map
-          ( \farepolicy -> case farepolicy.farePolicyDetails of
-              FarePolicyD.SlabsDetails det -> map (\slab -> (slab, farepolicy)) (toList det.slabs)
-              _ -> []
-          )
-          farePolicies
+    listAllTheRentalSlabs =
+      concatMap
+        ( \farepolicy -> case farepolicy.farePolicyDetails of
+            FarePolicyD.SlabsDetails det -> map (,farepolicy) (toList det.slabs)
+            _ -> []
+        )
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do

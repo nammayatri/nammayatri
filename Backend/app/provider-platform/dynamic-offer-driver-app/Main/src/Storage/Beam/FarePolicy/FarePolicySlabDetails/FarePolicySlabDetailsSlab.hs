@@ -33,11 +33,7 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
     platformFeeSgst :: B.C f (Maybe Double),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
-    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge),
-    maxDuration :: B.C f (Maybe Int),
-    maxDistanceBuffer :: B.C f (Maybe Int),
-    perExtraKmFare :: B.C f (Maybe Int),
-    perExtraMinFare :: B.C f (Maybe Int)
+    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
 

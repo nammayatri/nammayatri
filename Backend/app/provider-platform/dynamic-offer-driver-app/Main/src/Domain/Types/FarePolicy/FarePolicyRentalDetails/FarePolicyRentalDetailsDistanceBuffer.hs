@@ -18,9 +18,10 @@ import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Domain.Types.Common
 import Kernel.Prelude
+import Kernel.Utils.Common (Seconds)
 
 data FPRentalDetailsDistanceBuffersD (s :: UsageSafety) = FPRentalDetailsDistanceBuffers
-  { rideDuration :: Int,
+  { rideDuration :: Seconds,
     bufferKms :: Int
   }
   deriving (Generic, Show, Eq, ToSchema)
@@ -33,7 +34,7 @@ instance ToJSON (FPRentalDetailsDistanceBuffersD 'Unsafe)
 
 findFPRentalDetailsByDuration :: Int -> NonEmpty (FPRentalDetailsDistanceBuffersD s) -> FPRentalDetailsDistanceBuffersD s
 findFPRentalDetailsByDuration duration slabList = do
-  case NE.filter (\slab -> slab.rideDuration <= duration) $ NE.sortBy (comparing (.rideDuration)) slabList of
+  case NE.filter (\slab -> slab.rideDuration.getSeconds <= duration) $ NE.sortBy (comparing (.rideDuration)) slabList of
     [] -> error $ "Slab for duration = " <> show duration <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
 
@@ -42,7 +43,7 @@ findFPRentalDetailsByDuration duration slabList = do
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPRentalDetailsDistanceBuffersAPIEntity = FPRentalDetailsDistanceBuffersAPIEntity
-  { rideDuration :: Int,
+  { rideDuration :: Seconds,
     bufferKms :: Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
