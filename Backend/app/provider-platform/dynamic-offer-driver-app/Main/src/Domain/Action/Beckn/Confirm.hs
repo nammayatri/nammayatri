@@ -306,7 +306,7 @@ handler transporter req validateRes = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking _ghrId _ otp = do
+    buildRide driverId booking ghrId _ otp = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
@@ -317,8 +317,8 @@ handler transporter req validateRes = do
               ( DRide.ON_DEMAND,
                 DRide.RideDetailsOnDemand
                   { toLocation = toLocation,
-                    driverGoHomeRequestId = Nothing,
-                    driverDeviatedFromRoute = Nothing,
+                    driverGoHomeRequestId = ghrId,
+                    driverDeviatedFromRoute = Just False,
                     numberOfSnapToRoadCalls = Nothing,
                     numberOfDeviation = Nothing,
                     uiDistanceCalculationWithAccuracy = Nothing,

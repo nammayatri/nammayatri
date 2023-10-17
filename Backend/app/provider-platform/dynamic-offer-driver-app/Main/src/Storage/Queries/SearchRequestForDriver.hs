@@ -68,11 +68,31 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
+findAllActiveWithoutRespBySearchRequestId :: MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchRequestId (Id searchRequestId) =
+  findAllWithKV
+    [ Se.And
+        ( [Se.Is BeamSRFD.requestId $ Se.Eq searchRequestId]
+            <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+            <> [Se.Is BeamSRFD.response $ Se.Eq Nothing]
+        )
+    ]
+
 findByDriverAndSearchTryId :: MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
         ( [Se.Is BeamSRFD.searchTryId $ Se.Eq (Just searchTryId)]
+            <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+            <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
+        )
+    ]
+
+findByDriverAndSearchRequestId :: MonadFlow m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchRequestId (Id driverId) (Id searchRequestId) =
+  findOneWithKV
+    [ Se.And
+        ( [Se.Is BeamSRFD.requestId $ Se.Eq searchRequestId]
             <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
             <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
         )
