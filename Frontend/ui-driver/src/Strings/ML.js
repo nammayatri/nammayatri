@@ -880,5 +880,17 @@ const mlStrings = {
   ECONOMICAL : "സാമ്പത്തിക",
 	SPACIOUS : "വിശാലമായത്",
 	COMFY : "സുഖപ്രദമായ",
-	PEOPLE : "പേർ"
+	PEOPLE : "പേർ",
+  DURATION : "ദൈർഘ്യം",
+  START_TIME : "ആരംഭ സമയം",
+  START_ODO_READING : "ആരംഭ ഓഡോ റീഡിംഗ്",
+  RIDE_START : "സവാരി ആരംഭിക്കുക",
+  RIDE_END : "സവാരി അവസാനം",
+  RIDE_STARTED_AT : "സവാരി ആരംഭിച്ചത്",
+  RIDE_ENDED_AT : "സവാരി അവസാനിച്ചത്",
+  ODOMETER_READING : "ഓഡോമീറ്റർ വായന",
+  PICKED_UP_AT : "പിക്കപ്പ് സമയമാണ്",
+  RIDE_TIME : "സവാരി സമയം",
+  YOU_ARE_ON_A_RENTAL_RIDE : "നിങ്ങൾ ഒരു റെന്റൽ റൈഡിൽ ഉണ്ട്",
+  ENTER_END_RIDE_OTP : "റൈഡ് അവസാനിപ്പിക്കുക ഓടിപി നൽകുക"
 }

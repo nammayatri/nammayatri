@@ -222,7 +222,7 @@ view push state =
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
-      , if state.props.enterOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
+      , if state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView

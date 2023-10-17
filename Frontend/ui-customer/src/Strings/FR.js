@@ -504,11 +504,17 @@ export function getStringValue(key) {
     "SENT_OTP_VIA_WHATSAPP" : "OTP envoyé par WhatsApp", 
     "SENT_OTP_VIA_SMS" : "OTP envoyé par SMS",
     "ENABLE_LOCATION_PERMISSION_TO": "Activer l'autorisation de localisation pour rechercher des courses",
-   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets.",
-   "AC_CAB" : "Cabine AC",
-   "AC_SUV" : "SUV climatisé",
-   "RIDE_TYPE" : "Type de trajet",
+    "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets.",
+    "AC_CAB" : "Cabine AC",
+    "AC_SUV" : "SUV climatisé",
+    "RIDE_TYPE" : "Type de trajet",
     "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation pour Namma Yatri depuis l'application des paramètres pour commencer à rechercher des trajets.",
     "ERNAKULAM_LIMIT_CHARGE" : "Le tarif sera de 1.5 x si la prise en charge ou la destination se situe en dehors des limites de la société Ernakulam",
-    "SELECT_LOCATION_ON_MAP" : "sélectionner l'emplacement sur la carte"
+    "SELECT_LOCATION_ON_MAP" : "sélectionner l'emplacement sur la carte",
+    "RIDE_TIME" : "Temps de trajet",
+    "RIDE_DURATION" : "Durée du trajet",
+    "RIDE_START" : "Début du trajet",
+    "RIDE_STARTED_AT" : "Début du trajet à",
+    "RIDE_END" : "Fin du trajet",
+    "RIDE_ENDED_AT" : "Fin du trajet à"
   }

@@ -939,6 +939,18 @@ const englishStrings = {
   WHAT_ARE_PURPLE_RIDES : "What are Purple Rides?",
   ECONOMICAL : "Economical",
   SPACIOUS : "Spacious",
+  START_ODO_READING : "Start ODO Reading",
   COMFY : "Comfy",
-  PEOPLE : "people"
+  PEOPLE : "people",
+  DURATION : "Duration",
+  RIDE_TIME : "Ride Time",
+  RIDE_START : "Ride Start",
+  RIDE_END : "Ride End",
+  RIDE_STARTED_AT : "Ride Started at",
+  RIDE_ENDED_AT : "Ride Ended at",
+  ODOMETER_READING : "Odometer Reading",
+  START_TIME : "Start Time",
+  PICKED_UP_AT : "Picked up at",
+  YOU_ARE_ON_A_RENTAL_RIDE : "You are on a rental ride",
+  ENTER_END_RIDE_OTP : "Enter end ride OTP"
 } 

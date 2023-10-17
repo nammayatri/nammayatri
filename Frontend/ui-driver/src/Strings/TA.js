@@ -911,5 +911,17 @@ const tamilStrings = {
   ECONOMICAL: "பொருளாதாரம்",
   SPACIOUS: "விசாலமான",
   COMFY: "வசதியான",
-  PEOPLE: "மக்கள்"
+  PEOPLE: "மக்கள்",
+  DURATION : "காலம்",
+  START_TIME : "தொடக்க நேரம்",
+  START_ODO_READING : "தொடக்க ஓடோ வாசிப்பு",
+  RIDE_TIME : "சவாரி நேரம்",
+  RIDE_START : "சவாரி தொடக்கம்",
+  RIDE_END : "சவாரி முடிவு",
+  RIDE_STARTED_AT : "சவாரி தொடக்கம்",
+  RIDE_ENDED_AT : "சவாரி முடிவு",
+  ODOMETER_READING : "ஓடோ வாசிப்பு",
+  PICKED_UP_AT : "பிக் அப் நேரம்",
+  YOU_ARE_ON_A_RENTAL_RIDE : "நீங்கள் வாடகை சவாரியில் உள்ளீர்கள்",
+  ENTER_END_RIDE_OTP : "சவாரி முடிவு OTP ஐ உள்ளிடவும்"
 }

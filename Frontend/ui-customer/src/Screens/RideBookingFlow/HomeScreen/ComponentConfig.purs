@@ -1156,6 +1156,14 @@ rideCompletedCardConfig state = let
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true
         },
+        strings {
+          rideTime = (getString RIDE_TIME),
+          rideDistance = (getString RIDE_DISTANCE),
+          rideStart = (getString RIDE_START),
+          rideStartedAt = (getString RIDE_STARTED_AT),
+          rideEnd = (getString RIDE_END), 
+          rideEndedAt = (getString RIDE_ENDED_AT)
+        },
         primaryButtonConfig = skipButtonConfig state
       }
   in config'

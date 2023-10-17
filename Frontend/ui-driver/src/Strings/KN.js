@@ -912,5 +912,17 @@ const kannadaStrings = {
   ECONOMICAL : "ಆರ್ಥಿಕ",
 	SPACIOUS : "ವಿಶಾಲವಾದ",
 	COMFY : "ಆರಾಮದಾಯಕ",
-	PEOPLE : "ಜನರು"
+	PEOPLE : "ಜನರು",
+  DURATION : "ಅವಧಿ",
+  START_TIME : "ಪ್ರಾರಂಭ ಸಮಯ",
+  START_ODO_READING : "ಪ್ರಾರಂಭ ಓಡೋ ಓದುವುದು",
+  RIDE_TIME : "ಸವಾರಿ ಸಮಯ",
+	RIDE_START : "ಸವಾರಿ ಪ್ರಾರಂಭ",
+  RIDE_END : "ಸವಾರಿ ಅಂತ್ಯ",
+  RIDE_STARTED_AT : "ನಲ್ಲಿ ಸವಾರಿ ಪ್ರಾರಂಭವಾಯಿತು",
+  RIDE_ENDED_AT : "ನಲ್ಲಿ ಸವಾರಿ ಕೊನೆಗೊಂಡಿತು",
+  ODOMETER_READING : "ಓಡೋಮೀಟರ್ ಓದುವಿಕೆ",
+  PICKED_UP_AT : "ಪಿಕ್ ಅಪ್ ಸಮಯ",
+  YOU_ARE_ON_A_RENTAL_RIDE : "ನೀವು ರೆಂಟಲ್ ಸವಾರಿಯಲ್ಲಿದ್ದೀರಿ",
+  ENTER_END_RIDE_OTP : "ಸವಾರಿ ಮುಗಿಸಲು ಒಟಿಪಿ ನಮೂದಿಸಿ"
 }

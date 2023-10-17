@@ -638,5 +638,11 @@ const bengaliStrings = {
   "AC_SUV" : "এসি এসইউভি",
   "RIDE_TYPE" : "রাইড টাইপ",
   "ERNAKULAM_LIMIT_CHARGE": "পিকআপ বা গন্তব্য যদি এর্নাকুলাম কর্পোরেশনের সীমার বাইরে থাকে তবে ভাড়া 1.5x হবে",
-  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন"
+  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন",
+  "RIDE_TIME" : "রাইড সময়",
+  "RIDE_DURATION" : "রাইড সময়",
+  "RIDE_START" : "রাইড শুরু",
+  "RIDE_STARTED_AT" : "রাইড শুরু হয়েছে",
+  "RIDE_END" : "রাইড শেষ",
+  "RIDE_ENDED_AT" : "রাইড শেষ হয়েছে"
 }

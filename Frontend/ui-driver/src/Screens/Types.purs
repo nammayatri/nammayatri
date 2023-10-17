@@ -774,7 +774,8 @@ type HomeScreenData =  {
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
-  peekHeight :: Int
+  peekHeight :: Int,
+  odometerReading :: OdometerReading
 }
 
 type EndRideData = {
@@ -885,7 +886,7 @@ type ActiveRide = {
   rideType :: RideType
 }
 
-data RideType = SPECIAL_ZONE_BOOKING | NORMAL_BOOKING | RENTAL_BOOKING
+data RideType = NORMAL_BOOKING | RENTAL_BOOKING
 
 derive instance genericRideType :: Generic RideType _
 instance showRideType :: Show RideType where show = genericShow
@@ -899,6 +900,7 @@ type HomeScreenProps =  {
   enterOtpModal :: Boolean,
   endRideOtpModal :: Boolean,
   rideOtp :: String,
+  odometerValueInKm :: String,
   editedOdometerValue :: String,
   odometerValue :: String,
   enterOdometerReadingModal :: Boolean,
@@ -943,8 +945,19 @@ type HomeScreenProps =  {
   showRideRating :: Boolean,
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
-  showGenericAccessibilityPopUp :: Boolean
+  showGenericAccessibilityPopUp :: Boolean,
+  odometerConfig :: OdometerConfig
  }
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
+}
+
+type OdometerReading = {
+  valueInM :: String,
+  valueInkm :: String
+}
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 

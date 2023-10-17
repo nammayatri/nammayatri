@@ -501,22 +501,22 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = co
     -- exit exitState
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continueWithCmd state  [ pure UploadImage] -- make api call
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
-  _ <- pure $ spy "Inside InAppKeyboardModalOdometerAction" (show key <> "index : " <> ( show index))
-  _ <- pure $ spy "Odometer value" (length state.props.editedOdometerValue)
-  if length state.props.editedOdometerValue >=5 then continue state
-    else do
-      let 
-        editedOdometerValue = state.props.editedOdometerValue <> key
-        odometerVal = (joinWith "" (Array.replicate (6 - (length editedOdometerValue +1)) "0")) <> editedOdometerValue
-      _ <- pure $ spy "OdometerValue" ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal))
-      continue state{props{odometerValue = ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal)), editedOdometerValue = editedOdometerValue }}
+  let kmStrLen = length state.data.odometerReading.valueInkm 
+      mStrLen = length state.data.odometerReading.valueInM 
+  if(state.props.odometerConfig.updateKm && kmStrLen >= 6  || state.props.odometerConfig.updateM && mStrLen >= 3) then continue state
+    else  
+      continue state{props{odometerValueInKm = if state.props.odometerConfig.updateKm then state.props.odometerValueInKm <> key else state.props.odometerValueInKm}
+                      , data {odometerReading {valueInM = (if (not state.props.odometerConfig.updateKm) then (state.data.odometerReading.valueInM <> key) else (state.data.odometerReading.valueInM )), valueInkm = if (state.props.odometerConfig.updateKm) then (state.data.odometerReading.valueInkm <> key) else state.data.odometerReading.valueInkm }}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnTextViewClick str)) state = 
+  continue state{props{odometerConfig {updateKm = (str == "Km") , updateM = (str == "m")}}}
 
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
-  let 
-    text = state.props.editedOdometerValue 
-    editedOdometerValue = if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" 
-    odometerVal = (joinWith "" (Array.replicate (6 - (length editedOdometerValue + 1)) "0")) <> editedOdometerValue
-  continue state { props{ odometerValue = ((take 4 odometerVal) <> "•" <> (drop 4 odometerVal)), editedOdometerValue = editedOdometerValue } }
+  if (state.props.odometerConfig.updateKm) then 
+    continue state{data{odometerReading{valueInkm = (if length state.data.odometerReading.valueInkm > 0 then (take (length state.data.odometerReading.valueInkm - 1) state.data.odometerReading.valueInkm) else "")}}}
+    else if (state.props.odometerConfig.updateM) then 
+      continue state{data{odometerReading{valueInM = (if length state.data.odometerReading.valueInM > 0 then (take (length state.data.odometerReading.valueInM - 1) state.data.odometerReading.valueInM) else "")}}}
+      else continue state
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do

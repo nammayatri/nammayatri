@@ -741,5 +741,11 @@ const frenchStrings = {
   ECONOMICAL : "Économique",
 	SPACIOUS : "Spacieux",
 	COMFY : "Confortable",
-	PEOPLE : "personnes"
+	PEOPLE : "personnes",
+  DURATION : "Durée",
+  START_TIME : "Heure de début",
+  START_ODO_READING : "Lecture de début ODO",
+  PICKED_UP_AT : "L'heure de prise en charge est",
+  YOU_ARE_ON_A_RENTAL_RIDE : "Vous êtes sur un trajet de location",
+  ENTER_END_RIDE_OTP : "Entrez le OTP de fin de trajet"
 }

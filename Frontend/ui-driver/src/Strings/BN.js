@@ -932,5 +932,18 @@ const bengaliStrings = {
 	ECONOMICAL : "অর্থনৈতিক",
 	SPACIOUS : "প্রশস্ত",
 	COMFY : "আরামদায়ক",
-	PEOPLE : "মানুষ"
+	PEOPLE : "মানুষ",
+	DURATION : "সময়কাল",
+	START_RIDE : "রাইড শুরু করুন",
+	START_ODO_READING : "শুরুর ওডো পঠন",
+	START_TIME : "শুরুর সময়",
+	RIDE_TIME : "রাইড সময়",
+	RIDE_START : "যাত্রা শুরু",
+  RIDE_END : "রাইড শেষ",
+  RIDE_STARTED_AT : "যাত্রা শুরু হল",
+  RIDE_ENDED_AT : "রাইড শেষ হয়েছে এ",
+  ODOMETER_READING : "দূরত্বমাপণী পড়া",
+	PICKED_UP_AT : "পিক আপ সময় হল",
+	YOU_ARE_ON_A_RENTAL_RIDE : "আপনি একটি ভাড়া রাইডে আছেন",
+	ENTER_END_RIDE_OTP : "শেষ রাইড ওটিপি প্রবেশ করুন"
 }

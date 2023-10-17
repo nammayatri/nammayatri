@@ -125,6 +125,10 @@ initData = {
           feedback : "",
           disability : Nothing,
           payerVpa : ""
+        },
+        odometerReading : {
+          valueInkm : "",
+          valueInM : ""
         }
     
     },
@@ -138,6 +142,7 @@ initData = {
         enterOtpModal : false,
         endRideOtpModal : false,
         odometerValue : "0000•0",
+        odometerValueInKm : "",
         editedOdometerValue : "",
         enterOdometerReadingModal : false,
         endRideOdometerReadingModal : false,
@@ -152,7 +157,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : false,
-        currentStage : RideStarted,
+        currentStage : HomeScreen,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,
@@ -180,7 +185,11 @@ initData = {
         showContactSupportPopUp : false,
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
-        showGenericAccessibilityPopUp : false
+        showGenericAccessibilityPopUp : false,
+        odometerConfig : {
+            updateKm : true,
+            updateM : false
+        }
     }
 }
 

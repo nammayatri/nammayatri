@@ -160,6 +160,9 @@ data STR = LETS_GET_STARTED
         | ONLINE_
         | GO_ONLINE_POPUP
         | DISTANCE
+        | DURATION
+        | START_TIME 
+        | START_ODO_READING
         | REPORT_AN_ISSUE
         | TIME_TAKEN
         | MAPS
@@ -953,6 +956,15 @@ data STR = LETS_GET_STARTED
         | SPACIOUS
         | COMFY
         | PEOPLE
+        | RIDE_START
+        | RIDE_END 
+        | RIDE_STARTED_AT 
+        | RIDE_ENDED_AT
+        | ODOMETER_READING
+        | PICKED_UP_AT
+        | RIDE_TIME
+        | YOU_ARE_ON_A_RENTAL_RIDE
+        | ENTER_END_RIDE_OTP
 
 
 getStringFromEnum :: STR -> String
@@ -1900,3 +1912,15 @@ getStringFromEnum key = case key of
     SPACIOUS -> "SPACIOUS"
     COMFY -> "COMFY"
     PEOPLE -> "PEOPLE"
+    DURATION -> "DURATION"
+    START_TIME -> "START_TIME"
+    START_ODO_READING -> "START_ODO_READING"
+    RIDE_TIME -> "RIDE_TIME"
+    RIDE_START -> "RIDE_START"
+    RIDE_END -> "RIDE_END"
+    RIDE_STARTED_AT -> "RIDE_STARTED_AT"
+    RIDE_ENDED_AT -> "RIDE_ENDED_AT"
+    ODOMETER_READING -> "ODOMETER_READING"
+    PICKED_UP_AT -> "PICKED_UP_AT"
+    YOU_ARE_ON_A_RENTAL_RIDE -> "YOU_ARE_ON_A_RENTAL_RIDE"
+    ENTER_END_RIDE_OTP -> "ENTER_END_RIDE_OTP"

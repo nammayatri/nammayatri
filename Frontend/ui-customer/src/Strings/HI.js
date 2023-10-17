@@ -622,5 +622,11 @@ const hindiStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी भेजा गया है", 
   "SENT_OTP_VIA_SMS" : "ओटीपी एसएमएस के माध्यम से भेजा गया है",
   "ERNAKULAM_LIMIT_CHARGE": "यदि पिकअप या गंतव्य एर्नाकुलम निगम सीमा के बाहर है तो किराया 1.5 गुना होगा",
-  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें"
+  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें",
+  "RIDE_TIME" : "सवारी का समय",
+  "RIDE_DURATION" : "सवारी की अवधि",
+  "RIDE_START" : "सवारी शुरू",
+  "RIDE_STARTED_AT" : "सवारी शुरू हुई",
+  "RIDE_END" : "सवारी समाप्त",
+  "RIDE_ENDED_AT" : "सवारी समाप्त हुई"
 }
