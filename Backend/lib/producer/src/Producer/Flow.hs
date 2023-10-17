@@ -73,11 +73,14 @@ runReviver :: Flow ()
 runReviver = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
-  let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
-      shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getSeconds) == 0
-  if shouldRunReviver
-    then Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
-    else threadDelayMilliSec 5000
+  let minutesTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 60000000000000
+      shouldRunReviver = minutesTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
+  logDebug $ "Reviver is ** " <> show minutesTillNow
+  logDebug $ "Reviver is ** 2" <> show shouldRunReviver
+  logDebug $ "Reviver is ** 3" <> show reviverInterval.getMinutes
+  logDebug ("Reviver is ** 4" <> show (minutesTillNow `mod` (fromIntegral reviverInterval.getMinutes)))
+  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
+  threadDelayMilliSec 60000
 
 runReviver' :: Flow ()
 runReviver' = do

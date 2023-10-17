@@ -75,7 +75,7 @@ in  { hedisCfg
     , reviveThreshold = +3600
     , schedulerType = common.schedulerType.DbBased
     , maxShards = +5
-    , metricsPort = +9990
+    , metricsPort = +9999
     , tables
     , runReviver = True
     }
