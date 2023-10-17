@@ -101,9 +101,9 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq booking merchant driverEx
           isReceivedMaxDriverQuotes = pure $ booking.status /= DB.SCHEDULED,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchId booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
-          getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchId driverPoolConfig.singleBatchProcessTime,
-          createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
+          getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
+          setBatchDurationLock = I.setBatchDurationLock searchId driverPoolConfig.singleBatchProcessTimeRental,
+          createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
           metrics =
             MetricsHandle
               { incrementTaskCounter = Metrics.incrementTaskCounter merchant.name,
