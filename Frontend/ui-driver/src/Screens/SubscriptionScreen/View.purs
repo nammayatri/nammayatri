@@ -247,7 +247,7 @@ joinPlanView push state visibility' =
           [ width $ V 116
           , height $ V 368
           , margin $ MarginTop 20
-          , imageWithFallback "ny_ic_ny_driver,"
+          , imageWithFallback $ "ny_ic_ny_driver," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_ny_driver.png"
           ]
         , enjoyBenefitsView push state
         , plansBottomView push state
@@ -402,7 +402,7 @@ plansBottomView push state =
             ][ imageView
                 [ width $ V 85
                 , height $ V 20
-                , imageWithFallback "ny_ic_upi_autopay,"
+                , imageWithFallback $ "ny_ic_upi_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_upi_autopay.png"
                 ]
             ]
           ]
@@ -634,7 +634,7 @@ myPlanBodyview push state =
     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
     , planCardView push state.data.myPlanData.planEntity (state.data.myPlanData.planEntity.isSelected || not state.data.config.enableSubscriptionPopups) (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false
     , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && state.data.myPlanData.planEntity.title == getString DAILY_UNLIMITED) false state.props.offerBannerProps
-    , alertView push (getImageURL "ny_ic_about,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_about.png") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
+    , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ HU.getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil false isFreezed
@@ -904,7 +904,7 @@ alertView push image primaryColor title description buttonText action visible is
       , onClick push $ const RefreshPage
       , visibility if showRefresh then VISIBLE else GONE
    ][ imageView [
-        imageWithFallback "ny_ic_refresh"
+        imageWithFallback $ getImageURL "ny_ic_refresh"
         , height $ V 16
         , width $ V 16
       ]
@@ -1271,7 +1271,7 @@ autoPayPGView push state =
               , gravity CENTER_VERTICAL
               ][ commonTV push "UPI Autopay" Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT true
                , imageView
-                  [ imageWithFallback "ny_ic_upi_logo,"
+                  [ imageWithFallback $ "ny_ic_upi_logo," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_upi_logo.png"
                   , height $ V 14
                   , width $ V 14
                   ]
@@ -1315,7 +1315,7 @@ errorView push state =
       , clickable true
       , gravity CENTER
       ][ imageView
-          [ imageWithFallback "ny_ic_api_failed,"
+          [ imageWithFallback $ "ny_ic_api_failed," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_api_failed.png"
           , height $ V 180
           , width $ V 280
           ]
