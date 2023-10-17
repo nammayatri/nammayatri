@@ -66,7 +66,6 @@ import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Services.Config (getSupportNumber)
 import Helpers.Utils as HU
 import JBridge as JB
 import Effect.Uncurried (runEffectFn4)
@@ -836,7 +835,7 @@ eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
 eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContactSupportPopUp = true}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContactSupportPopUp = false}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
-                                                                                                      _ <- pure $ showDialer (getSupportNumber "") false 
+                                                                                                      _ <- pure $ showDialer state.data.config.supportNumber false 
                                                                                                       continue state
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContactSupportPopUp = false}}
 

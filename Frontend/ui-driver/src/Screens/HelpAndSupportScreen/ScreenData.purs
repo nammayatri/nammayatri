@@ -20,6 +20,7 @@ import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST
+import MerchantConfig.DefaultConfig as DC
 
 
 initData :: HelpAndSupportScreenState
@@ -30,6 +31,7 @@ initData = {
           resolvedIssueList : [],
           ongoingIssueList : [],
           issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL
+          , config : DC.config
           },
   props: {isNoRides: false }
 }

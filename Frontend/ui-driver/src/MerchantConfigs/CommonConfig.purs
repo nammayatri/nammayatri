@@ -75,4 +75,5 @@ commonConfig =
             }
         , enablePurpleRideBanner : false
         , showPaymentDetails : true
+        , supportNumber : ""
         }

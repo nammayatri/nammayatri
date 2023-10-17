@@ -15,7 +15,8 @@ type AppConfig =
     rideActionModelConfig :: RideActionModelConfig,
     profile :: ProfileConfig,
     enablePurpleRideBanner :: Boolean,
-    showPaymentDetails :: Boolean
+    showPaymentDetails :: Boolean,
+    supportNumber :: String
   } 
 
 type Language =  {

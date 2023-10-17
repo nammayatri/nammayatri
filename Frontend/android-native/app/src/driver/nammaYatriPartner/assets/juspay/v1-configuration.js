@@ -100,5 +100,6 @@ window.getMerchantConfig = function () {
       }
     , "referralType" : "LeaderBoard"
     , "enablePurpleRideBanner" : true
+    , "supportNumber" : ""
   })
 }

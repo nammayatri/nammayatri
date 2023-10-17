@@ -44,4 +44,5 @@ config =
       { bookingOptionMenuForTaxi : false
       }
   , enablePurpleRideBanner : false
+  , supportNumber : ""
   }

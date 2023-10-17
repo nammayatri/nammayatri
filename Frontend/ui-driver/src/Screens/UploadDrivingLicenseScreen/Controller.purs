@@ -34,7 +34,7 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
-import Services.Config (getSupportNumber, getWhatsAppSupportNo)
+import Services.Config ( getWhatsAppSupportNo)
 import Data.String (length)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -156,7 +156,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
   _ <- case merchant of
     NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
-    _ -> pure $ showDialer (getSupportNumber "") false
+    _ -> pure $ showDialer state.data.config.supportNumber false
   pure NoAction
   ]
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount

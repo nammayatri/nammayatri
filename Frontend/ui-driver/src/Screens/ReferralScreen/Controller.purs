@@ -41,7 +41,6 @@ import Screens (ScreenName(..), getScreen)
 import Screens.ReferralScreen.ScreenData as RSD
 import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
 import Services.API (LeaderBoardRes(..), DriversInfo(..), GetPerformanceRes(..), GenerateReferralCodeRes(..))
-import Services.Config (getSupportNumber)
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Effect.Aff (launchAff_)
 import Common.Types.App
@@ -281,7 +280,7 @@ eval (PasswordModalAction (PopUpModal.ETextController (PrimaryEditTextController
 
 eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
-    void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+    void $ pure $ showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 
 eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do

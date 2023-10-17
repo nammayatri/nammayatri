@@ -24,7 +24,6 @@ import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
 import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
-import Services.Config (getSupportNumber)
 import JBridge (showDialer)
 import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toString)
 import Data.Array (foldr,cons,filter,reverse)
@@ -95,13 +94,13 @@ eval (OptionClick optionIndex) state = do
     OngoingIssues -> exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL}}
     ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL}}
     CallSupportCenter -> do
-      _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+      _ <- pure $ showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
       continue state
 eval (IssueScreenModal (IssueListFlow.AfterRender )) state = continue state
 eval (IssueScreenModal (IssueListFlow.BackPressed )) state = exit (GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }})
 eval (IssueScreenModal  (IssueListFlow.Remove issueId  )) state = exit $ RemoveIssue issueId state
 eval (IssueScreenModal (IssueListFlow.CallSupportCenter )) state = do
-       _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+       _ <- pure $ showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
        continue state
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList

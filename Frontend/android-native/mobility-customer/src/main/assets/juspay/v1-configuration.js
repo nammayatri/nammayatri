@@ -169,8 +169,9 @@ window.getMerchantConfig = function () {
   , "defaultLanguage" : "FR_FR"
   , "enableMockLocation" : false
   , "navigationAppConfig" : {
-    "query" : "https://waze.com/ul?ll=%f,%f"
-  , "packageName" : "com.waze"
-}
+      "query" : "https://waze.com/ul?ll=%f,%f"
+    , "packageName" : "com.waze"
+  }
+  , "supporNumber" : ""
   })
 }

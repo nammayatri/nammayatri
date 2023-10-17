@@ -95,7 +95,7 @@ import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
-import Services.Config (getDriverNumber, getSupportNumber)
+import Services.Config (getDriverNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -1276,7 +1276,7 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButt
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+    void $ pure $  showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
     let newState = state{props{emergencyHelpModelState{showContactSupportPopUp = false, waitingDialerCallback = true}}}
     updateAndExit newState $ CallSupport newState
 
@@ -1810,7 +1810,7 @@ eval (CallSupportAction PopUpModal.OnButton1Click) state= do
 
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+  _ <- pure $ showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
 

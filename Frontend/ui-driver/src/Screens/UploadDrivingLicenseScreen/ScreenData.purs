@@ -17,6 +17,7 @@ module Screens.UploadDrivingLicenseScreen.ScreenData where
 import Data.Maybe
 import Screens.Types (UploadDrivingLicenseState)
 import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -37,6 +38,7 @@ initData = {
       , dateOfIssueView : ""
       , imageFrontUrl : ""
       , logField : empty
+      , config : DC.config
       },
       props: {
         openRegistrationModal : false

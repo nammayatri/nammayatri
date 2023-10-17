@@ -137,7 +137,8 @@ type AddVehicleDetailsScreenData =  {
   errorMessage :: String,
   dateOfRegistration :: Maybe String,
   dateOfRegistrationView :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  config :: AppConfig
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -188,6 +189,7 @@ type UploadDrivingLicenseStateData = {
   , dateOfIssueView :: String
   , imageFrontUrl :: String
   , logField :: Object Foreign
+  , config :: AppConfig
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -385,7 +387,8 @@ type ApplicationStatusScreenData =  {
   rcVerificationStatus :: String,
   dlVerificationStatus :: String,
   mobileNumber :: String,
-  otpValue :: String
+  otpValue :: String,
+  config :: AppConfig
 }
 type ApplicationStatusScreenProps =  {
   isSelected :: Boolean,
@@ -1053,6 +1056,7 @@ type HelpAndSupportScreenData = {
   ongoingIssueList :: Array IssueInfo,
   resolvedIssueList :: Array IssueInfo,
   issueListType :: IssueModalType
+  , config :: AppConfig
 }
 
 type CategoryListType = {

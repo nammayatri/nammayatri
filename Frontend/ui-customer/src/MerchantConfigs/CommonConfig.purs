@@ -84,4 +84,5 @@ commonConfig =
           }
         , showChargeDesc : false
         , vehicleMarkerSize : 90
+        , supportNumber : ""
         }

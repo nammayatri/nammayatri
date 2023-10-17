@@ -37,7 +37,6 @@ import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
-import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
@@ -219,7 +218,7 @@ eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue s
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
-  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+  void $ pure $ showDialer state.data.config.supportNumber false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack   

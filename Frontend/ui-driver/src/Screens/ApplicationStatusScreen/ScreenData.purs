@@ -16,6 +16,7 @@
 module Screens.ApplicationStatusScreen.ScreenData where
 
 import Screens.Types
+import MerchantConfig.DefaultConfig as DC
 
 initData :: ApplicationStatusScreenState
 initData = {
@@ -24,6 +25,7 @@ initData = {
     rcVerificationStatus : "",
     mobileNumber : "",
     otpValue : ""
+    , config : DC.config  
     },
   props : {
       isSelected : true,

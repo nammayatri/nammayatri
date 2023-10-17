@@ -55,7 +55,6 @@ import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes
 import Services.API as SA
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
-import Services.Config (getSupportNumber)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.SubscriptionScreen.Controller
@@ -486,7 +485,7 @@ eval CallDriver state =
   continue state{props{callDriver = true}}
 
 eval CallCustomerSupport state = do
-  void $ pure $ showDialer (getSupportNumber "") false
+  void $ pure $ showDialer state.data.config.supportNumber false
   continue state
 
 eval (DeactivateRc rcType) state = do

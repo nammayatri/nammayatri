@@ -102,5 +102,6 @@ window.getMerchantConfig = function () {
     , "profile" :
         { "bookingOptionMenuForTaxi" : true
         }
+    , "supportNumber" : ""
   })
 }
