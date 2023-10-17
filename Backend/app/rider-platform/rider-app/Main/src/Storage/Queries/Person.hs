@@ -258,19 +258,6 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
     (Just limitVal)
     (Just offsetVal)
 
-countCustomers :: MonadFlow m => Id Merchant -> m Int
-countCustomers (Id merchantId) = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-          B.filter_'
-            (\person -> (BeamP.merchantId person B.==?. B.val_ merchantId) B.&&?. BeamP.role person B.==?. B.val_ USER)
-            do
-              B.all_ (BeamCommon.person BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
-
 fetchRidesCount :: MonadFlow m => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
   dbConf <- getMasterBeamConfig

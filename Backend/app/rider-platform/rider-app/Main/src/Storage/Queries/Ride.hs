@@ -121,8 +121,8 @@ updateMultiple rideId ride = do
 findActiveByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
-findAllByRBId :: MonadFlow m => Id Booking -> m [Ride]
-findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
+findByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
+findByRBId (Id bookingId) = findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq bookingId]
 
 findLatestCompletedRide :: MonadFlow m => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
