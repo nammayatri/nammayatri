@@ -17,6 +17,7 @@ module Domain.Types.Merchant.DriverPoolConfig where
 import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -43,7 +44,8 @@ data DriverPoolConfigD u = DriverPoolConfig
     driverToDestinationDistanceThreshold :: Meters,
     driverToDestinationDuration :: Seconds,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    vehicleVariant :: Maybe DVeh.Variant
   }
   deriving (Generic, Show)
 

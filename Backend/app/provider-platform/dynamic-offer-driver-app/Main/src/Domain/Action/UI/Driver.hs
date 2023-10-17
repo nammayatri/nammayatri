@@ -1197,7 +1197,7 @@ respondQuote (driverId, _) req = do
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-          quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
+          quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance searchTry.vehicleVariant
           quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
           farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
@@ -1283,8 +1283,8 @@ respondQuote (driverId, _) req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit merchantId dist = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantId dist
+    getQuoteLimit merchantId dist vehicleVariant = do
+      driverPoolCfg <- DP.getDriverPoolConfig merchantId (Just vehicleVariant) dist
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do

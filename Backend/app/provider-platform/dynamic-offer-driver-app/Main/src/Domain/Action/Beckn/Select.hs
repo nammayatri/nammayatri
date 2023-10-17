@@ -67,7 +67,7 @@ handler merchant sReq estimate = do
   farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq
-  driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
+  driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantId merchantId
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg

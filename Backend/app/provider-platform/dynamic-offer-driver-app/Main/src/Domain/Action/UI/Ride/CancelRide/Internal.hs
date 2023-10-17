@@ -125,7 +125,7 @@ cancelRideImpl rideId bookingCReason = do
     if isRepeatSearch
       then do
         blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
-        driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
+        driverPoolCfg <- getDriverPoolConfig merchant.id (Just searchTry.vehicleVariant) searchReq.estimatedDistance
         logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
         driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
         let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
