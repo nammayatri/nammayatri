@@ -1244,7 +1244,8 @@ respondQuote (driverId, _) req = do
                       nightShiftCharge = Nothing,
                       endRideTime = Nothing
                     }
-              driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
+              estimateId <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
+              driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId fareParams
               triggerQuoteEvent QuoteEventData {quote = driverQuote}
               _ <- QDrQt.create driverQuote
               _ <- QSRD.updateDriverResponse sReqFD.id req.response

@@ -221,13 +221,14 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
         SendSearchRequestToDriverJobData
           { searchTryId = newSearchTry.id,
             estimatedRideDistance = case searchReq.searchRequestDetails of
-              DSR.SearchRequestDetailsOnDemand {..} ->  estimatedDistance
+              DSR.SearchRequestDetailsOnDemand {..} -> estimatedDistance
               DSR.SearchRequestDetailsRental {} -> booking.estimatedDistance,
             driverExtraFeeBounds = driverExtraFeeBounds
           }
     _ -> return ()
 
-  BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource
+  estimateId <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
+  BP.sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource
   where
     buildSearchTry ::
       ( MonadTime m,

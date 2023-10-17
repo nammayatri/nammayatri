@@ -85,7 +85,8 @@ instance FromTType' BeamST.SearchTry SearchTry where
         SearchTry
           { id = Id id,
             requestId = Id requestId,
-            estimateId = Id estimateId,
+            tag = tag,
+            estimateId = Id <$> estimateId,
             merchantId = Id <$> merchantId,
             messageId = messageId,
             startTime = startTime,
@@ -105,7 +106,8 @@ instance ToTType' BeamST.SearchTry SearchTry where
     BeamST.SearchTryT
       { id = getId id,
         requestId = getId requestId,
-        estimateId = getId estimateId,
+        tag = tag,
+        estimateId = getId <$> estimateId,
         merchantId = getId <$> merchantId,
         messageId = messageId,
         startTime = startTime,
