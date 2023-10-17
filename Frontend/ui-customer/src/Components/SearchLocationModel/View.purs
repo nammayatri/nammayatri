@@ -350,7 +350,7 @@ sourceDestinationEditTextView state push =
                   )
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-              , onFocus push $ const $ EditTextFocusChanged "D"
+              , onFocus push $ const $ EditTextFocusChanged "D" 
               , autoCorrectionType 1
               ]
                 <> FontStyle.subHeading1 TypoGraphy

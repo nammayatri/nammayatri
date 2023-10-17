@@ -265,6 +265,12 @@ export const _isNetworkAvailable = function () {
   }
 }
 
+export const pickUpOnFocus = function(str) {
+  return function () {
+    return window.JBridge.pickUpOnFocus(str);
+  }
+}
+
 export const _renewFile = function (file) {
   return function () {
     console.log("renew files")

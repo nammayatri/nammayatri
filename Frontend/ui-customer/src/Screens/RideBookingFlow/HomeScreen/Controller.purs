@@ -73,7 +73,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange, toString, secondsToHms)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, pickUpOnFocus)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -1392,7 +1392,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
   if textType == "D" then
     continueWithCmd state { props { isSource = Just false }}
       [ do
-          if state.props.isSearchLocation /= LocateOnMap then do
+          if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just false then do
+            let _ = unsafePerformEffect $ pickUpOnFocus (getNewIDWithTag "DestinationEditText")
             _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
             pure $ NoAction
           else
@@ -1402,6 +1403,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
     continueWithCmd state { props { isSource = Just true}}
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
+            let _ = unsafePerformEffect $ pickUpOnFocus (getNewIDWithTag "SourceEditText")
             _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source)
             pure $ NoAction
           else
@@ -1440,6 +1442,11 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
   _ <- pure $ currentPosition ""
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
+
+-- eval (SearchLocationModelActionController (SearchLocationModelController.OnClickSelectText id)) state = do
+--   _ <- pure $ spy  "pickk" 
+--   _ <- pure $ pickUpOnFocus id
+--   continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ performHapticFeedback unit

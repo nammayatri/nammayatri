@@ -32,6 +32,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.webkit.JavascriptInterface;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -168,6 +169,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void storeCallBackCustomer(String callback) {
         storeCustomerCallBack = callback;
+    }
+
+    @JavascriptInterface
+    public void pickUpOnFocus(String id) {
+        if(bridgeComponents.getActivity() != null) {
+            EditText editText = (EditText)(bridgeComponents.getActivity().findViewById(Integer.parseInt(id)));
+            editText.setSelectAllOnFocus(true);
+        }
     }
 
     public void callingStoreCallCustomer(String notificationType) {
