@@ -28,7 +28,7 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import Data.OpenApi.Internal.Schema (ToSchema)
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
@@ -74,9 +74,6 @@ import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
-
--- import qualified Domain.Types.Booking as DBooking
--- import Data.Maybe (fromJust)
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 
@@ -128,8 +125,7 @@ data ServiceHandle m = ServiceHandle
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
-    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
-    updateOdometerEndReading :: Id DRide.Ride -> Maybe Int -> m ()
+    uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -155,8 +151,7 @@ buildEndRideHandle merchantId = do
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId,
         sendDashboardSms = Sms.sendDashboardSms,
-        uiDistanceCalculation = QRide.updateUiDistanceCalculation,
-        updateOdometerEndReading = QRide.updateOdometerEndReading
+        uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
 
 type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
@@ -215,52 +210,78 @@ endRide ::
 endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
-      rideType = rideOld.rideType
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
-  case rideType of
-    DRide.ON_DEMAND -> do
-      case req of
-        DriverReq driverReq -> do
-          let requestor = driverReq.requestor
-          uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy
-          case requestor.role of
-            DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-            _ -> throwError AccessDenied
-        DashboardReq dashboardReq -> do
-          unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
-        CronJobReq cronJobReq -> do
-          unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
-        CallBasedReq callBasedEndRideReq -> do
-          let requestor = callBasedEndRideReq.requestor
-          case requestor.role of
-            DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-            _ -> throwError AccessDenied
+  case req of
+    DriverReq driverReq -> do
+      let requestor = driverReq.requestor
+      case rideOld.rideDetails of
+        DRide.RideDetailsOnDemand {} -> pure ()
+        DRide.RideDetailsRental {} -> do
+          when (isJust driverReq.odometerEndReading) $ do
+            when (driverReq.endRideOtp /= rideOld.rideDetails.endRideOtp) $ throwError IncorrectOTP
+      uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy -- more checks?
+      case requestor.role of
+        DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
+        _ -> throwError AccessDenied
+    DashboardReq dashboardReq -> do
+      unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
+    CronJobReq cronJobReq -> do
+      unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
+    CallBasedReq callBasedEndRideReq -> do
+      let requestor = callBasedEndRideReq.requestor
+      case requestor.role of
+        DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
+        _ -> throwError AccessDenied
 
-      unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
+  unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-      tripEndPoint <- case req of
-        DriverReq driverReq -> do
-          logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          pure driverReq.point
-        DashboardReq dashboardReq -> do
-          logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          case dashboardReq.point of
-            Just point -> pure point
-            Nothing -> do
-              pure $ getCoordinates booking.bookingDetails.toLocation
-        CronJobReq cronJobReq -> do
-          logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          case cronJobReq.point of
-            Just point -> pure point
-            Nothing -> do
-              pure $ getCoordinates booking.bookingDetails.toLocation
-        CallBasedReq _ -> do
-          pure $ getCoordinates booking.bookingDetails.toLocation
+  (tripEndPoint, odometerEndReading) <-
+    case rideOld.rideDetails of
+      DRide.RideDetailsOnDemand {} -> do
+        case req of
+          DriverReq driverReq -> do
+            logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            pure (driverReq.point, driverReq.odometerEndReading :: Maybe Int)
+          DashboardReq dashboardReq -> do
+            logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            case dashboardReq.point of
+              Just point -> pure (point, Nothing)
+              Nothing -> do
+                pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
+          CronJobReq cronJobReq -> do
+            logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            case cronJobReq.point of
+              Just point -> pure (point, Nothing)
+              Nothing -> do
+                pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
+          CallBasedReq _ -> do
+            pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
+      DRide.RideDetailsRental {} -> do
+        case req of
+          DriverReq driverReq -> do
+            logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            pure (driverReq.point, driverReq.odometerEndReading :: Maybe Int)
+          DashboardReq dashboardReq -> do
+            logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            case dashboardReq.point of
+              Just point -> pure (point, Nothing)
+              Nothing -> do
+                error "TODO"
+          CronJobReq cronJobReq -> do
+            logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            case cronJobReq.point of
+              Just point -> pure (point, Nothing)
+              Nothing -> do
+                error "TODO"
+          CallBasedReq _ -> do
+            error "TODO"
 
-      goHomeConfig <- CQGHC.findByMerchantId booking.providerId
-      ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
+  goHomeConfig <- CQGHC.findByMerchantId booking.providerId
+  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
 
-      homeLocationReached' <-
+  homeLocationReached' <-
+    case odometerEndReading of
+      Nothing -> do
         if ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
           then do
             case ghInfo.driverGoHomeRequestId of
@@ -284,16 +305,18 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                         return $ Just False
                   Nothing -> return Nothing
           else return Nothing
+      _ -> return Nothing
 
-      whenWithLocationUpdatesLock driverId $ do
-        now <- getCurrentTime
-        thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
-        (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
+  whenWithLocationUpdatesLock driverId $ do
+    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    now <- getCurrentTime
+    (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
+      case odometerEndReading of
+        Nothing -> do
           case req of
             CronJobReq _ -> do
               logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-              (chargeableDistance, finalFare, mbUpdatedFareParams) <-
-                recalculateFareForDistance handle booking rideOld booking.estimatedDistance
+              (chargeableDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld booking.estimatedDistance thresholdConfig.timeDiffFromUtc
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
             _ -> do
               -- here we update the current ride, so below we fetch the updated version
@@ -317,195 +340,47 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                   then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                   else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-        let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-        let updRide =
-              ride{tripEndTime = Just now,
-                   chargeableDistance = Just chargeableDistance,
-                   fare = Just finalFare,
-                   tripEndPos = Just tripEndPoint,
-                   fareParametersId = Just newFareParams.id,
-                   distanceCalculationFailed = distanceCalculationFailed,
-                   pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold
-                  }
-        -- we need to store fareParams only when they changed
-        withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
-        withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
+        Just endReading -> do
+          farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area
+          logInfo $ "farePolicia :" <> show farePolicy
+          (recalcDistance, finalFare, mbUpdatedFareParams) <- case farePolicy.farePolicyDetails of
+            DFP.ProgressiveDetails _ -> throwError $ InternalError "Rental does not support progressive FP"
+            DFP.SlabsDetails _ -> throwError $ InternalError "Rental does not support slab FP"
+            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ (endReading - fromMaybe 0 rideOld.rideDetails.odometerStartReading) * 1000) thresholdConfig.timeDiffFromUtc
+          ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
+          pure (recalcDistance, finalFare, mbUpdatedFareParams, ride, Nothing, Nothing)
+    let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    let updRide =
+          ride{tripEndTime = Just now,
+               chargeableDistance = Just chargeableDistance,
+               fare = Just finalFare,
+               tripEndPos = Just tripEndPoint,
+               fareParametersId = Just newFareParams.id,
+               distanceCalculationFailed = distanceCalculationFailed,
+               pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+               rideDetails = case rideOld.rideDetails of
+                 DRide.RideDetailsOnDemand {} -> rideOld.rideDetails
+                 DRide.RideDetailsRental {} -> rideOld.rideDetails{odometerEndReading = odometerEndReading}
+              }
+    -- we need to store fareParams only when they changed
+    withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
+    withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
-        mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-          findPaymentMethodByIdAndMerchantId paymentMethodId booking.providerId
-            >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-        let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
-        let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-        withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      findPaymentMethodByIdAndMerchantId paymentMethodId booking.providerId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+    let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
 
-        fork "sending dashboardSMS - CallbasedEndRide " $ do
-          case req of
-            CallBasedReq callBasedEndRideReq -> do
-              let requestor = callBasedEndRideReq.requestor
-              sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
-            _ -> pure ()
-      return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
-    DRide.RENTAL -> do
+    fork "sending dashboardSMS - CallbasedEndRide " $ do
       case req of
-        DriverReq driverReq -> do
-          let requestor = driverReq.requestor
-          unless (isJust driverReq.odometerEndReading) $ do
-            -- can be on fareProduct
-            when (driverReq.endRideOtp /= rideOld.rideDetails.endRideOtp) $ throwError IncorrectOTP
-            uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy -- more checks?
-          case requestor.role of
-            DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-            _ -> throwError AccessDenied
-        DashboardReq dashboardReq -> do
-          unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
-        CronJobReq cronJobReq -> do
-          unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
         CallBasedReq callBasedEndRideReq -> do
           let requestor = callBasedEndRideReq.requestor
-          case requestor.role of
-            DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-            _ -> throwError AccessDenied
+          sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
+        _ -> pure ()
 
-      unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
-
-      (tripEndPoint, odometerEndReading) <- case req of
-        DriverReq driverReq -> do
-          logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          pure (driverReq.point, driverReq.odometerEndReading :: Maybe Int)
-        DashboardReq dashboardReq -> do
-          logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          case dashboardReq.point of
-            Just point -> pure (point, Nothing)
-            Nothing -> do
-              error "TODO"
-        CronJobReq cronJobReq -> do
-          logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-          case cronJobReq.point of
-            Just point -> pure (point, Nothing)
-            Nothing -> do
-              error "TODO"
-        CallBasedReq _ -> do
-          error "TODO"
-
-      goHomeConfig <- CQGHC.findByMerchantId booking.providerId
-      ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
-
-      homeLocationReached' <-
-        case odometerEndReading of
-          Nothing -> do
-            if ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
-              then do
-                case ghInfo.driverGoHomeRequestId of
-                  Nothing -> do
-                    logError "DriverGoHomeRequestId not present even though status is active."
-                    return Nothing
-                  Just ghrId -> do
-                    mbDriverGoHomeReq <- QDGR.findById ghrId
-                    case mbDriverGoHomeReq of
-                      Just driverGoHomeReq -> do
-                        let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-                        routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
-                        logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
-                        let driverHomeDists = mapMaybe (.distance) routesResp
-                        if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
-                          then do
-                            CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo (Just True)
-                            return $ Just True
-                          else do
-                            CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
-                            return $ Just False
-                      Nothing -> return Nothing
-              else return Nothing
-          _ -> return Nothing
-
-      whenWithLocationUpdatesLock driverId $ do
-        thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
-        now <- getCurrentTime
-        (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
-          case odometerEndReading of
-            Nothing -> do
-              case req of
-                CronJobReq _ -> do
-                  logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-                  (chargeableDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld booking.estimatedDistance
-                  pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
-                _ -> do
-                  -- here we update the current ride, so below we fetch the updated version
-                  pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-                  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-                  tripEndPoints <-
-                    if enableLocationTrackingService
-                      then do
-                        res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
-                        pure $ toList res.loc
-                      else pure [tripEndPoint]
-                  whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' booking.estimatedDistance pickupDropOutsideOfThreshold
-
-                  ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-
-                  distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
-                  when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
-                  (chargeableDistance, finalFare, mbUpdatedFareParams) <-
-                    if distanceCalculationFailed
-                      then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
-                      else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
-                  pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-            Just endReading -> do
-              actualDistance <- case getMeters <$> rideOld.rideDetails.odometerStartReading of
-                Nothing -> throwError $ InternalError "No start reading found" -- Impossible case
-                Just startReading -> pure $ endReading - startReading
-              actualDuration <- case rideOld.tripStartTime of
-                Nothing -> throwError $ InternalError "No start time found" -- Impossible case
-                Just startTime -> pure (now `diffUTCTime` startTime)
-              let extraDistance = (actualDistance * 1000) - booking.estimatedDistance.getMeters
-              farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area
-              case farePolicy.farePolicyDetails of
-                DFP.ProgressiveDetails _ -> throwError $ InternalError "Rental does not support progressive FP"
-                DFP.SlabsDetails sd -> do
-                  let slab = DFP.findFPSlabsDetailsSlabByDistance booking.estimatedDistance sd.slabs
-                  let extraTime = round actualDuration - booking.estimatedDuration.getSeconds
-                      fare = (if extraDistance >= fromMaybe 0 slab.maxDistanceBuffer then booking.estimatedFare.getMoney + extraDistance * (fromMaybe 0 slab.perExtraKmFare) + extraTime * (fromMaybe 0 slab.perExtraMinFare) else booking.estimatedFare.getMoney + extraTime * (fromMaybe 0 slab.perExtraMinFare))
-                      -- rideStartDate = utctDay rideOld.tripstartTime
-                      rideEndDate = utctDay now
-                      nightAllowance = isNightAllowanceApplicable farePolicy rideEndDate rideOld now
-                      totalFare = case slab.nightShiftCharge of
-                        Nothing -> fare
-                        Just charge -> do
-                          case charge of
-                            DFP.ProgressiveNightShiftCharge _ -> fare
-                            DFP.ConstantNightShiftCharge allowance -> if nightAllowance then fare + allowance.getMoney else fare
-                  ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-                  pure (Meters actualDistance, Money totalFare, Nothing, ride, Nothing, Nothing)
-        let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-        let updRide =
-              ride{tripEndTime = Just now,
-                   chargeableDistance = Just chargeableDistance,
-                   fare = Just finalFare,
-                   tripEndPos = Just tripEndPoint,
-                   fareParametersId = Just newFareParams.id,
-                   distanceCalculationFailed = distanceCalculationFailed,
-                   pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-                   rideDetails = ride.rideDetails{odometerEndReading = Meters <$> odometerEndReading}
-                  }
-        -- we need to store fareParams only when they changed
-        withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
-        withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
-
-        mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-          findPaymentMethodByIdAndMerchantId paymentMethodId booking.providerId
-            >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-        let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
-        let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-        withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
-
-        fork "sending dashboardSMS - CallbasedEndRide " $ do
-          case req of
-            CallBasedReq callBasedEndRideReq -> do
-              let requestor = callBasedEndRideReq.requestor
-              sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
-            _ -> pure ()
-      return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
+  return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
@@ -514,88 +389,87 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           calcPoints = True
         }
 
-    isNightAllowanceApplicable :: DFP.FullFarePolicy -> Day -> DRide.Ride -> UTCTime -> Bool
-    isNightAllowanceApplicable farePolicy rideEndDate oldRide now = do
-      case farePolicy.nightShiftBounds of
-        Nothing -> False
-        Just bounds -> do
-          let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
-              nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
-              prevNightShiftStartTs = UTCTime (addDays (-1) rideEndDate) nightShiftStartTime
-              prevNightShiftEndTs = UTCTime rideEndDate nightShiftEndTime
-          case oldRide.tripStartTime of
-            Nothing -> False
-            Just startTime -> do
-              let prevMxStart = max prevNightShiftStartTs startTime
-                  prevMnEnd = min prevNightShiftEndTs now
-                  curNightShiftStartTs = UTCTime rideEndDate nightShiftStartTime
-                  curNightShiftEndTs = UTCTime (addDays 1 rideEndDate) nightShiftEndTime
-                  curMxStart = max curNightShiftStartTs startTime
-                  curMnEnd = min curNightShiftEndTs now
-              (curMnEnd >= curMxStart) || (prevMnEnd >= prevMxStart)
-
-    timeOfDayToDiffTime :: TimeOfDay -> DiffTime -- TODO :  Move to Kernel
-    timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)
-
-recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
-recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
+recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> Seconds -> m (Meters, Money, Maybe FareParameters)
+recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance timeDiffFromUtc = do
   let merchantId = booking.providerId
-  case ride.rideType of
-    DRide.ON_DEMAND -> do
-      let oldDistance = booking.estimatedDistance
-      -- maybe compare only distance fare?
-      now <- getCurrentTime
-      let estimatedFare = Fare.fareSum booking.fareParams
-      farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
-      fareParams <-
-        calculateFareParameters
-          Fare.CalculateFareParametersParams
-            { farePolicy = farePolicy,
-              distance = recalcDistance,
-              rideTime = booking.startTime,
-              endRideTime = Just now,
-              waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
-              driverSelectedFare = booking.fareParams.driverSelectedFare,
-              customerExtraFee = booking.fareParams.customerExtraFee,
-              nightShiftCharge = booking.fareParams.nightShiftCharge
-            }
-      let finalFare = Fare.fareSum fareParams
-          distanceDiff = recalcDistance - oldDistance
-          fareDiff = finalFare - estimatedFare
-      logTagInfo "Fare recalculation" $
-        "Fare difference: "
-          <> show (realToFrac @_ @Double fareDiff)
-          <> ", Distance difference: "
-          <> show distanceDiff
-      putDiffMetric merchantId fareDiff distanceDiff
-      return (recalcDistance, finalFare, Just fareParams)
-    DRide.RENTAL ->
-      throwError $ InvalidRequest "RentalFareCalculation doesnot happen here"
+      oldDistance = booking.estimatedDistance
+
+  now <- getLocalCurrentTime timeDiffFromUtc
+  actualDuration <- case ride.tripStartTime of
+    Nothing -> throwError $ InternalError "No start reading found" -- Impossible case
+    Just startTime -> pure $ round (now `diffUTCTime` addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) startTime) `div` 3600
+  -- maybe compare only distance fare?
+  let estimatedFare = Fare.fareSum booking.fareParams
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
+  fareParams <- case ride.rideDetails of
+    DRide.RideDetailsOnDemand {} ->
+      calculateFareParameters
+        Fare.CalculateFareParametersParams
+          { farePolicy = farePolicy,
+            distance = recalcDistance,
+            rideTime = booking.startTime,
+            waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
+            driverSelectedFare = booking.fareParams.driverSelectedFare,
+            customerExtraFee = booking.fareParams.customerExtraFee,
+            nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
+            rideStartTime = Nothing, --if isJust ride.odometerStartReading then addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> ride.tripStartTime else Nothing,
+            rideEndTime = Nothing, --if isJust ride.odometerStartReading then Just now else Nothing,
+            actualDistance = Nothing, --if isJust ride.odometerStartReading then Just (recalcDistance.getMeters `div` 1000) else Nothing,
+            chargedDuration = 0, --if isJust ride.odometerStartReading then max actualDuration (booking.estimatedDuration.getSeconds `div` 3600) else 0,
+            nightShiftOverlapChecking = Just False, --Just $ isJust ride.odometerStartReading,
+            now = now,
+            endRideTime = Just now
+          }
+    DRide.RideDetailsRental {odometerStartReading} ->
+      calculateFareParameters
+        Fare.CalculateFareParametersParams
+          { farePolicy = farePolicy,
+            distance = recalcDistance,
+            rideTime = booking.startTime,
+            waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
+            driverSelectedFare = booking.fareParams.driverSelectedFare,
+            customerExtraFee = booking.fareParams.customerExtraFee,
+            nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
+            rideStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> ride.tripStartTime,
+            rideEndTime = Just now,
+            actualDistance = Just (recalcDistance.getMeters `div` 1000),
+            chargedDuration = max actualDuration (booking.estimatedDuration.getSeconds `div` 3600),
+            nightShiftOverlapChecking = Just $ isJust odometerStartReading,
+            now = now,
+            endRideTime = Just now
+          }
+  let finalFare = Fare.fareSum fareParams
+      distanceDiff = recalcDistance - oldDistance
+      fareDiff = finalFare - estimatedFare
+  logTagInfo "Fare recalculation" $
+    "Fare difference: "
+      <> show (realToFrac @_ @Double fareDiff)
+      <> ", Distance difference: "
+      <> show distanceDiff
+  putDiffMetric merchantId fareDiff distanceDiff
+  return (recalcDistance, finalFare, Just fareParams)
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
-  case ride.rideType of
-    DRide.ON_DEMAND -> do
-      let mbTripStartLoc = ride.tripStartPos
-      -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
-      case mbTripStartLoc of
-        Nothing -> pure True
-        Just tripStartLoc -> do
-          let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
-          let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
-          let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-          let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.bookingDetails.toLocation) tripEndPoint
-          let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+  let mbTripStartLoc = ride.tripStartPos
+  -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
+  case mbTripStartLoc of
+    Nothing -> pure True
+    Just tripStartLoc -> do
+      let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
+      let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
+      let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
+      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.bookingDetails.toLocation) tripEndPoint
+      let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
-          logTagInfo "Locations differences" $
-            "Pickup difference: "
-              <> show pickupDifference
-              <> ", Drop difference: "
-              <> show dropDifference
-              <> ", Locations outside of thresholds: "
-              <> show pickupDropOutsideOfThreshold
-          pure pickupDropOutsideOfThreshold
-    DRide.RENTAL -> pure False
+      logTagInfo "Locations differences" $
+        "Pickup difference: "
+          <> show pickupDifference
+          <> ", Drop difference: "
+          <> show dropDifference
+          <> ", Locations outside of thresholds: "
+          <> show pickupDropOutsideOfThreshold
+      pure pickupDropOutsideOfThreshold
 
 getDistanceDiff :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> Meters -> m HighPrecMeters
 getDistanceDiff booking distance = do
@@ -613,15 +487,15 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   if not pickupDropOutsideOfThreshold
     then
       if distanceDiff > thresholdConfig.actualRideDistanceDiffThreshold
-        then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance)
-        else recalculateFareForDistance handle booking ride booking.estimatedDistance
+        then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig.timeDiffFromUtc
+        else recalculateFareForDistance handle booking ride booking.estimatedDistance thresholdConfig.timeDiffFromUtc
     else
       if distanceDiff < 0
-        then recalculateFareForDistance handle booking ride $ roundToIntegral ride.traveledDistance
+        then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig.timeDiffFromUtc
         else
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
-            then recalculateFareForDistance handle booking ride booking.estimatedDistance
-            else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
+            then recalculateFareForDistance handle booking ride booking.estimatedDistance thresholdConfig.timeDiffFromUtc
+            else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig.timeDiffFromUtc
 
 calculateFinalValuesForFailedDistanceCalculations ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, Money, Maybe FareParameters)
@@ -635,17 +509,65 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
 
   if not pickupDropOutsideOfThreshold
-    then recalculateFareForDistance handle booking ride booking.estimatedDistance
+    then recalculateFareForDistance handle booking ride booking.estimatedDistance thresholdConfig.timeDiffFromUtc
     else
       if distanceDiff < 0
-        then recalculateFareForDistance handle booking ride approxTraveledDistance
+        then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig.timeDiffFromUtc
         else
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
             then do
-              recalculateFareForDistance handle booking ride booking.estimatedDistance
+              recalculateFareForDistance handle booking ride booking.estimatedDistance thresholdConfig.timeDiffFromUtc
             else do
               if distanceDiff < thresholdConfig.upwardsRecomputeBuffer
-                then recalculateFareForDistance handle booking ride approxTraveledDistance
+                then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig.timeDiffFromUtc
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
-                  recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer)
+                  recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer) thresholdConfig.timeDiffFromUtc
+
+-- calcRentalFare :: MonadFlow m => Seconds -> Int -> DFP.FPRentalDetailsD s -> DRide.Ride -> Seconds -> UTCTime -> Maybe DFP.NightShiftBounds -> m (Meters, Money, Maybe FareParameters, DRide.Ride, Maybe Bool, Maybe Bool)
+-- calcRentalFare estimatedDuration endReading rd rideOld timeDiffFromUtc now nightShiftBounds = do
+--   actualDistance <- case rideOld.odometerStartReading of
+--     Nothing -> throwError $ InternalError "No start reading found" -- Impossible case
+--     Just startReading -> pure (endReading - startReading)
+--   (actualDuration, tripStartTime) <- case rideOld.tripStartTime of
+--     Nothing -> throwError $ InternalError "No start time found" -- Impossible case
+--     Just startTime -> pure (round (now `diffUTCTime` startTime) `div` 3600, startTime)
+--   let chargedDuration = max actualDuration (estimatedDuration.getSeconds `div` 60)
+--       fareByTime = Money $ rd.baseFare.getMoney + (chargedDuration * rd.perHourCharge.getMoney)
+--       extraKm = actualDistance - (chargedDuration * rd.perHourFreeKms)
+--       distanceBuffer = DFP.findFPRentalDetailsByDuration chargedDuration rd.distanceBuffers
+--       fareByDistAndTime = if extraKm >= distanceBuffer.bufferKms then Money (fareByTime.getMoney + extraKm * rd.perExtraKmRate.getMoney) else fareByTime
+--       rideEndDate = utctDay (addUTCTime (fromIntegral timeDiffFromUtc) now)
+--       nightAllowance = isNightAllowanceApplicable nightShiftBounds rideEndDate (addUTCTime (fromIntegral timeDiffFromUtc) tripStartTime) (addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now)
+--       totalFare = if nightAllowance then fareByDistAndTime + rd.nightShiftAllowance else fareByDistAndTime
+--   ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
+--   logDebug $
+--     "Fare by time :"
+--       <> show fareByTime
+--       <> ", Fare by dist and time :"
+--       <> show fareByDistAndTime
+--       <> ", Night allowance: "
+--       <> show nightAllowance
+--   pure (Meters actualDistance * 1000, totalFare, Nothing, ride, Nothing, Nothing)
+
+-- isNightAllowanceApplicable :: Maybe DFP.NightShiftBounds -> Day -> UTCTime -> UTCTime -> Bool
+-- isNightAllowanceApplicable nightShiftBounds rideEndDate tripStartTime now = do
+--   case nightShiftBounds of
+--     Nothing -> False
+--     Just bounds -> do
+--       let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
+--           nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
+--       if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
+--         then isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 0
+--         else isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now (-1) 0 || isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 1
+
+-- isNightShift :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
+-- isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now startAdd endAdd = do
+--   let curNightShiftStartTs = UTCTime (addDays startAdd rideEndDate) nightShiftStartTime
+--       curNightShiftEndTs = UTCTime (addDays endAdd rideEndDate) nightShiftEndTime
+--       curMxStart = max curNightShiftStartTs tripStartTime
+--       curMnEnd = min curNightShiftEndTs now
+--   curMnEnd >= curMxStart
+
+-- timeOfDayToDiffTime :: TimeOfDay -> DiffTime -- TODO :  Move to Kernel
+-- timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)

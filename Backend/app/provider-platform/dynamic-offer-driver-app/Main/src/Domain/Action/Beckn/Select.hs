@@ -98,7 +98,13 @@ handler merchant sReq estimate = do
                   driverSelectedFare = Nothing,
                   customerExtraFee = sReq.customerExtraFee,
                   nightShiftCharge = Nothing,
-                  endRideTime = Nothing -- Need to check this
+                  endRideTime = Nothing, -- Need to check this
+                  rideStartTime = Nothing,
+                  rideEndTime = Nothing,
+                  actualDistance = Nothing,
+                  chargedDuration = 0,
+                  nightShiftOverlapChecking = Nothing,
+                  now = now
                 }
           let estimatedFare = fareSum fareParams
               pureEstimatedFare = pureFareSum fareParams
@@ -117,7 +123,6 @@ handler merchant sReq estimate = do
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
               _ <- QST.create searchTry
               return searchTry
-
           logDebug $
             "search try id=" <> show searchTry.id
               <> "; estimated distance = "
