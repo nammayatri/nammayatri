@@ -152,7 +152,9 @@ data SendOverlayJobData = SendOverlayJobData
     freeTrialDays :: Int,
     timeDiffFromUtc :: Seconds,
     driverPaymentCycleDuration :: NominalDiffTime,
-    driverPaymentCycleStartTime :: NominalDiffTime
+    driverPaymentCycleStartTime :: NominalDiffTime,
+    driverFeeOverlaySendingTimeLimitInDays :: Int,
+    overlayBatchSize :: Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

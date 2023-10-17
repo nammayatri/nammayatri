@@ -19,6 +19,7 @@ import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Plan (PaymentMode (..))
+import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -46,7 +47,12 @@ data OverlayD (s :: UsageSafety) = Overlay
     link :: Maybe Text,
     method :: Maybe Text,
     reqBody :: Value,
-    endPoint :: Maybe Text
+    endPoint :: Maybe Text,
+    delay :: Maybe Int,
+    contactSupportNumber :: Maybe Text,
+    toastMessage :: Maybe Text,
+    secondaryActions :: Maybe [Text],
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
   }
   deriving (Generic, Show)
 

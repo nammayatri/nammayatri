@@ -395,7 +395,7 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
         startTime = startTime,
         endTime = endTime
       }
-  createJobIn @_ @'SendOverlay dfCalculationJobTs maxShards $
+  createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
     SendOverlayJobData
       { merchantId = merchantId,
         rescheduleInterval = Nothing,
@@ -406,9 +406,11 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
         freeTrialDays = transporterConfig.freeTrialDays,
         timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
         driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime
+        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+        driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+        overlayBatchSize = transporterConfig.overlayBatchSize
       }
-  createJobIn @_ @'SendOverlay dfCalculationJobTs maxShards $
+  createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
     SendOverlayJobData
       { merchantId = merchantId,
         rescheduleInterval = Nothing,
@@ -419,7 +421,9 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
         freeTrialDays = transporterConfig.freeTrialDays,
         timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
         driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime
+        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+        driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+        overlayBatchSize = transporterConfig.overlayBatchSize
       }
 
 manualInvoiceGeneratedNudgeKey :: Text

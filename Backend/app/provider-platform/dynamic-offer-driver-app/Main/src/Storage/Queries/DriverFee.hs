@@ -163,16 +163,20 @@ findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
     (Just limitVal)
     (Just offsetVal)
 
-findWindowsWithFeeType :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> FeeType -> m [DriverFee]
-findWindowsWithFeeType merchantId from to feeType =
-  findAllWithKV
+findWindowsWithFeeTypeAndLimit :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> FeeType -> Int -> m [DriverFee]
+findWindowsWithFeeTypeAndLimit merchantId from to feeType limit =
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
           Se.Is BeamDF.feeType $ Se.Eq feeType,
-          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+          Se.Is BeamDF.overlaySent $ Se.Eq False
         ]
     ]
+    (Se.Asc BeamDF.createdAt)
+    (Just limit)
+    Nothing
 
 findWindows :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Int -> Int -> m [DriverFee]
 findWindows (Id driverId) from to limitVal offsetVal =
@@ -334,6 +338,18 @@ updateFeeTypeByIds feeType driverFeeIds now =
     ]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
+updateDriverFeeOverlayScheduled :: MonadFlow m => [Id Person] -> Bool -> UTCTime -> UTCTime -> m ()
+updateDriverFeeOverlayScheduled driverIds val from to =
+  updateWithKV
+    [ Se.Set BeamDF.overlaySent val
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq to
+        ]
+    ]
+
 updateBillNumberById :: MonadFlow m => Maybe Int -> Id DriverFee -> m ()
 updateBillNumberById billNumber driverFeeId = do
   now <- getCurrentTime
@@ -364,8 +380,17 @@ findAllByStatusAndDriverId (Id driverId) driverFeeStatus = findAllWithKV [Se.And
 findAllPendingAndDueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE], Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
-findAllOverdueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
-findAllOverdueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.driverId $ Se.Eq driverId]]
+findAllOverdueDriverFeeByDriverIdWithinWindow :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
+findAllOverdueDriverFeeByDriverIdWithinWindow (Id driverId) from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE,
+          Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.startTime $ Se.LessThanOrEq to
+        ]
+    ]
 
 findAllPendingRegistrationDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
@@ -545,7 +570,8 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             schedulerTryCount,
             billNumber,
             stageUpdatedAt,
-            feeWithoutDiscount
+            feeWithoutDiscount,
+            overlaySent = overlaySent
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -575,5 +601,6 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.schedulerTryCount = schedulerTryCount,
         BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
-        BeamDF.updatedAt = updatedAt
+        BeamDF.updatedAt = updatedAt,
+        BeamDF.overlaySent = overlaySent
       }

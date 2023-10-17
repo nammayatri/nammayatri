@@ -314,11 +314,11 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
           when (mandateStatus == Payment.PAUSED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
-            notifyPaymentModeManualOnPause driver.merchantId driver.id driver.deviceToken
+            PaymentNudge.notifyMandatePaused driver.id driver.merchantId driver.deviceToken driver.language
           when (mandateStatus == Payment.REVOKED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
-            notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
+            PaymentNudge.notifyMandateCancelled driver.id driver.merchantId driver.deviceToken driver.language
         Nothing -> do
           mbDriverPlanByDriverId <- QDP.findByDriverId driverId
           when (isNothing $ mbDriverPlanByDriverId >>= (.mandateId)) $ do QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)

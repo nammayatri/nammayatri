@@ -109,7 +109,9 @@ data TransporterConfigD u = TransporterConfig
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
     ratingAsDecimal :: Bool,
-    refillVehicleModel :: Bool
+    refillVehicleModel :: Bool,
+    driverFeeOverlaySendingTimeLimitInDays :: Int,
+    overlayBatchSize :: Int
   }
   deriving (Generic, Show)
 
