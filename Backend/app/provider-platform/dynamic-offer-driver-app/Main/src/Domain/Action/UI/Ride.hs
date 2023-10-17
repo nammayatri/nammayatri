@@ -444,7 +444,6 @@ getOdometerReading ::
   Flow OdometerReadingRes
 getOdometerReading rideId isStartRide = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-
   let imagePath =
         if fromMaybe True isStartRide
           then ride.rideDetails.odometerStartReadingImagePath

@@ -16,8 +16,8 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
-import Beckn.Types.Core.Taxi.OnSelect (TimeTimestamp (..))
+import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemPrice (value))
+import Beckn.Types.Core.Taxi.OnSelect (TagGroup (display), TimeTimestamp (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
@@ -224,8 +224,6 @@ mkQuoteEntitiesRental :: OS.StartInfo -> DM.Merchant -> DSearch.RentalQuoteInfo 
 mkQuoteEntitiesRental start provider it = do
   let variant = Common.castVariant it.vehicleVariant
       baseFare = OS.DecimalValue $ toRational it.baseFare
-      baseDistance = it.baseDistance
-      baseDuration = it.baseDuration
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -246,14 +244,14 @@ mkQuoteEntitiesRental start provider it = do
                   minimum_value = baseFare,
                   maximum_value = baseFare
                 },
-            tags = Just $ OS.TG [mkRentalTag baseDistance baseDuration]
+            tags = Just $ OS.TG [mkRentalTag it]
           }
   QuoteEntities
     { fulfillment,
       item
     }
   where
-    mkRentalTag baseDistance baseDuration =
+    mkRentalTag info =
       OS.TagGroup
         { display = False,
           code = "general_info",
@@ -263,13 +261,37 @@ mkQuoteEntitiesRental start provider it = do
                 { display = Just True,
                   code = Just "rental_base_duration",
                   name = Just "Base Duration",
-                  value = Just $ show baseDuration.getHours
+                  value = Just $ show info.baseDuration.getHours
                 },
               OS.Tag
                 { display = Just True,
                   code = Just "rental_base_distance",
                   name = Just "Base Distance",
-                  value = Just $ show baseDistance.getKilometers
+                  value = Just $ show info.baseDistance.getKilometers
+                },
+              OS.Tag
+                { display = Just True,
+                  code = Just "per_hour_charge",
+                  name = Just "Per Hour Charge",
+                  value = Just $ show info.perHourCharge
+                },
+              OS.Tag
+                { display = Just True,
+                  code = Just "per_hour_free_kms",
+                  name = Just "Per Hour Free Kms",
+                  value = Just $ show info.perHourFreeKms
+                },
+              OS.Tag
+                { display = Just True,
+                  code = Just "per_extra_km_rate",
+                  name = Just "Per Extra Km Rate",
+                  value = Just $ show info.perHourFreeKms
+                },
+              OS.Tag
+                { display = Just True,
+                  code = Just "night_shift_charge",
+                  name = Just "Night Shift Charge",
+                  value = (show . (.getMoney)) <$> info.nightShiftCharge
                 }
             ]
         }

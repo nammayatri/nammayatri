@@ -138,6 +138,10 @@ data RentalQuoteInfo = RentalQuoteInfo
     baseFare :: Money,
     baseDistance :: Kilometers,
     baseDuration :: Hours,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Maybe Money,
     fromLocation :: LatLong,
     rentalTag :: Maybe Text,
     startTime :: UTCTime
@@ -243,27 +247,30 @@ handler merchant sReq' =
       sessiontoken <- generateGUIDText
       fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
       fareProducts <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
-      rentalfarePolicies <-
+      logDebug $ "fareProducts" <> show fareProducts
+      fullFarePolicies <-
         mapM
           ( \fareProduct -> do
               farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
               return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
           )
           fareProducts
+      logDebug $ "rentalfarePolicies" <> show fullFarePolicies
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
       _ <- QSR.create rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
-      let allRentalSlabandFarePolicy = listAllTheRentalSlabs rentalfarePolicies
+      let vehiclesVariantRentalFarePolicy = listVehicleVariantHelper fullFarePolicies
+          initialDistance = 1000
+          initialDuration = Seconds 3600
       (quotes, mbEstimateInfos) <- do
         now <- getCurrentTime
-        -- let listOfBuildRentalQuote = []
         listOfRentalQuotes <- do
-          for allRentalSlabandFarePolicy $ \(rentalslab :: FarePolicyD.FPSlabsDetailsSlab, farePolicy) -> do
+          for vehiclesVariantRentalFarePolicy $ \rentalFarePolicy -> do
             fareParams <-
               calculateFareParameters
                 CalculateFareParametersParams
-                  { farePolicy = farePolicy,
-                    distance = rentalslab.startDistance,
+                  { farePolicy = rentalFarePolicy,
+                    distance = initialDistance,
                     rideTime = sReq.pickupTime,
                     waitingTime = Nothing,
                     driverSelectedFare = Nothing,
@@ -275,22 +282,21 @@ handler merchant sReq' =
               rentalSearchReq
               fareParams
               merchant.id
-              rentalslab.startDistance
-              farePolicy.vehicleVariant
-              (Seconds 1000) -- FIX ME: use correct table
-              -- let z = concat listOfRentalQuotes
+              initialDistance
+              rentalFarePolicy.vehicleVariant
+              initialDuration
+        -- let z = concat listOfRentalQuotes
         for_ listOfRentalQuotes QQuoteRental.create
         return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuotes), Nothing)
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
   where
-    listAllTheRentalSlabs =
-      concatMap
-        ( \farepolicy -> case farepolicy.farePolicyDetails of
-            FarePolicyD.SlabsDetails det -> map (,farepolicy) (toList det.slabs)
-            _ -> []
-        )
+    -- getRentalPolicies = map
+    --       ( \farepolicy -> case farepolicy.farePolicyDetails of
+    --           FarePolicyD.RentalDetails det -> map (, farepolicy) (toList det.slabs)
+    --           _ -> []
+    --       )
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
@@ -562,9 +568,16 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
 mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> DQuoteRental.QuoteRental -> RentalQuoteInfo
 mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
+      (perHourCharge, perExtraKmRate, perHourFreeKms, nightShiftCharge) = case fareParams.fareParametersDetails of
+        RentalDetails rDet -> (rDet.timeBasedFare, rDet.extraDistFare, 0, fareParams.nightShiftCharge)
+        _ -> (0, 0, 0, 0)
   RentalQuoteInfo
     { quoteId = id,
       rentalTag = Nothing,
+      perHourCharge,
+      perExtraKmRate,
+      perHourFreeKms,
+      nightShiftCharge,
       ..
     }
 
