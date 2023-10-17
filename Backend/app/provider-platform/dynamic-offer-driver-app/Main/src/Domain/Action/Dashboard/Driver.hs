@@ -51,6 +51,8 @@ module Domain.Action.Dashboard.Driver
     fleetUnlinkVehicle,
     fleetRemoveVehicle,
     fleetStats,
+    fleetTotalEarning,
+    fleetVehicleEarning,
     updateSubscriptionDriverFeeAndInvoice,
     setVehicleDriverRcStatusForFleet,
     getAllDriverVehicleAssociationForFleet,
@@ -120,6 +122,8 @@ import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
+import Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRD
 import Storage.Queries.Vehicle (findByRegistrationNo)
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
@@ -1261,3 +1265,43 @@ castFleetVehicleDriverStatus = \case
   FDVA.Active -> Common.Active
   FDVA.InActive -> Common.InActive
   FDVA.UnAssigned -> Common.UnAssigned
+
+fleetTotalEarning :: ShortId DM.Merchant -> Text -> Flow Common.FleetEarningRes
+fleetTotalEarning _merchantShortId fleetOwnerId = do
+  totalRides <- QRD.totalRidesByFleetOwner (Just fleetOwnerId)
+  totalEarning <- QRide.totalEarningsByFleetOwner (Just fleetOwnerId)
+  let vehicleNo = Nothing
+      driverId = Nothing
+      driverName = Nothing
+  pure $ Common.FleetEarningRes {..}
+
+fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe Text -> Flow Common.FleetEarningRes
+fleetVehicleEarning _merchantShortId fleetOwnerId vehicleNo mbDriverId = do
+  case mbDriverId of
+    Just driverId -> fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId
+    Nothing -> do
+      totalRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
+      totalEarning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
+      pure $
+        Common.FleetEarningRes
+          { driverId = Nothing,
+            driverName = Nothing,
+            vehicleNo = Just vehicleNo,
+            ..
+          }
+
+fleetVehicleEarningPerDriver :: Text -> Text -> Text -> Flow Common.FleetEarningRes
+fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId = do
+  totalRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicleNo driverId
+  totalEarning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicleNo driverId
+  let dId = Id driverId
+  driver <- QPerson.findById dId >>= fromMaybeM (PersonNotFound dId.getId)
+  let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+  pure $
+    Common.FleetEarningRes
+      { driverId = Just driverId,
+        driverName = Just driverName,
+        totalRides = totalRides,
+        totalEarning = totalEarning,
+        vehicleNo = Just vehicleNo
+      }
