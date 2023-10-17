@@ -12,12 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common where
 
 import Data.Aeson
 import Data.OpenApi
 import Kernel.Prelude
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data Customer
 
@@ -47,7 +49,9 @@ data DriverHomeLocation
 
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''Variant)
 
 -- | Hide secrets before storing request (or response) to DB.
 --

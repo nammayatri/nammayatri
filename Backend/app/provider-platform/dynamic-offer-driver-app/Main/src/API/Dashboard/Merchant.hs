@@ -95,9 +95,10 @@ driverPoolConfig merchantShortId = withFlowHandlerAPI . DMerchant.driverPoolConf
 driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Meters ->
+  Maybe Common.Variant ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId tripDistance = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId tripDistance
+driverPoolConfigUpdate merchantShortId tripDistance variant = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId tripDistance variant
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->

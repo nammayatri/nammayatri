@@ -219,9 +219,10 @@ castDPoolSortingType = \case
 driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Meters ->
+  Maybe Common.Variant ->
   Common.DriverPoolConfigUpdateReq ->
   Flow APISuccess
-driverPoolConfigUpdate merchantShortId tripDistance req = do
+driverPoolConfigUpdate merchantShortId tripDistance variant req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   config <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance >>= fromMaybeM (DriverPoolConfigDoesNotExist merchant.id.getId tripDistance)
@@ -239,7 +240,8 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
-               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
+               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit,
+               vehicleVariant = castVehicleVariant <$> variant
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchant.id
@@ -287,6 +289,7 @@ buildDriverPoolConfig merchantId tripDistance Common.DriverPoolConfigCreateReq {
         distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,
         updatedAt = now,
         createdAt = now,
+        vehicleVariant = castVehicleVariant <$> vehicleVariant,
         ..
       }
 

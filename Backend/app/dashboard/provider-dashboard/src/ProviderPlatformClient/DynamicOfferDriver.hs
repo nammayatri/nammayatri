@@ -135,7 +135,7 @@ data MerchantAPIs = MerchantAPIs
     merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfig :: Maybe Meters -> Euler.EulerClient Merchant.DriverPoolConfigRes,
-    driverPoolConfigUpdate :: Meters -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfigUpdate :: Meters -> Maybe Common.Variant -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfigCreate :: Meters -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
     driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,

@@ -260,6 +260,7 @@ type DriverPoolConfigUpdateAPI =
     :> "driverPool"
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> QueryParam "vehicleVariant" Variant
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
@@ -337,7 +338,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     singleBatchProcessTime :: Seconds,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
-    driverToDestinationDuration :: Seconds
+    driverToDestinationDuration :: Seconds,
+    vehicleVariant :: Maybe Variant
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

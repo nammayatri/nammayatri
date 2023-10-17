@@ -16,6 +16,7 @@
 module Storage.Beam.Merchant.DriverPoolConfig where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
@@ -42,7 +43,8 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverToDestinationDistanceThreshold :: B.C f Meters,
     driverToDestinationDuration :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    vehicleVariant :: B.C f (Maybe DVeh.Variant)
   }
   deriving (Generic, B.Beamable)
 
