@@ -10,6 +10,8 @@ data Action
   | OnSelect Config
   | OnImageClick
   | ShowRateCard String
+  | ChangeTicketQuantity Boolean
+  | ShowRouteInfo
 
 type Config
   = { vehicleImage :: String
@@ -28,6 +30,7 @@ type Config
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
+    , quantity :: Int
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -55,4 +58,26 @@ config =
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
+  , quantity : 0
+  }
+
+dummyBusConfig :: Config 
+dummyBusConfig =
+  { vehicleImage: "ny_ic_bus"
+  , isSelected: true -- toggle
+  , vehicleVariant: "BUS"
+  , vehicleType: "Local Bus"
+  , capacity: "1 passenger"
+  , price: "₹20"
+  , isCheckBox: false
+  , isEnabled: true
+  , activeIndex: 0
+  , index: 0
+  , id: "123456"
+  , maxPrice : 123
+  , basePrice : 20
+  , showInfo : true
+  , searchResultType : ESTIMATES
+  , isBookingOption : false
+  , quantity : 1
   }

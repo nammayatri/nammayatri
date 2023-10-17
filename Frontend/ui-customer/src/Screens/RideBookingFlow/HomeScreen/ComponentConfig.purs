@@ -27,6 +27,8 @@ import Components.Banner as Banner
 import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
+import Components.ChooseVehicle as ChooseVehicle
+import Components.RouteDetails.RouteDetails as RouteDetails
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
@@ -1001,16 +1003,19 @@ menuButtonConfig state item = let
     }
     in menuButtonConfig'
 
-chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
+chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config -- shrey00
 chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
+    -- quoteList = [ChooseVehicle.dummyBusConfig],
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers
   }
 
+routeDetailsViewConfig :: ST.HomeScreenState -> RouteDetails.Config
+routeDetailsViewConfig state = RouteDetails.config
 
 specialLocationIcons :: ZoneType -> String
 specialLocationIcons tag =

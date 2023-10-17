@@ -107,6 +107,7 @@ initData = {
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
+      , quantity : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -133,6 +134,7 @@ initData = {
       rideRequestFlow : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
+    , showRouteDetails : false
     , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing
@@ -223,6 +225,7 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , quantity : 0
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
     }

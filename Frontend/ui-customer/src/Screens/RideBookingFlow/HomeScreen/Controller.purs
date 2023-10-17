@@ -23,6 +23,7 @@ import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
+import Components.RouteDetails.Controller as RouteDetailsController
 import Components.DriverInfoCard.Controller as DriverInfoCardController
 import Components.EmergencyHelp as EmergencyHelpController
 import Components.ErrorModal.Controller as ErrorModalController
@@ -622,6 +623,7 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | RouteDetailsViewAction RouteDetailsController.Action
             | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
@@ -1875,8 +1877,10 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
   continue state{ props{ defaultPickUpPoint = "" } }
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
-  let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-      newState = state{data{specialZoneQuoteList = updatedQuotes}}
+  _ <- pure $ spy "OnSelct Triggered" config
+  let newQuantity = if config.quantity == 0 then 1 else state.props.quantity
+      updatedQuotes = map (\item -> item{activeIndex = config.index, quantity = newQuantity, isSelected = true}) state.data.specialZoneQuoteList
+      newState = state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = newQuantity}}
   if state.data.currentSearchResultType == QUOTES then do
               _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
               continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
@@ -1888,6 +1892,25 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , vehicleVariant = vehicleVariant
                                     , currentRateCardType = DefaultRateCard
                                     }}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ChangeTicketQuantity ticketChange))) state = do
+  let initialQuantity = state.props.quantity
+      updatedQuantity = case initialQuantity of 
+        10 -> if ticketChange then initialQuantity else initialQuantity - 1
+        1 -> if ticketChange then initialQuantity + 1 else initialQuantity
+        _ -> if ticketChange then initialQuantity + 1 else initialQuantity - 1
+
+  let updatedQuotes = map (\item -> item{quantity = updatedQuantity}) state.data.specialZoneQuoteList
+  continue state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = updatedQuantity}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.ShowRouteInfo)) state = 
+  continue state{props{showRouteDetails = true}}
+
+eval(RouteDetailsViewAction (RouteDetailsController.CloseRouteDetailsView)) state = 
+  continue state{props{showRouteDetails = false}}
+
+eval(RouteDetailsViewAction (RouteDetailsController.NoAction)) state = continue state
+
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price

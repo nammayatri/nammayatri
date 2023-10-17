@@ -129,7 +129,7 @@ quoteListView push config =
     , afterRender push (const NoAction)
     ]
     [ scrollView
-      [ height $ getQuoteListViewHeight config
+      [ height $ WRAP_CONTENT
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT

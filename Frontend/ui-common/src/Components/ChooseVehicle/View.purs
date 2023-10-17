@@ -5,17 +5,18 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), (<), (>), (/=), bind, when, void, (*))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, alpha)
 import Common.Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Commons as EHC
+import Data.Array (concat)
 import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  relativeLayout
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , background if config.index == config.activeIndex && (not config.isCheckBox) then Color.blue600 else Color.white900
@@ -28,20 +29,26 @@ view push config =
   , padding $ Padding 8 16 12 16
   , clickable config.isEnabled
   , onClick push $ const $ OnSelect config
-  , afterRender push (const NoAction)
+  , orientation VERTICAL
+  , afterRender 
+    ( \action -> do
+        _ <- pure $ spy "shrey00" config
+        pure unit
+    )
+    (const NoAction)
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , afterRender push (const NoAction)
       ][ imageView
-          [ imageWithFallback config.vehicleImage
+          [ imageWithFallback $ config.vehicleImage <> "," <> (getCommonAssetStoreLink FunctionCall) <> config.vehicleImage <> ".png"
           , height $ V 48
           , width $ V 60
           ]
         , linearLayout
           [ width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
           , height WRAP_CONTENT
-          , orientation VERTICAL
+          , orientation HORIZONTAL
           ][ vehicleDetailsView push config
            , if config.isCheckBox || config.searchResultType == QUOTES then capacityView push config else priceDetailsView push config
           ]
@@ -55,9 +62,15 @@ view push config =
       , height WRAP_CONTENT
       , gravity RIGHT
       , afterRender push (const NoAction)
-      , visibility if config.isCheckBox || config.searchResultType == QUOTES then VISIBLE else GONE
-      ][if config.isCheckBox then checkBox push config else priceDetailsView push config]
-
+      , visibility if config.isCheckBox then VISIBLE else GONE
+      ][checkBox push config]
+    , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity RIGHT
+          , afterRender push (const NoAction)
+          , visibility if config.vehicleVariant /= "AUTO_RICKSHAW" then GONE else VISIBLE -- "BUS"
+          ][ quantitySelectionView push config ]
   ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -65,7 +78,7 @@ vehicleDetailsView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , orientation $ if config.isBookingOption then VERTICAL else HORIZONTAL
+    , orientation VERTICAL
     , padding $ PaddingLeft 8
     ]
     [ textView
@@ -83,43 +96,110 @@ vehicleDetailsView push config =
                                       "SEDAN" -> "Sedan"
                                       "SUV" -> "SUV"
                                       "HATCHBACK" -> "Hatchback"
+                                      "BUS" -> "Bus"
                                       _ -> "Non-AC Taxi"
           , color Color.black800
+          , visibility if config.searchResultType == QUOTES then VISIBLE else GONE
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
+      , orientation HORIZONTAL
       , visibility if config.isCheckBox || config.searchResultType == QUOTES then GONE else VISIBLE
-      ][ linearLayout
+      ][ textView
+          $ [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text
+                $ case config.vehicleVariant of
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                    "TAXI" -> "Non-AC Taxi"
+                    "TAXI_PLUS" -> "AC Taxi"
+                    "SEDAN" -> "Sedan"
+                    "SUV" -> "SUV"
+                    "HATCHBACK" -> "Hatchback"
+                    "BUS" -> "Bus"
+                    _ -> "Non-AC Taxi"
+            , color Color.black800
+            ]
+          <> FontStyle.subHeading1 TypoGraphy
+        , linearLayout
           [ height $ V 4
           , width $ V 4
           , cornerRadius 2.5
           , background Color.black600
           , margin (Margin 5 12 0 0)
-          , visibility if config.isBookingOption then GONE else VISIBLE
+          , orientation HORIZONTAL
+          , visibility if config.isBookingOption then VISIBLE else GONE
           ][]
-        , linearLayout
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , margin $ if config.isBookingOption then (Margin 0 0 0 0) else (Margin 5 5 0 0)
-            ]
-            [ textView
+        , linearLayout 
+            [ width $ V 61
+            , height $ V 19
+            , cornerRadius 4.0
+            , gravity CENTER
+            , margin (Margin 2 6 0 0)
+            , background Color.blueMagentaOpacity10
+            ][ textView
                 $ [ width WRAP_CONTENT
                   , height WRAP_CONTENT
-                  , text config.capacity
-                  , color Color.black700
+                  , text config.id
+                  , color Color.blueMagenta
                   ]
-                <> FontStyle.body3 TypoGraphy
+                <> FontStyle.body15 TypoGraphy
             ]
       ]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      -- , orientation HORIZONTAL
+      , visibility if config.isSelected then GONE else VISIBLE
+      , margin $ if config.isBookingOption then (Margin 0 0 0 0) else (Margin 5 5 0 0)
+      ]
+      [ textView
+          $ [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text config.capacity
+            , color Color.black700
+            ]
+          <> FontStyle.body3 TypoGraphy
+      ]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , visibility if config.isSelected then VISIBLE else GONE
+      ][ imageView
+          [ imageWithFallback $ "ny_ic_walk," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_walk.png"
+          , height $ V 16
+          , width $ V 16
+          ]
+        , imageView
+          [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+          , height $ V 16
+          , width $ V 16
+          ]
+        , imageView
+          [ imageWithFallback $ "ny_ic_bus_vector," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_bus_vector.png"
+          , height $ V 16
+          , width $ V 16
+          ]
+        , imageView
+          [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_.png"
+          , height $ V 16
+          , width $ V 16
+          ]
+        , imageView
+          [ imageWithFallback $ "ny_ic_walk," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_walk.png"
+          , height $ V 16
+          , width $ V 16
+          ]
+        ]
 
     ]
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config = do 
-  let basePrice = config.basePrice 
+  let totalPrice = config.basePrice * config.quantity
   linearLayout
     [ height MATCH_PARENT
     , width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
@@ -175,3 +255,71 @@ capacityView push config =
   , text config.capacity
   , margin $ Margin 8 4 0 0
   ] <> FontStyle.body3 TypoGraphy
+
+  
+quantitySelectionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+quantitySelectionView push config = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ Margin 8 0 0 0
+  , gravity CENTER
+  , orientation VERTICAL
+  , visibility if config.isSelected then VISIBLE else GONE
+  ][ linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , gravity CENTER
+    , background Color.white900
+    , orientation HORIZONTAL
+    , margin $ Margin 4 4 4 4
+    ][  imageView
+          [ imageWithFallback $ "ny_ic_stepper_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_stepper_down.png"
+          , height $ V 36
+          , width $ V 72
+          , gravity CENTER
+          , margin (Margin 10 6 0 6)
+          , cornerRadius 4.0
+          , onClick push $ const $ ChangeTicketQuantity false
+          ]
+        , textView $
+          [ text $ "Tickets: " <> show config.quantity
+          , height $ V 36
+          , width $ V 168
+          , gravity CENTER
+          , color Color.black900
+          ]<> FontStyle.h3 TypoGraphy
+        , imageView
+          [ imageWithFallback $ "ny_ic_stepper_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_stepper_up.png"
+          , height $ V 36
+          , width $ V 72
+          , gravity CENTER
+          , margin (Margin 0 6 10 6)
+          , cornerRadius 4.0
+          , onClick push $ const $ ChangeTicketQuantity true
+          ]
+      ]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ][ textView $
+          [ text "You can book a maximum of 10 tickets"
+          , height $ V 16
+          , color if config.quantity /= 10 then Color.transparent else Color.red900
+          , gravity CENTER
+          ] <> FontStyle.body3 TypoGraphy
+        , textView $ 
+          [ text "View Route Details"
+          , width $ V 107
+          , height $ V 15
+          , color Color.blue900
+          , margin $ Margin 0 0 0 8
+          , gravity CENTER
+          , clickable config.isEnabled
+          , onClick push $ const ShowRouteInfo
+          ] <> FontStyle.tags TypoGraphy
+      ]
+  ]
+  

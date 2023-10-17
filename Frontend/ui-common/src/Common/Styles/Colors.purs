@@ -156,6 +156,12 @@ yellow500 = "#F5C061"
 yellow700 :: Color
 yellow700 = "#F09A01"
 
+blueMagentaOpacity10 :: Color
+blueMagentaOpacity10 = "#1A9747FF"
+
+red900 :: Color
+red900 = "#E55454"
+
 yellow800 :: Color
 yellow800 = "#FEEBB9"
 

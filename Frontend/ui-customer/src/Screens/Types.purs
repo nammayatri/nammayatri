@@ -625,6 +625,7 @@ type DisabilityData = {
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , showRouteDetails :: Boolean  
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
@@ -701,6 +702,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , quantity :: Int
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
   }

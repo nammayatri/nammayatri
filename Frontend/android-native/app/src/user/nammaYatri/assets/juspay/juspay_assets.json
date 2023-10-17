@@ -1,5 +1,6 @@
 {
    "fonts" : {
+      "FEFont" : true,
       "NotoSansKannada-Black" : true,
       "NotoSansKannada-Bold" : true,
       "NotoSansKannada-ExtraBold" : true,
@@ -155,6 +156,7 @@
       "ny_ic_blind_pickup" : true,
       "ny_ic_blue_auto" : true,
       "ny_ic_briefcase" : true,
+      "ny_ic_bus" : true,
       "ny_ic_calendar_blue" : true,
       "ny_ic_call" : true,
       "ny_ic_cancel" : true,
