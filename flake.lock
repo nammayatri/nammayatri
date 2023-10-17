@@ -101,11 +101,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1697012339,
-        "narHash": "sha256-GB4oWSI/GW1s71cQGN2gLbGEFUPrSPLSb5Dq38gLJjQ=",
+        "lastModified": 1697532260,
+        "narHash": "sha256-5K6pWixfI5JGY8TXdkx7SMeTPhWEkDJMY8wtDe6YWgg=",
         "owner": "arjunkathuria",
         "repo": "beckn-gateway",
-        "rev": "50b31d3a7c95fd8ea5104609bf12ee6d8cbc002c",
+        "rev": "635b37487134ac6fd80504f10c2712e0e054fc5b",
         "type": "github"
       },
       "original": {
@@ -308,11 +308,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1696580690,
-        "narHash": "sha256-6NsQIqnyYcOL1UVnNbptgssiQkU5ASVR4M0M4+MO7Jo=",
+        "lastModified": 1697529152,
+        "narHash": "sha256-zh4d4ic53io60fHC1gMvQaVcSTJ42mSW6sQJ2STVgJg=",
         "owner": "arjunkathuria",
         "repo": "common",
-        "rev": "fb68c68fcbc6d87c346786befc203b4b71521f64",
+        "rev": "90fc38c398503e0452e42a499fb78c17dd540a5c",
         "type": "github"
       },
       "original": {
@@ -338,11 +338,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1696580690,
-        "narHash": "sha256-6NsQIqnyYcOL1UVnNbptgssiQkU5ASVR4M0M4+MO7Jo=",
+        "lastModified": 1697529152,
+        "narHash": "sha256-zh4d4ic53io60fHC1gMvQaVcSTJ42mSW6sQJ2STVgJg=",
         "owner": "arjunkathuria",
         "repo": "common",
-        "rev": "fb68c68fcbc6d87c346786befc203b4b71521f64",
+        "rev": "90fc38c398503e0452e42a499fb78c17dd540a5c",
         "type": "github"
       },
       "original": {
@@ -2606,11 +2606,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1696953681,
-        "narHash": "sha256-EHkFM6yzKvzjudTPHHD2efqadDNxXgapOagc1kXyRzM=",
+        "lastModified": 1697531764,
+        "narHash": "sha256-qjqBK7vGRkhCCbqlyD6DCGu0xHMsR/S0rFmwyv4EY0s=",
         "owner": "arjunkathuria",
         "repo": "shared-kernel",
-        "rev": "59c5e99f8a9238348bf2349249885667e40c0d2c",
+        "rev": "f34e935edb39be225293d4bf245c8039305f4815",
         "type": "github"
       },
       "original": {
