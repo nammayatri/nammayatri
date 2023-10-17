@@ -31,9 +31,6 @@ import Lib.Scheduler.Types as ST
 import qualified Sequelize as Se
 import SharedLogic.Allocator
 
-getShouldRunReviverKey :: Text
-getShouldRunReviverKey = "SHOULD_RUN_REVIVER"
-
 producerLockKey :: Text
 producerLockKey = "Producer:Lock:key"
 
@@ -75,14 +72,16 @@ runProducer = do
 runReviver :: Flow ()
 runReviver = do
   reviverInterval <- asks (.reviverInterval)
-  shouldRunReviver :: (Maybe Bool) <- Hedis.get getShouldRunReviverKey
-  when (shouldRunReviver == Just True) $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
-  threadDelayMilliSec reviverInterval
+  T.UTCTime _ todaysDiffTime <- getCurrentTime
+  let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
+      shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getSeconds) == 0
+  if shouldRunReviver
+    then Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
+    else threadDelayMilliSec 5000
 
 runReviver' :: Flow ()
 runReviver' = do
   logDebug "Reviver is Running "
-  Hedis.set getShouldRunReviverKey False
   pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
   let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
   logDebug $ "Total number of pendingJobs in DB : " <> show (length pendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
