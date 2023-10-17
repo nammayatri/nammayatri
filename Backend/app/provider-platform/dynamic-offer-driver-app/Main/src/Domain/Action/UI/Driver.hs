@@ -1171,9 +1171,13 @@ respondQuote (driverId, _) req = do
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
+    mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
     sReqFD <-
-      QSRD.findByDriverAndSearchTryId driverId searchTry.id
-        >>= fromMaybeM NoSearchRequestForDriver
+      case mSReqFD of
+        Just srfd -> return srfd
+        Nothing -> do
+          logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
+          throwError RideRequestAlreadyAccepted
     driverFCMPulledList <-
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
