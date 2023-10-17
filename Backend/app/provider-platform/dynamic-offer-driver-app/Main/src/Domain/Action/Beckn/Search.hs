@@ -173,13 +173,8 @@ handler merchant sReq = do
                     waitingTime = Nothing,
                     driverSelectedFare = Nothing,
                     customerExtraFee = Nothing,
-                    nightShiftCharge = Nothing, -- Params below me are for rentals
-                    rideStartTime = Nothing,
-                    rideEndTime = Nothing,
-                    actualDistance = Nothing,
-                    chargedDuration = 0,
-                    nightShiftOverlapChecking = Nothing,
-                    now = now
+                    nightShiftCharge = Nothing,
+                    rentalRideParams = Nothing
                   }
             buildSpecialZoneQuote
               searchRequestSpecialZone

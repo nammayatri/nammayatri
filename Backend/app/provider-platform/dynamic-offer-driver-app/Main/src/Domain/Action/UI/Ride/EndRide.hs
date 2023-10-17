@@ -88,7 +88,7 @@ data DriverEndRideReq = DriverEndRideReq
     requestor :: DP.Person,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    odometerEndReading :: Maybe Int,
+    odometerEndReading :: Maybe Centesimal,
     endRideOtp :: Maybe Text
   }
 
@@ -236,7 +236,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   (tripEndPoint, odometerEndReading) <- case req of
     DriverReq driverReq -> do
       logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      pure (driverReq.point, driverReq.odometerEndReading :: Maybe Int)
+      pure (driverReq.point, driverReq.odometerEndReading :: Maybe Centesimal)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
       case dashboardReq.point of
@@ -256,33 +256,29 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
 
   homeLocationReached' <-
-    case odometerEndReading of
-      Nothing -> do
-        if ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
-          then do
-            case ghInfo.driverGoHomeRequestId of
-              Nothing -> do
-                logError "DriverGoHomeRequestId not present even though status is active."
-                return Nothing
-              Just ghrId -> do
-                mbDriverGoHomeReq <- QDGR.findById ghrId
-                case mbDriverGoHomeReq of
-                  Just driverGoHomeReq -> do
-                    let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-                    routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
-                    logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
-                    let driverHomeDists = mapMaybe (.distance) routesResp
-                    if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
-                      then do
-                        CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo (Just True)
-                        return $ Just True
-                      else do
-                        CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
-                        return $ Just False
-                  Nothing -> return Nothing
-          else return Nothing
-      _ -> return Nothing
-
+    if isNothing odometerEndReading && ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
+      then do
+        case ghInfo.driverGoHomeRequestId of
+          Nothing -> do
+            logError "DriverGoHomeRequestId not present even though status is active."
+            return Nothing
+          Just ghrId -> do
+            mbDriverGoHomeReq <- QDGR.findById ghrId
+            case mbDriverGoHomeReq of
+              Just driverGoHomeReq -> do
+                let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
+                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
+                let driverHomeDists = mapMaybe (.distance) routesResp
+                if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
+                  then do
+                    CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo (Just True)
+                    return $ Just True
+                  else do
+                    CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
+                    return $ Just False
+              Nothing -> return Nothing
+      else return Nothing
   whenWithLocationUpdatesLock driverId $ do
     thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
     now <- getCurrentTime
@@ -322,7 +318,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           (recalcDistance, finalFare, mbUpdatedFareParams) <- case farePolicy.farePolicyDetails of
             DFP.ProgressiveDetails _ -> throwError $ InternalError "Rental does not support progressive FP"
             DFP.SlabsDetails _ -> throwError $ InternalError "Rental does not support slab FP"
-            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ (endReading - fromMaybe 0 rideOld.odometerStartReading) * 1000) thresholdConfig.timeDiffFromUtc
+            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ round (endReading - fromMaybe 0 rideOld.odometerStartReading) * 1000) thresholdConfig.timeDiffFromUtc
           ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
           pure (recalcDistance, finalFare, mbUpdatedFareParams, ride, Nothing, Nothing)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
@@ -367,11 +363,10 @@ recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance timeDiffFromUtc = do
   let merchantId = booking.providerId
       oldDistance = booking.estimatedDistance
-
-  now <- getLocalCurrentTime timeDiffFromUtc
+  now <- getCurrentTime
   actualDuration <- case ride.tripStartTime of
     Nothing -> throwError $ InternalError "No start reading found" -- Impossible case
-    Just startTime -> pure $ round (now `diffUTCTime` addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) startTime) `div` 3600
+    Just startTime -> pure $ round (now `diffUTCTime` startTime)
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
@@ -385,12 +380,19 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance timeDi
           driverSelectedFare = booking.fareParams.driverSelectedFare,
           customerExtraFee = booking.fareParams.customerExtraFee,
           nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
-          rideStartTime = if isJust ride.odometerStartReading then addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> ride.tripStartTime else Nothing,
-          rideEndTime = if isJust ride.odometerStartReading then Just now else Nothing,
-          actualDistance = if isJust ride.odometerStartReading then Just (recalcDistance.getMeters `div` 1000) else Nothing,
-          chargedDuration = if isJust ride.odometerStartReading then max actualDuration (booking.estimatedDuration.getSeconds `div` 3600) else 0,
-          nightShiftOverlapChecking = Just $ isJust ride.odometerStartReading,
-          now = now
+          rentalRideParams =
+            if isJust ride.odometerStartReading
+              then
+                Just $
+                  Fare.RentalRideParams
+                    { rideStartTime = ride.tripStartTime,
+                      rideEndTime = now,
+                      actualDistanceInKm = recalcDistance.getMeters `div` 1000,
+                      chargedDurationInHr = (max actualDuration booking.estimatedDuration.getSeconds) `div` 3600,
+                      nightShiftOverlapChecking = True,
+                      timeDiffFromUtc = timeDiffFromUtc
+                    }
+              else Nothing
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance

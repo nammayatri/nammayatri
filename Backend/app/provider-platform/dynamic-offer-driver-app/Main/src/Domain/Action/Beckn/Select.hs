@@ -87,7 +87,6 @@ handler merchant sReq estimate = do
     createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
     createNewSearchTry farePolicy searchReq = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
-      now <- getCurrentTime
       fareParams <-
         calculateFareParameters
           CalculateFareParametersParams
@@ -97,13 +96,8 @@ handler merchant sReq estimate = do
               waitingTime = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = sReq.customerExtraFee,
-              nightShiftCharge = Nothing, -- Params below me are for rentals
-              rideStartTime = Nothing,
-              rideEndTime = Nothing,
-              actualDistance = Nothing,
-              chargedDuration = 0,
-              nightShiftOverlapChecking = Nothing,
-              now = now
+              nightShiftCharge = Nothing,
+              rentalRideParams = Nothing
             }
       let estimatedFare = fareSum fareParams
           pureEstimatedFare = pureFareSum fareParams

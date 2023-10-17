@@ -32,10 +32,10 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Event
 
-startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, HasField "enableLocationTrackingService" r Bool) => Id SP.Person -> SRide.Ride -> SRB.Booking -> LatLong -> Maybe Int -> m ()
+startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, HasField "enableLocationTrackingService" r Bool) => Id SP.Person -> SRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m ()
 startRideTransaction driverId ride booking firstPoint odometerStartReading = do
   when (booking.bookingType == SRB.RentalBooking) $ do
-    unless (isJust odometerStartReading) $ throwError InvalidRideRequest
+    unless (isJust odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
     void $ QRide.updateOdometerStartReading ride.id odometerStartReading
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = booking.providerId}
   QRide.updateStatus ride.id SRide.INPROGRESS

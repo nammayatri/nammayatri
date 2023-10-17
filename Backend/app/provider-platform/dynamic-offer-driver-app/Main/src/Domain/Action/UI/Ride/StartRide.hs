@@ -59,7 +59,7 @@ data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRi
 data DriverStartRideReq = DriverStartRideReq
   { rideOtp :: Text,
     point :: LatLong,
-    odometerStartReading :: Maybe Int,
+    odometerStartReading :: Maybe Centesimal,
     requestor :: DP.Person
   }
 
@@ -72,7 +72,7 @@ data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> SRB.Booking -> LatLong -> Maybe Int -> m (),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
@@ -156,7 +156,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   (point, odometerStartReading) <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
-      when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError InvalidRideRequest
+      when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       pure (driverReq.point, driverReq.odometerStartReading)
     DashboardReq dashboardReq -> do

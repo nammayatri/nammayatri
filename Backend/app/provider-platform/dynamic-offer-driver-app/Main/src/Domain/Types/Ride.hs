@@ -71,8 +71,8 @@ data Ride = Ride
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    odometerStartReading :: Maybe Int,
-    odometerEndReading :: Maybe Int,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal,
     endRideOtp :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
