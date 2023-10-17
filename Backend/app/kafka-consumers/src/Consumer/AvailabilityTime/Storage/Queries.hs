@@ -11,60 +11,79 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Consumer.AvailabilityTime.Storage.Queries where
 
-import Consumer.AvailabilityTime.Storage.Tables
+import qualified Consumer.AvailabilityTime.Storage.Beam.Tables as BeamDA
 import qualified Consumer.AvailabilityTime.Types as Domain
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (putMany)
+import Kernel.Types.App (MonadFlow)
+import Kernel.Types.Id (Id (..))
+import qualified Sequelize as Se
 
-create :: Domain.DriverAvailability -> Esq.SqlDB ()
-create = Esq.create
+create :: MonadFlow m => Domain.DriverAvailability -> m ()
+create = createWithKV
 
-findLatestByDriverIdAndMerchantId :: (Esq.Transactionable m) => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
-findLatestByDriverIdAndMerchantId driverId merchantId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.DriverAvailability) $
-    Esq.findOne' $ do
-      dDriverAvailability <-
-        from $ table @DriverAvailabilityT
-      where_ $
-        dDriverAvailability ^. DriverAvailabilityDriverId ==. val driverId
-          &&. dDriverAvailability ^. DriverAvailabilityMerchantId ==. val merchantId
-      orderBy [desc $ dDriverAvailability ^. DriverAvailabilityLastAvailableTime]
-      limit 1
-      pure dDriverAvailability
+findLatestByDriverIdAndMerchantId :: MonadFlow m => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
+findLatestByDriverIdAndMerchantId driverId merchantId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDA.driverId $ Se.Eq driverId,
+          Se.Is BeamDA.merchantId $ Se.Eq merchantId
+        ]
+    ]
+    (Se.Desc BeamDA.lastAvailableTime)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
-findAvailableTimeInBucketByDriverIdAndMerchantId :: (Esq.Transactionable m) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
-findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime = buildDType $
-  fmap (fmap $ extractSolidType @Domain.DriverAvailability) $
-    Esq.findOne' $ do
-      dDriverAvailability <-
-        from $ table @DriverAvailabilityT
-      where_ $
-        dDriverAvailability ^. DriverAvailabilityDriverId ==. val driverId
-          &&. dDriverAvailability ^. DriverAvailabilityMerchantId ==. val merchantId
-          &&. dDriverAvailability ^. DriverAvailabilityBucketStartTime ==. val bucketStartTime
-          &&. dDriverAvailability ^. DriverAvailabilityBucketEndTime ==. val bucketEndTime
-      limit 1
-      pure dDriverAvailability
+findAvailableTimeInBucketByDriverIdAndMerchantId :: MonadFlow m => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
+findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDA.driverId $ Se.Eq driverId,
+          Se.Is BeamDA.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDA.bucketStartTime $ Se.Eq bucketStartTime,
+          Se.Is BeamDA.bucketEndTime $ Se.Eq bucketEndTime
+        ]
+    ]
+    (Se.Desc BeamDA.lastAvailableTime)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
-createOrUpdateDriverAvailability :: Domain.DriverAvailability -> SqlDB ()
+createOrUpdateDriverAvailability :: MonadFlow m => Domain.DriverAvailability -> m ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do
   mbOldBucketAvailableTime <- findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime
   case mbOldBucketAvailableTime of
     Nothing -> Consumer.AvailabilityTime.Storage.Queries.create d
     Just lastVal ->
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ DriverAvailabilityTotalAvailableTime =. val (lastVal.totalAvailableTime + totalAvailableTime),
-            DriverAvailabilityUpdatedAt =. val updatedAt,
-            DriverAvailabilityLastAvailableTime =. val (ifAGBTA lastVal.lastAvailableTime lastAvailableTime)
-          ]
-        where_ $
-          tbl ^. DriverAvailabilityDriverId ==. val driverId
-            &&. tbl ^. DriverAvailabilityBucketStartTime ==. val bucketStartTime
-            &&. tbl ^. DriverAvailabilityBucketEndTime ==. val bucketEndTime
-  where
-    ifAGBTA a b = if a > b then a else b
+      updateWithKV
+        [ Se.Set BeamDA.totalAvailableTime (lastVal.totalAvailableTime + totalAvailableTime),
+          Se.Set BeamDA.updatedAt updatedAt,
+          Se.Set BeamDA.lastAvailableTime (max lastVal.lastAvailableTime lastAvailableTime)
+        ]
+        [ Se.And
+            [ Se.Is BeamDA.driverId $ Se.Eq driverId,
+              Se.Is BeamDA.bucketStartTime $ Se.Eq bucketStartTime,
+              Se.Is BeamDA.bucketEndTime $ Se.Eq bucketEndTime
+            ]
+        ]
+
+instance FromTType' BeamDA.DriverAvailability Domain.DriverAvailability where
+  fromTType' BeamDA.DriverAvailabilityT {..} = do
+    pure $
+      Just
+        Domain.DriverAvailability
+          { id = Id id,
+            ..
+          }
+
+instance ToTType' BeamDA.DriverAvailability Domain.DriverAvailability where
+  toTType' Domain.DriverAvailability {..} =
+    BeamDA.DriverAvailabilityT
+      { id = getId id,
+        ..
+      }

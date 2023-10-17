@@ -23,6 +23,7 @@ library
   exposed-modules:
       App
       Consumer.AvailabilityTime.Processor
+      Consumer.AvailabilityTime.Storage.Beam.Tables
       Consumer.AvailabilityTime.Storage.Queries
       Consumer.AvailabilityTime.Storage.Tables
       Consumer.AvailabilityTime.Types
@@ -73,7 +74,11 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , dynamic-offer-driver-app
     , errors
@@ -86,15 +91,18 @@ library
     , monad-control
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , sequelize
     , servant-server
     , sessionizer-metrics
     , streamly
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs
@@ -144,7 +152,11 @@ executable kafka-consumers-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , errors
     , esqueleto
@@ -157,14 +169,17 @@ executable kafka-consumers-exe
     , monad-control
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant-server
     , sessionizer-metrics
     , streamly
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs
