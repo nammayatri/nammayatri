@@ -39,7 +39,7 @@ startProducer = do
   startProducerWithEnv flowRt appCfg appEnv
 
 startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
-startProducerWithEnv flowRt appCfg appEnv@AppEnv {} = do
+startProducerWithEnv flowRt appCfg appEnv = do
   runFlow
     flowRt
     ( prepareConnectionRider
@@ -52,4 +52,4 @@ startProducerWithEnv flowRt appCfg appEnv@AppEnv {} = do
         appCfg.tables
     )
   runFlowR flowRt appEnv $ do
-    loopGracefully [PF.runReviver, PF.runProducer]
+    loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

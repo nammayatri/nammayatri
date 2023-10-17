@@ -77,4 +77,5 @@ in  { hedisCfg
     , maxShards = +5
     , metricsPort = +9990
     , tables
+    , runReviver = True
     }
