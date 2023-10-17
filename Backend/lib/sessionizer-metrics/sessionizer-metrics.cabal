@@ -88,5 +88,3 @@ library
     , uri-encode
     , wai-middleware-prometheus
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

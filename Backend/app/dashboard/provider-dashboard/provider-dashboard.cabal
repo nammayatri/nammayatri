@@ -111,8 +111,6 @@ library
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable provider-dashboard-exe
   main-is: Main.hs
@@ -182,5 +180,3 @@ executable provider-dashboard-exe
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

@@ -92,8 +92,6 @@ library
     , wai-extra
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable mock-idfy-exe
   main-is: Main.hs
@@ -144,5 +142,3 @@ executable mock-idfy-exe
     , record-dot-preprocessor
     , record-hasfield
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs

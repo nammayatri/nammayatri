@@ -9,8 +9,10 @@
     # Backend inputs
     # Note: replace with upstream when GHC 9.2 changes get merged there
     # shared-kernel.url = "github:nammayatri/shared-kernel";
-    shared-kernel.url = "github:arjunkathuria/shared-kernel/Mobility-GHC927-rebased-03";
-    shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
+    shared-kernel = {
+      url = "github:arjunkathuria/shared-kernel/Mobility-GHC927-rebased-03";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway = {

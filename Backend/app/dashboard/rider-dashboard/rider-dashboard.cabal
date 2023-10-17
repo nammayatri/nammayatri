@@ -105,8 +105,6 @@ library
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
 
 executable rider-dashboard-exe
   main-is: Main.hs
@@ -173,5 +171,3 @@ executable rider-dashboard-exe
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
