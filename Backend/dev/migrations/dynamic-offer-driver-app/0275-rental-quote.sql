@@ -26,4 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_type character varying(3
 --to identify rental or ondemand ride
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN tag character varying(36);
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN opt_for_rental boolean;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN opt_for_rental boolean default true;
+
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_start_reading_image_path CHARACTER VARYING(255);
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading_image_path CHARACTER VARYING(255);

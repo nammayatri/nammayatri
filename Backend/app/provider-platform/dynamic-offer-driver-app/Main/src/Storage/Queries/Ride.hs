@@ -227,6 +227,20 @@ updateUiDistanceCalculation rideId dist1 dist2 = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateOdometerStartReadingImagePath :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerStartReadingImagePath rideId startReadingImage = do
+  updateOneWithKV
+    [ Se.Set BeamR.odometerStartReadingImagePath startReadingImage
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateOdometerEndReadingImagePath :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerEndReadingImagePath rideId endReadingImage = do
+  updateOneWithKV
+    [ Se.Set BeamR.odometerEndReadingImagePath endReadingImage
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Int -> m ()
 updateOdometerEndReading rideId meters = do
   now <- getCurrentTime
@@ -586,7 +600,9 @@ instance FromTType' BeamR.Ride Ride where
                 { DRide.rentalToLocation = Nothing,
                   endRideOtp = endRideOtp,
                   odometerStartReading = odometerStartReading,
-                  odometerEndReading = odometerEndReading
+                  odometerEndReading = odometerEndReading,
+                  odometerStartReadingImagePath = odometerStartReadingImagePath,
+                  odometerEndReadingImagePath = odometerEndReadingImagePath
                 }
         pure $
           Just
@@ -640,6 +656,8 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
             BeamR.odometerStartReading = Nothing,
             BeamR.odometerEndReading = Nothing,
+            BeamR.odometerStartReadingImagePath = Nothing,
+            BeamR.odometerEndReadingImagePath = Nothing,
             BeamR.endRideOtp = Nothing,
             BeamR.rideType = rideType
           }
@@ -676,6 +694,8 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.driverGoHomeRequestId = Nothing,
             BeamR.odometerStartReading = odometerStartReading,
             BeamR.odometerEndReading = odometerEndReading,
+            BeamR.odometerStartReadingImagePath = odometerStartReadingImagePath,
+            BeamR.odometerEndReadingImagePath = odometerEndReadingImagePath,
             BeamR.endRideOtp = endRideOtp,
             BeamR.rideType = rideType
           }

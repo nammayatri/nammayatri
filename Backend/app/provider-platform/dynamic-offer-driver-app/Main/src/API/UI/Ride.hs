@@ -89,6 +89,18 @@ type API =
                     :> ReqBody '[JSON] CancelRideReq
                     :> Post '[JSON] RideCancel.CancelRideResp
                 )
+             :<|> ( TokenAuth
+                      :> Capture "rideId" (Id Ride.Ride)
+                      :> "odometerReading"
+                      :> QueryParam "start" Bool
+                      :> ReqBody '[JSON] DRide.UploadOdometerReadingReq
+                      :> Post '[JSON] APISuccess
+                      :<|> TokenAuth
+                      :> Capture "rideId" (Id Ride.Ride)
+                      :> "odometerReading"
+                      :> QueryParam "start" Bool
+                      :> Get '[JSON] DRide.OdometerReadingRes
+                  )
          )
 
 data StartRideReq = StartRideReq
@@ -122,6 +134,8 @@ handler =
              :<|> endRide
              :<|> cancelRide
          )
+    :<|> uploadOdometerReading
+    :<|> getOdometerReading
 
 startRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
 startRide (requestorId, merchantId) rideId StartRideReq {rideOtp, point, odometerStartReading} = withFlowHandlerAPI $ do
@@ -170,3 +184,9 @@ listDriverRides (driverId, _) mbLimit mbOffset mbRideStatus mbDay = withFlowHand
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
+
+uploadOdometerReading :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> Maybe Bool -> DRide.UploadOdometerReadingReq -> FlowHandler APISuccess
+uploadOdometerReading (driverId, _) rideId isStartRide req = withFlowHandlerAPI $ do DRide.uploadOdometerReading driverId rideId isStartRide req
+
+getOdometerReading :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> Maybe Bool -> FlowHandler DRide.OdometerReadingRes
+getOdometerReading (_, _) rideId isStartRide = withFlowHandlerAPI $ do DRide.getOdometerReading rideId isStartRide

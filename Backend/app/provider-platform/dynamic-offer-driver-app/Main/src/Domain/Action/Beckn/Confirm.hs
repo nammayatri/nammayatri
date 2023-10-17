@@ -271,6 +271,8 @@ handler transporter req quote = do
                   { rentalToLocation = Nothing,
                     odometerStartReading = Nothing,
                     odometerEndReading = Nothing,
+                    odometerStartReadingImagePath = Nothing,
+                    odometerEndReadingImagePath = Nothing,
                     endRideOtp = Just endRideOtp
                   }
               )

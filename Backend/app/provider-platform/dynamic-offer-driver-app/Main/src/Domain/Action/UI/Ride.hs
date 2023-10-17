@@ -12,20 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     OTPRideReq (..),
+    UploadOdometerReadingReq (..),
+    OdometerReadingRes (..),
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
+    uploadOdometerReading,
+    getOdometerReading,
   )
 where
 
+import AWS.S3 as S3
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
+import Data.Time.Format.ISO8601
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
@@ -71,6 +78,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -79,6 +87,16 @@ import Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
+
+newtype UploadOdometerReadingReq = UploadOdometerReadingReq
+  { imageBase64 :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OdometerReadingRes = OdometerReadingRes
+  { imageBase64 :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
@@ -315,7 +333,9 @@ otpRideCreate driver otpCode booking = do
                 DRide.RideDetailsRental
                   { rentalToLocation = Nothing,
                     odometerStartReading = Nothing,
+                    odometerStartReadingImagePath = Nothing,
                     odometerEndReading = Nothing,
+                    odometerEndReadingImagePath = Nothing,
                     endRideOtp = Nothing
                   }
               )
@@ -374,3 +394,53 @@ otpRideCreate driver otpCode booking = do
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
+
+uploadOdometerReading ::
+  Id DP.Person ->
+  Id DRide.Ride ->
+  Maybe Bool ->
+  UploadOdometerReadingReq ->
+  Flow APISuccess
+uploadOdometerReading driverId rideId isStartRide req = do
+  person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let merchantId = person.merchantId
+  imagePath <- createPath driverId.getId merchantId.getId
+  _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) req.imageBase64
+  _ <-
+    if fromMaybe True isStartRide
+      then QRide.updateOdometerStartReadingImagePath rideId (Just req.imageBase64)
+      else QRide.updateOdometerEndReadingImagePath rideId (Just req.imageBase64)
+  pure Success
+  where
+    createPath ::
+      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      Text ->
+      Text ->
+      m Text
+    createPath driverId' merchantId' = do
+      pathPrefix <- asks (.s3Env.pathPrefix)
+      now <- getCurrentTime
+      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      return
+        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
+            <> driverId'
+            <> "/"
+            <> fileName
+            <> ".png"
+        )
+
+getOdometerReading ::
+  Id DRide.Ride ->
+  Maybe Bool ->
+  Flow OdometerReadingRes
+getOdometerReading rideId isStartRide = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+
+  let imagePath =
+        if fromMaybe True isStartRide
+          then ride.rideDetails.odometerStartReadingImagePath
+          else ride.rideDetails.odometerEndReadingImagePath
+  when (isNothing imagePath) $ do
+    throwError $ InvalidRequest "Ride Not Found"
+  image <- S3.get (T.unpack $ fromJust imagePath)
+  pure $ OdometerReadingRes image

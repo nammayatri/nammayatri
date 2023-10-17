@@ -54,7 +54,9 @@ data SpecificRideDetails
       }
   | RideDetailsRental
       { rentalToLocation :: Maybe DL.Location,
+        odometerStartReadingImagePath :: Maybe Text,
         odometerStartReading :: Maybe Int,
+        odometerEndReadingImagePath :: Maybe Text,
         odometerEndReading :: Maybe Int,
         endRideOtp :: Maybe Text
       }
