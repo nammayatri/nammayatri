@@ -288,7 +288,7 @@ fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbD
             vehicle <- B.leftJoin_' (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\veh' -> BeamP.id person B.==?. BeamV.driverId veh')
             driverLicense <- B.leftJoin_' (B.all_ (BeamCommon.driverLicense BeamCommon.atlasDB)) (\dl' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbDlNumberHash (BeamP.id person B.==. BeamDL.driverId dl'))
             driverRCAssociation <- B.leftJoin_' (B.all_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB)) (\drca' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbRcNumberHash (BeamP.id person B.==. BeamDRCA.driverId drca' B.&&. (B.just_ (B.val_ now) B.<. BeamDRCA.associatedTill drca')))
-            vehicleRegistrationCertificate <- B.leftJoin_' (B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)) (\vrc' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbRcNumberHash (BeamP.id person B.==. BeamVRC.id vrc'))
+            vehicleRegistrationCertificate <- B.leftJoin_' (B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)) (\vrc' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbRcNumberHash (BeamDRCA.rcId driverRCAssociation B.==. B.just_ (BeamVRC.id vrc')))
             pure (person, driverInfo, vehicle, driverLicense, driverRCAssociation, vehicleRegistrationCertificate)
   res' <- case result of
     Right x -> do
