@@ -490,6 +490,48 @@ createMapping bookingId rideId = do
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]
 
+totalEarningsByFleetOwner :: MonadFlow m => Maybe Text -> m Int
+totalEarningsByFleetOwner fleetIdWanted = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+
+totalEarningsByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
+totalEarningsByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+
+totalEarningsByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Text -> m Int
+totalEarningsByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverNameWanted = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted) B.&&?. (BeamRD.driverName rideDetails'' B.==?. B.val_ driverNameWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id

@@ -57,6 +57,8 @@ type API =
            :<|> FleetUnlinkVehicleAPI
            :<|> FleetRemoveVehicleAPI
            :<|> FleetStatsAPI
+           :<|> FleetTotalEarningAPI
+           :<|> FleetVehicleEarningAPI
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
@@ -178,6 +180,20 @@ type SetVehicleDriverRcStatusForFleetAPI =
     :> ReqBody '[JSON] Common.RCStatusReq
     :> Post '[JSON] APISuccess
 
+type FleetTotalEarningAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "totalEarning"
+    :> Get '[JSON] Common.FleetEarningRes
+
+type FleetVehicleEarningAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "vehicleEarning"
+    :> Capture "vehicleNo" Text
+    :> QueryParam "driverId" Text
+    :> Get '[JSON] Common.FleetEarningRes
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocumentsInfo merchantId
@@ -209,6 +225,8 @@ handler merchantId =
     :<|> fleetUnlinkVehicle merchantId
     :<|> fleetRemoveVehicle merchantId
     :<|> fleetStats merchantId
+    :<|> fleetTotalEarning merchantId
+    :<|> fleetVehicleEarning merchantId
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
@@ -310,6 +328,12 @@ fleetRemoveVehicle merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.f
 
 fleetStats :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetStatsRes
 fleetStats merchantShortId = withFlowHandlerAPI . DDriver.fleetStats merchantShortId
+
+fleetTotalEarning :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning merchantShortId = withFlowHandlerAPI . DDriver.fleetTotalEarning merchantShortId
+
+fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe Text -> FlowHandler Common.FleetEarningRes
+fleetVehicleEarning merchantShortId fleetOwnerId vehicleNo mbDriverId = withFlowHandlerAPI $ DDriver.fleetVehicleEarning merchantShortId fleetOwnerId vehicleNo mbDriverId
 
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId

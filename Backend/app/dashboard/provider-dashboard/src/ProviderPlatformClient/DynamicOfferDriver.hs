@@ -97,6 +97,8 @@ data DriversAPIs = DriversAPIs
     fleetUnlinkVehicle :: Text -> Text -> Maybe Text -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
     fleetStats :: Text -> Euler.EulerClient Driver.FleetStatsRes,
+    fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetEarningRes,
+    fleetVehicleEarning :: Text -> Text -> Maybe Text -> Euler.EulerClient Driver.FleetEarningRes,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
@@ -282,6 +284,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> fleetUnlinkVehicle
       :<|> fleetRemoveVehicle
       :<|> fleetStats
+      :<|> fleetTotalEarning
+      :<|> fleetVehicleEarning
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
