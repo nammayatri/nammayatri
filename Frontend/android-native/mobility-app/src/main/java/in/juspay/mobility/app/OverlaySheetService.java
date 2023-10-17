@@ -500,8 +500,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         try {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.postDelayed(() -> executor.execute(() -> {
-                if (sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
+                String searchRequestId = rideRequestBundle.getString("searchRequestId");
+                boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(searchRequestId);
+                boolean requestAlreadyPresent = findCardById(searchRequestId);
+                if (sheetArrayList.size() >= 3 || requestAlreadyPresent || isClearedReq ){
+                    if (isClearedReq) MyFirebaseMessagingService.clearedRideRequest.remove(searchRequestId);
                     return;
+                }
                 if (progressDialog == null || apiLoader == null) {
                     if (mediaPlayer != null) {
                         mediaPlayer.start();
@@ -509,7 +514,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                 }
                 handler.post(() -> {
-                    String searchRequestId = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID));
                     String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
                     int baseFare = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
                     String currency = rideRequestBundle.getString("currency");
@@ -583,13 +587,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     public boolean removeCardById(String id){
-        if (sheetArrayList!=null){
-            if (sheetArrayList.size()>0){
-                for (int i = 0; i<sheetArrayList.size(); i++){
-                    if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                        removeCard(i);
-                        return true;
-                    }
+        if (sheetArrayList.size()>0){
+            for (int i = 0; i<sheetArrayList.size(); i++){
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                    removeCard(i);
+                    return true;
                 }
             }
         }
