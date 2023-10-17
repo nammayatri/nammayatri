@@ -287,6 +287,7 @@ data DriverQuoteError
   | DriverOnRide
   | DriverQuoteExpired
   | NoSearchRequestForDriver
+  | RideRequestAlreadyAccepted
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
   | NoActiveRidePresent
@@ -300,6 +301,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
+  toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
@@ -311,6 +313,7 @@ instance IsHTTPError DriverQuoteError where
     DriverOnRide -> "DRIVER_ON_RIDE"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
+    RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
     NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
@@ -321,6 +324,7 @@ instance IsHTTPError DriverQuoteError where
     DriverOnRide -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
+    RideRequestAlreadyAccepted -> E400
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
