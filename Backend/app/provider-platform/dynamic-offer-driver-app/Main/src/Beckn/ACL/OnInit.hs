@@ -147,9 +147,9 @@ mkOnInitMessage res = do
       VehVar.TAXI -> OnInit.TAXI
       VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
     buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
       DRB.RentalBooking -> OnInit.RENTAL
+      DRB.NormalBooking -> OnInit.RIDE
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
@@ -161,7 +161,8 @@ mkOnInitMessage res = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-        DFParams.Slab ->
+        _ ->
+          -- FIX ME
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"

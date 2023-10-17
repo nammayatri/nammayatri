@@ -36,8 +36,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
+import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
+import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails as QueriesFPRD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
 findById :: MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
@@ -71,6 +73,15 @@ update farePolicy = do
     SlabsDetails (FPSlabsDetails slabs) -> do
       _ <- QueriesFPSDS.deleteAll' farePolicy.id
       mapM_ (create'' farePolicy.id) slabs
+    RentalDetails fPRD ->
+      updateOneWithKV
+        [ Se.Set BeamFPRD.baseFare $ fPRD.baseFare,
+          Se.Set BeamFPRD.perHourCharge $ fPRD.perHourCharge,
+          Se.Set BeamFPRD.perHourFreeKms $ fPRD.perHourFreeKms,
+          Se.Set BeamFPRD.perExtraKmRate $ fPRD.perExtraKmRate,
+          Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
+        ]
+        [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
   where
     create'' :: MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
@@ -108,7 +119,11 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
           case nonEmpty slabs of
             Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
             Nothing -> return Nothing
-
+        Rental -> do
+          mFPRD <- QueriesFPRD.findById' (Id id)
+          case mFPRD of
+            Just (_, fPRD) -> return $ Just (RentalDetails fPRD)
+            Nothing -> return Nothing
     case mFarePolicyDetails of
       Just farePolicyDetails -> do
         return $
