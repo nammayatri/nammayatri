@@ -65,7 +65,8 @@ data ValidateInitResponse
   | RENTAL_QUOTE (DQR.QuoteRental, DSR.SearchRequest)
 
 data InitReq = InitReq
-  { estimateId :: Text,
+  { messageId :: Text,
+    estimateId :: Text,
     driverId :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     bapId :: Text,
@@ -127,7 +128,8 @@ cancelBooking booking transporterId = do
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -169,8 +171,11 @@ handler merchantId req initReq = do
     InitRentalReq -> do
       case initReq of
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
-          booking <- buildRentalBooking rentalQuote searchRequest now DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          let startTime = now -- FIXME
+          searchTry <- buildRentalSearchTry searchRequest.id startTime rentalQuote
+          booking <- buildRentalBooking rentalQuote searchRequest startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
+          QST.create searchTry
           return (booking, Nothing, Nothing)
         _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   let paymentMethodInfo = req.paymentMethodInfo
@@ -350,6 +355,41 @@ handler merchantId req initReq = do
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
             quoteId = rentalQuote.id.getId,
+            ..
+          }
+    buildRentalSearchTry ::
+      ( MonadTime m,
+        MonadGuid m,
+        MonadReader r m,
+        HasField "searchRequestExpirationSeconds" r NominalDiffTime
+      ) =>
+      Id DSR.SearchRequest ->
+      UTCTime ->
+      DQR.QuoteRental ->
+      m DST.SearchTry
+    buildRentalSearchTry searchReqId startTime rentalQuote = do
+      now <- getCurrentTime
+      id_ <- Id <$> generateGUID
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let validTill_ = searchRequestExpirationSeconds `addUTCTime` startTime
+          customerExtraFee = Nothing
+      pure
+        DST.SearchTry
+          { id = id_,
+            requestId = searchReqId,
+            tag = DSR.RENTAL,
+            estimateId = Nothing,
+            merchantId = Just merchantId,
+            messageId = req.messageId,
+            startTime,
+            validTill = validTill_,
+            vehicleVariant = rentalQuote.vehicleVariant,
+            status = DST.ACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            searchRepeatType = DST.INITIAL,
+            searchRepeatCounter = 0,
+            baseFare = rentalQuote.baseFare,
             ..
           }
 
