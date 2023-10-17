@@ -46,7 +46,8 @@ data DriverFeeT f = DriverFeeT
     schedulerTryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    overlaySent :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

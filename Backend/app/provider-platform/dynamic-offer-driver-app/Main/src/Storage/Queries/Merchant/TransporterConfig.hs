@@ -202,5 +202,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
         BeamTC.ratingAsDecimal = ratingAsDecimal,
-        BeamTC.refillVehicleModel = refillVehicleModel
+        BeamTC.refillVehicleModel = refillVehicleModel,
+        BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
+        BeamTC.overlayBatchSize = overlayBatchSize
       }

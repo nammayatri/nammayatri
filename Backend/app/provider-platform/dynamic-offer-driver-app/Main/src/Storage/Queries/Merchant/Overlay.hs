@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.Overlay
     #-}
 where
 
+import qualified Data.Aeson as A
 import Domain.Types.Merchant
 import Domain.Types.Merchant.Overlay
 import Kernel.Beam.Functions
@@ -83,8 +84,14 @@ instance FromTType' BeamMPN.Overlay Overlay where
         Overlay
           { id = Id id,
             merchantId = Id merchantId,
+            socialMediaLinks = valueToMaybe =<< socialMediaLinks,
             ..
           }
+    where
+      valueToMaybe :: FromJSON a => A.Value -> Maybe a
+      valueToMaybe value = case A.fromJSON value of
+        A.Success a -> Just a
+        A.Error _ -> Nothing
 
 instance ToTType' BeamMPN.Overlay Overlay where
   toTType' Overlay {..} = do
@@ -103,5 +110,10 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.link = link,
         BeamMPN.method = method,
         BeamMPN.reqBody = reqBody,
-        BeamMPN.endPoint = endPoint
+        BeamMPN.endPoint = endPoint,
+        BeamMPN.delay = delay,
+        BeamMPN.contactSupportNumber = contactSupportNumber,
+        BeamMPN.toastMessage = toastMessage,
+        BeamMPN.secondaryActions = secondaryActions,
+        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks
       }

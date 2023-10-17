@@ -22,6 +22,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.Overlay as DTMO
 import Environment
+import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -47,7 +48,12 @@ data CreateOverlayReq = CreateOverlayReq
     reqBody :: Value,
     method :: Maybe Text,
     endPoint :: Maybe Text,
-    contents :: [OverlayContent]
+    contents :: [OverlayContent],
+    delay :: Maybe Int,
+    contactSupportNumber :: Maybe Text,
+    toastMessage :: Maybe Text,
+    secondaryActions :: Maybe [Text],
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -214,6 +220,8 @@ scheduleOverlay merchantShortId req@ScheduleOverlay {..} = do
         timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
         driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
         driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+        driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+        overlayBatchSize = transporterConfig.overlayBatchSize,
         ..
       }
   pure Success

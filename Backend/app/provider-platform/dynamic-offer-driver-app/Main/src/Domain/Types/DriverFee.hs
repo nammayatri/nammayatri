@@ -47,7 +47,8 @@ data DriverFee = DriverFee
     autopayPaymentStage :: Maybe AutopayPaymentStage,
     schedulerTryCount :: Int,
     stageUpdatedAt :: Maybe UTCTime,
-    feeWithoutDiscount :: Maybe HighPrecMoney
+    feeWithoutDiscount :: Maybe HighPrecMoney,
+    overlaySent :: Bool
   }
   deriving (Generic, Show, Eq)
 

@@ -64,6 +64,8 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTime :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
     timeDiffFromUtc :: B.C f Seconds,
+    driverFeeOverlaySendingTimeLimitInDays :: B.C f Int,
+    overlayBatchSize :: B.C f Int,
     subscription :: B.C f Bool,
     minLocationAccuracy :: B.C f Double,
     aadhaarVerificationRequired :: B.C f Bool,
