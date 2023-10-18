@@ -91,10 +91,9 @@ cancelRideImpl rideId bookingCReason = do
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  cancelRideTransaction booking.id ride bookingCReason merchantId
+  cancelRideTransaction booking ride bookingCReason merchantId
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
-  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
@@ -139,20 +138,22 @@ cancelRideImpl rideId bookingCReason = do
 cancelRideTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    LT.HasLocationService m r
   ) =>
-  Id SRB.Booking ->
+  SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason _merchantId = do
+cancelRideTransaction booking ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   QDI.updateOnRide (cast ride.driverId) False
+  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
-  void $ QRB.updateStatus bookingId SRB.CANCELLED
+  void $ QRB.updateStatus booking.id SRB.CANCELLED
   void $ QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 

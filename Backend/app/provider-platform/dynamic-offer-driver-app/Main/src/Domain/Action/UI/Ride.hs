@@ -247,10 +247,10 @@ otpRideCreate driver otpCode booking = do
     Just route -> Redis.setExp (BS.searchRequestKey $ getId ride.id) route 14400
     Nothing -> logDebug "Unable to get the key"
 
-  void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.createRide ride
   QDI.updateOnRide (cast driver.id) True
+  void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   QRideD.create rideDetails

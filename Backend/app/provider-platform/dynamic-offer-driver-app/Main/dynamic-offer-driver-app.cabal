@@ -142,7 +142,6 @@ library
       Domain.Action.UI.Issue
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
-      Domain.Action.UI.Location.UpdateLocation
       Domain.Action.UI.Maps
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
