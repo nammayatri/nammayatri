@@ -37,7 +37,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (os, screenWidth)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -75,10 +75,10 @@ view push config =
          , imageView
            [ width MATCH_PARENT
            , height $ V 90
-           , imageWithFallback case config.currentRateCardType of
+           , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
+              case config.currentRateCardType of
               PaymentFareBreakup -> ""
-              _ -> if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" 
-                                          else "ny_ic_day,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
+              _ -> if config.nightCharges then "ny_ic_night" else "ny_ic_day"
            ]  
          ]
       ,linearLayout
@@ -159,7 +159,7 @@ defaultRateCardView push config =
         , imageView
           [ width MATCH_PARENT
           , height $ V 2 
-          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , margin $ Margin 20 20 20 12
           ]
         , textView $
@@ -182,7 +182,7 @@ defaultRateCardView push config =
           [ width MATCH_PARENT
           , height $ V 2 
           , visibility if config.showDetails then VISIBLE else GONE
-          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
           , margin $ Margin 20 12 20 0
           ]
         , linearLayout
@@ -225,7 +225,7 @@ defaultRateCardView push config =
                           imageView
                           [ height $ V 12
                           , width $ V 12
-                          , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                           , margin $ MarginTop 4
                           , color Color.black900
                           , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -319,7 +319,7 @@ paymentfareBreakup push config =
       [ width MATCH_PARENT
       , height $ V 2 
       , margin $ MarginTop 10
-      , imageWithFallback $ "ny_ic_horizontal_dash,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_horizontal_dash.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
       ]
     , linearLayout
       [ width MATCH_PARENT

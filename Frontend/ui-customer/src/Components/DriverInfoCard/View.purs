@@ -32,7 +32,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber, getVariantRideType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber, getVariantRideType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -337,7 +337,7 @@ supportButton push state =
   , gravity CENTER_HORIZONTAL
   , cornerRadius 20.0
   ][ imageView
-      [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_share_icon"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
@@ -354,7 +354,7 @@ supportButton push state =
       , background Color.lightGreyShade
       ][]
     , imageView
-      [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_contact_support"
       , height $ V 18
       , width $ V 18
       , visibility if state.data.config.enableContactSupport then VISIBLE else GONE
@@ -387,7 +387,7 @@ locationTrackButton push state =
       , stroke $ "1,"<> Color.grey900
       , cornerRadius 20.0
       ][  imageView
-        [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_location_track"
         , height $ V 18
         , width $ V 18
         , margin $ Margin 10 10 10 10
@@ -404,7 +404,7 @@ sosView push state =
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     ][ imageView
-        [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
         , height $ V 50
         , width $ V 50
         , accessibilityHint $ "S O S Button, Select to view S O S options"
@@ -433,7 +433,7 @@ messageNotificationView push state =
           , onClick push $ const $ RemoveNotification
           , accessibility ENABLE
           , accessibilityHint "Close Message Pop Up : Button"
-          , imageWithFallback "ny_ic_cross_round,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_cross_round.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_cross_round"
           ]
         ]
     , linearLayout
@@ -454,7 +454,7 @@ messageNotificationView push state =
          ][imageView
            [height $ V 24
            , width $ V 24
-           , imageWithFallback "ny_ic_chat_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chat_white.png"
+           , imageWithFallback  $ fetchImage FF_ASSET "ny_ic_chat_white"
            , margin $ MarginRight 12
           ]
          ]
@@ -531,7 +531,7 @@ navigateView push state =
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback $ "ny_ic_walk_mode_blue," <>  (getAssetStoreLink FunctionCall) <> "ny_ic_walk_mode_blue.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_walk_mode_blue"
           ]
         , textView (
           [ width WRAP_CONTENT
@@ -654,7 +654,7 @@ driverInfoView push state =
                 , height (V 15)
                 , margin (MarginRight 6)
                 , accessibility DISABLE
-                , imageWithFallback $  "ny_ic_metro_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_metro_white.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_metro_white"
                 ]
               , textView
                 [ width WRAP_CONTENT
@@ -791,7 +791,7 @@ contactView push state =
              , accessibilityHint "Chat or Call : Button"
              , accessibility ENABLE
              ][ imageView
-                 [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                 [ imageWithFallback  $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
                  , height $ V state.data.config.driverInfoConfig.callHeight
                  , width $ V state.data.config.driverInfoConfig.callWidth
                  ]
@@ -829,7 +829,7 @@ driverDetailsView push state =
               , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle Number : " <> state.data.registrationNumber
               , accessibility ENABLE
               , padding $ Padding 2 3 2 1
-              , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
+              , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_driver"
               ]
           ]
         , textView $
@@ -899,7 +899,7 @@ driverDetailsView push state =
                     , cornerRadius 4.0
                     , orientation HORIZONTAL
                     ][  imageView
-                        [ imageWithFallback $ "ny_ic_number_plate," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate.png"
+                        [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_number_plate"
                         , gravity LEFT
                         , visibility if state.data.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
                         , background "#1C4188"
@@ -915,7 +915,7 @@ driverDetailsView push state =
                         , gravity CENTER
                         ] <> FontStyle.body7 TypoGraphy
                         , imageView
-                        [ imageWithFallback $ "ny_ic_number_plate_suffix," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate_suffix.png"
+                        [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_number_plate_suffix"
                         , gravity RIGHT
                         , visibility if state.data.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
                         , height MATCH_PARENT
@@ -943,7 +943,7 @@ ratingView push state =
   , cornerRadius state.data.config.driverInfoConfig.ratingCornerRadius
   , accessibility DISABLE
   ][  imageView
-      [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_star_active"
       , height $ V 13
       , width $ V 13
       , accessibility DISABLE
@@ -996,7 +996,7 @@ paymentMethodView push state title shouldShowIcon =
           , gravity CENTER
           , visibility if shouldShowIcon then VISIBLE else GONE
           ][  imageView
-              [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
+              [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_wallet"
               , height $ V 20
               , width $ V 20
               ]
@@ -1053,7 +1053,7 @@ primaryButtonConfig = let
       , prefixImageConfig {
           height = V 18
         , width = V 18
-        , imageUrl = "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+        , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_call"
         , margin = Margin 20 10 20 10
         }
       , id = "CallButton"
@@ -1073,7 +1073,7 @@ sourceToDestinationConfig state = let
     , overrideSeparatorCount = 6
     , separatorMargin = 19
     , sourceImageConfig {
-        imageUrl = "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_pickup"
       , height = V 14
       , width = V 14
       }
@@ -1085,7 +1085,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"
+        imageUrl =fetchImage FF_ASSET "ny_ic_drop"
       , height = V 14
       , width = V 14
       }
@@ -1197,7 +1197,7 @@ openGoogleMap push state =
           [ width $ V 20
           , height $ V 20
           , margin (MarginLeft 6)
-          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "driver/images/ny_ic_navigation.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_navigation"
           ]
       ]
   ]
@@ -1222,14 +1222,14 @@ configurations =
 
 getVehicleImage :: String -> String -> String
 getVehicleImage variant vehicleDetail = do
-  let url = getAssetStoreLink FunctionCall
   let details = (toLower vehicleDetail)
-  if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
-  else
-    if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
-    else 
-      case (getMerchant FunctionCall) of
-        YATRISATHI -> case variant of
-                        "SUV" -> "ny_ic_suv_concept," <> url <> "ny_ic_suv_concept.png"
-                        _     -> "ny_ic_sedan_concept," <> url <> "ny_ic_sedan_concept.png"
-        _          -> "ic_white_taxi," <> url <> "ic_white_taxi.png"
+  fetchImage FF_ASSET $ 
+    if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw"
+    else
+      if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
+      else 
+        case (getMerchant FunctionCall) of
+          YATRISATHI -> case variant of
+                          "SUV" -> "ny_ic_suv_concept"
+                          _     -> "ny_ic_sedan_concept"
+          _          -> "ic_white_taxi"

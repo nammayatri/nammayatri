@@ -31,7 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -132,12 +132,12 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_vehicle_registration_card," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_vehicle_registration_card.png"}] else linearLayout [][]
+        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_vehicle_registration_card"}] else linearLayout [][]
     , if state.props.openRegistrationDateManual then 
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_registration," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_date_of_registration.png"}] else linearLayout [][]
+        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_registration"}] else linearLayout [][]
     , if state.props.limitExceedModal then 
         linearLayout
         [ width MATCH_PARENT
@@ -196,7 +196,7 @@ referralAppliedView state push =
           , gravity CENTER
           , orientation HORIZONTAL
           ][  imageView
-              [ imageWithFallback $ "ny_ic_check_green," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_check_green"
               , width (V 11)
               , height (V 8)
               ]
@@ -414,7 +414,7 @@ uploadRC state push =
               ][ imageView
                 [ width ( V 328 )
                 , height ( V 166 )
-                , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_rc_demo"
                 ]
               ]
             , linearLayout
@@ -472,7 +472,7 @@ uploadIcon state push =
     , gravity CENTER
     , visibility if (state.props.rcAvailable ) then GONE else VISIBLE
     ][  imageView
-        [ imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_front"
           , height (V 20)
           , width (V 20)
         ]
@@ -499,7 +499,7 @@ previewIcon state push =
         [ height (V 10)
         , width (V 10)
         , margin (Margin 10 0 0 0)
-        , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
         , onClick push (const RemoveUploadedFile)
         ]
     ]
@@ -570,7 +570,7 @@ dateOfRCRegistrationView push state =
       , imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]
@@ -601,7 +601,7 @@ headerLayout state push =
   ][  imageView
       [ width $ V 25
       , height $ V 25
-      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
       , layoutGravity "center_vertical"
       , padding $ PaddingHorizontal 2 2
       , margin $ MarginLeft 5

@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, getAssetStoreLink)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -164,7 +164,7 @@ view push state =
                    ][ imageView
                       [ width (V 16)
                       , height (V 16)
-                      , imageWithFallback "ny_ic_reward,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_reward.png"
+                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_reward"
                       , margin (MarginRight 5)
                       ]
                     , textView
@@ -278,7 +278,7 @@ noDataView state =
         ][  imageView
             [ width $ V $ (screenWidth unit) - 48
             , height $ V $ ceil ((toNumber ((screenWidth unit) - 48)) * 1.25)
-            , imageWithFallback "ny_ic_leaderboard_no_data,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_leaderboard_no_data.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_leaderboard_no_data"
             ]
           , textView
             [ width MATCH_PARENT
@@ -348,10 +348,7 @@ dateAndTime push state =
             [ width (V 24)
             , height (V 24)
             , margin (MarginLeft 12)
-            , imageWithFallback if state.props.showDateSelector then
-                                  "ny_ic_chevron_up_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_up_blue.png"
-                                else
-                                  "ny_ic_calendar_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_blue.png"
+            , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDateSelector then "ny_ic_chevron_up_blue" else "ny_ic_calendar_blue"
             ]
         ]
       , textView
@@ -512,7 +509,7 @@ rankCard item aboveThreshold state =
           , height (V 40)
           , cornerRadius 30.0
           , margin (MarginHorizontal 8 10)
-          , imageWithFallback "ny_ic_general_profile,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_general_profile.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_general_profile"
           ]
         , textView
           [ width WRAP_CONTENT
@@ -585,7 +582,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
           ][ imageView
              [ height (V 31)
              , width (V 31)
-             , imageWithFallback "ny_ic_crown,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_crown.png"
+             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_crown"
              , visibility if rank == 1 then VISIBLE else GONE
              , padding (PaddingBottom 5)
              ]
@@ -1067,7 +1064,7 @@ qrScreen push state =
               [ height $ V 30
               , width $ V 30
               , padding (PaddingLeft 10)
-              , imageWithFallback $ "ny_ic_share_grey," <> getAssetStoreLink FunctionCall <> "ny_ic_share_grey.png"
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
               ]
             , textView
               [ height MATCH_PARENT
@@ -1236,21 +1233,21 @@ checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdat
                   else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 
 
 getReferralScreenIcon :: Merchant -> String
-getReferralScreenIcon merchant =
+getReferralScreenIcon merchant = fetchImage FF_ASSET $
   case merchant of
-    NAMMAYATRI -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
-    YATRI -> "ny_ic_yatri_logo_dark," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_logo_dark.png"
-    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_sathi_logo_black_icon.png"
-    _ -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+    NAMMAYATRI -> "ny_namma_yatri"
+    YATRI -> "ny_ic_yatri_logo_dark"
+    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon"
+    _ -> "ny_namma_yatri"
 
 getActiveReferralBannerIcon :: String -> String
-getActiveReferralBannerIcon vehicleType =
+getActiveReferralBannerIcon vehicleType = fetchImage FF_ASSET $
   case vehicleType of
-    "AUTO_RICKSHAW" -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
-    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    "AUTO_RICKSHAW" -> "ny_ic_auto2"
+    _ -> "ny_ic_car_referral_banner"
 
 getReferralBannerIcon :: String -> String
-getReferralBannerIcon vehicleType =
+getReferralBannerIcon vehicleType = fetchImage FF_ASSET $
   case vehicleType of
-    "AUTO_RICKSHAW" -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
-    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    "AUTO_RICKSHAW" -> "ny_ic_auto1"
+    _ -> "ny_ic_car_referral_banner"

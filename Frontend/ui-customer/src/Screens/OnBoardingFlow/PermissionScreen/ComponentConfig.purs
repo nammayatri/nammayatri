@@ -31,7 +31,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.Types (PermissionScreenState)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (os)
 
@@ -40,7 +40,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_offline.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_offline"
       , height = V 124
       , width = V 124
       , margin = (MarginBottom 32)
@@ -109,8 +109,7 @@ getLocationBlockerPopUpConfig state = let
     , padding = Padding 0 0 0 0
     }
   , coverImageConfig {
-      imageUrl = if (os == "IOS") then "ny_ic_enable_location_in_settings_ios," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_ios.png"
-                 else "ny_ic_enable_location_in_settings_android," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_android.png"
+      imageUrl = fetchImage FF_COMMON_ASSET $ if (os == "IOS") then "ny_ic_enable_location_in_settings_ios" else "ny_ic_enable_location_in_settings_android"
     , visibility = VISIBLE
     , width = MATCH_PARENT
     , height = V 260

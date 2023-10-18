@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Common.Types.App
 import PrestoDOM.Animation as PrestoAnim
 import Styles.Colors as Color
-import Helpers.Utils (getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons as EHC
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
@@ -120,7 +120,7 @@ countryCodeCaptureView push config  =
           , visibility if getValueFromConfig "internationalNumberEnabled" then VISIBLE else GONE
           ]
           [ imageView
-            [ imageWithFallback if config.countryCodeField.countryCodeOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET if config.countryCodeField.countryCodeOptionExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
             , height $ V 24
             , width $ V 15
             ]

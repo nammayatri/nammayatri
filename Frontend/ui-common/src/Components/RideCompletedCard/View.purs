@@ -11,7 +11,7 @@ import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
-import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Array (mapWithIndex, length, (!!), null)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
@@ -88,7 +88,7 @@ topPillAndSupportView config push =
               , width $ V 40
               , accessibility config.accessibility
               , accessibilityHint "Contact Support : Button"
-              , imageWithFallback if config.theme == LIGHT then ("ny_ic_black_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_black_headphone.png") else ("ny_ic_headphone," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_headphone.png")
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
               , onClick push $ const Support
               ]
             ]
@@ -205,7 +205,7 @@ rideDetailsButtonView config push =
               [ width $ V 18
               , height $ V 18
               , accessibility DISABLE
-              , imageWithFallback $ if config.theme == LIGHT then ("ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png") else ("ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png")
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_chevron_right_grey" else "ny_ic_chevron_right_white"
               ]
           ]
   ]
@@ -288,7 +288,7 @@ customerIssueView config push =
                   , imageView
                     [ width $ V 15
                     , height $ V 15
-                    , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall)<> "ny_ic_chevron_right.png"
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                     ]
                 ]
               , linearLayout
@@ -345,7 +345,7 @@ customerRatingDriverView config push =
   , margin $ MarginBottom 24
   , gravity CENTER
   ][ imageView [
-      imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_avatar.png"
+      imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
       , height $ V 56
       , width $ V 56
     ]
@@ -367,8 +367,7 @@ customerRatingDriverView config push =
               , width $ V 30
               , accessibilityHint $ (show item <> "star" ) <> if item <= config.customerBottomCard.selectedRating then " : Selected " else " : Un Selected "
               , accessibility config.accessibility
-              , imageWithFallback if item <= config.customerBottomCard.selectedRating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
-                                      else "ny_ic_star_inactive,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= config.customerBottomCard.selectedRating then "ny_ic_star_active" else "ny_ic_star_inactive"
               ]
           ]) [1,2,3,4,5])
   ]
@@ -489,7 +488,7 @@ noVpaView config =
         [ height $ V 24
         , width $ V 24
         , margin $ MarginVertical 8 13
-        , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_orange"
         ]
       , textView $
         [ text config.noVpaCard.title
@@ -589,7 +588,7 @@ driverFareBreakUpView config push =
         height $ V 100
       , width $ V 100
       , gravity CENTER
-      , imageWithFallback $ "ny_ic_wallet_with_coin," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_with_coin.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_wallet_with_coin"
       ]
   ]
 

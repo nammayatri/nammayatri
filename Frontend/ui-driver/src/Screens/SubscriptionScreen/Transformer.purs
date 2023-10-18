@@ -31,7 +31,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number.Format (fixed, toStringWith)
 import Data.String (Pattern(..), split, toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (getAssetStoreLink, getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
 import Language.Strings (Language, getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
@@ -63,7 +63,7 @@ getPromoConfig offerEntityArr gradientConfig =
             isGradient : isJust gradient' || item.title == Just "Freedom Offer: 96% off APPLIED-*$*-ಫ್ರೀಡಮ್ ಆಫರ್: 96% ರಷ್ಟು ರಿಯಾಯಿತಿ",
             gradient : if item.title == Just "Freedom Offer: 96% off APPLIED-*$*-ಫ್ರೀಡಮ್ ಆಫರ್: 96% ರಷ್ಟು ರಿಯಾಯಿತಿ" then [Color.orange200, Color.white900, Color.green300] else (fromMaybe {id : "", colors : []} gradient').colors,
             hasImage : true ,
-            imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png" ,
+            imageURL : fetchImage FF_ASSET "ny_ic_discount" ,
             offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
             addedFromUI : false
         }
@@ -123,7 +123,7 @@ introductoryOfferConfig lazy =
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : "ny_ic_discount," <> (getAssetStoreLink FunctionCall) <> "ny_ic_discount.png",
+    imageURL : fetchImage FF_ASSET "ny_ic_discount",
     offerDescription : Just $ getString NO_CHARGES_TILL,
     addedFromUI : false
     }

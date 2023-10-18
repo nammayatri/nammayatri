@@ -104,7 +104,7 @@ backArrow state push =
       [ width (V 25)
       , height (V 25)
       , margin (MarginTop 20)
-      , imageWithFallback $ "ny_ic_back," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_back"
       , onClick push (const BackPressed)
       ]
   ]

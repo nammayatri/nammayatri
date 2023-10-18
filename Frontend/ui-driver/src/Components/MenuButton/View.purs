@@ -22,7 +22,7 @@ import Components.SelectMenuButton.Controller (Action(..), State)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), (||), not)
 import Prelude (Unit, const, ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
@@ -79,13 +79,13 @@ view push state =
                   ][ imageView
                       [ height (V 24)
                       , width (V 24)
-                      , imageWithFallback $ "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_selected.png"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET $ "ny_ic_radio_selected"
                       , visibility if state.isSelected then VISIBLE else GONE
                       ]
                     , imageView
                       [ width (V 24)
                       , height (V 24)
-                      , imageWithFallback $ "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
                       , visibility if state.isSelected then GONE else VISIBLE
                       ]
                   ]

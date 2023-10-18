@@ -37,7 +37,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App (FeedbackAnswer, LazyCheck(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM ( Effect Unit ) w
@@ -163,7 +163,7 @@ editTextView state push =
   , margin $ MarginBottom 24
   , padding $ Padding 16 16 16 0
   ][  imageView 
-      [ imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_message_square.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_message_square"
       , height $ V 16 
       , width $ V 16 
       , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
@@ -197,7 +197,7 @@ starRatingView state push =
     , padding (PaddingBottom 16)
     , cornerRadius 8.0
     ][ imageView [
-        imageWithFallback $ "ny_ic_driver_avatar,"<> (getAssetStoreLink FunctionCall)<>"ny_ic_driver_avatar.png"
+        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
         , height $ V 56
         , width $ V 56
         , cornerRadius 50.0
@@ -228,7 +228,7 @@ starRatingView state push =
         , onClick push $ const BackPressed
         , gravity CENTER
         , visibility state.closeImgVisible
-        , imageWithFallback $ "ny_ic_cancel_unfilled," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel_unfilled.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel_unfilled"
         ]
       ]
     , linearLayout
@@ -246,7 +246,7 @@ starRatingView state push =
                               , width $ V 35
                               , accessibilityHint (show item <> " Star : " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
                               , accessibility state.accessibility
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
+                              , imageWithFallback  $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
                               ]
                           ]) [1,2,3,4,5])
     , if state.showFeedbackPill then feedbackBasedOnRatingView state push else dummyTextView

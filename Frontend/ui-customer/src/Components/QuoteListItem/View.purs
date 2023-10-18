@@ -31,7 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, countDown)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (startTimerWithTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -125,7 +125,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleType == "auto" then "ny_ic_auto_quote_list" else "ny_ic_auto_quote_list"
         , weight 1.0
         ]
       ]
@@ -143,7 +143,7 @@ driverRatingView state  =
     ][  imageView
         [ height $ V 13
         , width $ V 13
-        , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_star_active"
         , margin (MarginRight 6)
         ]
       , textView (
@@ -275,7 +275,7 @@ autoAcceptingView state push =
           , imageView
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_close"
             , onClick push $ const CancelAutoAssigning
             ]
         ]

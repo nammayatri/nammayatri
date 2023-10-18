@@ -36,7 +36,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, map, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>), (>=) , (+), (&&))
@@ -333,7 +333,7 @@ profileImageView state push =
             ][  imageView
                 [ height $ V 100
                 , width $ V 100
-                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_profile_image"
                 ]
             ]
           ]
@@ -427,7 +427,7 @@ genderCaptureView state push =
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.genderOptionExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
               , height $ V 24
               , width $ V 15
               ]

@@ -41,7 +41,7 @@ import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import JBridge(getHeightFromPercent)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -124,7 +124,7 @@ errorModalConfig state = let
   config = ErrorModalConfig.config
   errorModalConfig' = config
     { imageConfig {
-        imageUrl = "ny_ic_no_saved_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_saved_address.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_no_saved_address"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 31)
@@ -159,7 +159,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {

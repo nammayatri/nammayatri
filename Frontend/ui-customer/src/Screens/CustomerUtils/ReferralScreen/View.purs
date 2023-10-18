@@ -22,7 +22,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
 import Engineering.Helpers.Commons  as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (adjustViewWithKeyboard, getCommonAssetStoreLink, getPreviousVersion, getAssetStoreLink)
+import Helpers.Utils (adjustViewWithKeyboard, FetchImageFrom(..), getPreviousVersion, fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, ($), (<<<), (<>), (==))
@@ -83,7 +83,7 @@ referralCodeView push state =
     , visibility if state.showThanks then GONE else VISIBLE
     ]
     [ imageView
-        [ imageWithFallback $ "ny_ic_referral," <> (getAssetStoreLink FunctionCall) <> "ny_ic_referral.png"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_referral"
         , gravity CENTER
         , height $ V 112
         , width $ V 140
@@ -120,7 +120,7 @@ thanksView push state =
         , gravity CENTER_HORIZONTAL
         ]
         [ imageView
-            [ imageWithFallback $ "ny_ic_thanks," <> (getAssetStoreLink FunctionCall) <> "ny_ic_thanks.png"
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_thanks"
             , gravity CENTER
             , height $ V 230
             , width $ V 280
@@ -180,7 +180,7 @@ referenceView push state =
             [ imageView
                 [ height $ V 15
                 , width $ V 20
-                , imageWithFallback if state.isExpandReference then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.isExpandReference then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                 ]
             ]
         ]

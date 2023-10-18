@@ -32,7 +32,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.String.CodeUnits (charAt)
 import Data.String (length)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -62,7 +62,7 @@ view push state =
             ][  imageView
                 [ width (V 25)
                 , height (V 25)
-                , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
                 , margin (MarginLeft 14)
                 , onClick push (const OnBackClick)
                 ]

@@ -45,7 +45,7 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Helpers.Utils (getPeriod)
+import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style (Style(..))
 
@@ -68,7 +68,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , height = (V 25)
       , width = (V 25)
       , margin = (Margin 16 16 16 16)
@@ -120,7 +120,7 @@ driverGenericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
       }
     , padding = PaddingVertical 5 5

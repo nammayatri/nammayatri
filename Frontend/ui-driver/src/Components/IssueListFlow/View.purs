@@ -36,6 +36,7 @@ import Data.String (length)
 import Components.IssueListFlow.Controller (Action(..), IssueListFlowState,getTitle)
 import Data.Show (show)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> IssueListFlowState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -74,7 +75,7 @@ headerLayout state push =
         [ imageView
             [ width  state.headerConfig.imageConfig.width                        
             , height state.headerConfig.imageConfig.height
-            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
             , padding state.headerConfig.imageConfig.padding    
             , margin  state.headerConfig.imageConfig.margin

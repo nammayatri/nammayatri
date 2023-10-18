@@ -39,7 +39,7 @@ import Log (printLog)
 import Data.String as DS 
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)
@@ -128,12 +128,12 @@ linearLayout
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_driver_license_card," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_driver_license_card.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_driver_license_card" }] else linearLayout [][]
     , if state.props.openDateOfIssueManual then 
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_issue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_date_of_issue.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_issue"}] else linearLayout [][]
     , if state.props.openGenericMessageModal then 
       linearLayout[
       width MATCH_PARENT
@@ -236,7 +236,7 @@ frontUploadSection state push =
     ][ imageView
       [ width MATCH_PARENT
       , height ( V 166 )
-      , imageWithFallback $ "ny_ic_dl_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dl_demo.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dl_demo"
       ]
     ]
   , linearLayout
@@ -259,7 +259,7 @@ frontUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_front"
       ]
     ]
   ]
@@ -298,7 +298,7 @@ backUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_front"
       ]
     ]
   ]
@@ -322,7 +322,7 @@ previewIcon state push previewType =
           [ height (V 10)
           , width (V 10)
           , margin (MarginLeft 10)
-          , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
           , onClick push (const( RemoveUploadedFile previewType))
           ]
     ]
@@ -343,7 +343,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , layoutGravity "center_vertical"
         , padding (PaddingHorizontal 2 2)
         , margin (MarginLeft 5)
@@ -414,7 +414,7 @@ dateOfBirth push state =
       , imageView
         [ width ( V 20 )
         , height ( V 20 )
-        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]
@@ -457,7 +457,7 @@ dateOfIssue push state =
       , imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]

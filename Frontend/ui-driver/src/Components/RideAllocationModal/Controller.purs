@@ -22,7 +22,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenWidth, screenHeight)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -136,7 +136,7 @@ config = {
         fontStyle : FontStyle.medium LanguageStyle
     },
     source : {
-        imageUrl : "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png",
+        imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_source_dot",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",
@@ -145,7 +145,7 @@ config = {
         textColor : Color.black800
     },
     destination : {
-        imageUrl : "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png",
+        imageUrl : fetchImage FF_ASSET "ny_ic_destination",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",

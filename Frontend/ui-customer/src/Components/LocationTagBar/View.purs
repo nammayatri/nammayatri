@@ -29,7 +29,7 @@ import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -54,10 +54,10 @@ view push state =
         ][ imageView
             [ width $ V 15
             , height $ V 17
-            , imageWithFallback case item of
-                        HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_add_address.png" else "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
-                        WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_add_address.png" else "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
-                        _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
+            , imageWithFallback $ fetchImage FF_ASSET $  case item of
+                        HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_home_blue"
+                        WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_work_blue"
+                        _      -> "ny_ic_fav_red"
             ]
           , textView $
             [ height WRAP_CONTENT

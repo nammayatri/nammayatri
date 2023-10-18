@@ -34,6 +34,7 @@ import Font.Size as FontSize
 import Animation (screenAnimationFadeInOut)
 import Language.Types (STR(RECORD_VOICE_NOTE))
 import Language.Strings (getString)
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> RecordAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -64,7 +65,7 @@ view push state =
      [ width $ V 28
      , height $ V 28
      , layoutGravity "end"
-     , imageWithFallback "ny_ic_close_bold,https://assets.juspay.in/nammayatri/images/driver/ny_ic_close_bold"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_bold"
      , onClick push (const OnClickClose)
      ]
     ]
@@ -111,7 +112,7 @@ view push state =
                               [ width WRAP_CONTENT
                               , height $ V 50
                               , visibility if state.isRecording then GONE else VISIBLE
-                              , imageWithFallback "ny_ic_static_record,https://assets.juspay.in/nammayatri/images/driver/ny_ic_static_record"
+                              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_static_record"
                               , padding (PaddingRight 50)
                               ]
                             , textView $
@@ -139,11 +140,7 @@ view push state =
      , imageView
      [ width $ V 72
      , height $ V 72
-     , imageWithFallback if state.isRecording
-                         then "ny_ic_stop_record,https://assets.juspay.in/nammayatri/images/driver/ny_ic_stop_record"
-                         else if state.recordingDone
-                              then "ny_ic_recording_done,https://assets.juspay.in/nammayatri/images/driver/ny_ic_recording_done"
-                              else "ny_ic_start_record,https://assets.juspay.in/nammayatri/images/driver/ny_ic_start_record"
+     , imageWithFallback $ fetchImage FF_ASSET $ if state.isRecording then "ny_ic_stop_record" else if state.recordingDone then "ny_ic_recording_done"  else "ny_ic_start_record"
      , margin (MarginHorizontal 20 20)
      , visibility if state.isUploading then GONE else VISIBLE
      , onClick push (case state.isRecording of
@@ -170,7 +167,7 @@ view push state =
      , imageView
      [ width $ V 48
      , height $ V 48
-     , imageWithFallback "ny_ic_cancel_recording,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_recording"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_cancel_recording"
      , visibility if state.isUploading then INVISIBLE else if state.recordingDone then VISIBLE else GONE
      , onClick push (if state.isUploading then const NoAction else const OnClickRestart)
      ]

@@ -28,7 +28,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Effect (Effect)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -93,7 +93,7 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_chevron_left_black," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_black.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_black"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)

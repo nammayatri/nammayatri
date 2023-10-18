@@ -6,7 +6,7 @@ import Screens.Types as ST
 import Components.PopUpModal as PopUpModal
 import Components.SelectListModal as SelectListModal
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Margin(..), Visibility(..), Padding(..), Length(..))
 import Data.Maybe as Mb
 import Data.Array as DA
@@ -85,21 +85,21 @@ getAccessibilityPopupData pwdtype  =
    in case pwdtype of 
         Mb.Just disability -> case (disability.tag) of 
           "BLIND_LOW_VISION" -> accessibilityConfig'
-                                                  { imageUrl = "ny_ic_blind_pickup," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_blind_pickup.png",
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
                                                     videoUrl = "https://www.youtube.com/watch?v=GllvoYpOUpc",
                                                     mediaType = "VideoLink",
                                                     listViewArray = [(getString VI_POINTER_1) , (getString VI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
                                                     videoId = "VisualImpairmentCoverVideo"
                                                   } 
           "HEAR_IMPAIRMENT" ->     accessibilityConfig'
-                                                  { imageUrl = "ny_ic_deaf_pickup," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_deaf_pickup.png",
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
                                                     videoUrl = "https://www.youtube.com/watch?v=QcKeSF9uiJ4",
                                                     mediaType = "PortraitVideoLink",
                                                     listViewArray = [(getString HI_POINTER_1) , (getString HI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
                                                     videoId = "HearingImpairmentCoverVideo"
                                                   }
           "LOCOMOTOR_DISABILITY" -> accessibilityConfig'
-                                                  { imageUrl = "ny_ic_locomotor_arrival," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_locomotor_arrival.png",
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
                                                     videoUrl = "https://youtu.be/-ku9Gc8U5B8",
                                                     mediaType = "PortraitVideoLink",
                                                     listViewArray = [(getString PI_POINTER_1) , (getString PI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
@@ -110,7 +110,7 @@ getAccessibilityPopupData pwdtype  =
         Mb.Nothing -> accessibilityConfig' 
 
 accessibilityConfig :: Common.LazyCheck -> ContentConfig
-accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_disability_illustration.png", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
+accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
 
 accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
 accessibilityListConfig disabilityData otherDisability config = 

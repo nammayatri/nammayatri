@@ -25,7 +25,7 @@ import Data.String (toLower, trim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, unit, not, (<>), (/), (-), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
@@ -51,9 +51,9 @@ view push state =
         , gravity CENTER_HORIZONTAL
         ]
         [ imageView
-            [ imageWithFallback case tag of
-                "home" -> "ny_ic_home," <> getAssetStoreLink FunctionCall <> "ny_ic_home.png"
-                _ -> "ic_location_unfilled," <> getAssetStoreLink FunctionCall <> "ny_ic_location_unfilled.png"
+            [ imageWithFallback $ fetchImage FF_ASSET $ case tag of
+                "home" -> "ny_ic_home"
+                _ -> "ny_ic_location_unfilled"
             , height $ V 20
             , margin $ Margin 0 2 12 0
             , width $ V 20
@@ -159,12 +159,12 @@ radioButton state push =
             [ height $ V 21
             , width $ V 21
             , visibility if state.isSelected then GONE else VISIBLE
-            , imageWithFallback $ "ny_ic_radio_unselected," <> getAssetStoreLink FunctionCall <> "ny_ic_radio_unselected.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
             ]
         , imageView
             [ width $ V 21
             , height $ V 21
-            , imageWithFallback $ "ny_ic_radio_selected," <> getAssetStoreLink FunctionCall <> "ny_ic_radio_selected.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_selected"
             , visibility if state.isSelected then VISIBLE else GONE
             ]
         ]

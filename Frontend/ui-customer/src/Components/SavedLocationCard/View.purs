@@ -28,7 +28,7 @@ import Language.Types (STR(..))
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe(Maybe(..), fromMaybe)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Data.String as DS
@@ -49,12 +49,12 @@ view push state =
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
       ][  imageView
-          [ imageWithFallback case (getCardType (fromMaybe "" state.cardType)) of
+          [ imageWithFallback $ fetchImage FF_ASSET $ case (getCardType (fromMaybe "" state.cardType)) of
                 Just card -> case card of 
-                  HOME_TAG -> "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png"
-                  WORK_TAG -> "ny_ic_work," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work.png"
-                  OTHER_TAG -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
-                Nothing   -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
+                  HOME_TAG -> "ny_ic_home"
+                  WORK_TAG -> "ny_ic_work"
+                  OTHER_TAG -> "ny_ic_fav_red"
+                Nothing   -> "ny_ic_fav_red"
           , height $ V 20
           , margin (Margin 0 2 12 0)
           , width $ V 20

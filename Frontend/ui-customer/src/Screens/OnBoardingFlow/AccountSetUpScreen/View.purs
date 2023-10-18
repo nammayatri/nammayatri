@@ -44,7 +44,7 @@ import Screens.AccountSetUpScreen.ComponentConfig
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (/=), (<<<), (<>), (==), (||))
@@ -210,7 +210,7 @@ nameEditTextView state push =
                   [ width $ V 20
                   , height MATCH_PARENT
                   , padding $ Padding 0 5 0 3
-                  , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info" 
                   ]
                 , textView $
                   [ height WRAP_CONTENT
@@ -273,7 +273,7 @@ genderCaptureView state push =
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback $ if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.genderOptionExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
               , height $ V 24
               , width $ V 15
               ]

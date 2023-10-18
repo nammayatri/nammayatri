@@ -401,7 +401,7 @@ paymentStatusBanner state push =
             , gravity RIGHT
             , margin $ MarginRight 4
             , onClick push $ const RemovePaymentBanner
-            , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross"
             , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
             ]
           , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
@@ -451,7 +451,7 @@ genderBannerView state push =
         , gravity RIGHT
         , margin (MarginRight 4)
         , onClick push (const RemoveGenderBanner)
-        , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross"
         ]
         , genderBanner push state
       ]
@@ -485,7 +485,7 @@ otpButtonView state push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
     ][ imageView
-        [ imageWithFallback $ "ic_mode_standby," <> (HU.getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_mode_standby"
         , width $ V 20
         , height $ V 20
         ]
@@ -541,7 +541,7 @@ helpAndSupportBtnView push showReportText =
   ][ imageView
      [ width $ V 15
      , height $ V 15
-     , imageWithFallback $ "ny_ic_vector," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_vector.png"
+     , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_vector"
      ]
    , textView $
      [ weight 1.0
@@ -565,7 +565,7 @@ recenterBtnView state push =
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
-    , imageWithFallback $ "ny_ic_recenter_btn," <> (HU.getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_recenter_btn"
     , onClick (\action -> do
             _ <- JB.getCurrentPosition push CurrentLocation
             pure unit
@@ -684,7 +684,7 @@ driverDetail push state =
         ][ imageView
            [ width $ V 42
            , height $ V 42
-           , imageWithFallback $ "ny_ic_user," <> HU.getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_new_avatar"
            ]
          ]
       ]
@@ -777,7 +777,7 @@ driverStatusPill pillConfig push state index =
                     DEFAULT -> GONE
         , imageWithFallback $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.imageUrl
-                    DEMO_ -> "ic_driver_status_demo,https://assets.juspay.in/beckn/merchantcommon/images/ic_driver_status_demo.png"
+                    DEMO_ ->   HU.fetchImage HU.FF_ASSET "ic_driver_status_demo"
                     DEFAULT -> "none"
         ]
       , textView(
@@ -840,14 +840,14 @@ profileDemoView state push =
           [ width $ V 50
           , height $ V 50
           , margin $ Margin 5 5 5 5
-          , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_profile_shadow.png"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_profile_shadow"
           , onClick push $ const $ GoToProfile
           ]
         , imageView
           [ width $ V 40
           , height $ V 40
           , margin $ Margin 15 10 0 15
-          , imageWithFallback "up_hand_arrow,https://assets.juspay.in/beckn/nammayatri/driver/images/up_hand_arrow.png"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "up_hand_arrow"
           ]
         , clickHereDemoLayout state push
       ]
@@ -994,7 +994,7 @@ noGoToLocationView push state =
         [ imageView
             [ height $ V 240
             , width $ V 240
-            , imageWithFallback $ "ny_ic_no_goto_loc," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_no_goto_loc.png"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_no_goto_loc"
             , margin $ Margin 10 20 10 0
             ]
         , textView $
@@ -1047,7 +1047,7 @@ gotoHeader state push =
       [ height $ V 36
       , width $ V 36
       , padding $ Padding 4 4 4 4
-      , imageWithFallback $ "ny_ic_chevron_left," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_left"
       , onClick push $ const BackPressed
       ]
     , linearLayout
@@ -1096,7 +1096,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch" else if state.props.statusOnline then "ny_ic_toggle_on" else "ny_ic_toggle_off"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -1145,7 +1145,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback $ "ny_ic_offline_status," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
+             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_offline_status"
              ]
           ]
         , linearLayout
@@ -1212,18 +1212,18 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_active," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
+             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_vehicle_side_active"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback $ "ny_ic_chevrons_right," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
+             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevrons_right"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_inactive," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_vehicle_side_inactive"
              ]
           ]
         , linearLayout
@@ -1299,10 +1299,7 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback if state.props.showlinkAadhaarPopup then
-                            "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
-                          else
-                            "ic_call_plus," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if state.props.showlinkAadhaarPopup then "ny_ic_aadhaar_logo" else "ic_call_plus"
       , margin (MarginRight 5)
       ]
     , textView $
@@ -1356,7 +1353,7 @@ updateButtonIconAndText push state =
     [ width $ V 20
     , height $ V 20
     , margin $ MarginRight 5
-    , imageWithFallback $ "ny_ic_refresh," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
+    , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_refresh"
     , gravity RIGHT
     ],
     textView $

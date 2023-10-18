@@ -28,7 +28,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod)
 import Helpers.Utils (getPreviousVersion)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
@@ -134,8 +134,8 @@ imageData :: { height :: Length
 , imageUrl :: String
 }
 imageData = 
-  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
-    else {imageUrl : "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png", height : (V 24) , width : (V 24)}
+  if os == "IOS" then {imageUrl : fetchImage FF_ASSET "ny_ic_wallet_rect", height : (V 15), width : (V 15)}
+    else {imageUrl : fetchImage FF_ASSET "ny_ic_wallet", height : (V 24) , width : (V 24)}
     
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -151,14 +151,14 @@ sourceDestinationImageView state =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
         ]
       ]
 
@@ -179,7 +179,7 @@ sourceDestinationView state push =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
         ] 
       , textView $
         [ height WRAP_CONTENT
@@ -203,7 +203,7 @@ sourceDestinationView state push =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
         ]
         , textView $
         [ height WRAP_CONTENT
@@ -405,7 +405,7 @@ selectRideAndConfirmView state push =
     ][ imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
       , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
      
       ]
@@ -436,7 +436,7 @@ paymentMethodView push state =
       , height WRAP_CONTENT
       , margin (MarginTop 7)
       ][  imageView
-          [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet"
           , height $ V 20
           , width $ V 20
           , accessibility DISABLE
@@ -519,9 +519,7 @@ noQuotesErrorModel state =
         [ height $ V 115
         , width $ V 161
         , accessibility DISABLE
-        , imageWithFallback $ if state.vehicleVariant == "AUTO_RICKSHAW" 
-                                then "ny_ic_no_quotes_auto," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_auto.png"
-                                else "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_no_quotes_auto" else "ny_ic_no_quotes_color"
         ]
       , textView $
         [ height WRAP_CONTENT

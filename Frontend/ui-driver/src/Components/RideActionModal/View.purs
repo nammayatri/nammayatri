@@ -27,7 +27,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import JBridge (getVersionCode, waitingCountdownTimer, toast)
 import Language.Strings (getString)
@@ -94,7 +94,7 @@ messageButton push config =
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
   , clickable true
   ][  imageView
-      [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
+      [ imageWithFallback $ fetchImage FF_ASSET $ if config.unReadMessages then "ic_chat_badge" else "ic_chat"
       , height $ V 20
       , width $ V 20
       ]
@@ -130,7 +130,7 @@ callButton push config =
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
   ][  imageView
-      [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "/ic_phone.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_phone"
       , height $ V 20
       , width $ V 20
       ]
@@ -291,7 +291,7 @@ openGoogleMap push config =
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_navigation.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_navigation"
           ]
         , textView (
           [ width WRAP_CONTENT
@@ -515,7 +515,7 @@ waitTimeView push config =
             , width  $ V 25
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
-            , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
           ]
          ]
         , textView $
@@ -575,13 +575,13 @@ sourceDestinationImageView  config =
         [ height $ V 14
         , width $ V 14
         , margin $ MarginTop 4
-        , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 14
         , width $ V 14
-        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
         ]
       ]
 
@@ -643,7 +643,7 @@ arrivedButtonView push config =
   ][  imageView
       [ width $ V 20
       , height $ V 20
-      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_grey.png" else "ny_ic_hand_wave," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_hand_wave.png"
+      , imageWithFallback $ fetchImage FF_ASSET $ if config.notifiedCustomer then "ny_ic_tick_grey" else "ny_ic_hand_wave"
       , margin $ MarginRight 4
       ]
     , textView $
@@ -665,7 +665,7 @@ destinationView config push =
   ][  imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
       , margin $ Margin 0 3 8 0
       ]
     , destAddressTextView config push

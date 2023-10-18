@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Engineering.Helpers.Utils (saveObject)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getAssetStoreLink, getDistanceBwCordinates, getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -331,7 +331,7 @@ eval (LoadMyPlans plans) state = do
                 }
               , autoPayDetails {
                   detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                , pspLogo = pspLogo <> "," <> (getAssetStoreLink FunctionCall) <> pspLogo <> ".png"
+                , pspLogo = fetchImage FF_ASSET pspLogo
                 , payerUpiId = mandateDetails.payerVpa
                 }
               }

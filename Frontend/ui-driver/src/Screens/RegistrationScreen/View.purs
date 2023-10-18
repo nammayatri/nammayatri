@@ -30,7 +30,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Screens.RegistrationScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import Effect.Uncurried (runEffectFn1)
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
@@ -72,7 +72,7 @@ view push state =
     ][ imageView
         [ width ( V 20 )
         , height ( V 20)
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , visibility GONE
         ]
       , linearLayout
@@ -133,7 +133,7 @@ tutorialView state =
       , color Color.black800
       ] <> FontStyle.body1 TypoGraphy)
     , imageView
-      [ imageWithFallback $ "ny_ic_media," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_media.png"
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_media"
       , width (V 40)
       , height (V 40)
       ]
@@ -156,9 +156,9 @@ cardItemView state =
           , padding (Padding 0 20 15 15)
           , cornerRadius 3.0
           ][ imageView
-              [ imageWithFallback case item of
-                  DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dl_blue.png"
-                  VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto_onboard.png"
+              [ imageWithFallback $ fetchImage FF_ASSET $ case item of
+                  DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
+                  VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard"
               , width (V 50)
               , height (V 50)
               , margin (MarginRight 14)

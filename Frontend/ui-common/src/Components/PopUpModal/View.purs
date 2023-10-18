@@ -38,6 +38,7 @@ import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -79,7 +80,7 @@ view push state =
         ][ imageView
             [ height $ V 21
             , width $ V 21
-            , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dismiss" 
             ]
         ]
      , linearLayout
@@ -412,7 +413,7 @@ listView push state =
         , margin $ Margin 12 0 0 4
         , orientation HORIZONTAL
         ][  imageView
-            [ imageWithFallback $ "ny_ic_circle,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_circle.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
             , height $ V 6 
             , alpha 0.7
             , width $ V 6
@@ -484,7 +485,7 @@ tipsView push state =
             , width MATCH_PARENT
             ]
             [   imageView
-                [ imageWithFallback "ny_ic_wallet_filled,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_wallet_filled.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_wallet_filled"
                 , width $ V 20
                 , height $ V 20
                 , margin $ MarginRight 5
@@ -513,7 +514,7 @@ tipsView push state =
             , margin $ MarginTop 14
             ]
             [   imageView
-                [ imageWithFallback "ny_ic_stop_circle_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_stop_circle_yellow.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_stop_circle_yellow"
                 , width $ V 20
                 , height $ V 20
                 , margin $ MarginRight 5

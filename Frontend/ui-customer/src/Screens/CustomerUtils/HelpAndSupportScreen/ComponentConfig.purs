@@ -37,7 +37,7 @@ import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
 import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let
@@ -50,7 +50,7 @@ sourceToDestinationConfig state = let
     , id = Just $ "HelpAndSupportSTDC_" <> state.data.bookingId
     , sourceMargin = (Margin 0 0 0 14)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 5)
       }
     , sourceTextConfig {
@@ -63,7 +63,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
       , margin = (MarginTop 4)
       }
     , destinationTextConfig {
@@ -84,7 +84,7 @@ apiErrorModalConfig state = let
   config = ErrorModal.config
   errorModalConfig' = config
     { imageConfig {
-        imageUrl = "ny_ic_error_404," <> (getAssetStoreLink FunctionCall) <> "ny_ic_error_404.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_error_404"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -144,7 +144,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
@@ -165,7 +165,7 @@ deleteGenericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
       }
     , padding = PaddingVertical 5 5

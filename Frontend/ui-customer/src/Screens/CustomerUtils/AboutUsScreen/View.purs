@@ -28,7 +28,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -174,7 +174,7 @@ bottomLinksView state =
             [ imageView
                 [ height $ V 20
                 , width $ V 20
-                , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_launcher"
                 ]
             , textView
                 $ [ text $ "namma yatri"

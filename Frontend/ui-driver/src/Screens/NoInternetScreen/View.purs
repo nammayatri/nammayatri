@@ -30,7 +30,7 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
@@ -87,7 +87,7 @@ locationAccessPermissionView push state triggertype =
         , width MATCH_PARENT
         , gravity CENTER
         ][  imageView
-            [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_location_access"
             , height $ V 213
             , width $ V 240
             , gravity CENTER
@@ -109,7 +109,7 @@ noInternetScreenView push state triggertype =
       , orientation VERTICAL
       , clickable false
       ][imageView
-        [ imageWithFallback $ "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_offline"
         , height $ V 213
         , width $ V 240
         , gravity CENTER

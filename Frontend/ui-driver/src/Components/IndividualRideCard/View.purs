@@ -23,7 +23,7 @@ import Components.SeparatorView.View as SeparatorView
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -140,7 +140,7 @@ tagView config =
       , padding $ Padding 10 4 10 4
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ item.image <> "," <> (getAssetStoreLink FunctionCall) <> item.image <> ".png"
+          [ imageWithFallback $ fetchImage FF_ASSET item.image
           , height $ V 14
           , width $ V 14
           ]
@@ -219,7 +219,7 @@ rideDetails showTripId =
               , fontStyle $ FontStyle.regular LanguageStyle
               ]
             , imageView
-              [ imageWithFallback $ "ny_ic_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_circle.png"
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
               , height $ V 5
               , width $ V 5
               , cornerRadius 2.5
@@ -275,7 +275,7 @@ sourceAndDestination =
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
       ][  imageView
-          [ imageWithFallback $  "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
           , height $ V 16
           , width $ V 14
           ]
@@ -295,7 +295,7 @@ sourceAndDestination =
         , gravity CENTER_VERTICAL
         , background Color.white900
         ][  imageView
-            [ imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
             , height $ V 16
             , width $ V 14
             ]
@@ -399,7 +399,7 @@ sourceAndDestinationShimmerView =
   , PrestoList.visibilityHolder "shimmer_visibility"
   , padding $ PaddingVertical 16 16
   ][sfl $  imageView[
-    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_shimmer_img.png"
+    imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_shimmer_img"
   , height $ V 57
   , margin (MarginLeft 4)
   , weight 1.0

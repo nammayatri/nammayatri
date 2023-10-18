@@ -45,6 +45,7 @@ import Styles.Types (FontStyle)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import MerchantConfig.Utils(getValueFromConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -103,7 +104,7 @@ linearLayout
           imageView
           [ height $ V 22
           , width $ V 22
-          , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
           , margin $ Margin 0 4 12 0
           , onClick push (const OnGoBack)
           , visibility if config.topLeftIcon then VISIBLE else GONE

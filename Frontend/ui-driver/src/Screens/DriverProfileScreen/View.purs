@@ -50,7 +50,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -73,6 +73,7 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils as HU
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Resource.Constants as Const
 import Data.Either (Either (..))
 
@@ -214,7 +215,7 @@ renderQRView state push =
               width $ V 24
             , height  $ V 24
             , margin $ MarginRight 6
-            , imageWithFallback $ pspIcon <> "," <> (getAssetStoreLink FunctionCall) <> pspIcon <> ".png"
+            , imageWithFallback $ fetchImage FF_ASSET pspIcon
           ]
           , textView $ [
             text state.data.payerVpa
@@ -292,7 +293,7 @@ headerView state push =
   ][ imageView
       [ width $ V 30
       , height $ V 30
-      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , onClick push $ const BackPressed
       ]
     , textView
@@ -311,7 +312,7 @@ headerView state push =
           [ height $ V 20
           , width $ V 20
           , margin $ MarginRight 4
-          , imageWithFallback "ic_settings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_settings"
           ]
         , textView
           ([ text (getString SETTINGS)
@@ -404,7 +405,7 @@ tabImageView state push =
           imageView[ 
             height $ V 88
           , width $ V 88
-          , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_new_avatar"
           ]
         else 
           linearLayout [
@@ -426,7 +427,7 @@ tabImageView state push =
         , gravity CENTER
         , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
         ][  imageView
-            [ imageWithFallback if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" else "ny_ic_silhouette,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view" else "ny_ic_silhouette" --change this image link after uploading in asset store
             , height $ V 68
             , width $ V 68
             ]
@@ -474,9 +475,9 @@ missedOpportunityView state push  =
   ]
 
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
-missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-  {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+  {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+    {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push =
@@ -588,7 +589,7 @@ additionalRcsView state push config =
                 [ height $ V 11
                 , width $ V 11
                 , margin $ MarginLeft 7
-                , imageWithFallback if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                 ]] )
             ],
             linearLayout[
@@ -657,7 +658,7 @@ detailsViewForInactiveRcs state push config =
                 [ height $ V 11
                 , width $ V 11
                 , margin $ MarginLeft 7
-                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_edit_pencil"
                 ]]  else [])
           , linearLayout
             [ height $ V 1
@@ -763,31 +764,31 @@ badgeView state =
 
 ------------------------------------------------- BADGE DATA -----------------------------------------------------------------
 getBadgeData :: ST.DriverProfileScreenState -> Array {badgeImage :: String, primaryText :: String, subText :: String}
-getBadgeData state = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_five_star_badge.png"
+getBadgeData state = [{badgeImage: fetchImage FF_ASSET "ny_ic_five_star_badge"
                      , primaryText: "5-Star Rides"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_safe_ride,https://assets.juspay.in/nammayatri/images/driver/ny_ic_safe_ride.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_safe_ride"
                      , primaryText: "Safe Rides"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_clean_auto_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_clean_auto_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_clean_auto_badge"
                      , primaryText: "Clean Auto"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_expert_driver,https://assets.juspay.in/nammayatri/images/driver/ny_ic_expert_driver.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_expert_driver"
                      , primaryText: "Expert Driving"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_navigator_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigator_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_navigator_badge"
                      , primaryText: "Navigator"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_ontime_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_ontime_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_ontime_badge"
                      , primaryText: "On Time"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_polite_driver_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_polite_driver_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_polite_driver_badge"
                      , primaryText: "Professional"
                      , subText: "235"
                       }
@@ -1094,7 +1095,7 @@ profileOptionsLayout state push =
                       , imageView
                         [ width $ V 18
                         , height $ V 18
-                        , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
                         ]
                     ]
                 ]
@@ -1259,7 +1260,7 @@ infoTileView state config =
                     ][imageView
                         [ height $ V 13
                         , width $ V 13
-                        , imageWithFallback if item <= (fromMaybe 0.0 state.data.analyticsData.rating) then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= (fromMaybe 0.0 state.data.analyticsData.rating) then "ny_ic_star_active" else "ny_ic_star_inactive"
                         ]
                     ]) [1.0,2.0,3.0,4.0,5.0])
           ]
@@ -1296,7 +1297,7 @@ showMenuButtonView state push genderName genderType=
       ][  imageView
           [ width $ V 10
           , height $ V 10
-          , imageWithFallback "ny_ic_radio_button,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_button.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_button"
           , visibility if checkGenderSelect state.data.genderTypeSelect genderType then VISIBLE else GONE
           ]
         ]
@@ -1364,7 +1365,7 @@ detailsListViewComponent state push config =
                     , margin $ Margin 7 3 0 0
                     , onClick push $ const PaymentInfo
                     , visibility if item.keyInfo then VISIBLE else GONE
-                    , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
                     ]
                 ]
               , linearLayout
@@ -1391,13 +1392,13 @@ detailsListViewComponent state push config =
                 , width $ V 11
                 , margin $ MarginLeft 7
                 , onClick push $ const item.action
-                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ic_edit_pencil.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_edit_pencil"
                 ]] else if item.isRightInfo then [imageView
                 [ height $ V 12
                 , width $ V 12
                 , margin $ MarginLeft 7
                 , onClick push $ const PaymentInfo
-                , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
                 ]] else [])
           , linearLayout
             [ height $ V 1
@@ -1534,7 +1535,7 @@ genderOptionsArray _ =
   ]
 
 vehicleSummaryArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
 vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean}
 vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true , keyInfo : false, isRightInfo : false }
@@ -1652,11 +1653,11 @@ rcEditPopUpView push state =
 rcEditPopUpData :: ST.DriverProfileScreenState -> Array { text :: String, imageWithFallback :: String, type :: ST.EditRc }
 rcEditPopUpData state =
   [ { text: if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)
-    , imageWithFallback: if state.data.isRCActive then "ny_ic_deactivate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_deactivate.png" else "ny_ic_activate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_activate.png"
+    , imageWithFallback: fetchImage FF_ASSET $ if state.data.isRCActive then "ny_ic_deactivate" else "ny_ic_activate"
     , type: if state.data.isRCActive then ST.ACTIVATING_RC else ST.DEACTIVATING_RC
     }
   , { text: (getString DELETE_RC)
-    , imageWithFallback: "ny_ic_bin,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_bin.png"
+    , imageWithFallback: fetchImage FF_ASSET "ny_ic_bin"
     , type: ST.DELETING_RC
     }
   ]
@@ -1691,7 +1692,7 @@ trackingCardRcEditView push state item =
       , width MATCH_PARENT
       , gravity RIGHT
       ][ imageView
-         [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
          , height $ V 30
          , width $ V 32
          , gravity RIGHT
@@ -1871,7 +1872,7 @@ trackingCardRcActiveOnAnotherDriverProfileView push state item =
           gravity RIGHT
         ][
           imageView
-          [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
           , height $ V 30
           , width $ V 32
           , gravity RIGHT

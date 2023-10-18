@@ -29,7 +29,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl)
 import JBridge (startLottieProcess, lottieAnimationConfig)
 import Presto.Core.Types.Language.Flow (delay, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, color, gravity, height, id, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width, imageView, imageUrl)
@@ -84,7 +84,7 @@ view push state =
             imageView
             [ height $ V 160
             , width $ V 280
-            , imageUrl $ "ny_ic_success_lottie_placeholder" <> (getAssetStoreLink FunctionCall) <> "ny_ic_success_lottie_placeholder.png"] 
+            , imageUrl $ fetchImage FF_ASSET "ny_ic_success_lottie_placeholder"] 
             else lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT

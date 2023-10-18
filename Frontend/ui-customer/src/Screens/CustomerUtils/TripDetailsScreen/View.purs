@@ -35,7 +35,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleVariantImage, getVariantRideType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType)
 import Prelude ((<>), show)
 import Data.Maybe(fromMaybe, isJust, Maybe(..))
 import Data.String as DS
@@ -157,7 +157,7 @@ lostAndFoundView push state =
       , width MATCH_PARENT
       , gravity RIGHT
       ][  imageView
-          [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
           , height (V 15)
           , width (V 15)
           ]
@@ -201,7 +201,7 @@ tripIdView push state =
               , color Color.black900
               ] <> FontStyle.paragraphText LanguageStyle
             , imageView
-              [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_copy"
               , height (V 13)
               , width (V 11)
               , margin (MarginLeft 10)
@@ -255,12 +255,12 @@ tripDetailsView state =
               -- , background Color.grey800
               , width (V 36)
               , height (V 36)
-              , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_profile_image"
               ]
             , imageView
               [ imageWithFallback $ case state.data.vehicleVariant of
                                       Just variant -> getVehicleVariantImage (show variant)
-                                      Nothing      -> "ic_vehicle_side,"<> getAssetStoreLink FunctionCall <>"ic_auto_side_view.png" 
+                                      Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
               , width (V 40)
               , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
               , height (V 40)
@@ -363,7 +363,7 @@ ratingAndInvoiceView state push =
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png" 
+                              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive" 
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
     -- , linearLayout
@@ -403,7 +403,7 @@ invoiceView state push =
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
             , height (V 15)
             , width (V 15)
             ]
@@ -437,7 +437,7 @@ reportIssueView state push =
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up" else "ny_ic_chevron_right"
                 , height $ if state.props.reportIssue then V 6 else V 15
                 , width $ if state.props.reportIssue then V 12 else V 15
                 ]
@@ -496,7 +496,7 @@ issueReportedView state push =
       , gravity CENTER
       , orientation VERTICAL
       ][ imageView
-          [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_letter"
           , height $ V 149
           , width $ V 149
           , margin (MarginBottom 32)

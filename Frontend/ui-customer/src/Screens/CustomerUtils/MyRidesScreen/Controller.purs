@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -41,7 +41,6 @@ import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
@@ -184,7 +183,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     totalAmount : toPropValue ((getValueFromConfig "currency") <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
-    driverImage : toPropValue $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
+    driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
     isCancelled : toPropValue (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
@@ -218,7 +217,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     totalAmount :  ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
-    driverImage :  "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
+    driverImage : fetchImage FF_ASSET  "ny_ic_user",
     isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),

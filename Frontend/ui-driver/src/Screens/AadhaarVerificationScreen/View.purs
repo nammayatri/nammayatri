@@ -114,7 +114,7 @@ backArrow state push =
   ][ imageView
       [ width ( V 25 )
       , height ( V 25 )
-      , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_back"
       , onClick push (const BackPressed)
       ]
     , linearLayout
@@ -266,7 +266,7 @@ dateOfBirth push state =
       , imageView
         [ width ( V 20 )
         , height ( V 20 )
-        , imageWithFallback $ "ny_ic_calendar," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]

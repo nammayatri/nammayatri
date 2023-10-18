@@ -44,7 +44,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
 import Screens.ApplicationStatusScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Effect.Uncurried (runEffectFn1)
@@ -119,7 +119,7 @@ applicationStatusView state push =
       [ width (V 136)
       , height (V 123)
       , layoutGravity "center_horizontal"
-      , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_coming_soon.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_coming_soon"
       , margin (MarginBottom 32)
       ]
     , textView $
@@ -238,14 +238,14 @@ supportTextView state push =
 drivingLicenseCardDetails state =
   {
     "title" : (getString DRIVING_LICENSE),
-    "image" : case state.data.dlVerificationStatus of
-                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png",
+    "image" : fetchImage FF_ASSET $ case state.data.dlVerificationStatus of
+                "VALID" -> "ny_ic_check_mark"
+                "PENDING" -> "ny_ic_pending"
+                "FAILED" -> "ny_ic_api_failure_popup"
+                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle"
+                "INVALID" -> "ny_ic_api_failure_popup"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle"
+                _ -> "ny_ic_api_failure_popup",
     "verificationStatus" :  case state.data.dlVerificationStatus of 
                 "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
@@ -263,14 +263,14 @@ drivingLicenseCardDetails state =
 vehicleCardDetails state=
   {
     "title" : (getString VEHICLE_DETAILS),
-    "image" : case state.data.rcVerificationStatus of
-                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png",
+    "image" : fetchImage FF_ASSET $ case state.data.rcVerificationStatus of
+                "VALID" -> "ny_ic_check_mark"
+                "PENDING" -> "ny_ic_pending"
+                "FAILED" -> "ny_ic_api_failure_popup"
+                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle"
+                "INVALID" -> "ny_ic_api_failure_popup"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle"
+                _ -> "ny_ic_api_failure_popup",
     "verificationStatus" :  case state.data.rcVerificationStatus of 
                 "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
@@ -304,7 +304,7 @@ applicationApprovedView state push =
           [ width (V 340)
           , height (V 150)
           , layoutGravity "center_horizontal"
-          , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_coming_soon.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_coming_soon"
           ]
           , textView (
           [ height WRAP_CONTENT
