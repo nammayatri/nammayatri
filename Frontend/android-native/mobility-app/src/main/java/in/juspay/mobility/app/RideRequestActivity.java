@@ -551,10 +551,23 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             }
         }
-                } catch (Exception e) {
+        } catch (Exception e) {
             FirebaseAnalytics.getInstance(this).logEvent("Exception_in_findCardById", null);
             Log.e("RideRequestActivity", "Error in findCardById : " + e);
             return false;
+        }
+        return false;
+    }
+
+
+    public boolean removeCardById(String id){
+        if (sheetArrayList.size()>0){
+            for (int i = 0; i<sheetArrayList.size(); i++){
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                    removeCard(i);
+                    return true;
+                }
+            }
         }
         return false;
     }
