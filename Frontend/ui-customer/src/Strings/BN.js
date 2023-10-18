@@ -633,7 +633,6 @@ const bengaliStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "SENT_OTP_VIA_SMS" : "Whatsapp এর মাধ্যমে OTP পাঠানো হয়েছে",
   "ENABLE_LOCATION_PERMISSION_TO" : "রাইড অনুসন্ধান করার জন্য অবস্থানের অনুমতি সক্ষম করুন",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে নম্মা যাত্রীর জন্য অবস্থানের অনুমতি সক্ষম করুন।",
   "AC_CAB" : "এসি ক্যাব",
   "AC_SUV" : "এসি এসইউভি",
   "RIDE_TYPE" : "রাইড টাইপ",
@@ -644,5 +643,6 @@ const bengaliStrings = {
   "DRIVER_RECEIPT" : "ড্রাইভার রসিদ",
   "HELP" : "সাহায্য",
   "FARE_INFO_TEXT" : "",
-  "FASTER" : "দ্রুততর"
+  "FASTER" : "দ্রুততর",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে অবস্থানের অনুমতি সক্ষম করুন।"
 }

@@ -615,7 +615,6 @@ const hindiStrings = {
   "NOW_GET_ASSISTED_RIDES" : "यदि आप विकलांग व्यक्ति हैं तो अब सहायता प्राप्त सवारी प्राप्त करें",
   "CLEAN_CAB" : "क्लीन कैब",
   "ENABLE_LOCATION_PERMISSION_TO" : "सवारी खोजने के लिए स्थान अनुमति सक्षम करें",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
   "AC_CAB" : "एसी कैब",
   "AC_SUV" : "एसी एसयूवी",
   "RIDE_TYPE" : "सवारी का प्रकार",
@@ -630,5 +629,6 @@ const hindiStrings = {
   "DRIVER_RECEIPT" : "ड्राइवर रसीद",
   "HELP" : "सहायता",
   "FARE_INFO_TEXT" : "",
-  "FASTER" : "और तेज"
+  "FASTER" : "और तेज",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से स्थान अनुमतियां सक्षम करें।"
 }

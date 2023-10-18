@@ -613,7 +613,6 @@ const kannadaStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "Whatsapp ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ", 
   "SENT_OTP_VIA_SMS" : "SMS ಮೂಲಕ OTP ಕಳುಹಿಸಲಾಗಿದೆ",
   "ENABLE_LOCATION_PERMISSION_TO" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕಲು ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
   "AC_CAB" : "ಎಸಿ ಕ್ಯಾಬ್",
   "AC_SUV" : "ಎಸಿ ಎಸ್ಯುವಿ",
   "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ",
@@ -625,5 +624,6 @@ const kannadaStrings = {
   "DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿ",
   "HELP" : "ಸಹಾಯ",
   "FARE_INFO_TEXT" : "",
-  "FASTER" : "ವೇಗವಾಗಿ"
+  "FASTER" : "ವೇಗವಾಗಿ",
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
 }
