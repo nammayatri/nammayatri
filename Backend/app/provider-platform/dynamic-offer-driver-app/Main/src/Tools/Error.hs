@@ -206,8 +206,8 @@ instance IsHTTPError DriverError where
     DriverAlreadyLinkedWithVehicle _ -> "DRIVER_ALREADY_LINKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
-    DriverWithoutVehicle _ -> E500
-    NoPlanSelected _ -> E500
+    DriverWithoutVehicle _ -> E400
+    NoPlanSelected _ -> E400
     DriverAccountBlocked -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
