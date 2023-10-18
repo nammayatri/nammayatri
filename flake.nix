@@ -40,9 +40,6 @@
     amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
     amazonka-git.flake = false;
 
-    # Streamly version 0.8.3r1 tagged release
-    streamly-083r1-git.url = "github:composewell/streamly?ref=v0.8.3r1";
-    streamly-083r1-git.flake = false;
   };
 
   outputs = inputs:

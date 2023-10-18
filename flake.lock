@@ -2534,8 +2534,7 @@
           "nixpkgs"
         ],
         "osrm-pbf": "osrm-pbf",
-        "shared-kernel": "shared-kernel",
-        "streamly-083r1-git": "streamly-083r1-git"
+        "shared-kernel": "shared-kernel"
       }
     },
     "sequelize": {
@@ -2617,23 +2616,6 @@
         "owner": "arjunkathuria",
         "ref": "Mobility-GHC927-rebased-03",
         "repo": "shared-kernel",
-        "type": "github"
-      }
-    },
-    "streamly-083r1-git": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1677588549,
-        "narHash": "sha256-PwnetrZeCbCXADH9A9zoVVfjIDzUarh60llbTbs7iJE=",
-        "owner": "composewell",
-        "repo": "streamly",
-        "rev": "a0d4b24ae7950d96aa8a5e9d61c4da4ae37c54a9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "composewell",
-        "ref": "v0.8.3r1",
-        "repo": "streamly",
         "type": "github"
       }
     },
