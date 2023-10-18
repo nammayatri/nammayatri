@@ -120,7 +120,7 @@ data SearchDetails
   = OnDemandSearchDetails
       {searchTry :: DST.SearchTry}
   | RentalSearchDetails
-      { searchTryId :: Id DST.SearchTry,
+      { searchTry :: DST.SearchTry,
         booking :: DB.Booking
       }
 

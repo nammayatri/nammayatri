@@ -26,7 +26,6 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -39,6 +38,7 @@ import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -59,12 +59,13 @@ allocateRentalRide ::
   m ExecutionResult
 allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
-  searchReq <- B.runInReplica $ QSR.findById jobData.searchRequestId >>= fromMaybeM (SearchRequestNotFound jobData.searchRequestId.getId)
+  searchTry <- B.runInReplica $ QST.findById jobData.searchTryId >>= fromMaybeM (SearchTryNotFound jobData.searchTryId.getId)
+  searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id booking.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantId merchant.id
-  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig jobData.searchTryId searchReq booking merchant Nothing goHomeCfg
+  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
 
 -- TODO remove redundant constraints everywhere:
@@ -85,25 +86,25 @@ sendSearchRequestToDrivers' ::
     LT.HasLocationService m r
   ) =>
   DriverPoolConfig ->
-  Id DST.SearchTry ->
+  DST.SearchTry ->
   SearchRequest ->
   DB.Booking ->
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
   GoHomeConfig ->
   m (ExecutionResult, Bool)
-sendSearchRequestToDrivers' driverPoolConfig searchTryId searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
+sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
-    searchDetails = DSRD.RentalSearchDetails {booking, searchTryId}
+    searchDetails = DSRD.RentalSearchDetails {booking, searchTry}
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTryId,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = pure $ booking.status /= DB.SCHEDULED,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTryId booking.vehicleVariant,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
-          setBatchDurationLock = I.setBatchDurationLock searchTryId driverPoolConfig.singleBatchProcessTimeRental,
+          setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTimeRental,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
           metrics =
             MetricsHandle

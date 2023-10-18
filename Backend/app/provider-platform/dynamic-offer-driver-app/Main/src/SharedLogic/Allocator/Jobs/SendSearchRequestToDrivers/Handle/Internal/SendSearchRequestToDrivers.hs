@@ -70,41 +70,34 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   now <- getCurrentTime
-  let (searchTryId', vehVariant, searchReqTag, mbBookingId, startTime, singleBatchProcessTime) = case searchDetails of
+  let (searchTry', vehVariant, searchReqTag, mbBookingId, startTime, singleBatchProcessTime) = case searchDetails of
         OnDemandSearchDetails {searchTry} -> do
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTime
-          (searchTry.id, searchTry.vehicleVariant, DSR.ON_DEMAND, Nothing, searchTry.startTime, singleBatchProcessTime')
-        RentalSearchDetails {booking, searchTryId} -> do
+          (searchTry, searchTry.vehicleVariant, DSR.ON_DEMAND, Nothing, searchTry.startTime, singleBatchProcessTime')
+        RentalSearchDetails {booking, searchTry} -> do
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTimeRental
-          (searchTryId, booking.vehicleVariant, DSR.RENTAL, Just booking.id, booking.startTime, singleBatchProcessTime')
+          (searchTry, booking.vehicleVariant, DSR.RENTAL, Just booking.id, booking.startTime, singleBatchProcessTime')
+  let searchTryId = searchTry'.id
   let validTill = fromIntegral singleBatchProcessTime `addUTCTime` now
-  batchNumber <- getPoolBatchNum searchTryId'
+  batchNumber <- getPoolBatchNum searchTryId
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
-  case searchDetails of
-    OnDemandSearchDetails {searchTry} -> do
-      DS.driverScoreEventHandler
-        DST.OnNewSearchRequestForDrivers
-          { driverPool = driverPool,
-            merchantId = searchReq.providerId,
-            searchReq = searchReq,
-            searchTry = searchTry,
-            validTill = validTill,
-            batchProcessTime = fromIntegral singleBatchProcessTime
-          }
-    RentalSearchDetails {} -> pure () -- FIXME do we need driverScoreEventHandler for rentals?
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill searchReqTag searchTryId' mbBookingId startTime) driverPool
+  DS.driverScoreEventHandler
+    DST.OnNewSearchRequestForDrivers
+      { driverPool = driverPool,
+        merchantId = searchReq.providerId,
+        searchReq = searchReq,
+        searchTry = searchTry',
+        validTill = validTill,
+        batchProcessTime = fromIntegral singleBatchProcessTime
+      }
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill searchReqTag searchTryId mbBookingId startTime) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  case searchDetails of
-    OnDemandSearchDetails {searchTry} -> do
-      whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $
-        QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
-    RentalSearchDetails {} -> do
-      whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $
-        QSRD.setInactiveBySRId searchReq.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $
+    QSRD.setInactiveBySTId searchTryId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
   forM_ searchRequestsForDrivers $ \sReqFD -> do
-    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId', searchTryId = searchTryId', validTill = sReqFD.searchRequestValidTill}
+    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId, searchTryId = searchTryId, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
