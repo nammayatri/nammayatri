@@ -39,12 +39,14 @@ import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as FarePolicyD
+-- import qualified Storage.CachedQueries.FareProduct as QFareProduct
+
+import Domain.Types.FarePolicy.Common
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
--- import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Domain.Types.QuoteRental as DQuoteRental
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import Domain.Types.RideRoute
@@ -287,7 +289,7 @@ handler merchant sReq' =
               initialDuration
         -- let z = concat listOfRentalQuotes
         for_ listOfRentalQuotes QQuoteRental.create
-        return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuotes), Nothing)
+        return (Just (mkRentalQuoteInfo fromLocation now fullFarePolicies <$> listOfRentalQuotes), Nothing)
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
@@ -565,12 +567,22 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
       ..
     }
 
-mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> DQuoteRental.QuoteRental -> RentalQuoteInfo
-mkRentalQuoteInfo fromLoc startTime DQuoteRental.QuoteRental {..} = do
+mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> [FarePolicyD.FullFarePolicy] -> DQuoteRental.QuoteRental -> RentalQuoteInfo
+mkRentalQuoteInfo fromLoc startTime fullFarePolicies DQuoteRental.QuoteRental {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
-      (perHourCharge, perExtraKmRate, perHourFreeKms, nightShiftCharge) = case fareParams.fareParametersDetails of
-        RentalDetails rDet -> (rDet.timeBasedFare, rDet.extraDistFare, 0, fareParams.nightShiftCharge)
-        _ -> (0, 0, 0, 0)
+      farePolicy = find ((== vehicleVariant) . (.vehicleVariant)) fullFarePolicies
+      (perHourCharge, perExtraKmRate, perHourFreeKms, nightShiftCharge) = do
+        case (.farePolicyDetails) <$> farePolicy of
+          Just (FarePolicyD.RentalDetails fpRentalDetails) ->
+            ( fpRentalDetails.perHourCharge,
+              fpRentalDetails.perExtraKmRate,
+              fpRentalDetails.perHourFreeKms,
+              case fpRentalDetails.nightShiftCharge of
+                Just (ProgressiveNightShiftCharge _) -> Nothing
+                Just (ConstantNightShiftCharge fare) -> Just fare
+                Nothing -> Nothing
+            )
+          _ -> (0, 0, 0, 0)
   RentalQuoteInfo
     { quoteId = id,
       rentalTag = Nothing,
