@@ -244,3 +244,8 @@ selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
       _ -> do
         let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
         { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+
+ifelse :: forall a. Boolean -> a -> a -> a
+ifelse p a b = if p then a else b
+
+infixl 1 ifelse as ?

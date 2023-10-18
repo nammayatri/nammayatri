@@ -16,7 +16,8 @@ type AppConfig =
     profile :: ProfileConfig,
     enablePurpleRideBanner :: Boolean,
     showPaymentDetails :: Boolean,
-    gotoConfig :: GotoConfig
+    gotoConfig :: GotoConfig,
+    profileVerification :: ProfileVerificationConfig
   } 
 
 type Language =  {
@@ -27,6 +28,10 @@ type Language =  {
 
 type LeaderBoard = {
   isMaskedName :: Boolean
+}
+
+type ProfileVerificationConfig = {
+  aadharVerificationRequired :: Boolean
 }
 
 type SubscriptionConfig =  {

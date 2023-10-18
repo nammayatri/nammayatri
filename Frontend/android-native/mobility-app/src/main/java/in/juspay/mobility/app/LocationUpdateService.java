@@ -216,7 +216,7 @@ public class LocationUpdateService extends Service {
                         .addOnSuccessListener(location -> {
                             if(location!=null) {
                                 isDistanceCalulation = true;
-                                int distanceBtLatLng = 0, distanceBtLatLngWithAcc = 0;
+                                int distanceBtLatLng, distanceBtLatLngWithAcc;
                                 String accHolder = getValueFromStorage("ACCURACY_THRESHOLD");
                                 String accuracyThreshold = accHolder == null ? "100.0" : accHolder;
                                 if (prevLocation != null && prevAccLocation != null) {
@@ -887,10 +887,6 @@ public class LocationUpdateService extends Service {
     private boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         return locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
-    }
-
-    private void calculateRideDistance(Location location){
-
     }
 
     /* create timer task */

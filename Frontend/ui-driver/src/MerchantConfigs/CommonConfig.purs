@@ -78,4 +78,7 @@ commonConfig =
         , gotoConfig : {
             maxGotoLocations : 5
         }
+        , profileVerification : {
+          aadharVerificationRequired : false
+        } 
         }

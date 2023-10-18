@@ -35,9 +35,11 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.LinearInterpolator;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -73,6 +75,7 @@ public class WidgetService extends Service {
     private final Bundle params = new Bundle();
 
     private static FirebaseAnalytics mFirebaseAnalytics;
+    private int LAYOUT_FLAG;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -374,7 +377,6 @@ public class WidgetService extends Service {
     private void addWidgetToWindowManager() {
         if (!Settings.canDrawOverlays(this)) return;
         float scale = getResources().getDisplayMetrics().density;
-        int LAYOUT_FLAG;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         } else {
@@ -456,10 +458,15 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
-                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
-                                        long percentUsedRam = Math.round(getCurrentUsedRam());
+                                    long ramBasedTime = getTimeBasedOnRamSize();
+                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true") || sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true")) {
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
-                                        mainLooper.postDelayed(() -> openMainActivity(), percentUsedRam*10 > 500 ? percentUsedRam*10 : 500 );
+                                        minimizeApp();
+                                        View loaderView = getLoaderView();
+                                        mainLooper.postDelayed(() -> {
+                                            loaderView.setVisibility(View.GONE);
+                                            openMainActivity();
+                                            }, ramBasedTime );
                                     } else {
                                         openMainActivity();
                                     }
@@ -505,6 +512,27 @@ public class WidgetService extends Service {
         });
     }
 
+    private View getLoaderView() {
+        View loaderView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.loader_mini, null);
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                LAYOUT_FLAG,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        ProgressBar loader = loaderView.findViewById(R.id.loader);
+        loaderView.setVisibility(View.VISIBLE);
+        windowManager.addView(loaderView, lp);
+        RotateAnimation rotateAnimation = new RotateAnimation(0, 360,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+        rotateAnimation.setDuration(1000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
+        loader.startAnimation(rotateAnimation);
+        return loaderView;
+    }
+
 
     @Override
     public void onDestroy() {
@@ -520,11 +548,21 @@ public class WidgetService extends Service {
         rideRequestQueue.clear();
     }
 
-    private double getCurrentUsedRam(){
+    private long getTimeBasedOnRamSize() {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         activityManager.getMemoryInfo(mi);
-        return ((double)mi.totalMem - mi.availMem) / (double)mi.totalMem * 100.0;
+        double totalRamInGB = ((double) mi.totalMem) / 1024 / 1024 / 1024;
+        long timeInMilliseconds;
+        if (totalRamInGB >= 7) {
+            timeInMilliseconds = 1000;
+        } else {
+            double ramSizeDifference = 7 - totalRamInGB;
+            double timeDifference = ramSizeDifference * 500;
+            timeInMilliseconds = (long) (1000 + timeDifference);
+        }
+
+        return timeInMilliseconds;
     }
 
     private void openMainActivity() {
