@@ -457,7 +457,6 @@ library
       Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
-      Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
       Storage.Queries.Estimate
@@ -530,7 +529,6 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
-      Storage.Queries.VehicleRegistrationCertificate
       Storage.Queries.Volunteer
       Tools.AadhaarVerification
       Tools.Auth

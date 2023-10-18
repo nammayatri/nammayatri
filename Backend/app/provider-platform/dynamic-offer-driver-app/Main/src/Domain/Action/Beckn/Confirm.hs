@@ -56,6 +56,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
@@ -317,6 +318,7 @@ buildRideDetails ride driver = do
   vehicle <-
     QVeh.findById ride.driverId
       >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
   return
     SRD.RideDetails
       { id = ride.id,
@@ -328,7 +330,7 @@ buildRideDetails ride driver = do
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
         vehicleClass = Nothing,
-        fleetOwnerId = Nothing
+        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
       }
 
 cancelBooking ::

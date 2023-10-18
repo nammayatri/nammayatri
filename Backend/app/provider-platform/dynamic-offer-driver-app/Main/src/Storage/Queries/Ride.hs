@@ -492,13 +492,13 @@ createMapping bookingId rideId = do
   return [fromLocationRideMapping, toLocationRideMappings]
 
 totalEarningsByFleetOwner :: MonadFlow m => Maybe Text -> m Int
-totalEarningsByFleetOwner fleetIdWanted = do
+totalEarningsByFleetOwner fleetId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
@@ -506,13 +506,13 @@ totalEarningsByFleetOwner fleetIdWanted = do
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
-totalEarningsByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
+totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumberWanted = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
@@ -520,15 +520,15 @@ totalEarningsByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerDriver :: MonadFlow m => Maybe Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerDriver fleetIdWanted driverIdWanted = do
+totalEarningsByFleetOwnerPerDriver fleetId driverId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.filter_'
-            ( \ride'' -> BeamR.driverId ride'' B.==?. B.val_ driverIdWanted.getId
+            ( \ride'' -> BeamR.driverId ride'' B.==?. B.val_ driverId.getId
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -538,15 +538,15 @@ totalEarningsByFleetOwnerPerDriver fleetIdWanted driverIdWanted = do
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverIdWanted = do
+totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumberWanted driverId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetIdWanted) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId B.&&?. BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
           filteredRide <- B.filter_'
-            ( \ride'' -> (BeamR.driverId ride'' B.==?. B.val_ driverIdWanted.getId)
+            ( \ride'' -> BeamR.driverId ride'' B.==?. B.val_ driverId.getId
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
