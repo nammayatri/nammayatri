@@ -31,18 +31,22 @@ import Data.Int (fromString)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, nonCanceler, try, launchAff)
+import Effect.Aff (Aff, makeAff, nonCanceler, attempt, launchAff)
 import Effect.Aff.AVar (new)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Effect.Uncurried (EffectFn2)
+import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8)
 import Foreign.Class (class Decode, class Encode)
+import Foreign.Object (empty, insert, lookup, Object, foldM, delete)
+import JSURI (decodeURIComponent)
+import Presto.Core.Types.API (standardEncodeJSON)
+import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
 import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Presto.Core.Language.Runtime.API (APIRunner)
 import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run,UIRunner(..))
-import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL, Response)
+import Presto.Core.Types.API (Header(..), Headers(..), Request(..), RestAPIOptions(..)) as API
 import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
 import Presto.Core.Types.Permission (PermissionStatus(..))
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
@@ -54,13 +58,17 @@ import Data.Array ((!!))
 import Data.Number.Format as Number
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
 import Data.Function.Uncurried (Fn1(..), runFn2)
+import Data.Either (Either(..), either, hush)
+import Data.Foldable (foldl)
+import Log (printLog)
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' = showUIImpl
-foreign import callAPIImpl :: AffError -> AffSuccess (Response String) -> NativeRequest -> (Effect Unit)
-callAPI' :: AffError -> AffSuccess (Response String) -> NativeRequest -> (Effect Unit)
-callAPI' = callAPIImpl
+foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
+foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
+foreign import callbackMapper :: forall a. a -> String
+foreign import atobImpl :: String -> String
 foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
 foreign import setScreenImpl :: String -> Effect Unit
@@ -85,6 +93,7 @@ foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+
 
 os :: String
 os = getOs unit
@@ -113,22 +122,22 @@ type AffSuccess s = (s -> Effect Unit)
 
 newtype NativeRequest = NativeRequest
   { method :: String
-  , url :: URL
+  , url :: String
   , payload :: String
   , headers :: NativeHeaders
   }
 
 
-mkNativeRequest :: Request -> NativeRequest
-mkNativeRequest (Request request@{headers: Headers hs}) = NativeRequest
+mkNativeRequest :: API.Request -> NativeRequest
+mkNativeRequest (API.Request request@{headers: API.Headers hs}) = NativeRequest
                                           { method : show request.method
                                             , url: request.url
                                             , payload: request.payload
                                             , headers: mkNativeHeader <$> hs
                                             }
 
-mkNativeHeader :: Header -> NativeHeader
-mkNativeHeader (Header field val) = { field: field, value: val}
+mkNativeHeader :: API.Header -> NativeHeader
+mkNativeHeader (API.Header field val) = { field: field, value: val}
 
 trackerIcon :: String -> String
 trackerIcon vehicleType = case vehicleType of
@@ -149,11 +158,11 @@ window key = liftFlow (getWindowVariable key Just Nothing)
 setWindowVariable :: forall a st. String -> a -> Flow st Unit
 setWindowVariable key value = liftFlow (setWindowVariableImpl key value)
 
-flowRunner :: forall a st. st -> Flow st a -> Aff (Either Error a)
-flowRunner initialState flow = do
-  let runtime  = Runtime pure permissionRunner apiRunner
-  let freeFlow = S.evalStateT (run runtime flow)
-  try $ new (defaultState initialState) >>= freeFlow
+flowRunner :: ∀ return st. st -> Flow st return -> Aff (Either Error return)
+flowRunner state flow = do
+  let
+    freeFlow = S.evalStateT $ run standardRunTime flow
+  attempt $ new (defaultState state) >>= freeFlow
 
 permissionCheckRunner :: PermissionCheckRunner
 permissionCheckRunner = checkIfPermissionsGranted
@@ -164,10 +173,12 @@ permissionTakeRunner = requestPermissions
 permissionRunner :: PermissionRunner
 permissionRunner = PermissionRunner permissionCheckRunner permissionTakeRunner
 
-apiRunner :: APIRunner
-apiRunner request = makeAff (\cb -> do
-    _ <- callAPI' (cb <<< Left) (cb <<< Right) (mkNativeRequest request)
-    pure $ nonCanceler)
+standardRunTime :: Runtime
+standardRunTime =
+  Runtime
+    pure
+    permissionRunner
+    apiRunner
 
 readFromRef :: forall st. Ref st → FlowBT String st st
 readFromRef ref = lift $ lift $ doAff $ liftEffect $ read ref
@@ -217,6 +228,39 @@ stringToVersion reqVersion =
   }
   in
     madeVersion
+
+apiRunner :: APIRunner
+apiRunner (API.Request request@{headers: API.Headers hs}) =
+  makeAff
+    ( \cb -> do
+        void $ pure $ printLog "callAPI request" request   
+        case request.options of
+          Nothing -> do
+            _ <- runEffectFn7 callAPI (show request.method) request.url request.payload (standardEncodeJSON headers) shouldFormEncode isSSLPinnedURL $ callback cb
+            pure $ nonCanceler
+          Just (API.RestAPIOptions ops) -> do
+            _ <- runEffectFn8 callAPIWithOptions (show request.method) request.url request.payload (standardEncodeJSON headers) shouldFormEncode isSSLPinnedURL (standardEncodeJSON ops) $ callback cb
+            pure $ nonCanceler
+    )
+  where
+    callback cb = callbackMapper $
+        mkEffectFn6 $
+          \status response statusCode url responseHeaders urlEncodedResponse -> do
+            let formattedResponse = { status : status,
+              response : extractResponse response urlEncodedResponse,
+              code : fromMaybe (-3) (fromString statusCode),
+              responseHeaders : fromMaybe empty $ hush $ runExcept $ decodeJSON $ atobImpl responseHeaders
+            }
+            void $ pure $ printLog "callAPI response" formattedResponse
+            cb $ Right formattedResponse
+    headers = foldl (\acc (API.Header key value) -> insert key value acc) empty hs
+    isSSLPinnedURL = lookup "x-pinned" headers == Just "true"
+    shouldFormEncode = lookup "Content-Type" headers == Just "application/x-www-form-urlencoded"
+
+    extractResponse response urlEncodedResponse = do
+      case hush $ runExcept $ decode urlEncodedResponse of
+        Just resp -> fromMaybe (atobImpl response) $ decodeURIComponent resp
+        _ -> atobImpl response
 
 getMapsLanguageFormat :: String -> String
 getMapsLanguageFormat key = 

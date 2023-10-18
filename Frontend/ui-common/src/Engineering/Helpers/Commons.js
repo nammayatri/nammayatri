@@ -1,5 +1,4 @@
-import axios from "axios";
-import { callbackMapper } from 'presto-ui';
+import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
@@ -31,116 +30,6 @@ const getEncodedData = function(data) {
   return data;
 }
 
-const makeRequest = function (headersRaw, method, url, payload, success) {
-  var apiStartTIme = Date.now();
-  var successResponse = {};
-  var headers = {};
-  headers["Cache-Control"] = "no-cache";
-  // headers["x-jp-merchant-id"] = __payload.merchant_id;
-  // headers["x-jp-session-id"] = window.session_id;
-  var isSSLPinnedURL = false;
-
-  for (var i = 0; i < headersRaw.length; i++) {
-    headers[headersRaw[i].field] = headersRaw[i].value;
-  }
-  isSSLPinnedURL = headers["x-pinned"] == "true"
-  var callback = callbackMapper.map(function () {
-    console.log("RESPONSE =---=-=-=-=-=-=---???", arguments)
-    if (arguments && arguments.length >= 5) {
-      try{
-      // console.log("decodeURIComponent =---=-=-=-=-=-=---???", (decodeURIComponent(escape(window.atob(arguments[1]))) ))
-      // console.log("decodeURIComponent json =---=-=-=-=-=-=---???", JSON.parse((decodeURIComponent(escape(window.atob(arguments[1])))) ))
-      var decoderesp = (decodeURIComponent(escape(window.atob(arguments[1]))) )
-      var decoderespp =  JSON.parse(decoderesp)
-      var status_value
-      if(decoderespp.hasOwnProperty('status')){
-        status_value = decoderespp.status
-      }
-      else
-      {
-        status_value = "success"
-      }
-      console.log("status_value =---=-=-=-=-=-=---???", status_value)
-      var responseHeaders = JSON.parse(atob(arguments[4]) || "{}");
-      successResponse = {
-        status: status_value , //arguments[0],
-        responseHeaders: responseHeaders,
-        response: Object.assign(JSON.parse(decodeURIComponent(escape(window.atob(arguments[1]))) || "{}"), { "headers" : JSON.parse(atob(arguments[4]) || "{}")}),
-        code: parseInt(arguments[2])
-      };}
-      catch(e)
-      {
-        successResponse = {
-          status: arguments[0],
-          responseHeaders: {},
-          response : Object.assign(({ response : {errorMessage : decodeURIComponent(escape(window.atob(arguments[1]))) ,error:true, userMessage: "" }} || "{}"), { "headers" : JSON.parse(atob(arguments[4]) || "{}")}),
-          code: parseInt(arguments[2])
-
-        };
-      }
-      trackAPICalls(successResponse.code, url, apiStartTIme);
-      var resp = successResponse.response;
-      resp["code"] = successResponse["code"];
-      resp["status"] = successResponse["status"];
-      if(successResponse["code"] != 200 && resp.action == "NACK" ){
-        successResponse["response"] = (successResponse["response"]||{error:true, userMessage: "", errorMessage: resp.errorMessage.fromErrorMsg});
-        console.log("Condition 1 =---=-=-=-=-=-=---???", resp.errorMessage.fromErrorMsg)
-      }
-      else if (successResponse["code"] != 200 && resp.errorMessage != null){
-        successResponse["response"] = (successResponse["response"]||{error:true, userMessage: resp.errorMessage, errorMessage: resp.errorCode});
-        console.log("Condition 2 =---=-=-=-=-=-=---???", resp.errorCode)
-      }
-      else if (successResponse["code"] != 200 && resp.errorMessage == null){
-        successResponse["response"] = (successResponse["response"]||{error:true, userMessage: "", errorMessage: resp.errorCode});
-        console.log("Condition 3 =---=-=-=-=-=-=---???", resp.errorCode)
-      }
-      else{
-        successResponse["response"] = (successResponse["response"]||{error:true, userMessage: "", errorMessage: ""});
-        console.log("Condition 4 =---=-=-=-=-=-=---???", "")
-      }
-      console.log(successResponse);
-      console.log(resp);
-      successResponse["response"] = JSON.stringify(successResponse["response"]);
-      success(successResponse)();
-      // success(JSON.stringify(resp))();
-    }else if(arguments[2] == "-2"){
-      // trackAPICalls(0,url,apiStartTIme);
-      // success(JSON.stringify({
-      var dummyErrorResp = {
-        status: "ssl handshake failure",
-        responseHeaders: {},
-        response: {
-          error: true,
-          errorMessage: "Monitored Network",
-          userMessage: "Monitored Network"
-        },
-        code: -2
-      // }))();
-      };
-      dummyErrorResp.response = JSON.stringify(dummyErrorResp.response);
-      success(dummyErrorResp)();
-    }else {
-      // trackAPICalls(0,url,apiStartTIme);
-      // success(JSON.stringify({
-      var dummyErrorResp = {
-        status: "failure",
-        responseHeaders: {},
-        response: {
-          error: true,
-          errorMessage: arguments[2].toString(),
-          userMessage: "Unknown error"
-        },
-        code: -1
-      // }))();
-      }
-      dummyErrorResp.response = JSON.stringify(dummyErrorResp.response);
-      success(dummyErrorResp)();
-    }
-  });
-  console.log("REQUEST =>",payload)
-  isSSLPinnedURL = false; // TODO: Change it to true later
-  JBridge.callAPI(method, url, getEncodedData(payload), getEncodedData(JSON.stringify(headers)), false, isSSLPinnedURL, callback);
-}
 
 export const showUIImpl = function (sc, screen) {
   return function () {
@@ -160,14 +49,26 @@ export const getNewIDWithTag = function(tag){
   return window.__usedID[tag];
 }
 
-export const callAPIImpl = function () {
-  return function (success) {
-    return function (request) {
-      return function () {
-        makeRequest(request.headers, request.method, request.url, request.payload, success);
-      };
-    };
-  };
+export const callAPI = function () {
+  return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
+}
+
+export const callAPIWithOptions = function () {
+  if (typeof window.JBridge.callAPIWithOptions == 'function') {
+    return window.JBridge.callAPIWithOptions(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
+  } else {
+    return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[7]);
+  }
+}
+
+export const callbackMapper = PrestoCallbackMapper.map
+
+export const atobImpl = function (value) {
+  try {
+    return window.atob(value);
+  } catch (e) {
+    return value;
+  }
 }
 
 export const getWindowVariable = function(key) {
@@ -295,7 +196,7 @@ export const countDown = function (countDownTime) {
           if (countDownTimers[id] != undefined) {
             clearInterval(parseInt(countDownTimers[id]));
           }
-          var callback = callbackMapper.map(function () {
+          var callback = PrestoCallbackMapper.map(function () {
             var countDown = countDownTime;
             countDownTimers[id] = instantGetTimer(function () {
               var timerIID = countDownTimers[id];

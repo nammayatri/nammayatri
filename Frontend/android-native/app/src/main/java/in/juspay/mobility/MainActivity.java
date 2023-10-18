@@ -897,7 +897,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("logLevel",1);
         payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(context,context.getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
+        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }
