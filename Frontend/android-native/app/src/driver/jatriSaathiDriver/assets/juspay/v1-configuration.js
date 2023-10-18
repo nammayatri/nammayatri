@@ -102,5 +102,8 @@ window.getMerchantConfig = function () {
     , "profile" :
         { "bookingOptionMenuForTaxi" : true
         }
+    , "profileVerification" : {
+      "aadharVerificationRequired" : true
+    } 
   })
 }

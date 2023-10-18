@@ -47,4 +47,7 @@ config =
       { bookingOptionMenuForTaxi : false
       }
   , enablePurpleRideBanner : false
+  , profileVerification : {
+      aadharVerificationRequired : false
+    } 
   }
