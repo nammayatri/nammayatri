@@ -283,7 +283,7 @@ calendarView push state =
             ]
             []
         , linearLayout 
-          [ height MATCH_PARENT
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER

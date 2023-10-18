@@ -1435,9 +1435,7 @@ endRidePopView push state =
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
   textView
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  ]
+  [ visibility GONE]
 
 requestInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 requestInfoCardView push state =

@@ -358,7 +358,7 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
                                       },
-                    props { hideGoto = not driverProfileResp.isGoHomeEnabled}}
+                    props { hideGoto = not driverProfileResp.isGoHomeEnabled || driverGoHomeInfo.status == Just "ACTIVE"}}
 
 eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
   let rctransformedData = makeRcsTransformData rcDataArray
