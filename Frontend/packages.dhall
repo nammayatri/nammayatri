@@ -189,7 +189,7 @@ in  upstream
       , "web-events"
       ]
     , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "nammayatri"
+    , version = "update/github-purescript-halogen-vdom-repo"
     }
   with foreign-generic =
     { dependencies =
