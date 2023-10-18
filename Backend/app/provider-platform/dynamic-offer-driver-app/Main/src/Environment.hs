@@ -123,11 +123,9 @@ data AppCfg = AppCfg
     schedulerType :: SchedulerType,
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
-    enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
     modelNamesMap :: M.Map Text Text,
-    maxMessages :: Text,
-    dontEnableForDb :: [Text]
+    maxMessages :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -198,11 +196,9 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
-    enableLocationTrackingService :: Bool,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text,
-    dontEnableForDb :: [Text]
+    modelNamesHashMap :: HM.Map Text Text
   }
   deriving (Generic)
 

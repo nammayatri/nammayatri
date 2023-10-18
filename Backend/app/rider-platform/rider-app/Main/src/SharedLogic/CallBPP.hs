@@ -130,9 +130,6 @@ callTrack booking ride = do
           }
   void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
 
-data Status = PreRide | ActualRide
-  deriving (Generic, ToJSON, Show, FromJSON, ToSchema)
-
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
     lastUpdate :: UTCTime

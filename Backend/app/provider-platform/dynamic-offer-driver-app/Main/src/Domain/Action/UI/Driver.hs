@@ -158,8 +158,6 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -644,7 +642,7 @@ getInformation (personId, merchantId) = do
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantId Nothing
   makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues)
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -659,8 +657,6 @@ setActivity (personId, merchantId) isActive mode = do
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
-  whenJust mode $ \md -> do
-    void $ LF.driverDetails personId md
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
@@ -668,7 +664,7 @@ setActivity (personId, merchantId) isActive mode = do
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
-activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
+activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId) driverHomeLocationId driverLocation = do
   goHomeConfig <- CQGHC.findByMerchantId merchantId
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
