@@ -57,6 +57,9 @@ type API =
            :<|> FleetUnlinkVehicleAPI
            :<|> FleetRemoveVehicleAPI
            :<|> FleetRemoveDriverAPI
+           :<|> FleetTotalEarningAPI
+           :<|> FleetVehicleEarningAPI
+           :<|> FleetDriverEarningAPI
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
@@ -68,6 +71,7 @@ type API =
            :<|> DriverPaymentHistoryEntityDetailsAPI
            :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
            :<|> SetVehicleDriverRcStatusForFleetAPI
+           :<|> GetFleetDriverVehicleAssociationAPI
        )
 
 -- driver cash collection api ----------------------------------------
@@ -173,6 +177,35 @@ type SetVehicleDriverRcStatusForFleetAPI =
     :> ReqBody '[JSON] Common.RCStatusReq
     :> Post '[JSON] APISuccess
 
+type FleetTotalEarningAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "totalEarning"
+    :> Get '[JSON] Common.FleetEarningRes
+
+type FleetVehicleEarningAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "vehicleEarning"
+    :> Capture "vehicleNo" Text
+    :> QueryParam "driverId" Text
+    :> Get '[JSON] Common.FleetEarningRes
+
+type FleetDriverEarningAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "driverEarning"
+    :> Capture "driverId" Text
+    :> Get '[JSON] Common.FleetEarningRes
+
+type GetFleetDriverVehicleAssociationAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "getFleetDriverVehicleAssociation"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocumentsInfo merchantId
@@ -204,6 +237,8 @@ handler merchantId =
     :<|> fleetUnlinkVehicle merchantId
     :<|> fleetRemoveVehicle merchantId
     :<|> fleetRemoveDriver merchantId
+    :<|> fleetTotalEarning merchantId
+    :<|> fleetVehicleEarning merchantId
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
@@ -215,6 +250,7 @@ handler merchantId =
     :<|> getPaymentHistoryEntityDetails merchantId
     :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId
     :<|> setVehicleDriverRcStatusForFleet merchantId
+    :<|> getFleetDriverVehicleAssociation merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -305,6 +341,15 @@ fleetRemoveVehicle merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.f
 fleetRemoveDriver :: ShortId DM.Merchant -> Text -> Id Common.Driver -> FlowHandler APISuccess
 fleetRemoveDriver merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.fleetRemoveDriver merchantShortId fleetOwnerId
 
+fleetTotalEarning :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning merchantShortId = withFlowHandlerAPI . DDriver.fleetTotalEarning merchantShortId
+
+fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe Text -> FlowHandler Common.FleetEarningRes
+fleetVehicleEarning merchantShortId fleetOwnerId vehicleNo mbDriverId = withFlowHandlerAPI $ DDriver.fleetVehicleEarning merchantShortId fleetOwnerId vehicleNo mbDriverId
+
+fleetDriverEarning :: ShortId DM.Merchant -> Text -> Text -> FlowHandler Common.FleetEarningRes
+fleetDriverEarning merchantShortId fleetOwnerId driverId = withFlowHandlerAPI $ DDriver.fleetDriverEarning merchantShortId fleetOwnerId driverId
+
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId
 
@@ -338,3 +383,6 @@ updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId driverId req =
 
 setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Common.RCStatusReq -> FlowHandler APISuccess
 setVehicleDriverRcStatusForFleet merchantShortId driverId fleetOwnerId req = withFlowHandlerAPI $ DDriver.setVehicleDriverRcStatusForFleet merchantShortId driverId fleetOwnerId req
+
+getFleetVehicleDriverAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetVehicleDriverAssociation merchantShortId fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleDriverAssociation merchantShortId fleetOwnerId mbLimit mbOffset

@@ -799,6 +799,35 @@ data FleetVehicleStatsListItem = FleetVehicleStatsListItem
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+type FleetTotalEarningAPI =
+  "fleet"
+    :> "totalEarning"
+    :> Get '[JSON] FleetEarningRes
+
+type FleetVehicleEarningAPI =
+  "fleet"
+    :> "vehicleEarning"
+    :> Capture "vehicleNo" Text
+    :> QueryParam "driverId" Text
+    :> Get '[JSON] FleetEarningRes
+
+data FleetEarningRes = FleetEarningRes
+  { totalRides :: Int,
+    totalEarning :: Int,
+    vehicleNo :: Maybe Text,
+    driverId :: Maybe Text,
+    driverName :: Maybe Text,
+    status :: Maybe DriverMode,
+    vehicleType :: Maybe Variant
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+type FleetDriverEarningAPI =
+  "fleet"
+    :> "driverEarning"
+    :> Capture "driverId" Text
+    :> Get '[JSON] FleetEarningRes
+
 ---------------------------------------------------------
 -- update driver name -----------------------------------
 
@@ -907,3 +936,31 @@ type SetVehicleDriverRcStatusForFleetAPI =
     :> "vehicleDriverRCstatus"
     :> ReqBody '[JSON] RCStatusReq
     :> Post '[JSON] APISuccess
+
+type GetFleetDriverVehicleAssociationAPI =
+  "fleet"
+    :> "driverVehicleAssociation"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
+  { vehicleNo :: Text,
+    driverName :: Text,
+    status :: DriverMode,
+    completedRides :: Int,
+    earning :: Int
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes
+  { fleetOwnerId :: Text,
+    listItem :: [DriveVehicleAssociationListItem]
+  }
+
+-- data DriverMode
+--   = ONLINE
+--   | OFFLINE
+--   | SILENT
+--   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+--   deriving (PrettyShow) via Showable DriverMode

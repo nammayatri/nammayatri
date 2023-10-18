@@ -98,6 +98,9 @@ data DriversAPIs = DriversAPIs
     fleetUnlinkVehicle :: Text -> Text -> Maybe Text -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
+    fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetEarningRes,
+    fleetVehicleEarning :: Text -> Text -> Maybe Text -> Euler.EulerClient Driver.FleetEarningRes,
+    fleetDriverEarning :: Text -> Text -> Euler.EulerClient Driver.FleetEarningRes,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
@@ -108,7 +111,8 @@ data DriversAPIs = DriversAPIs
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
     getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
     updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
-    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
+    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient DrivertoVehicleAssociationRes
   }
 
 data RidesAPIs = RidesAPIs
@@ -283,6 +287,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> fleetUnlinkVehicle
       :<|> fleetRemoveVehicle
       :<|> fleetRemoveDriver
+      :<|> fleetTotalEarning
+      :<|> fleetVehicleEarning
+      :<|> fleetDriverEarning
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
@@ -293,7 +300,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
       :<|> updateSubscriptionDriverFeeAndInvoice
-      :<|> setVehicleDriverRcStatusForFleet = driversClient
+      :<|> setVehicleDriverRcStatusForFleet =
+        driversClient
+          :<|> getFleetDriverAssociation
 
     rideList
       :<|> rideStart
