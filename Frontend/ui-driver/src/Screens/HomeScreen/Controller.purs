@@ -299,7 +299,6 @@ data Action = NoAction
             | AccessibilityBannerAction Banner.Action
             | GenericAccessibilityPopUpAction PopUpModal.Action
 
-
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
 eval AfterRender state = do
@@ -324,9 +323,10 @@ eval BackPressed state = do
                           else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
                             else if state.data.paymentState.showBlockingPopup then continue state {data{paymentState{showBlockingPopup = false}}}
                             else if state.props.subscriptionPopupType /= ST.NO_SUBSCRIPTION_POPUP then continue state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
-                              else do
-                                _ <- pure $ minimizeApp ""
-                                continue state
+                            else if state.props.showRideRating then continue state{props{showRideRating = false}}
+                            else do
+                              _ <- pure $ minimizeApp ""
+                              continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
@@ -856,6 +856,10 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
+
+eval (PaymentBannerAC (Banner.OnClick)) state = do
+  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  continue state
 
 eval _ state = continue state
 

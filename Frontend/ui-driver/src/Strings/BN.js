@@ -665,7 +665,7 @@ const bengaliStrings = {
 	WE_MIGHT_BE_LOST : "ওহ! আমরা হারিয়ে যেতে পারি",
 	EXEPERIENCING_ERROR : "ত্রুটির সম্মুখীন",
 	ENJOY_THESE_BENEFITS : "আপনার যোগদানের জন্য সুবিধা",
-	CHOOSE_YOUR_PLAN : "এখন একটি পরিকল্পনা চয়ন করুন!",
+	CHOOSE_YOUR_PLAN : "এখন প্ল্যান শুরু করুন!",
 	SKIP_FOR_NOW : "এখন জন্য লাফালাফি",
 	NAMMAYATRI_PLANS  : "নম্মা যাত্রী পরিকল্পনা",
 	SEVEN_DAY_FREE_TRIAL_ACTIVATED : "7-দিনের বিনামূল্যে ট্রায়াল সক্রিয়!",
@@ -757,7 +757,7 @@ const bengaliStrings = {
 	SWITCHED_PLAN : "সুইচড প্ল্যান",
 	RESUME_AUTOPAY : "পুনরায় স্বতঃপ্রদান শুরু হয়েছে",
 	PAYMENT_CANCELLED : "আপনি আপনার UPI অটোপে বাতিল করেছেন। আপনি আপনার বকেয়া ম্যানুয়ালি সাফ করতে পারেন",
-	UPI_AUTOPAY_S : "UPI অটোপে",
+	UPI_AUTOPAY_S :  "UPI অটোপে",
 	MANUAL_PAYMENT_STR : "ম্যানুয়াল পেমেন্ট",
 	DAILY_UNLIMITED : "দৈনিক সীমাহীন",
     DAILY_PER_RIDE : "প্রতি যাত্রায় প্রতিদিন",
@@ -945,4 +945,5 @@ const bengaliStrings = {
 	NO : "না",
 	YES_CANCEL : "হ্যাঁ, বাতিল",
 	AUTOPAY_CANCELLED : "অটোপে বাতিল করা হয়েছে",
+	YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।"
 }

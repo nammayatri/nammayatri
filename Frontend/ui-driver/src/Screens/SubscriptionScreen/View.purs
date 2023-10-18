@@ -307,13 +307,13 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
-  , visibility if state.data.orderId /= Nothing then VISIBLE else GONE
+  , visibility if ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
     , textView $
       [ text $ getString OFFERS_NOT_APPLICABLE
       , color Color.red
-      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && state.data.myPlanData.planEntity.title == getString DAILY_UNLIMITED || not state.data.config.enableSubscriptionPopups then VISIBLE else GONE
+      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.offerBannerConfig.offerBannerPlans) then VISIBLE else GONE
       ] <> if state.props.isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
     , linearLayout
       [ width MATCH_PARENT
@@ -447,8 +447,8 @@ plansBottomView push state =
                   (\item ->
                     let selectedPlan = state.props.joinPlanProps.selectedPlanItem
                     in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView []
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView []
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -620,8 +620,8 @@ myPlanBodyview push state =
         , paymentMethodView push state.data.myPlanData
       ]
     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
-    , planCardView push state.data.myPlanData.planEntity (state.data.myPlanData.planEntity.isSelected || not state.data.config.enableSubscriptionPopups) (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false
-    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && state.data.myPlanData.planEntity.title == getString DAILY_UNLIMITED) false state.props.offerBannerProps
+    , planCardView push state.data.myPlanData.planEntity (state.data.myPlanData.planEntity.isSelected || not state.data.config.enableSubscriptionPopups) (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false []
+    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ HU.getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
@@ -982,7 +982,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginBottom 12
         ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false
+      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.offerBannerConfig.offerBannerPlans
       , textView $
         [ text (getString ALTERNATE_PLAN)
         , color Color.black700
@@ -993,7 +993,7 @@ managePlanBodyView push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false)
+             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.offerBannerConfig.offerBannerPlans)
              ) state.data.managePlanData.alternatePlans)
       , textView $ [
         text (getString OFFERS_APPLICABLE_ON_DAILY_UNLIMITED)
@@ -1005,8 +1005,8 @@ managePlanBodyView push state =
      ]
    ]
 
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> PrestoDOM (Effect Unit) w
-planCardView push state isSelected clickable' action isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory =
+planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> PrestoDOM (Effect Unit) w
+planCardView push state isSelected clickable' action isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans =
   -- PrestoAnim.animationSet                TODO :: Animations
   -- [ translateInXForwardAnim true] $
   let dummyOfferConfig = { showOfferBanner : false, offerBannerValidTill : "", offerBannerDeadline : ""}
@@ -1099,11 +1099,10 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
                   [ textView $
                     [ textFromHtml $ Mb.fromMaybe "" item.offerDescription
                     , color Color.black600
-                    , lineHeight "20"
                     ] <> if isSelectedLangTamil then FontStyle.captions TypoGraphy else FontStyle.body3 TypoGraphy
                   ]
               )state.offers)
-          , offerCardBannerView push false (isJust offerBannerProps && getString DAILY_UNLIMITED == state.title && showBanner) true (fromMaybe dummyOfferConfig offerBannerProps)
+          , offerCardBannerView push false (isJust offerBannerProps && (any (_ == state.id) offerBannerPlans) && showBanner) true (fromMaybe dummyOfferConfig offerBannerProps) false
           ]
       ]
     ]
@@ -1113,7 +1112,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
       , gravity CENTER
       , visibility if isActivePlan then VISIBLE else GONE
      ][ textView $ [
-        text $ "● " <> getString ACTIVE_PLAN
+        text $ getString ACTIVE_PLAN
       , background Color.green900
       , color Color.white900
       , padding $ Padding 8 5 8 5
@@ -1778,7 +1777,7 @@ lottieView state viewId margin' padding'=
   , padding padding'
   , cornerRadius 4.0
   , background Color.blue600
-  , alpha if state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing then 0.4 else 1.0
+  , alpha if (state.data.orderId /= Nothing) then 0.4 else 1.0
   ][
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
@@ -1790,8 +1789,8 @@ lottieView state viewId margin' padding'=
     ]
   ]
 
-offerCardBannerView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> Boolean -> OfferBanner -> PrestoDOM (Effect Unit) w
-offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps =
+offerCardBannerView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> Boolean -> OfferBanner -> Boolean -> PrestoDOM (Effect Unit) w
+offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFreezed =
   let horizontalMargin = if useMargin then 16 else 0
   in
   linearLayout
@@ -1802,6 +1801,7 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps =
     , visibility if visibility' && offerBannerProps.showOfferBanner && not HU.isDateGreaterThan offerBannerProps.offerBannerValidTill then VISIBLE else GONE
     , weight 1.0
     , clickable false
+    , alpha if isFreezed then 0.6 else 1.0
     ][
         Banner.view (push <<< OfferCardBanner) (offerCardBannerConfig isPlanCard offerBannerProps)
     ]

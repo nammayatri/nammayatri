@@ -85,9 +85,12 @@ window.getMerchantConfig = function () {
     , "subscriptionConfig" : {
       "enableBlocking" : true,
       "onBoardingSubscription" : true,
-      "showDUOfferBanner" : true,
-      "offerBannerValidTill" : "2023-11-02T00:00:00",
-      "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1",
+      "offerBannerConfig" : {
+        "showDUOfferBanner" : true,
+        "offerBannerValidTill" : "2023-11-02T00:00:00",
+        "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1",
+        "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
+      },
       "lowDuesLimit" : 25.0,
       "maxDuesLimit" : 100.0,
       "highDueWarningLimit" : 75.0,
