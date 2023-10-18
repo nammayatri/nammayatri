@@ -36,6 +36,7 @@ import Animation (screenAnimationFadeInOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import JBridge (addMediaFile)
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> AddAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -105,7 +106,7 @@ view push state =
                       [ width $ V 42
                       , height $ V 42
                       , margin (MarginRight 8)
-                      , imageWithFallback "ny_ic_add_audio,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_audio"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
                       ]
                       , textView
                       [ text (getString ADD_VOICE_NOTE)

@@ -9,7 +9,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Language.Types (STR(..))
 import Language.Strings (getString)
-import Helpers.Utils (parseFloat)
+import Helpers.Utils (parseFloat, fetchImage, FetchImageFrom(..))
 import Data.Int (toNumber)
 import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), Accessiblity(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout, accessibilityHint, accessibility, singleLine)
@@ -42,7 +42,7 @@ view push item =
             [ height $ V 40
             , width $ V 40
             , margin (Margin 16 16 0 16)
-            , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+            , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_user"
             , cornerRadius if os == "IOS" then 16.0 else 20.0
             , gravity CENTER
             ]

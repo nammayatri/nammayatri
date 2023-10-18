@@ -22,7 +22,7 @@ import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe as Mb
 
@@ -363,7 +363,7 @@ config = {
       }
     }
     , dismissPopupConfig : 
-    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_close.png"
+    { imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_close"
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , margin : (MarginTop 20)
@@ -374,7 +374,7 @@ config = {
     , eTextConfig : PrimaryEditTextController.config
     , coverImageConfig :
     {
-      imageUrl : "ny_ic_ride_completed," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_ride_completed.png"
+      imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_ride_completed"
     , visibility : GONE
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT

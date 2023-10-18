@@ -33,7 +33,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
 import Screens.WriteToUsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -106,7 +106,7 @@ headerLayout state push=
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
@@ -191,7 +191,7 @@ thankYouForWritingUsScreen state =
         ][ imageView
             [ width ( V 150)
             , height ( V 200)
-            , imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_greetings.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_greetings"
             ]
             , textView (
             [ height WRAP_CONTENT

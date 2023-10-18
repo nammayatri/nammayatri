@@ -19,7 +19,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Maybe as Maybe
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import MerchantConfig.Types (BottomNavConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&))
@@ -34,40 +34,40 @@ navData screenName bottomNavConfig = do
   let showNewBannerOnSubscription = (Maybe.fromMaybe 0 $ fromString $ getValueToLocalNativeStore TIMES_OPENED_NEW_SUBSCRIPTION) < 3
       navdata = [
         {
-          activeIcon: "ny_ic_home_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_home_active.png",
-          defaultIcon: "ny_ic_home_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_home_inactive.png",
+          activeIcon: fetchImage FF_ASSET "ny_ic_home_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_home_inactive",
           text: "Home",
           showNewBanner : bottomNavConfig.home.showNew,
           isVisible : bottomNavConfig.home.isVisible,
           screenName : ScreenNames.HOME_SCREEN
         },
         {
-          activeIcon: "ny_ic_rides_tab_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_rides_tab_active.png",
-          defaultIcon: "ny_ic_rides_tab_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_rides_tab_inactive.png",
+          activeIcon: fetchImage FF_ASSET "ny_ic_rides_tab_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_rides_tab_inactive",
           isVisible : bottomNavConfig.rideHistory.isVisible,
           showNewBanner : bottomNavConfig.rideHistory.showNew,
           text: "Rides",
           screenName : ScreenNames.RIDE_HISTORY_SCREEN
         },
         {
-          activeIcon: "ny_ic_join_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_active.png",
-          defaultIcon: "ny_ic_join_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_join_inactive.png",
+          activeIcon: fetchImage FF_ASSET "ny_ic_join_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_join_inactive",
           isVisible : bottomNavConfig.subscription.isVisible,
           showNewBanner : bottomNavConfig.subscription.showNew && showNewBannerOnSubscription ,
           text: "Join",
           screenName : ScreenNames.SUBSCRIPTION_SCREEN
         },
         {
-          activeIcon: "ic_referral_active," <> (getAssetStoreLink FunctionCall) <> "ic_referral_active.png",
-          defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
+          activeIcon: fetchImage FF_ASSET "ic_referral_active",
+          defaultIcon: fetchImage FF_ASSET $ if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert" else "ic_referral_inactive",
           isVisible : bottomNavConfig.referral.isVisible,
           showNewBanner : bottomNavConfig.referral.showNew,
           text: "Rankings",
           screenName : ScreenNames.REFERRAL_SCREEN
         },
         {
-          activeIcon: "ny_ic_alerts_active",
-          defaultIcon: "ny_ic_alerts_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_alerts_inactive.png",
+          activeIcon: fetchImage FF_ASSET "ny_ic_alerts_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_alerts_inactive",
           text: "Alert",
           isVisible : bottomNavConfig.notifications.isVisible,
           showNewBanner : bottomNavConfig.notifications.showNew,

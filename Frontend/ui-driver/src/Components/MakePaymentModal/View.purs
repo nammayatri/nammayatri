@@ -12,7 +12,7 @@ import Data.Maybe (Maybe(..), isJust)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
@@ -82,7 +82,7 @@ paymentReview push state =
           [ width MATCH_PARENT
           , height $ V 2 
           , padding $ PaddingHorizontal 10 10
-          , imageWithFallback $ "ny_ic_horizontal_dash,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , visibility if index == 0 then VISIBLE else GONE
           ]
       ]
@@ -108,7 +108,7 @@ feeItem push state item =
       [ height $ V 18
       , width $ V 18
       , margin $ MarginLeft 5
-      , imageWithFallback $ "ny_ic_info_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
       , visibility if item.feeType == GST_PAYABLE then VISIBLE else GONE
       , onClick push $ const Info
       ]

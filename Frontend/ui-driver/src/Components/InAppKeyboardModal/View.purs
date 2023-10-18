@@ -34,7 +34,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
 import Language.Strings (getString)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -73,7 +73,7 @@ view push state =
                 ][  imageView
                     [ width (V 35)
                     , height (V 35)
-                    , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
                     , onClick push (const BackPressed)
                     , padding (Padding 5 5 5 5)
                     ]
@@ -148,7 +148,7 @@ singleTextBox push state =
     imageView
         [ width $ V 23
          , height $ V 23
-         , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
          , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
          , onClick push (const (OnClickTextCross))
         ]
@@ -244,14 +244,14 @@ keyboard push state =
                 imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ "ny_ic_delete," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_delete.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete"
                   , margin (Margin 0 18 0 18)
                   ]
                 else
                   imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ "ny_ic_tick_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_white.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_tick_white"
                   , margin (Margin 0 18 0 18)
                   ]
            ]

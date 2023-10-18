@@ -42,7 +42,7 @@ import Debug
 import MerchantConfig.Utils (getValueFromConfig)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 
@@ -85,7 +85,7 @@ inaccurateDateAndTimeView push state =
     , orientation VERTICAL
   ]
   [ imageView
-    [ imageWithFallback "ny_ic_app_date_and_time,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_app_date_and_time.png"
+    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_app_date_and_time"
     , height $ V 250
     , width $ V 250
     , margin $ MarginTop 208
@@ -285,7 +285,7 @@ appUpdatedModelConfig state =
       margin = (Margin 12 0 12 16)
     }
   , coverImageConfig {
-      imageUrl = state.appUpdatedView.coverImageUrl <> "," <> (getAssetStoreLink FunctionCall) <> state.appUpdatedView.coverImageUrl <> ".png"
+      imageUrl = fetchImage FF_ASSET $ state.appUpdatedView.coverImageUrl
     , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE
     , height = V 178
     , width = V 204

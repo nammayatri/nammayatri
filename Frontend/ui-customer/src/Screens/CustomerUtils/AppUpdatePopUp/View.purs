@@ -37,7 +37,7 @@ import Font.Style as FontStyle
 import Common.Types.App
 import MerchantConfig.Utils(Merchant(..), getMerchant, getValueFromConfig)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 
@@ -210,7 +210,7 @@ appUpdatedModelConfig state =
       margin = (Margin 12 0 12 16)
     }
   , coverImageConfig {
-      imageUrl = state.appUpdatedView.coverImageUrl <> "," <> (getAssetStoreLink FunctionCall) <> state.appUpdatedView.coverImageUrl <> ".png"
+      imageUrl = fetchImage FF_ASSET state.appUpdatedView.coverImageUrl
     , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE
     , height = V 178
     , width = V 204

@@ -32,7 +32,7 @@ import Styles.Colors (black900, blue900, white900) as Color
 import Font.Size (a_16, a_18, a_20) as Font
 import Components.PrimaryButton (view) as PrimaryButton
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (renderBase64ImageFile)
+import Helpers.Utils (renderBase64ImageFile, fetchImage, FetchImageFrom(..))
 import Animation (screenAnimationFadeInOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -139,7 +139,7 @@ view push state =
        [ width $ V 42
        , height $ V 42
        , margin (MarginRight 8)
-       , imageWithFallback "ny_ic_add_image,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_image"
+       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_add_image"
        ]
        , textView
        [ text if (length state.images) > 0 then (getString ADD_ANOTHER) else (getString ADD_IMAGE)

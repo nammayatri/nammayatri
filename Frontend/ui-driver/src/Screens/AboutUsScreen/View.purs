@@ -21,7 +21,7 @@ import Components.PopUpModal as PopUpModal
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -114,7 +114,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 25
             , height MATCH_PARENT
-            , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
             , gravity CENTER_VERTICAL
             , onClick push (const $ BackPressed state.props.demoModePopup)
             , padding (Padding 2 2 2 2)
@@ -167,7 +167,7 @@ applicationInformationLayout state push =
         ( [ width $ V 150
           , height $ V 100
           , layoutGravity "center_horizontal"
-          , imageWithFallback $ "ic_launcher," <> (getAssetStoreLink FunctionCall) <> "ic_launcher.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
           ]
             <> if getValueToLocalStore DRIVER_STATUS == "true" then [ onClick push (const ShowDemoPopUp) ] else []
         )

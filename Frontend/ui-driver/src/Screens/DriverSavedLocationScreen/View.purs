@@ -32,7 +32,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -173,7 +173,7 @@ searchLocation state push visibility' =
             [ imageView
                 [ height $ V 24
                 , width $ V 24
-                , imageWithFallback $ "ny_ic_chevron_left_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_white.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
                 , margin $ MarginLeft 10
                 , onClick push $ const BackPressed
                 ]
@@ -181,7 +181,7 @@ searchLocation state push visibility' =
                 [ height $ V 32
                 , width $ V 32
                 , margin $ MarginLeft 10
-                , imageWithFallback $ "ny_pin_check_white," <> (getAssetStoreLink FunctionCall) <> "ny_pin_check_white.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_pin_check_white"
                 ]
             , linearLayout
                 [ weight 1.0
@@ -222,7 +222,7 @@ searchLocation state push visibility' =
                     , imageView
                         [ height $ V 22
                         , width $ V 22
-                        , imageWithFallback $ "ic_cancel_unfilled," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_unfilled.png"
+                        , imageWithFallback $ fetchImage FF_ASSET "ic_cancel_unfilled"
                         , padding $ Padding 4 4 4 4
                         , onClick push $ const ClearSearch
                         ]
@@ -270,7 +270,7 @@ bottomButtons state push =
             [ imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ic_location_marker," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_marker.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_location_marker"
                 ]
             , textView
                 $ [ height MATCH_PARENT
@@ -296,7 +296,7 @@ bottomButtons state push =
             [ imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ny_ic_fill," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fill.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_fill"
                 ]
             , textView
                 $ [ height MATCH_PARENT
@@ -369,7 +369,7 @@ perdictionItem prediction push =
         [ imageView
             [ height $ V 14
             , width $ V 16
-            , imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_loc_grey"
             ]
         , textView
             $ [ width WRAP_CONTENT
@@ -465,7 +465,7 @@ locateOnMap state push =
         , imageView
             [ width $ V 35
             , height $ V 35
-            , imageWithFallback $ "ny_ic_src_marker," <> (getAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET"ny_ic_src_marker"
             ]
         ]
     , linearLayout
@@ -480,7 +480,7 @@ locateOnMap state push =
         [ imageView
             [ height $ V 24
             , width $ V 24
-            , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
             ]
         ]
@@ -521,7 +521,7 @@ locateOnMap state push =
                 [ imageView
                     [ height $ V 28
                     , width $ V 28
-                    , imageWithFallback $ "ny_ic_ellipse," <> (getAssetStoreLink FunctionCall) <> "ny_ic_ellipse.png"
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ellipse"
                     ]
                 , textView
                     $ [ height WRAP_CONTENT
@@ -556,7 +556,7 @@ confirmLocationBG state push =
         [ height $ V 18
         , width $ V 18
         , margin $ MarginTop 5
-        , imageWithFallback $ "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_white"
         , onClick push $ const BackPressed
         ]
     , linearLayout
@@ -664,11 +664,7 @@ confirmLocation state push visibility' =
                 [ imageView
                     [ height $ V 13
                     , width $ V 13
-                    , imageWithFallback
-                        if isActive then
-                          "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
-                        else
-                          "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png"
+                    , imageWithFallback $ fetchImage FF_ASSET $ if isActive then "ny_ic_home_blue" else "ny_ic_home"
                     ]
                 , textView
                     $ [ height WRAP_CONTENT
@@ -749,7 +745,7 @@ header push =
         [ height $ V 32
         , width $ V 32
         , padding $ Padding 4 4 4 4
-        , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
         ]
     , textView
@@ -800,7 +796,7 @@ noSavedLocationView push state =
             [ imageView
                 [ height $ V 240
                 , width $ V 240
-                , imageWithFallback $ "ny_ic_no_goto_loc," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_goto_loc.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_no_goto_loc"
                 , margin $ Margin 10 20 10 0
                 ]
             , textView

@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleVariantImage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -115,7 +115,7 @@ view push state =
                        , orientation HORIZONTAL
                        , onClick push (const HelpAndSupport)
                         ][ imageView
-                          [ imageWithFallback $ "ny_ic_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_support.png"
+                          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_support"
                           , height $ V 17
                           , width $ V 20
                           , margin $ MarginRight 7
@@ -129,7 +129,7 @@ view push state =
                           , imageView
                           [ width $ V 18
                           , height $ V 18
-                          , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey"
                           ]
                         ]
                       ]
@@ -173,7 +173,7 @@ tagView state config =
       , padding $ Padding 12 5 12 5
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ item.image <> ","  <> (getAssetStoreLink FunctionCall) <> item.image <> ".png"
+          [ imageWithFallback $ fetchImage FF_ASSET item.image
           , height $ V 16
           , width $ V 16
           ]
@@ -305,7 +305,7 @@ tripDataView push state =
                     , color Color.black900
                     ] <> FontStyle.body14 TypoGraphy
                   , imageView
-                    [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_copy.png"
+                    [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_copy"
                     , height (V 15)
                     , width (V 13)
                     , margin (Margin 10 5 0 0)
@@ -397,7 +397,7 @@ reportIssueView state push =
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_down.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                 , height $ V 5
                 , width $ V 10 
                 ]
@@ -458,7 +458,7 @@ issueReportedView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_greetings.png"
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_greetings"
       , height $ V 81
       , width $ V 135
       , margin (MarginBottom 32)
@@ -479,7 +479,7 @@ issueReportedView state push =
 getVehicleImage :: ST.TripDetailsScreenState -> String
 getVehicleImage state = case getMerchant FunctionCall of
                           YATRI       -> case state.data.vehicleType of
-                                          "AUTO_RICKSHAW" -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
-                                          _               -> "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
+                                          "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
+                                          _               -> fetchImage FF_ASSET "ic_vehicle_front"
                           YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-                          _           -> "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
+                          _           -> fetchImage FF_ASSET  "ic_vehicle_front"

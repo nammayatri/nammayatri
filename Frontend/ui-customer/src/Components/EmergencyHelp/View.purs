@@ -37,7 +37,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
 import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import JBridge as JB
@@ -135,7 +135,7 @@ supportButtonViewContent state push item index =  linearLayout
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                 , margin $ MarginTop 4
                 , color Color.black900
                 ]
@@ -161,7 +161,7 @@ emergencyHelpLogoContainer state =
     ][  imageView
         [ height $ V 128
         , width MATCH_PARENT
-        , imageWithFallback $ "ny_ic_emergency_shield," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_shield.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_emergency_shield"
         , margin (MarginBottom 24)
         ]
       , textView (
@@ -367,7 +367,7 @@ showEmergencyContact state push =
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                 , margin $ MarginTop 6
                 , color Color.black900
                 ]
@@ -464,7 +464,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       } 
     , suffixImageConfig {
         visibility = GONE }

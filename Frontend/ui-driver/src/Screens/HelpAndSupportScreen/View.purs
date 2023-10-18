@@ -34,7 +34,7 @@ import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
 import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
-import Helpers.Utils (toStringJSON, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
@@ -126,7 +126,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
@@ -293,7 +293,7 @@ allOtherTopics state push =
                   , imageView
                   [ width $ V 20
                   , height $ V 20
-                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
                   ]
               ]
               , horizontalLineView

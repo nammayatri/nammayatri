@@ -36,7 +36,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
 import MerchantConfig.Utils (getValueFromConfig)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -100,7 +100,7 @@ backArrow state push =
       [ width ( V 25 )
       , height ( V 25 )
       , margin (MarginTop 20)
-      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
       , onClick push (const BackPressed)
       ]
   ]

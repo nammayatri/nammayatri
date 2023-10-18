@@ -22,10 +22,10 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPastDays)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastDays)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), (/=))
+import Prelude ((<>), (/=), ($))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Resource.Constants (tripDatesCount)
 import Screens.Types as ST
@@ -37,7 +37,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png" else "ny_ic_no_past_rides_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides_auto.png"
+        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides" else fetchImage FF_ASSET "ny_ic_no_past_rides_auto"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)

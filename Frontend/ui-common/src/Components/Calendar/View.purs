@@ -15,7 +15,7 @@
 
 module Components.Calendar.View where
 
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 import Prelude
 import Components.Calendar.Controller (Action(..), Config, dummyDateItem)
@@ -138,7 +138,7 @@ selectedDateView push config =
           , gravity CENTER
           ]
         , imageView
-          [ imageWithFallback $ "ny_ic_arrow_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_arrow_right.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_arrow_right"
           , height MATCH_PARENT
           , width $ V 16
           , margin $ MarginHorizontal 8 8
@@ -172,8 +172,7 @@ monthYearPicker push config =
   , margin $ Margin 16 16 16 16
   , cornerRadius 9.0
   ][  imageView
-      [ imageWithFallback $ if decrementMonthFlag then  "ny_ic_chevron_left_black," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_black.png"
-                            else "ny_ic_chevron_left_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_grey.png"
+      [ imageWithFallback $ fetchImage FF_ASSET $ if decrementMonthFlag then "ny_ic_chevron_left_black" else "ny_ic_chevron_left_grey"
       , width $ V 24
       , height $ V 24
       , gravity CENTER
@@ -199,8 +198,7 @@ monthYearPicker push config =
           ]
       ]
     , imageView
-      [ imageWithFallback $ if incrementMonthFlag then "ny_ic_chevron_right_black," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_black.png"
-                            else  "ny_ic_chevron_right_grey_900," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey_900.png"
+      [ imageWithFallback $ fetchImage FF_ASSET $ if incrementMonthFlag then "ny_ic_chevron_right_black" else "ny_ic_chevron_right_grey"
       , width $ V 28
       , height $ V 28
       , gravity CENTER

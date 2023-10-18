@@ -21,7 +21,6 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 data Action = OnClick Config
 

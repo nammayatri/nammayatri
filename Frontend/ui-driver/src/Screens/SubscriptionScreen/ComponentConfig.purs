@@ -113,7 +113,7 @@ retryPaymentButtonConfig state =
       , margin = MarginLeft 0
       , isSuffixImage = true
       , suffixImageConfig
-        { imageUrl = "ny_ic_arrow_right_yellow," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_arrow_right_yellow.png"
+        { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right_yellow"
         , height = V 16
         , width = V 16
         , margin = (MarginLeft 5)
@@ -148,7 +148,7 @@ checkStatusButtonConfig state =
       , stroke = "1," <> Color.black900
       , background = Color.yellow800
       , prefixImageConfig
-        { imageUrl = "ny_ic_refresh_unfilled," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_refresh_unfilled.png"
+        { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_refresh_unfilled"
         , height = V 16
         , width = V 16
         , margin = case getValueToLocalStore LANGUAGE_KEY of
@@ -249,7 +249,7 @@ popupModalConfig state = let
                   Mb.Just SupportPopup -> MATCH_PARENT
                   _                    -> (V 156)
       , image {
-          imageUrl = "ny_ic_phone_filled_yellow,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_yellow.png"
+          imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_yellow"
           , height = (V 16)
           , width = (V 16)
           , visibility = if Mb.Just SupportPopup == state.props.popUpState then VISIBLE else GONE
@@ -257,13 +257,13 @@ popupModalConfig state = let
         }
       },
       coverImageConfig {
-        imageUrl =  case state.props.popUpState of
-          Mb.Just SuccessPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
-          Mb.Just SwitchedPlan -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
-          Mb.Just FailedPopup -> "ny_failed," <> (HU.getAssetStoreLink FunctionCall) <> "ny_failed.png"
-          Mb.Just DuesClearedPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
-          Mb.Just CancelAutoPay -> "ny_ic_pause_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_pause_autopay.png"
-          Mb.Just PaymentSuccessPopup -> "ny_ic_green_tick," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_green_tick.png"
+        imageUrl =  HU.fetchImage HU.FF_ASSET $ case state.props.popUpState of
+          Mb.Just SuccessPopup -> "ny_ic_green_tick"
+          Mb.Just SwitchedPlan -> "ny_ic_green_tick"
+          Mb.Just FailedPopup -> "ny_failed"
+          Mb.Just DuesClearedPopup -> "ny_ic_green_tick"
+          Mb.Just CancelAutoPay -> "ny_ic_pause_autopay"
+          Mb.Just PaymentSuccessPopup -> "ny_ic_green_tick"
           Mb.Just SupportPopup -> ""
           Mb.Nothing -> ""
       , visibility = case state.props.popUpState of
@@ -309,7 +309,7 @@ popupModalConfig state = let
         , visibility = VISIBLE
       } 
       , image {
-          imageUrl = "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          imageUrl =  HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"
           , height = (V 16)
           , width = (V 16)
           , visibility = VISIBLE
@@ -355,7 +355,7 @@ confirmCancelPopupConfig state = let
       , margin = MarginLeft 12
       },
       coverImageConfig {
-        imageUrl = "ny_ic_pause_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_pause_autopay.png"
+        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_pause_autopay"
       , visibility = VISIBLE
       , width = V 265
       , height = V 265
@@ -400,12 +400,12 @@ optionsMenuConfig state =
   in
   OptionsMenuConfig.config {
   menuItems = [
-    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
-    {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
-    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
     {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
-    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
-    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
     {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
@@ -496,9 +496,9 @@ offerCardBannerConfig isPlanCard bannerProps=
         actionText = getString OFFER_CARD_BANNER_DESC,
         actionTextColor = Color.black800,
         imageUrl = case getValueToLocalStore LANGUAGE_KEY of
-                      "HI_IN" -> "ny_ic_autopay_setup_banner_hi,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner_hi.png"
-                      "BN_IN" -> "ny_ic_autopay_setup_banner_bn,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner_bn.png"
-                      _       -> "ny_ic_autopay_setup_banner,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
+                      "HI_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_hi"
+                      "BN_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_bn"
+                      _       -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner",
         isBanner = true,
         alertText = getString OFFER_CARD_BANNER_ALERT,
         alertTextColor = Color.red,

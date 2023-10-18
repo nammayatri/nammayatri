@@ -45,7 +45,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -167,7 +167,7 @@ genderBannerConfig state =
         titleColor = Color.white900,
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
-        imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
+        imageUrl = fetchImage FF_ASSET "ny_ic_driver_gender_banner",
         isBanner = true
       }
   in config'
@@ -184,7 +184,7 @@ accessbilityBannerConfig state =
         titleColor = Color.purple,
         actionText = getString LEARN_MORE,
         actionTextColor = Color.purple,
-        imageUrl = "ny_ic_purple_badge,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_purple_badge.png",
+        imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
         isBanner = true,
         stroke = "1,"<>Color.fadedPurple
       }
@@ -216,7 +216,7 @@ linkAadhaarPopupConfig state = let
     dismissPopup = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+      imageUrl = fetchImage FF_ASSET "ny_ic_aadhaar_logo"
     , visibility = VISIBLE
     , height = V 178
     , width = V 204
@@ -302,10 +302,10 @@ freeTrialEndingPopupConfig state =
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = case noOfDaysLeft of
-        3 -> "ny_ic_2_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_2_days_left.png"
-        2 -> "ny_ic_1_days_left," <> getAssetStoreLink FunctionCall <> "ny_ic_1_days_left.png"
-        1 -> "ny_ic_offer_ends_tonight," <> getAssetStoreLink FunctionCall <> "ny_ic_offer_ends_tonight.png"
+      imageUrl = fetchImage FF_ASSET $ case noOfDaysLeft of
+        3 -> "ny_ic_2_days_left"
+        2 -> "ny_ic_1_days_left"
+        1 -> "ny_ic_offer_ends_tonight"
         _ -> ""
     , visibility = VISIBLE
     , height = V 220
@@ -361,7 +361,7 @@ paymentPendingPopupConfig state =
     , margin = MarginBottom 24
     , suffixImage = {
         visibility : VISIBLE
-        , imageUrl : "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+        , imageUrl : fetchImage FF_ASSET "ny_ic_youtube"
         , height : (V 24)
         , width : (V 24)
         , margin : MarginLeft 4 
@@ -380,11 +380,11 @@ paymentPendingPopupConfig state =
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = case popupType of
-                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png"
+      imageUrl = fetchImage FF_ASSET $ case popupType of
+                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending"
                           _ ->  if isHighDues 
-                                then "ny_ic_payment_pending," <> getAssetStoreLink FunctionCall <> "ny_ic_payment_pending.png" 
-                                else "ny_ic_clear_dues_early," <> getAssetStoreLink FunctionCall <> "ny_ic_clear_dues_early.png"
+                                then "ny_ic_payment_pending" 
+                                else "ny_ic_clear_dues_early"
     , visibility = VISIBLE
     , height = V 220
     , width = V 280
@@ -411,7 +411,7 @@ offerConfigParams :: ST.HomeScreenState -> PromotionPopupConfig
 offerConfigParams state = PromotionPopupConfig $ {
   title : getString LIMITED_TIME_OFFER,
   description : getString JOIN_THE_UNLIMITED_PLAN,
-  imageUrl : "ny_ic_limited_time_offer,",
+  imageUrl : fetchImage FF_ASSET "ny_ic_limited_time_offer",
   buttonText : getString JOIN_NOW,
   heading : getString MY_PLAN_TITLE
 }
@@ -455,8 +455,8 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl =  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
-                    then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
+      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
+                    then "ic_cancel_prevention"
                   else HU.getRideLabelData "cancelConfirmImage" state.data.activeRide.specialLocationTag
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -505,7 +505,7 @@ driverRCPopUpConfig state = let
     }, 
     coverImageConfig {
       visibility = VISIBLE,
-      imageUrl = "ny_rc_deactivated," <> (getAssetStoreLink FunctionCall) <> "ny_rc_deactivated.png", 
+      imageUrl = fetchImage FF_ASSET "ny_rc_deactivated",
       height = V 182,
       width = V 280
     }
@@ -616,19 +616,19 @@ driverStatusIndicators = [
     {
       status : ST.Offline,
       background : Color.red,
-      imageUrl : "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_offline.png",
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
       textColor : Color.white900
     },
     {
         status : ST.Silent,
         background : Color.blue800,
-        imageUrl : "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_silent.png",
+        imageUrl : fetchImage FF_ASSET "ic_driver_status_silent",
         textColor : Color.white900
     },
     {
       status : ST.Online,
         background : Color.darkMint,
-        imageUrl : "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_online.png",
+        imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
         textColor : Color.white900
     }
 ]
@@ -663,7 +663,7 @@ requestInfoCardConfig _ = let
       visibility = VISIBLE
     }
   , imageConfig {
-      imageUrl = "ny_ic_bonus,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_bonus.png",
+      imageUrl = fetchImage FF_ASSET "ny_ic_bonus",
       height = V 122,
       width = V 116
     }
@@ -690,7 +690,7 @@ waitTimeInfoCardConfig _ = let
       padding = PaddingLeft 16
     }
   , imageConfig {
-      imageUrl = "ny_ic_waiting_auto,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_ride_completed",
+      imageUrl = fetchImage FF_ASSET "ny_ic_waiting_auto",
       height = V 130,
       width = V 130,
       padding = Padding 0 4 1 0
@@ -822,11 +822,11 @@ autopayBannerConfig state configureImage =
                             _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
                             DUE_LIMIT_WARNING_BANNER -> Color.red
                             _ -> Color.white900,
-        imageUrl = case bannerType of
-                      FREE_TRIAL_BANNER -> "ic_free_trial_period,"<>(getAssetStoreLink FunctionCall)<>"ic_free_trial_period.png" 
-                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png"
-                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_clear_dues_banner.png"
-                      DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning,"<>(getAssetStoreLink FunctionCall)<>"ny_ic_due_limit_warning.png"
+        imageUrl = fetchImage FF_ASSET $ case bannerType of
+                      FREE_TRIAL_BANNER -> "ic_free_trial_period" 
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner"
+                      DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
         isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
         imageHeight = if configureImage then (V 75) else (V 105),
@@ -963,7 +963,7 @@ chatBlockerPopUpConfig state = let
   in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
-accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_illustration.png", mediaType : "", videoId : ""}
+accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : ""}
 
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
@@ -971,42 +971,42 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
-                                                imageUrl = "ny_ic_blind_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_arrival.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_blind_arrival",
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
                                               }   
       Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
-                                                imageUrl = "ny_ic_blind_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_blind_pickup.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
                                                 videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo, -- "https://www.youtube.com/watch?v=2qYXl03N6Jg",
                                                 mediaType = "VideoLink",
                                                 videoId = "BlindOrLowVisionCoverVideo"
                                               }
       Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_POOR_HEARING_MESSAGE_THEM_AT_PICKUP,
-                                                imageUrl = "ny_ic_deaf_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_arrival.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_deaf_arrival",
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
                                               }   
       Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
-                                                imageUrl = "ny_ic_deaf_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_deaf_pickup.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
                                                 videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo, --"https://youtu.be/udkWOt0serg?feature=shared",
                                                 mediaType = "VideoLink",
                                                 videoId = "HearingImpairmentCoverVideo"
                                               }
       Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_STORE_THEIR_SUPPORT_AT_PICKUP ,
-                                                imageUrl = "ny_ic_locomotor_arrival," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_arrival.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
                                               }    
       Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
-                                                imageUrl = "ny_ic_locomotor_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locomotor_pickup.png",
+                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_pickup",
                                                 videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, --"https://youtu.be/B0C6SZTQO6k",
                                                 mediaType = "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
@@ -1020,25 +1020,25 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
 getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
                         case state.data.activeRide.disabilityTag, state.data.activeRide.isDriverArrived of   
-                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
                       -- else if state.data.activeRide.isDriverArrived then
                           -- case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
                       else 
                         case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_poor_hearing," <> (getAssetStoreLink FunctionCall) <> "ny_ic_poor_hearing.png", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ic_accessibility_vision," <> (getAssetStoreLink FunctionCall) <> "ic_accessibility_vision.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
+                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
@@ -1118,7 +1118,7 @@ getRideCompletedConfig state = let
     },
     badgeCard{
       visible = disability,
-      image = "ny_ic_disability_confetti_badge," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_confetti_badge.png",
+      image = fetchImage FF_ASSET "ny_ic_disability_confetti_badge",
       imageWidth = V 152, 
       imageHeight = V 106,
       text1 = getString BADGE_EARNED,
@@ -1130,7 +1130,7 @@ getRideCompletedConfig state = let
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
       id = "renderQRViewOnRideComplete",
       vpa = payerVpa,
-      vpaIcon = pspIcon <> "," <> (getAssetStoreLink FunctionCall) <> pspIcon <> ".png",
+      vpaIcon = fetchImage FF_ASSET pspIcon,
       collectCashText = getString OR_COLLECT_CASH_DIRECTLY
     },
     noVpaCard {
@@ -1189,7 +1189,7 @@ subsBlockerPopUpConfig state = PopUpModal.config {
 
     },
     coverImageConfig {
-      imageUrl = "ny_ic_sub_save_more,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_sub_save_more.png"
+      imageUrl = fetchImage FF_ASSET "ny_ic_sub_save_more"
     , visibility = VISIBLE
     , width = V 280
     , height = V 250
@@ -1212,7 +1212,7 @@ subsBlockerPopUpConfig state = PopUpModal.config {
       , visibility = VISIBLE
     } 
     , image {
-        imageUrl = "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_blue"
         , height = V 16
         , width = V 16
         , visibility = VISIBLE
@@ -1486,5 +1486,5 @@ gotoButtonConfig state = PrimaryButton.config
 
 gotoTimerConfig :: Boolean -> {bgColor :: String , imageString :: String, textColor :: String }
 gotoTimerConfig enabled 
-  | enabled = {bgColor : Color.green900, imageString : "ny_pin_check_white,", textColor : Color.white900}
-  | otherwise = {bgColor : Color.white900, imageString : "ny_ic_goto_icon_map_pin_check,", textColor : Color.black800}
+  | enabled = {bgColor : Color.green900, imageString : fetchImage FF_ASSET "ny_pin_check_white", textColor : Color.white900}
+  | otherwise = {bgColor : Color.white900, imageString : fetchImage FF_ASSET "ny_ic_goto_icon_map_pin_check", textColor : Color.black800}

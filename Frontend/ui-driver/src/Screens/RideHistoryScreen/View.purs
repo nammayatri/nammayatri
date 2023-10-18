@@ -43,7 +43,7 @@ import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC)
+import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC, fetchImage, FetchImageFrom(..))
 import JBridge (horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -273,7 +273,7 @@ calendarView push state =
             [ imageView
                 [ height $ V 24
                 , width $ V 24
-                , imageWithFallback if state.props.showDatePicker then "ny_ic_chevron_down_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_down_blue.png" else "ny_ic_calendar_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_calendar_blue.png"
+                , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDatePicker then "ny_ic_chevron_down_blue" else "ny_ic_calendar_blue"
                 ]
             ]
           ]
@@ -301,7 +301,7 @@ calendarView push state =
             , imageView
               [ height $ V 8
               , width $ V 10
-              , imageWithFallback "ny_ic_right_arrow_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_right_arrow_blue.png"
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
               ]
           ]
         ]

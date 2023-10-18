@@ -25,6 +25,7 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import Common.Types.App
 import Common.Types.App (CheckBoxOptions)
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -112,7 +113,7 @@ checkBoxView config item push =
             imageView
                 [ width (V 18)
                 , height (V 18)
-                , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_check_box.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
                 , visibility if item.isSelected then VISIBLE else GONE
                 ]
             ]

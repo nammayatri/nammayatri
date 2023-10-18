@@ -35,7 +35,7 @@ import Components.SelectVehicleTypeModal as SelectVehicleTypeModal
 import JBridge as JB
 import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
@@ -113,7 +113,7 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
@@ -325,7 +325,7 @@ vehicleTypeView push state =
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_drop_down"
             ]
         ]
     ]
@@ -374,7 +374,7 @@ uploadRCView state push =
              , imageView
                [ width ( V 20 )
                , height ( V 20 )
-               , imageWithFallback if (state.props.deleteButtonVisibility) then "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel.png" else "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
+               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if (state.props.deleteButtonVisibility) then "ny_ic_cancel" else "ny_ic_upload"
                , padding (Padding 2 2 2 0)
                , margin (MarginLeft 5)
                , onClick push $ if (state.props.deleteButtonVisibility) then ((const RemoveImageClick)) else ((const UploadImage))

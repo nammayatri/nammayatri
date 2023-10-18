@@ -61,7 +61,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, parseFloat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -109,7 +109,7 @@ shareAppConfig state = let
       },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = "ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ic_share_app.png"
+        imageUrl = fetchImage FF_ASSET "ic_share_app"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -149,9 +149,9 @@ cancelAppConfig state = let
       },
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
-        imageUrl = if state.data.driverInfoCardState.distance <= 500
-                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near_auto.png" else "ny_ic_driver_near," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near.png"
-                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto,"  <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started_auto.png" else "ny_ic_driver_started," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started.png"
+        imageUrl = fetchImage FF_ASSET $ if state.data.driverInfoCardState.distance <= 500
+                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto" else "ny_ic_driver_near"
+                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto" else "ny_ic_driver_started"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -258,7 +258,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
+        { imageUrl = fetchImage FF_ASSET "ny_ic_bent_right_arrow"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)
@@ -357,7 +357,7 @@ genderBannerConfig state =
       , titleColor = Color.elfGreen
       , actionText = (getString UPDATE_NOW)
       , actionTextColor = Color.elfGreen
-      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_banner_gender_feat"
       , isBanner = state.props.isBanner
       }
   in config'
@@ -373,7 +373,7 @@ disabilityBannerConfig state =
       , titleColor = Color.purple
       , actionText = (getString UPDATE_PROFILE)
       , actionTextColor = Color.purple
-      , imageUrl = "ny_ic_accessibility_banner_img,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_accessibility_banner_img.png"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
       , stroke = "1,"<> Color.fadedPurple
       }
   in config'
@@ -591,7 +591,7 @@ sourceUnserviceableConfig state =
         , corners = (Corners 24.0 true true false false)
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
-          { imageUrl = "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
+          { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
           , height = V 99
           , width = V 133
           , margin = (Margin 0 50 0 20)
@@ -631,8 +631,7 @@ rateCardConfig state =
         , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
         , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
-        , driverAdditionsImage = if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                                   else "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
+        , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                                  else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
@@ -1128,7 +1127,7 @@ requestInfoCardConfig _ = let
       text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
     }
   , imageConfig {
-      imageUrl = "ny_ic_select_offer," <> getAssetStoreLink FunctionCall <> "ny_ic_select_offer.png",
+      imageUrl = fetchImage FF_ASSET "ny_ic_select_offer",
       height = V 122,
       width = V 116
     }
@@ -1188,7 +1187,7 @@ rideCompletedCardConfig state = let
           gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
           infoPill {
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
-            image = "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png",
+            image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },

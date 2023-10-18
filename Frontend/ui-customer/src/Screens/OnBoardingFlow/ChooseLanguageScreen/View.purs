@@ -33,7 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.ChooseLanguageScreen.ComponentConfig 
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -96,7 +96,7 @@ scrollLanguageView state push =
             ] $ imageView
             [ width ( V 270)
             , height ( V 270)
-            , imageWithFallback $ "ny_ic_welcome_customer," <> (getAssetStoreLink FunctionCall) <> "ny_ic_welcome_customer.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_welcome_customer"
             ]]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig --300 10 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0

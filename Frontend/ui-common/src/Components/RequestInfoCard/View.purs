@@ -22,7 +22,6 @@ import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(.
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth)

@@ -298,8 +298,8 @@ getMerchantVehicleSize unit =
   case getMerchant FunctionCall of 
     _ -> 90
 
-getAssetStoreLink :: LazyCheck -> String
-getAssetStoreLink lazy = case (getMerchant lazy) of
+getAssetLink :: LazyCheck -> String
+getAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
@@ -316,14 +316,27 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
 
-getCommonAssetStoreLink :: LazyCheck -> String
-getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+getCommonAssetLink :: LazyCheck -> String
+getCommonAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+
+fetchImage :: FetchImageFrom -> String -> String
+fetchImage fetchImageFrom imageName = case fetchImageFrom of
+  FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
+  FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+
+derive instance genericFetchImageFrom :: Generic FetchImageFrom _
+instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq
+instance showFetchImageFrom :: Show FetchImageFrom where show = genericShow
+instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnumEncode
+instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
 type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
@@ -426,8 +439,8 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
-  let url = getAssetStoreLink FunctionCall
-      commonUrl = getCommonAssetStoreLink FunctionCall
+  let url = getAssetLink FunctionCall
+      commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
         YATRISATHI -> case variant of
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"

@@ -27,7 +27,7 @@ import Engineering.Helpers.Commons (screenWidth)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -98,7 +98,7 @@ navigationView state push =
             , color Color.blueBtn
             ] <> FontStyle.paragraphText TypoGraphy
         , imageView
-            [ imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_drop_down"
             , height (V 11)
             , margin (Margin 5 3 0 0)
             , width (V 11)

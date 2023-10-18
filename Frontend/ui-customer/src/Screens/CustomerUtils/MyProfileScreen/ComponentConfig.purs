@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -53,7 +53,7 @@ genericHeaderConfig state = let
         height = (V 35)
       , width = (V 35)
       , margin = (Margin 10 17 16 15)
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , padding = (Padding 5 5 5 5 )
       }
     , textConfig {

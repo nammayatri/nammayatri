@@ -28,7 +28,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe (Maybe(..))
 
@@ -41,7 +41,7 @@ genericHeaderConfig state= let
      , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
@@ -86,7 +86,7 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
@@ -97,7 +97,7 @@ sourceToDestinationConfig state = let
       , ellipsize = false
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600

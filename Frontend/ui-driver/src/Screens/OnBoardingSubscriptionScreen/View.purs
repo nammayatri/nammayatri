@@ -32,7 +32,7 @@ import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
-import Helpers.Utils (getAssetStoreLink, getDateAfterNDays)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig)
 
@@ -109,7 +109,7 @@ view push state =
             ][ imageView
                 [ width $ V 85
                 , height $ V 20
-                , imageWithFallback $ getImageURL "ny_ic_upi_autopay"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_autopay"
                 ]
             ]
           ]
@@ -151,7 +151,7 @@ headerLayout push state =
         [ width $ V 30
         , height $ V 30
         , visibility GONE
-        , imageWithFallback $ getImageURL "ny_ic_chevron_left_white"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
         , onClick push $ const BackPressed
         , padding $ Padding 2 2 2 2
         ]
@@ -169,7 +169,7 @@ headerLayout push state =
           imageView
           [ width $ V 16
           , height $ V 16
-          , imageWithFallback $ getImageURL "ny_ic_phone_filled_yellow"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
           , padding $ Padding 2 2 2 2
           ]
         , commonTV push (getString SUPPORT) Color.yellow900 FontStyle.body3 CENTER 0 CallSupport false
@@ -189,7 +189,7 @@ headerLayout push state =
           imageView
           [ width $ V 16
           , height $ V 16
-          , imageWithFallback $ getImageURL "ic_chevrons_right_white"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_chevrons_right_white"
           , padding $ Padding 2 2 2 2
           , margin $ MarginRight 5
           ]
@@ -232,7 +232,7 @@ infoView push state =
         imageView
         [ width $ V 32
         , height $ V 32
-        , imageWithFallback $ getImageURL "ic_creative_zero"
+        , imageWithFallback $ fetchImage FF_ASSET "ic_creative_zero"
         ]
       , commonTV push (getString EVERY_RIDE_AT_ZERO_COMMISSION) Color.black900 FontStyle.h3 CENTER 0 NoAction false
       ]
@@ -251,7 +251,7 @@ infoView push state =
         imageView
         [ width $ V 32
         , height $ V 32
-        , imageWithFallback $ getImageURL "ic_mingcute_currency_rupee"
+        , imageWithFallback $ fetchImage FF_ASSET "ic_mingcute_currency_rupee"
         ]
       , commonTV push (getString EARN_UPTO_PER_DAY) Color.black900 FontStyle.h3 CENTER 0 NoAction false
       ]
@@ -278,7 +278,7 @@ workFlowView push state =
       imageView
       [ width $ V 24
       , height $ V 146
-      , imageWithFallback $ getImageURL "ic_subscription_flow"
+      , imageWithFallback $ fetchImage FF_ASSET "ic_subscription_flow"
       ]
     , let lang = getValueToLocalStore LANGUAGE_KEY
           check = lang == "KN_IN" || lang == "TA_IN"
@@ -530,7 +530,7 @@ offerCountView count isSelected =
   , visibility if (count > 0 && not isSelected) then VISIBLE else GONE
   , gravity CENTER_VERTICAL
   ][ imageView
-     [ imageWithFallback $ getImageURL "ny_ic_discount"
+     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_discount"
      , width $ V 12
      , height $ V 12
      , margin $ MarginRight 4
@@ -694,6 +694,3 @@ commonTV push text' color' theme gravity' marginTop action txtFromHtml =
   , onClick push $ const action
   , (if txtFromHtml then textFromHtml else text) text'
   ] <> theme TypoGraphy
-
-getImageURL :: String -> String
-getImageURL imageName = imageName <> "," <> (getAssetStoreLink FunctionCall) <> imageName <> ".png"

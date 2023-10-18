@@ -45,7 +45,7 @@ import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, Paths)
 import MerchantConfig.DefaultConfig as DC
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -58,8 +58,8 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
-    prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
-  , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
+    prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+  , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
   , postfixImageVisibility : true
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))

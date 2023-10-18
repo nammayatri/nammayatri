@@ -49,7 +49,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -901,13 +901,13 @@ homeScreenFlow = do
                       lat = savedLocation.lat,
                       lon = savedLocation.lon,
                       locationItemType = Just SAVED_LOCATION,
-                      postfixImageUrl = "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" }
+                      postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav_red" }
                     else
                       item {
                         lat = item.lat,
                         lon = item.lon,
                         locationItemType = item.locationItemType,
-                        postfixImageUrl = "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }
+                        postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
             ) ((filteredRecentsList) <> filteredPredictionList) }, props{searchLocationModelProps{isAutoComplete = true,  showLoader = false}}})
       homeScreenFlow
     GET_QUOTES state -> do
@@ -1333,11 +1333,11 @@ homeScreenFlow = do
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
           recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"|| (listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"))) (AddNewAddress.getSavedLocations listResp.list))
+          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue"))) (AddNewAddress.getSavedLocations listResp.list))
               recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
-              savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")) (AddNewAddress.getSavedLocations listResp.list))
-              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
-                                                                        else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }) (recents))
+              savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue")) (AddNewAddress.getSavedLocations listResp.list))
+              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then fetchImage FF_ASSET "ny_ic_fav_red"
+                                                                        else fetchImage FF_ASSET "ny_ic_fav" }) (recents))
               predicArray = (recentDistance updatedList currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong)
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
                                                                     { data
@@ -1961,7 +1961,7 @@ addNewAddressScreenFlow input = do
 
       modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> state{  data  { locationList = map
                                                                                                                 (\item -> item{ postfixImageVisibility = (not (checkPrediction item state.data.savedLocations))
-                                                                                                                              , postfixImageUrl = if (checkPrediction item state.data.savedLocations) then "" else "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
+                                                                                                                              , postfixImageUrl = if (checkPrediction item state.data.savedLocations) then "" else fetchImage FF_ASSET "ny_ic_fav_red"
                                                                                                                               , isClickable = (checkPrediction item state.data.savedLocations)
                                                                                                                               , alpha = if (checkPrediction item state.data.savedLocations) then 1.0 else 0.5 }) (filteredPredictionList <> filteredRecentsList) }})
       addNewAddressScreenFlow ""
@@ -2176,7 +2176,7 @@ checkAndUpdateSavedLocations state = do
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == ("ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png") || (listItem.prefixImageUrl == ("ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")))) (AddNewAddress.getSavedLocations listResp.list))
+          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue"))) (AddNewAddress.getSavedLocations listResp.list))
           let recent = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
           let twoElements = catMaybes ([] <> [recent!!0] <> [recent!!1])
           _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
@@ -2189,10 +2189,10 @@ checkAndUpdateSavedLocations state = do
                   { recentSearchs
                     { predictionArray =
                         map
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) twoElements},
+                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then fetchImage FF_ASSET "ny_ic_fav_red" else fetchImage FF_ASSET "ny_ic_fav" } ) twoElements},
                       savedLocations = (AddNewAddress.getSavedLocations listResp.list),
                       locationList =  map
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) recent
+                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then fetchImage FF_ASSET "ny_ic_fav_red" else fetchImage FF_ASSET "ny_ic_fav" } ) recent
                     }
                   }
                 )

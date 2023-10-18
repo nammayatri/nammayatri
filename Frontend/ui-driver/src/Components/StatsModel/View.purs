@@ -33,6 +33,7 @@ import Language.Types(STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App
 import MerchantConfig.Utils(getValueFromConfig)
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -128,7 +129,7 @@ earningsView config push =
             , color config.bonusTextConfig.color
             ]<> FontStyle.h2 TypoGraphy
          , imageView
-            [imageWithFallback "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png"
+            [imageWithFallback $ fetchImage FF_ASSET "ic_info"
             , width $ V 14
             , height $ V 23
             , margin $ Margin 5 2 0 0

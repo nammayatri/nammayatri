@@ -31,7 +31,7 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (addMediaPlayer, parseNumber)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), addMediaPlayer, parseNumber)
 import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -314,10 +314,7 @@ titleAndLikeCount state push =
       ][ imageView
          [ height $ V 16
          , width $ V 16
-         , imageWithFallback if state.likeStatus then 
-                                "ny_ic_heart_red,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_red.png" 
-                             else 
-                                "ny_ic_heart_outline,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_outline.png"
+         , imageWithFallback $ fetchImage FF_ASSET $ if state.likeStatus then "ny_ic_heart_red" else "ny_ic_heart_outline"
          , margin $ MarginRight 4
          ]
        , textView 

@@ -74,7 +74,6 @@ import Services.API (Prediction)
 import Services.API (Prediction)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
-import Types.App (GlobalState)
 import Unsafe.Coerce (unsafeCoerce)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -239,7 +238,7 @@ getObjFromLocal :: HomeScreenState -> Flow GlobalState RecentlySearchedObject
 getObjFromLocal homeScreenState = do
   (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
   case recentlySearched of
-    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"}) (recents.predictionArray)}
+    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetLink FunctionCall) <> "ny_ic_recent_search.png"}) (recents.predictionArray)}
     Nothing -> pure homeScreenState.data.recentSearchs
 
 getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
@@ -299,7 +298,7 @@ addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> 
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addToRecentSearches prediction predictionArr = 
-    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
+    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
       in (if (checkPrediction prediction' predictionArr) 
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
@@ -371,8 +370,8 @@ getDistanceString distanceInMeters decimalPoint
 recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
 recentDistance arr currLat currLon = map (\item -> item{actualDistance = round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
 
-getAssetStoreLink :: LazyCheck -> String
-getAssetStoreLink lazy = case (getMerchant lazy) of
+getAssetLink :: LazyCheck -> String
+getAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
@@ -380,8 +379,8 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/images/"
 
-getCommonAssetStoreLink :: LazyCheck -> String
-getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+getCommonAssetLink :: LazyCheck -> String
+getCommonAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
@@ -397,6 +396,19 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/"
+
+fetchImage :: FetchImageFrom -> String -> String
+fetchImage fetchImageFrom imageName = case fetchImageFrom of
+  FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
+  FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
+
+derive instance genericFetchImageFrom :: Generic FetchImageFrom _
+instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq
+instance showFetchImageFrom :: Show FetchImageFrom where show = genericShow
+instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnumEncode
+instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
 showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI
@@ -497,8 +509,8 @@ fetchDefaultPickupPoint locations lati longi =
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
-  let url = getAssetStoreLink FunctionCall
-      commonUrl = getCommonAssetStoreLink FunctionCall
+  let url = getAssetLink FunctionCall
+      commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
         YATRISATHI -> case variant of
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"

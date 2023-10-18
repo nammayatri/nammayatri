@@ -31,7 +31,6 @@ import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueListFlow as IssueListFlow
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 

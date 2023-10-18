@@ -30,7 +30,7 @@ import Screens.PermissionsScreen.ScreenData (Permissions(..), permissionsList, L
 import JBridge as JB
 import Common.Types.App
 import Screens.PermissionsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
@@ -164,7 +164,7 @@ checkBox item state =
         , imageView
         [ width (V 18)
         , height (V 18)
-        , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
         , visibility case item.permission of
             Location -> if state.props.isLocationPermissionChecked then VISIBLE else GONE
             Overlay -> if state.props.isOverlayPermissionChecked then VISIBLE else GONE
@@ -177,11 +177,11 @@ checkBox item state =
 titleImage :: forall w. Listtype -> PrestoDOM (Effect Unit) w
 titleImage item = 
  imageView
-    [ imageWithFallback case item.permission of
-     Location -> "ny_ic_permission_location," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_location.png"
-     Overlay -> "ny_ic_permission_overlay," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_overlay.png"
-     AutoStart -> "ny_ic_permission_autostart," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_autostart.png"
-     Battery -> "ny_ic_permission_battery," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_battery.png"
+    [ imageWithFallback $ fetchImage FF_ASSET $ case item.permission of
+     Location -> "ny_ic_permission_location"
+     Overlay -> "ny_ic_permission_overlay"
+     AutoStart -> "ny_ic_permission_autostart"
+     Battery -> "ny_ic_permission_battery"
     , width (V 44)
     , height (V 44)
     , margin (Margin 15 2 15 0)

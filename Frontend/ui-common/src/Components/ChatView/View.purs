@@ -33,7 +33,7 @@ import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
 import Engineering.Helpers.Suggestions(getMessageFromKey)
-import Helpers.Utils (getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -71,8 +71,7 @@ chatHeaderView config push =
          , gravity CENTER
          , onClick push (const BackPressed)
          ][ imageView
-            [ imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
-            , height $ V 24
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , accessibilityHint "Back : Button"
             , accessibility ENABLE
             , width $ V 24
@@ -129,7 +128,7 @@ headerActionView config push =
      , background config.green200
      , onClick push (const Call)
      ][ imageView
-        [ imageWithFallback $ "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
         , height $ V 18
         , accessibilityHint "Call : Button"
         , accessibility ENABLE
@@ -149,7 +148,7 @@ headerActionView config push =
     , margin $ MarginRight 8
     , onClick push (const $ Call)
     ][ imageView
-       [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_phone.png"
+       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_phone"
        , height $ V 20
        , accessibilityHint "Call : Button"
        , accessibility ENABLE
@@ -167,7 +166,7 @@ headerActionView config push =
     , cornerRadius 32.0
     , onClick push (const $ Navigate)
     ][ imageView
-       [ imageWithFallback $ "ic_navigation_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_navigation_blue.png"
+       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_navigation_blue"
        , height $ V 20
        , width $ V 20
        , margin $ MarginRight 8
@@ -268,7 +267,7 @@ chatFooterView config push =
          , accessibilityHint "Send Message : Button"
          , accessibility ENABLE
          ][ imageView
-            [ imageWithFallback $ if config.sendMessageActive then "ic_send_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send_blue.png" else "ic_send," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET  $ if config.sendMessageActive then "ic_send_blue" else "ic_send"
             , height $ V 20 
             , width $ V 20 
             ] 
@@ -411,7 +410,7 @@ chatComponent state push config isLastItem userType =
                    ][ imageView
                     [ width $ V 48
                     , height $ V 48
-                    , imageWithFallback "ny_ic_add_audio,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_audio"
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
                     , margin (MarginRight 8)
                     ]
                     , linearLayout

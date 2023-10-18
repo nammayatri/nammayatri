@@ -23,7 +23,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC)
 import Font.Style (bold)
-import Helpers.Utils (getCurrentUTC)
+import Helpers.Utils (getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||))
@@ -233,7 +233,7 @@ submitView push state =
        [ width $ V 36
        , height $ V 36
        , margin (MarginRight 8)
-       , imageWithFallback "ny_ic_add_image,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_image"
+       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_add_image"
        ]
        , textView
        [ weight 1.0
@@ -246,7 +246,7 @@ submitView push state =
        [ width $ V 24
        , height $ V 24
        , margin (MarginRight 6)
-       , imageWithFallback "ny_ic_close_bold,https://assets.juspay.in/nammayatri/images/driver/ny_ic_close_bold"
+       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_bold"
        , visibility if (length state.data.addedImages > 0) then VISIBLE else GONE
        , onClick push (const DeleteSelectedImages)   
        ]
@@ -264,7 +264,7 @@ submitView push state =
        [ width $ V 36
        , height $ V 36
        , margin (MarginRight 8)
-       , imageWithFallback "ny_ic_add_audio,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_audio"
+       , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_add_audio"
        ]
        , textView
        [ weight 1.0
@@ -277,7 +277,7 @@ submitView push state =
        [ width $ V 24
        , height $ V 24
        , margin (MarginRight 6)
-       , imageWithFallback "ny_ic_close_bold,https://assets.juspay.in/nammayatri/images/driver/ny_ic_close_bold"
+       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_bold"
        , visibility if (isJust state.data.recordedAudioUrl) then VISIBLE else GONE
        , onClick push (const DeleteRecordedAudio)
        ]
@@ -307,7 +307,7 @@ submitView push state =
      , height $ V 18
      , margin (MarginLeft 12)
      , height WRAP_CONTENT
-     , imageWithFallback "ny_ic_submit_issue_arrow,https://assets.juspay.in/nammayatri/images/driver/ny_ic_submit_issue_arrow"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_submit_issue_arrow"
      ]
     ]
   ]

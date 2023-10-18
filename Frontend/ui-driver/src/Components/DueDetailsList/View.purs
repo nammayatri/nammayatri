@@ -24,7 +24,7 @@ import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCommonAssetStoreLink, getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<))
@@ -98,7 +98,7 @@ view push state =
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
-                  [ imageWithFallback if item.expanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item.expanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                   , height (V 11)
                   , margin (Margin 5 2 0 0)
                   , width (V 11)
@@ -197,7 +197,7 @@ keyValueView key value visibility' prefixImage =
     , height $ V 12
     , margin (Margin 0 1 4 0)
     , visibility if prefixImage then VISIBLE else GONE
-    , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
+    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
     ]
     , textView $ [
       text value

@@ -34,7 +34,7 @@ import Effect (Effect)
 import Data.Maybe
 import Common.Types.App
 import Screens.DriverRideRatingScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
@@ -95,7 +95,7 @@ topCloseButtonView state push =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
             , margin (Margin 12 12 12 12)
             ]
           ]
@@ -146,7 +146,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if index <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
+                              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if index <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
                               ]
                           ]) [1,2,3,4,5])
     ]
@@ -167,7 +167,7 @@ writeCommentView state push =
         ][imageView
           [ height $ V 20
           , width $ V 20 
-          , imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_message_square.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_message_square"
           ]
         ]
       , editText

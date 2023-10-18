@@ -51,7 +51,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getNewIDWithTag, screenHeight, screenWidth, getImageUrl)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getValueBtwRange, getAssetsBaseUrl)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getValueBtwRange, getAssetsBaseUrl)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -251,7 +251,7 @@ joinPlanView push state visibility' =
           [ width $ V 116
           , height $ V 368
           , margin $ MarginTop 20
-          , imageWithFallback $ "ny_ic_ny_driver," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_ny_driver.png"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_ny_driver"
           ]
         , enjoyBenefitsView push state
         , plansBottomView push state
@@ -285,7 +285,7 @@ enjoyBenefitsView push state =
                       , gravity CENTER_VERTICAL
                       , margin $ MarginTop 5
                       ][ imageView
-                          [ imageWithFallback $ "ny_ic_check_green," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
+                          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_check_green"
                           , width $ V 11
                           , height $ V 8
                           ]
@@ -406,7 +406,7 @@ plansBottomView push state =
             ][ imageView
                 [ width $ V 85
                 , height $ V 20
-                , imageWithFallback $ "ny_ic_upi_autopay," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_upi_autopay.png"
+                , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_upi_autopay"
                 ]
             ]
           ]
@@ -541,8 +541,8 @@ headerView push state =
       , margin $ MarginRight 16
       , visibility if config.backbutton || state.props.isEndRideModal then VISIBLE else GONE
       , onClick push $ const $ BackPressed
-      , imageWithFallback if config.backbutton then "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
-                          else if state.props.isEndRideModal then "ny_ic_close_bold,"<> (HU.getAssetStoreLink FunctionCall) <>"ny_ic_close_bold.png"
+      , imageWithFallback $ if config.backbutton then HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_left"
+                          else if state.props.isEndRideModal then HU.fetchImage HU.FF_ASSET "ny_ic_close_bold"
                           else ""
       ]
     , textView $
@@ -558,7 +558,7 @@ headerView push state =
         , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
       ][
         imageView [
-          imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"
           , height $ V 56
           , width $ V 56
           , padding $ Padding 16 16 16 15
@@ -578,7 +578,7 @@ headerView push state =
             , visibility if state.props.subView == MyPlan then VISIBLE else GONE
           ][]
         , imageView [
-            imageWithFallback "ny_ic_settings_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_filled_blue.png"
+            imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_settings_filled_blue"
             , height $ V 56
             , width $ V 56
             , padding $ Padding 16 16 16 15
@@ -625,7 +625,7 @@ myPlanBodyview push state =
           , margin (MarginLeft 4)
           , padding $ Padding 8 8 8 8
           , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
-          , imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
           , onClick (\action -> do
                       _<- push action
                       _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
@@ -669,7 +669,7 @@ duesView push state =
           , height $ V 16
           , margin (MarginRight 4)
           , visibility if state.props.myPlanProps.overDue then VISIBLE else GONE
-          , imageWithFallback $ "ny_ic_warning_unfilled_red," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_warning_unfilled_red.png"
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_warning_unfilled_red"
           ]
           , textView $
             [ text (getString YOUR_DUES)
@@ -684,9 +684,7 @@ duesView push state =
             , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
             ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
           , imageView [
-            imageWithFallback if state.props.myPlanProps.isDueViewExpanded 
-                                    then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
-                                    else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
+            imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET $ if state.props.myPlanProps.isDueViewExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
             , height $ V 12
             , width $ V 12
             , margin $ MarginLeft 6
@@ -911,7 +909,7 @@ alertView push image primaryColor title description buttonText action visible is
       , onClick push $ const RefreshPage
       , visibility if showRefresh then VISIBLE else GONE
    ][ imageView [
-        imageWithFallback $ getImageURL "ny_ic_refresh"
+        imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_refresh"
         , height $ V 16
         , width $ V 16
       ]
@@ -944,7 +942,7 @@ arrowButtonView push title arrowVisibility action isSelectedLangTamil =
         [ width $ V 18
         , height $ V 18
         , visibility if arrowVisibility then VISIBLE else GONE
-        , imageWithFallback "ny_ic_arrow_right_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_arrow_right_blue.png"
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right_blue"
         ]
      ]
   ]
@@ -1179,7 +1177,7 @@ dummyView =
   ][]
 
 getImageURL :: String -> String
-getImageURL imageName = imageName <> "," <> (HU.getAssetStoreLink FunctionCall) <> imageName <> ".png"
+getImageURL imageName = HU.fetchImage HU.FF_ASSET imageName
 
 autoPayDetailsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 autoPayDetailsView push state visibility' = 
@@ -1277,7 +1275,7 @@ autoPayPGView push state =
               , gravity CENTER_VERTICAL
               ][ commonTV push "UPI Autopay" Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT true
                , imageView
-                  [ imageWithFallback $ "ny_ic_upi_logo," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_upi_logo.png"
+                  [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_upi_logo"
                   , height $ V 14
                   , width $ V 14
                   ]
@@ -1321,7 +1319,7 @@ errorView push state =
       , clickable true
       , gravity CENTER
       ][ imageView
-          [ imageWithFallback $ "ny_ic_api_failed," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_api_failed.png"
+          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_api_failed"
           , height $ V 180
           , width $ V 280
           ]
@@ -1433,7 +1431,7 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
       , color if isIntroductory then Color.black600 else Color.black800
       ] <> if isSelectedLangTamil then FontStyle.body4 TypoGraphy else FontStyle.body7 TypoGraphy
    , imageView 
-     [ imageWithFallback $ "ny_ic_discount," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_discount.png" 
+     [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_discount" 
      , height $ V 16  
      , width $ V 16
      , margin $ MarginLeft 4
@@ -1623,7 +1621,7 @@ dueOverViewCard push state isManual =
         , margin (MarginLeft 4)
         , padding $ Padding 8 8 8 8
         , visibility if isManual then VISIBLE else GONE
-        , imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
         , onClick (\action -> do
             _<- push action
             _ <- JB.openUrlInApp state.data.config.myPlanYoutubeLink
@@ -1780,7 +1778,7 @@ showOfferApplicable state =
 commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
 commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPadding =
   imageView $
-      [ imageWithFallback $ imageName <> "," <> (HU.getAssetStoreLink FunctionCall) <> imageName <> ".png"
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET imageName
       , height $ V imageHeight
       , width $ V imageWidth
       , margin imageViewMargin

@@ -8,8 +8,8 @@ import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender)
 import Common.Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Commons as EHC
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 
@@ -135,7 +135,7 @@ priceDetailsView push config = do
           ]
         <> FontStyle.h3 TypoGraphy
       , imageView
-        [ imageWithFallback "ny_ic_info_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_grey"
         , width $ V 14
         , height $ V 14
         , margin $ Margin 4 6 0 0
@@ -162,7 +162,7 @@ checkBox push config =
   , imageView
       [ width (V 18)
       , height (V 18)
-      , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
       , visibility if config.isSelected then VISIBLE else GONE
       ]
   ]

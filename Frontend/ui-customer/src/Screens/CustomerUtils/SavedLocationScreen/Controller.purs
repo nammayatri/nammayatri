@@ -37,7 +37,7 @@ import Accessor (_list)
 import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Utils as EHU
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
@@ -174,7 +174,7 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
 
 getSavedLocationForAddNewAddressScreen :: (Array LocationListItemState) -> Array LocationListItemState 
 getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) -> 
-  { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+  { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))

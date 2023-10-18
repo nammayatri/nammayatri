@@ -33,7 +33,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getPreviousVersion, getSearchType, getAssetsBaseUrl, getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getLocationName, getPreviousVersion, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
 import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -150,7 +150,7 @@ locationUnserviceableView state push =
     , gravity CENTER_HORIZONTAL
     ]
     [ imageView
-        [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_unserviceable"
         , height $ V 99
         , width $ V 133
         , margin $ (MarginBottom 20)
@@ -195,7 +195,7 @@ sourceDestinationImageView state =
         ][  imageView
             [ height $ V 15
             , width $ V 15
-            , imageWithFallback $ "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
             ]
           ]
       , imageView
@@ -213,7 +213,7 @@ sourceDestinationImageView state =
         ][  imageView
             [ height $ V 15
             , width $ V 15
-            , imageWithFallback $ "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
             ]
         ]
     ]
@@ -286,7 +286,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ "ny_ic_close_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_grey.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_grey"
                 ]
             ]
         ]
@@ -360,7 +360,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ "ny_ic_close_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_grey.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_grey"
                 ]
             ]
         ]
@@ -475,7 +475,7 @@ recenterButtonView push state =
   , disableClickFeedback true
   ][
       imageView
-        [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation

@@ -33,7 +33,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.CustomerUtils.ContactUsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..)) 
 import Prelude ((<>))
 
@@ -139,7 +139,7 @@ afterSuccessfullSubmissionView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_letter"
       , height $ V 149
       , width $ V 149
       , margin (MarginBottom 32)

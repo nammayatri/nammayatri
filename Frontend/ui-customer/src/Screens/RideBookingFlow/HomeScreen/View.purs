@@ -64,7 +64,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -306,7 +306,7 @@ view push state =
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
-                    , imageWithFallback $ "ny_ic_map_blur," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_map_blur.png"
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_map_blur"
                     , visibility if state.props.isSrcServiceable then GONE else VISIBLE
                     ]
                 , linearLayout
@@ -338,9 +338,9 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png"
-                            false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                            true  -> "ny_ic_src_marker"
+                            false -> "ny_ic_dest_marker"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
                     ]
@@ -507,12 +507,12 @@ driverCallPopUp push state =
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
   [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: "ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
+    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
     , type: ANONYMOUS_CALLER
     , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   , { text: (getString DIRECT_CALL)
-    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
+    , imageWithFallback: fetchImage FF_ASSET "ic_direct_call"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
     }
@@ -570,7 +570,7 @@ trackingCardCallView push state item =
           ]
     ]
     , imageView
-        [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
         , height $ V 30
         , width $ V 32
         , padding (Padding 3 3 3 3)
@@ -648,7 +648,7 @@ recenterButtonView push state =
           --   , cornerRadii $ Corners 24.0 true true true true
           --   ][
           imageView
-            [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
             , accessibility DISABLE
             , onClick
                 ( \action -> do
@@ -680,7 +680,7 @@ referralView push state =
     , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
     ][
       imageView [
-         imageWithFallback $ "ny_ic_tick," <> (getAssetStoreLink FunctionCall) <> "ny_ic_tick.png"
+         imageWithFallback $ fetchImage FF_ASSET "ny_ic_tick"
         , width $ V 20
         , height $ V 15
         , margin (Margin 0 3 5 0)
@@ -711,7 +711,7 @@ liveStatsDashboardView push state =
     , onClick push $ const $ LiveDashboardAction
     ][
       imageView [
-        imageWithFallback $ "ic_graph_blue," <> (getAssetStoreLink FunctionCall) <> "ic_graph_blue.png"
+        imageWithFallback $ fetchImage FF_ASSET "ic_graph_blue"
         , width $ V 20
         , height $ V 15
         , margin (Margin 0 0 5 0)
@@ -972,7 +972,7 @@ homeScreenTopIconView push state =
                 , onClick push $ const OpenSettings
                 ]
                 [ imageView
-                    [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
+                    [ imageWithFallback $ fetchImage FF_ASSET $ if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify" else "ny_ic_hamburger"
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
@@ -987,7 +987,7 @@ homeScreenTopIconView push state =
                 ]
                 []
             , imageView
-                [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
                 , height $ V 16
                 , width $ V 16
                 , margin (Margin 5 5 5 5)
@@ -1124,7 +1124,7 @@ topLeftIconView state push =
           , accessibility ENABLE
           ]
           [ imageView
-              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
+              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
               , height $ V 25
               , accessibility DISABLE
               , clickable true
@@ -1171,7 +1171,7 @@ suggestedPriceView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_metro_white"
           ]
         , textView
           [ width WRAP_CONTENT
@@ -1240,7 +1240,7 @@ suggestedPriceView push state =
                 , estimatedTimeAndDistanceView push state
               ]
               , imageView
-                [ imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
                 , width $ V 40
                 , height $ V 40
                 , gravity BOTTOM
@@ -1290,7 +1290,7 @@ suggestedPriceView push state =
                           , height $ V 10
                           , margin (Margin 9 8 0 0)
                           , accessibility DISABLE
-                          , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/user/ny_ic_down_arrow.png"
+                          , imageWithFallback if state.data.showPreferences then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up" else fetchImage FF_ASSET "ny_ic_chevron_down"
                           ]
                       ],
                       linearLayout
@@ -1303,8 +1303,8 @@ suggestedPriceView push state =
                           , height WRAP_CONTENT
                           , orientation VERTICAL
                           , visibility if state.data.showPreferences then VISIBLE else GONE
-                          ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster_lightning," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster_lightning.png") true state,
-                            showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false state]
+                          ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ( fetchImage FF_ASSET "ny_ic_faster_lightning") true state,
+                            showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) (fetchImage FF_ASSET "ny_ic_info") false state]
                       ]
 
                   ]
@@ -1518,7 +1518,7 @@ trackingCardView push state item =
         ]
         []
     , imageView
-        [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
         , height $ V 20
         , width $ V 22
         , padding (Padding 3 3 3 3)
@@ -1528,11 +1528,11 @@ trackingCardView push state item =
 locationTrackingData :: String -> Array { text :: String, imageWithFallback :: String, type :: String }
 locationTrackingData lazyCheck =
   [ { text: (getString GOOGLE_MAP_)
-    , imageWithFallback: "ny_ic_track_google_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_track_google_map.png"
+    , imageWithFallback: fetchImage FF_ASSET "ny_ic_track_google_map"
     , type: "GOOGLE_MAP"
     }
   , { text: (getString IN_APP_TRACKING)
-    , imageWithFallback: "ny_ic_track_in_app," <> (getAssetStoreLink FunctionCall) <> "ny_ic_track_in_app.png"
+    , imageWithFallback: fetchImage FF_ASSET "ny_ic_track_in_app"
     , type: "IN_APP"
     }
   ]
@@ -1575,7 +1575,7 @@ confirmPickUpLocationView push state =
                 [ width (V 20)
                 , height (V 20)
                 , margin (MarginRight 6)
-                , imageWithFallback "ny_ic_zone_walk,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_zone_walk.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_zone_walk"
                 ]
               , textView
                 [ width if os == "IOS" && state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
@@ -2124,7 +2124,7 @@ notinPickUpZoneView push state =
             , estimatedTimeAndDistanceView push state
           ]
           , imageView
-            [ imageWithFallback $ "ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_info_blue.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
             , width $ V 40
             , height $ V 40
             , gravity BOTTOM
@@ -2164,7 +2164,7 @@ notinPickUpZoneView push state =
                       [ width $ V 10
                       , height $ V 10
                       , margin (Margin 9 8 0 0)
-                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getAssetStoreLink FunctionCall) <> "ny_ic_down_arrow.png"
+                      , imageWithFallback if state.data.showPreferences then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up" else fetchImage FF_ASSET "ny_ic_chevron_down"
                       ]
                   ],
                   linearLayout
@@ -2177,8 +2177,8 @@ notinPickUpZoneView push state =
                        , height WRAP_CONTENT
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true state,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false state ]
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ( fetchImage FF_ASSET "ny_ic_faster") true state,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ( fetchImage FF_ASSET "ny_ic_info") false state ]
                   ]
 
               ]
@@ -2209,7 +2209,7 @@ currentLocationView push state =
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
             ]
             [ imageView
-                [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
                 , height $ V 16
                 , width $ V 16
                 , gravity CENTER_VERTICAL

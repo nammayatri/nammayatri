@@ -9,7 +9,7 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (capitalizeFirstChar, getVehicleType, getAssetStoreLink, getCommonAssetStoreLink, getVariantRideType, getVehicleVariantImage)
+import Helpers.Utils (capitalizeFirstChar, getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
@@ -109,7 +109,7 @@ downgradeVehicleView push state =
               [ width $ V 15
               , height $ V 15
               , margin (Margin 0 3 8 0)
-              , imageWithFallback $ "ny_ic_info_orange," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_orange.png"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_orange"
               ]
             , textView $
               [ width MATCH_PARENT
@@ -181,8 +181,8 @@ downgradeVehicleCard variant enabled =
       , gravity RIGHT
       ][  imageView
           [ imageWithFallback $ case enabled of
-                                  true  -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
-                                  false -> "ny_ic_cross_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cross_red.png"
+                                  true  -> fetchImage FF_ASSET "ny_ic_check_mark"
+                                  false -> fetchImage FF_COMMON_ASSET "ny_ic_cross_red"
           , width $ V 16
           , height $ V 16
           ]
@@ -314,7 +314,7 @@ headerLayout push state =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2

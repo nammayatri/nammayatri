@@ -23,7 +23,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -90,7 +90,7 @@ locationAccessPermissionView push state =
       , cornerRadius 8.0
       , background Color.white900
       ][  imageView
-          [ imageWithFallback $ "ic_location_permission_logo," <> (getAssetStoreLink FunctionCall) <> "ic_location_permission_logo.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
           , height $ V 213
           , width $ V 240
           , gravity CENTER

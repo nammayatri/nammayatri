@@ -26,7 +26,7 @@ import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (consumeBP, getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (consumeBP, fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
@@ -35,7 +35,6 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -98,7 +97,7 @@ scrollableView state push =
           ] $ imageView
               [ width ( V 300)
               , height ( V 190)
-              , imageWithFallback $ "ny_ic_welcome,"
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_welcome"
               ]]
         , linearLayout
           [ height WRAP_CONTENT

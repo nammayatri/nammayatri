@@ -27,7 +27,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage as Storage
 import Prelude ((<>))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 apiErrorModalConfig :: ST.MyRidesScreenState -> ErrorModal.Config 
@@ -35,7 +35,7 @@ apiErrorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_error_404," <> (getAssetStoreLink FunctionCall) <> "ny_ic_error_404.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_error_404"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -64,7 +64,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -97,7 +97,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       } 
     , textConfig {
         text = (getString MY_RIDES)
