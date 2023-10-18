@@ -110,22 +110,23 @@ import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OU
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Constants.Configs
 import Engineering.Helpers.Commons as EHC
+import PrestoDOM (initUI)
+
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
     -- checkDateAndTime -- Need To Refactor
-    (GlobalState state) <- getState
     cacheAppParameters versionCode baseFlow
-    when baseFlow $ void $ UI.splashScreen state.splashScreen
+    void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
+    when baseFlow $ lift $ lift $ initUI
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     if isTokenValid regToken
       then do
-        _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         getDriverInfoFlow event
       else loginFlow

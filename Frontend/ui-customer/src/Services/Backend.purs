@@ -84,61 +84,49 @@ getHeaders' val isGzipCompressionEnabled = do
 ----------------------------------------------------------- API Results & BT Functions-------------------------------------------------------------------------------------------------
 
 withAPIResult url f flow = do
-    let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-    let end = getTime unit
-    _ <- pure $ printLog "withAPIResult url" url
-    case resp of
-        Right res -> do
-            _ <- (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end 200  "SUCCESS" url "" "") $> res
-            pure unit
-        Left (err) -> do
-            _ <- pure $ toggleBtnLoader "" false
-            _ <- pure $ printLog "Err Code" (err.code)
-            _ <- pure $ printLog "Err" err
-            let errResp = err.response
-            let codeMessage = decodeError errResp.errorMessage "errorCode"
-            _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeError errResp.errorMessage "errorMessage"
-
-            _ <- (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "") $> errResp
-            _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
-            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-                _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-                _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
-                _ <- liftFlow $ stopChatListenerService
-                _ <- pure $ factoryResetApp ""
-                pure unit -- default if it fails
-                else pure unit -- default if it fails
-    pure resp
+  let start = getTime unit
+  resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+  let end = getTime unit
+  _ <- pure $ printLog "withAPIResult url" url
+  case resp of
+    Right res -> void $ pure $ printLog "success resp" res
+    Left (err) -> do
+      _ <- pure $ toggleBtnLoader "" false
+      let errResp = err.response
+      _ <- pure $ printLog "error resp" errResp
+      let userMessage = decodeError errResp.errorMessage "errorMessage"
+      let codeMessage = decodeError errResp.errorMessage "errorCode"
+      if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+        _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
+        _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
+        _ <- liftFlow $ stopChatListenerService
+        _ <- pure $ factoryResetApp ""
+        pure unit -- default if it fails
+        else pure unit -- default if it fails
+  pure resp
 
 withAPIResultBT url f errorHandler flow = do
-    let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-    let end = getTime unit
-    _ <- pure $ printLog "withAPIResultBT url" url
-    case resp of
-        Right res -> do
-            (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end 200  "SUCCESS" url "" "")) $> res
-        Left (err) -> do
-            _ <- pure $ toggleBtnLoader "" false
-            _ <- pure $ printLog "Err Code" (err.code)
-            _ <- pure $ printLog "Err" err
-
-            let errResp = err.response
-            let codeMessage = decodeError errResp.errorMessage "errorCode"
-            _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeError errResp.errorMessage "errorMessage"
-            _ <- pure $ printLog "message" userMessage
-            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-                deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore REGISTRATION_APPROVED
-                lift $ lift $ liftFlow $ stopChatListenerService
-                pure $ factoryResetApp ""
-                    else if (err.code == 400 && userMessage == "Invalid start time.") then
-                        pure unit
-                    else pure unit
-            (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
+  let start = getTime unit
+  resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+  let end = getTime unit
+  _ <- pure $ printLog "withAPIResultBT url" url
+  case resp of
+    Right res -> do
+      _ <- pure $ printLog "success resp" res
+      pure res
+    Left err -> do
+      _ <- pure $ toggleBtnLoader "" false
+      let errResp = err.response
+      let userMessage = decodeError errResp.errorMessage "errorMessage"
+      let codeMessage = decodeError errResp.errorMessage "errorCode"
+      _ <- pure $ printLog "error resp" errResp
+      if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+          deleteValueFromLocalStore REGISTERATION_TOKEN
+          deleteValueFromLocalStore REGISTRATION_APPROVED
+          lift $ lift $ liftFlow $ stopChatListenerService
+          pure $ factoryResetApp ""
+        else pure unit
+      errorHandler err
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
