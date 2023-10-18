@@ -34,6 +34,7 @@ data SearchRequestT f = SearchRequestT
     estimatedRideDuration :: B.C f (Maybe Seconds),
     device :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     language :: B.C f (Maybe Language),
     disabilityTag :: B.C f (Maybe Text),
     customerExtraFee :: B.C f (Maybe Money),

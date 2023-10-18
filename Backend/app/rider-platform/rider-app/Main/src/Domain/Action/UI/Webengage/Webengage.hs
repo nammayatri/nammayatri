@@ -70,6 +70,7 @@ newtype WebengageRes = WebengageRes
 callInfobip ::
   ( HasFlowEnv m r '["infoBIPCfg" ::: EIF.InfoBIPConfig],
     EncFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m
   ) =>

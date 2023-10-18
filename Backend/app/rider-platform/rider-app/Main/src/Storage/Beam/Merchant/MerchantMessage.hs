@@ -22,7 +22,8 @@ import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
-  { merchantId :: B.C f Text,
+  { merchantId :: B.C f Text, -- TODO : Remove it
+    merchantOperatingCityId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
     updatedAt :: B.C f UTCTime,
@@ -34,10 +35,10 @@ instance B.Table MerchantMessageT where
   data PrimaryKey MerchantMessageT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type MerchantMessage = MerchantMessageT Identity
 
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(enableKVPG ''MerchantMessageT ['merchantOperatingCityId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message")

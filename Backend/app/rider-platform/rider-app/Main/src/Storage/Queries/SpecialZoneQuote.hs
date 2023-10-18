@@ -20,13 +20,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 
 createSpecialZoneQuote :: MonadFlow m => SpecialZoneQuote -> m ()
 createSpecialZoneQuote = createWithKV
 
-findById :: MonadFlow m => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
 findById specialZoneQuoteId = findOneWithKV [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
 
 instance FromTType' BeamSZQ.SpecialZoneQuote SpecialZoneQuote where

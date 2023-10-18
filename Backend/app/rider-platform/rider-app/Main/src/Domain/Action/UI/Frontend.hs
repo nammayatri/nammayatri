@@ -161,7 +161,7 @@ updateStatus personId updatedStatus = do
   _ <- QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId
 
-getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
+getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
 getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do

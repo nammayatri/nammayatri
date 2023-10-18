@@ -29,13 +29,13 @@ import qualified Storage.Beam.AadhaarVerification.AadhaarVerification as BeamAV
 create :: MonadFlow m => AadhaarVerification -> m ()
 create = createWithKV
 
-findByPersonId :: MonadFlow m => Id Person -> m (Maybe AadhaarVerification)
+findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe AadhaarVerification)
 findByPersonId (Id personId) = findOneWithKV [Se.Is BeamAV.personId $ Se.Eq personId]
 
-findByAadhaarNumberHash :: MonadFlow m => DbHash -> m (Maybe AadhaarVerification)
+findByAadhaarNumberHash :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
 
-findByPhoneNumberAndUpdate :: MonadFlow m => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
   now <- getCurrentTime
   updateWithKV

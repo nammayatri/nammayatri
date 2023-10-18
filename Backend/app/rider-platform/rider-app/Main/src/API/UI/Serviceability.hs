@@ -60,4 +60,4 @@ checkServiceability ::
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True

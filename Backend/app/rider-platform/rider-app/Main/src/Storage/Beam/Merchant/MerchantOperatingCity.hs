@@ -12,41 +12,35 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
-module Storage.Beam.DriverOffer where
+module Storage.Beam.Merchant.MerchantOperatingCity where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverOffer as Domain
-import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
+import Database.Beam.MySQL ()
+import GHC.Generics (Generic)
+import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Tools.Beam.UtilsTH
 
-data DriverOfferT f = DriverOfferT
+data MerchantOperatingCityT f = MerchantOperatingCityT
   { id :: B.C f Text,
-    estimateId :: B.C f Text,
-    merchantId :: B.C f (Maybe Text),
-    merchantOperatingCityId :: B.C f (Maybe Text),
-    driverId :: B.C f (Maybe Text),
-    driverName :: B.C f Text,
-    durationToPickup :: B.C f Int,
-    distanceToPickup :: B.C f HighPrecMeters,
-    validTill :: B.C f UTCTime,
-    bppQuoteId :: B.C f Text,
-    rating :: B.C f (Maybe Centesimal),
-    status :: B.C f Domain.DriverOfferStatus,
-    updatedAt :: B.C f UTCTime
+    merchantId :: B.C f Text,
+    merchantShortId :: B.C f Text,
+    city :: B.C f Context.City
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table DriverOfferT where
-  data PrimaryKey DriverOfferT f
+instance B.Table MerchantOperatingCityT where
+  data PrimaryKey MerchantOperatingCityT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type DriverOffer = DriverOfferT Identity
+type MerchantOperatingCity = MerchantOperatingCityT Identity
 
-$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
+$(enableKVPG ''MerchantOperatingCityT ['id] [])
 
-$(mkTableInstances ''DriverOfferT "driver_offer")
+$(mkTableInstances ''MerchantOperatingCityT "merchant_operating_city")

@@ -14,11 +14,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.MerchantConfig
-  ( findAllByMerchantId,
+  ( findAllByMerchantOperatingCityId,
   )
 where
 
-import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.MerchantConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -26,16 +26,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantConfig as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m [MerchantConfig]
-findAllByMerchantId id =
-  Hedis.safeGet (makeIdKey id) >>= \case
+findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantConfig]
+findAllByMerchantOperatingCityId id =
+  Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return a
-    Nothing -> cacheMerchant id /=<< Queries.findAllByMerchantId id
+    Nothing -> cacheMerchantOperatingCity id /=<< Queries.findAllByMerchantOperatingCityId id
 
-cacheMerchant :: (CacheFlow m r) => Id Merchant -> [MerchantConfig] -> m ()
-cacheMerchant merchantId merchantConfig = do
+cacheMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantConfig] -> m ()
+cacheMerchantOperatingCity merchantOperatingCityId merchantConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeIdKey merchantId) merchantConfig expTime
+  Hedis.setExp (makeMerchantOperatingCityIdKey merchantOperatingCityId) merchantConfig expTime
 
-makeIdKey :: Id Merchant -> Text
-makeIdKey id = "CachedQueries:MerchantConfig:Id-" <> id.getId
+makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOperatingCityIdKey id = "CachedQueries:MerchantConfig:MerchantOperatingCityId-" <> id.getId

@@ -185,6 +185,7 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -251,6 +252,7 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -282,10 +284,12 @@ library
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.Queries.AadhaarVerification.AadhaarOtp
@@ -313,6 +317,7 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig

@@ -39,6 +39,7 @@ import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -120,6 +121,8 @@ callTrack ::
 callTrack booking ride = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (InvalidRequest "Bpp Booking is missing")
+  let merchantOperatingCityId = booking.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let trackBUildReq =
         TrackACL.TrackBuildReq
           { bppId = booking.providerId,

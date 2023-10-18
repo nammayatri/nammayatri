@@ -20,6 +20,7 @@ module Tools.AadhaarVerification
 where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.AadhaarVerification as Reexport hiding
   ( generateAadhaarOtp,
@@ -37,6 +38,7 @@ import Tools.Error
 generateAadhaarOtp ::
   ServiceFlow m r =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   AadhaarOtpReq ->
   m AadhaarVerificationResp
 generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
@@ -44,6 +46,7 @@ generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
 verifyAadhaarOtp ::
   ServiceFlow m r =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   AadhaarOtpVerifyReq ->
   m AadhaarOtpVerifyRes
 verifyAadhaarOtp = runWithServiceConfig Verification.verifyAadhaarOtp
@@ -52,12 +55,13 @@ runWithServiceConfig ::
   ServiceFlow m r =>
   (AadhaarVerificationServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+    CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)
       >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantId:" <> merchantId.getId)

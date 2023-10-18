@@ -54,6 +54,7 @@ data BookingT f = BookingT
     tripTermsId :: B.C f (Maybe Text),
     rentalSlabId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

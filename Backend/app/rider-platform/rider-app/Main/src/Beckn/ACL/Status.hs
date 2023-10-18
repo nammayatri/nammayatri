@@ -29,7 +29,8 @@ import Kernel.Utils.Common
 
 data DStatusReq = DStatusReq
   { booking :: Booking,
-    merchant :: Merchant
+    merchant :: Merchant,
+    city :: Context.City
   }
 
 buildStatusReq ::
@@ -49,7 +50,7 @@ buildStatusReq DStatusReq {..} = do
       bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
-      merchant.city
+      city
       merchant.country
       False
   pure $

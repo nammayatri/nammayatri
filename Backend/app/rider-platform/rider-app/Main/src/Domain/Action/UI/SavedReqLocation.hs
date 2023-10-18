@@ -56,7 +56,7 @@ newtype SavedReqLocationsListRes = SavedReqLocationsListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-createSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
+createSavedReqLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
 createSavedReqLocation riderId sreq = do
   savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag
   when (sreq.tag == pack "") $ throwError $ InvalidRequest "Location tag cannot be empty"
@@ -66,7 +66,7 @@ createSavedReqLocation riderId sreq = do
   _ <- QSavedReqLocation.create location
   return APISuccess.Success
 
-getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
+getSavedReqLocations :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
   savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations

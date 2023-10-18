@@ -30,16 +30,16 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
-findById :: MonadFlow m => Id Merchant -> m (Maybe Merchant)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
-findByShortId :: MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
 
-findBySubscriberId :: MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
 
-findAll :: MonadFlow m => m [Merchant]
+findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
 update :: MonadFlow m => Merchant -> m ()
@@ -70,7 +70,7 @@ instance FromTType' BeamM.Merchant Merchant where
             subscriberId = ShortId subscriberId,
             shortId = ShortId shortId,
             name = name,
-            city = city,
+            defaultCity = city,
             country = country,
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
@@ -104,7 +104,7 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.subscriberId = getShortId subscriberId,
         BeamM.shortId = getShortId shortId,
         BeamM.name = name,
-        BeamM.city = city,
+        BeamM.city = defaultCity,
         BeamM.country = country,
         BeamM.bapId = bapId,
         BeamM.bapUniqueKeyId = bapUniqueKeyId,

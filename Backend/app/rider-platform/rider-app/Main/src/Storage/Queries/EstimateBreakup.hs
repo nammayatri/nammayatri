@@ -21,13 +21,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
 create :: MonadFlow m => EstimateBreakup -> m ()
 create = createWithKV
 
-findAllByEstimateIdT :: MonadFlow m => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where

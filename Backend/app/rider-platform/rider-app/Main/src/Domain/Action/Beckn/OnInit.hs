@@ -22,9 +22,11 @@ import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -58,7 +60,8 @@ data OnInitRes = OnInitRes
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City
   }
   deriving (Generic, Show)
 
@@ -72,6 +75,9 @@ onInit req = do
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   let fromLocation = booking.fromLocation
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing

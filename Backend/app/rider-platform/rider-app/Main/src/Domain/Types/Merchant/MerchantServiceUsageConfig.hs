@@ -16,6 +16,7 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.External.AadhaarVerification
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
@@ -28,6 +29,7 @@ import Kernel.Types.Id
 
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     initiateCall :: CallService,
     notifyPerson :: NotificationService,
     getDistances :: MapsService,
