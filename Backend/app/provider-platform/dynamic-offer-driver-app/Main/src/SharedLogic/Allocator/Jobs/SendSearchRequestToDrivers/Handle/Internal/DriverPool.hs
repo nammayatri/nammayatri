@@ -209,14 +209,14 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchId vehicleVariant batchNum 
           let merchantId = searchReq.providerId
           let pickupLoc = searchReq.searchRequestDetails.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId True (Just radiusStep)
         calcDriverCurrentlyOnRidePool radiusStep transporterConfig = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
               let pickupLoc = searchReq.searchRequestDetails.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId (Just $ radiusStep - 1)
             else pure []
         fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)

@@ -86,7 +86,6 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show, PrettyShow)
 
--- FIXME use Id Search
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
     searchTryId :: Id DST.SearchTry,
