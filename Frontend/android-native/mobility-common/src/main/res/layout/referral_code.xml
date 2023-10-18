@@ -39,7 +39,6 @@
                 android:layout_height="match_parent"
                 android:text="Referral\nCode"
                 android:layout_marginLeft="20dp"
-                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:textSize="16dp"
                 android:textColor="@color/Black900"/>
 
@@ -50,7 +49,6 @@
                 android:layout_height="match_parent"
                 android:text="000001"
                 android:textColor="@color/Black900"
-                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:textSize="30dp" />
         </LinearLayout>
 
