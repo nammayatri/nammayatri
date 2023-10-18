@@ -285,7 +285,6 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
-      SharedLogic.External.LocationTrackingService.API.DriverDetails
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy

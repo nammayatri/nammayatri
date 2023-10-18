@@ -7,6 +7,7 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
+    location-tracking-service.url = "github:nammayatri/location-tracking-service";
 
     # We cannot use southern-zone-latest here, because the sha256 will change
     # over time.  NOTE: This file is not permanent, find the available one at

@@ -1,7 +1,7 @@
 # Add a process-compose based package for running the entire backend stack.
 _:
 {
-  perSystem = perSystem@{ config, self', pkgs, lib, ... }:
+  perSystem = perSystem@{ inputs', config, self', pkgs, lib, ... }:
     let
       # Top-level common process-compose configuration
       commonConfig = { config, ... }: {
@@ -45,6 +45,7 @@ _:
       externalProcesses = {
         beckn-gateway.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
         mock-registry.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
+        location-tracking-service.command = lib.getExe inputs'.location-tracking-service.packages.default;
       };
 
       mobilityStackProcesses = m: addModule m {
