@@ -20,7 +20,8 @@ window.getMerchantConfig = function () {
     "LEARN_HOW_TEXT",
     "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
     "ACCESSIBILITY_TEXT",
-    "TO_CATER_YOUR_SPECIFIC_NEEDS"
+    "TO_CATER_YOUR_SPECIFIC_NEEDS",
+    "PLEASE_ENABLE_LOCATION_PERMISSION"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -166,7 +167,8 @@ window.getMerchantConfig = function () {
       "LEARN_HOW_TEXT" : "Learn how Yatri Sathi caters to your needs",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are in increments of ₹10",
       "ACCESSIBILITY_TEXT" : "Yatri Sathi, now customised for you!",
-      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri Sathi."
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri Sathi.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri Sathi from the settings app to start looking for rides."
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -190,7 +192,8 @@ window.getMerchantConfig = function () {
       "LEARN_HOW_TEXT" : "जानें कि यात्री साथी आपकी ज़रूरतों को कैसे पूरा करता है",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
       "ACCESSIBILITY_TEXT" : "यात्री साथी, अब आपके लिए अनुकूलित!",
-      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री साथी की कुछ विशेषताओं को अनुकूलित किया है"
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री साथी की कुछ विशेषताओं को अनुकूलित किया है",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से यात्री साथी के लिए स्थान अनुमतियां सक्षम करें।"
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -214,7 +217,8 @@ window.getMerchantConfig = function () {
       "LEARN_HOW_TEXT" : "জানুন কীভাবে যাত্রী সাথী আপনার প্রয়োজন মেটায়",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
       "ACCESSIBILITY_TEXT" : "যাত্রী সাথী, এখন আপনার জন্য কাস্টমাইজ করা হয়েছে!",
-      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "আপনার নির্দিষ্ট চাহিদা মেটাতে আমরা যাত্রী সাথীর কিছু বৈশিষ্ট্য কাস্টমাইজ করেছি"
+      "TO_CATER_YOUR_SPECIFIC_NEEDS" : "আপনার নির্দিষ্ট চাহিদা মেটাতে আমরা যাত্রী সাথীর কিছু বৈশিষ্ট্য কাস্টমাইজ করেছি",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে সেটিংস অ্যাপ থেকে যাত্রী সাথীর জন্য অবস্থানের অনুমতি সক্ষম করুন যাতে রাইডের খোঁজ শুরু করা যায়।"
     },
     "languageList": [{
       "name": "English",
