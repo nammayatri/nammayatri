@@ -162,8 +162,6 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           pure $ getCoordinates driverLocation
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
-    ltsRes <- LF.rideStart rideId point.lat point.lon booking.providerId driverId
-    logTagInfo "ltsRes" (show ltsRes)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId
