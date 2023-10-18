@@ -118,19 +118,6 @@ instance IsHTTPError AllocationError where
 
 instance IsAPIError AllocationError
 
-data LocationTrackingError
-  = InvalidLocationTrackingException
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''LocationTrackingError
-
-instance IsBaseError LocationTrackingError
-
-instance IsHTTPError LocationTrackingError where
-  toErrorCode InvalidLocationTrackingException = "INVALID_LOCATION_TRACKING_EXCEPTION"
-
-instance IsAPIError LocationTrackingError
-
 data DriverInformationError
   = DriverInfoNotFound
   deriving (Eq, Show, IsBecknAPIError)

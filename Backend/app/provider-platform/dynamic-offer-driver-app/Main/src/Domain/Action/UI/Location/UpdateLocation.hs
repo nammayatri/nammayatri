@@ -93,22 +93,6 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   }
   deriving (Generic, FromJSON, ToJSON)
 
--- buildUpdateLocationHandle ::
---   Id Person.Person ->
---   Flow (UpdateLocationHandle Flow)
--- buildUpdateLocationHandle driverId = do
---   driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
---   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
---   pure $
---     UpdateLocationHandle
---       { driver,
---         findDriverLocation = DrLoc.findById driverId,
---         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
---         getAssignedRide = QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
---         addIntermediateRoutePoints = \rideId ->
---           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
---       }
-
 streamLocationUpdates ::
   ( MonadFlow m,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],

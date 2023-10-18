@@ -112,6 +112,7 @@ endRideTransaction ::
   Id Merchant ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+  QDI.updateOnRide (cast ride.driverId) False
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create

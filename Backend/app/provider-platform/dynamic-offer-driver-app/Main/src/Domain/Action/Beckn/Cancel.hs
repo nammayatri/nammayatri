@@ -82,6 +82,7 @@ cancel req merchant booking = do
   mbRide <- QRide.findActiveByRBId req.bookingId
   whenJust mbRide $ \ride -> do
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    QDI.updateOnRide (cast ride.driverId) False
     QRide.updateStatus ride.id SRide.CANCELLED
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
 

@@ -135,8 +135,6 @@ data Status = PreRide | ActualRide
 
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
-    totalDistance :: Double,
-    status :: Status,
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

@@ -94,12 +94,11 @@ cancelRideImpl rideId bookingCReason = do
   cancelRideTransaction booking.id ride bookingCReason merchantId
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
+  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-    void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
     Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source
@@ -150,6 +149,7 @@ cancelRideTransaction ::
 cancelRideTransaction bookingId ride bookingCReason _merchantId = do
   let driverId = cast ride.driverId
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  QDI.updateOnRide (cast ride.driverId) False
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus bookingId SRB.CANCELLED

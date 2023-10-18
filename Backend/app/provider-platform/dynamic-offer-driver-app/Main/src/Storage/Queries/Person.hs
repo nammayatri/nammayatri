@@ -185,10 +185,27 @@ findAllDriversByIdsFirstNameAsc _merchantId driverIds = do
       info <- HashMap.lookup driverId' driverInfoHashMap
       Just $ FullDriver person location info vehicle
 
-getOnRideStuckDriverIds :: (MonadFlow m, Log m) => UTCTime -> m [DriverInformation]
+data DriverInfosAndRideDetails = DriverInfosAndRideDetails
+  { driverInfo :: DriverInformation,
+    ride :: Ride.Ride
+  }
+
+getOnRideStuckDriverIds :: (MonadFlow m, Log m) => UTCTime -> m [DriverInfosAndRideDetails]
 getOnRideStuckDriverIds dbSyncInterVal = do
-  driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
-  findAllWithDb [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.updatedAt $ Se.LessThanOrEq dbSyncInterVal, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
+  rideDetails <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]
+  let driverIds = Ride.driverId <$> rideDetails
+  driverInfos <- findAllWithDb [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.updatedAt $ Se.LessThanOrEq dbSyncInterVal, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
+  return (linkArrays driverInfos rideDetails driverIds)
+  where
+    linkArrays driverInfos rideDetails driverIds =
+      let driverInfosHashMap = HashMap.fromList $ (\p -> (p.driverId, p)) <$> driverInfos
+          rideDetailsHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> rideDetails
+       in mapMaybe (buildDriverInfosAndRideDetails driverInfosHashMap rideDetailsHashMap) driverIds
+
+    buildDriverInfosAndRideDetails driverInfosHashMap rideDetailsHashMap driverId = do
+      driverInfo <- HashMap.lookup driverId driverInfosHashMap
+      rideDetail <- HashMap.lookup driverId rideDetailsHashMap
+      Just $ DriverInfosAndRideDetails driverInfo rideDetail
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId

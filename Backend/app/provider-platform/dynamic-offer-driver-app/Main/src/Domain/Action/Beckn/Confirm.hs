@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
@@ -144,6 +145,7 @@ handler transporter req quote = do
           -- critical updates
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QRide.createRide ride
+          QDI.updateOnRide (cast driver.id) True
 
           -- non-critical updates
           when isNewRider $ QRD.create riderDetails
@@ -335,7 +337,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    LT.HasLocationService m r
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -354,6 +357,8 @@ cancelBooking booking mbDriver transporter = do
   QBCR.upsert bookingCancellationReason
   whenJust mbRide $ \ride -> do
     QRide.updateStatus ride.id DRide.CANCELLED
+    QDI.updateOnRide (cast ride.driverId) False
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
 
@@ -389,7 +394,8 @@ validateRequest ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    LT.HasLocationService m r
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
