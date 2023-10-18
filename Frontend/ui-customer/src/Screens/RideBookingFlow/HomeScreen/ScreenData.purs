@@ -297,6 +297,7 @@ initData = {
             , selectedDay : Nothing
             }
         }
+    , flowWithoutOffers : true
     }
 }
 

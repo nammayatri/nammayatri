@@ -727,6 +727,7 @@ type HomeScreenStateProps =
   , showRentalPackagePopup :: Boolean
   , bookingStage :: BookingStage
   , rentalData :: RentalConfig
+  , flowWithoutOffers :: Boolean
   }
 
 type RentalConfig = {
