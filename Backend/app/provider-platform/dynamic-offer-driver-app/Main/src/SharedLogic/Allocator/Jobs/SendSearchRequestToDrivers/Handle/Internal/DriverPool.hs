@@ -51,22 +51,19 @@ import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as D
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
 
--- FIXME include to driverPool only drivers with setRental = True for rentals
-
 isBatchNumExceedLimit ::
-  ( --EsqDBFlow m r,
-    CacheFlow m r
+  ( CacheFlow m r
   ) =>
   DriverPoolConfig ->
   Id DST.SearchTry ->
   m Bool
-isBatchNumExceedLimit driverPoolConfig searchId = do
+isBatchNumExceedLimit driverPoolConfig searchTryId = do
   let maxNumberOfBatches = driverPoolConfig.maxNumberOfBatches
-  currentBatchNum <- getPoolBatchNum searchId
+  currentBatchNum <- getPoolBatchNum searchTryId
   return $ currentBatchNum >= maxNumberOfBatches
 
 previouslyAttemptedDriversKey :: Id DST.SearchTry -> Text
-previouslyAttemptedDriversKey searchId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchId.getId
+previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -84,11 +81,11 @@ prepareDriverPoolBatch ::
   PoolBatchNum ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch driverPoolCfg searchReq searchId vehicleVariant batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True
-  incrementDriverRequestCount (fst poolBatchWithFlags) searchId
+  incrementDriverRequestCount (fst poolBatchWithFlags) searchTryId
   pure $ buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags previousBatchesDrivers
   where
     buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags prevBatchDrivers =
@@ -98,7 +95,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchId vehicleVariant batchNum 
           prevBatchDrivers = prevBatchDrivers
         }
     getPreviousBatchesDrivers = do
-      batches <- previouslyAttemptedDrivers searchId
+      batches <- previouslyAttemptedDrivers searchTryId
       return $ (.driverPoolResult.driverId) <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling = do
@@ -221,7 +218,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchId vehicleVariant batchNum 
         fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
-          driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchId dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
+          driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTryId dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
           nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
@@ -239,8 +236,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchId vehicleVariant batchNum 
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCount
         cacheBatch batch = do
           logDebug $ "Caching batch-" <> show batch
-          batches <- previouslyAttemptedDrivers searchId
-          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchId) (batches <> batch) (60 * 30)
+          batches <- previouslyAttemptedDrivers searchTryId
+          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchTryId) (batches <> batch) (60 * 30)
         -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
         splitDriverPoolForSorting merchantId minQuotes =
           foldrM
@@ -411,7 +408,7 @@ randomizeAndLimitSelection ::
 randomizeAndLimitSelection = randomizeList
 
 poolBatchNumKey :: Id DST.SearchTry -> Text
-poolBatchNumKey searchId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchId.getId
+poolBatchNumKey searchTryId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchTryId.getId
 
 poolRadiusStepKey :: Id DSR.SearchRequest -> Text
 poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReqId-" <> searchReqId.getId
@@ -443,19 +440,19 @@ getNextDriverPoolBatch ::
   DVeh.Variant ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchId vehicleVariant goHomeConfig = withLogTag "getNextDriverPoolBatch" do
-  batchNum <- getPoolBatchNum searchId
-  incrementBatchNum searchId
-  prepareDriverPoolBatch driverPoolConfig searchReq searchId vehicleVariant batchNum goHomeConfig
+getNextDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+  batchNum <- getPoolBatchNum searchTryId
+  incrementBatchNum searchTryId
+  prepareDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant batchNum goHomeConfig
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
-getPoolBatchNum searchId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchId)
+getPoolBatchNum searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchTryId)
   case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey searchId) (0 :: Integer) expTime
+      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey searchTryId) (0 :: Integer) expTime
       return 0
 
 incrementBatchNum ::
@@ -463,8 +460,8 @@ incrementBatchNum ::
   ) =>
   Id DST.SearchTry ->
   m ()
-incrementBatchNum searchId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchId)
+incrementBatchNum searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchTryId)
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
 
@@ -489,19 +486,19 @@ incrementPoolRadiusStep searchReqId = do
   return ()
 
 driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> Text
-driverRequestCountKey searchId driverId = "Driver-Request-Count-Key:SearchTryId-" <> searchId.getId <> ":DriverId-" <> driverId.getId
+driverRequestCountKey searchTryId driverId = "Driver-Request-Count-Key:SearchTryId-" <> searchTryId.getId <> ":DriverId-" <> driverId.getId
 
 checkRequestCount :: Redis.HedisFlow m r => Id DST.SearchTry -> Id Driver -> DriverPoolConfig -> m Bool
-checkRequestCount searchId driverId driverPoolConfig =
+checkRequestCount searchTryId driverId driverPoolConfig =
   maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit)
-    <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchId driverId))
+    <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchTryId driverId))
 
 incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DST.SearchTry -> m ()
-incrementDriverRequestCount finalPoolBatch searchId = do
+incrementDriverRequestCount finalPoolBatch searchTryId = do
   CM.mapM_
     ( \dpr ->
         Redis.withCrossAppRedis do
-          void $ Redis.incr (driverRequestCountKey searchId dpr.driverPoolResult.driverId)
-          Redis.expire (driverRequestCountKey searchId dpr.driverPoolResult.driverId) 7200
+          void $ Redis.incr (driverRequestCountKey searchTryId dpr.driverPoolResult.driverId)
+          Redis.expire (driverRequestCountKey searchTryId dpr.driverPoolResult.driverId) 7200
     )
     finalPoolBatch

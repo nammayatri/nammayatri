@@ -164,7 +164,6 @@ instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
 
--- fetch these fields from booking itself?
 data AllocateRentalRideJobData = AllocateRentalRideJobData
   { bookingId :: Id Booking,
     searchTryId :: Id DST.SearchTry,
