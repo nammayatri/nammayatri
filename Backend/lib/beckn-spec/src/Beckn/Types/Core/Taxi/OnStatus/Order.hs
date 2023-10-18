@@ -32,7 +32,7 @@ instance ToSchema Order where
 
 data BookingStatus
   = NEW_BOOKING
-  | BOOKING_SCHEDULED
+  | BOOKING_CONFIRMED
   | TRIP_ASSIGNED
   | BOOKING_COMPLETED
   | BOOKING_CANCELLED
@@ -62,7 +62,7 @@ bookingStatusSchemaOptions =
 modifier :: String -> String
 modifier = \case
   "NEW_BOOKING" -> "NEW"
-  "BOOKING_SCHEDULED" -> "SCHEDULED"
+  "BOOKING_CONFIRMED" -> "CONFIRMED"
   "TRIP_ASSIGNED" -> "TRIP_ASSIGNED"
   "BOOKING_COMPLETED" -> "COMPLETED"
   "BOOKING_CANCELLED" -> "CANCELLED"

@@ -1359,7 +1359,7 @@ respondQuote (driverId, _) req = do
       --- create ride ---
       -- FIXME remove duplication with Domain.Action.Beckn.Confirm
       when (req.response == Accept) $ do
-        unless (booking.status == DB.SCHEDULED) $
+        unless (booking.status == DB.CONFIRMED) $
           throwError (BookingInvalidStatus $ show booking.status)
         riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
 
