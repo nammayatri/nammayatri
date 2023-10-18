@@ -259,7 +259,7 @@ handler merchant sReq' =
           fareProducts
       logDebug $ "rentalfarePolicies" <> show fullFarePolicies
       rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
-      _ <- QSR.create rentalSearchReq
+      _ <- QSR.createDSReq rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let vehiclesVariantRentalFarePolicy = listVehicleVariantHelper fullFarePolicies
           initialDistance = 1000

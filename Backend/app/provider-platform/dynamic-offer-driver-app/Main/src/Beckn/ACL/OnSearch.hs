@@ -259,6 +259,12 @@ mkQuoteEntitiesRental start provider it = do
           list =
             [ OS.Tag
                 { display = Just True,
+                  code = Just "rental_base_fare",
+                  name = Just "Rental Base Fare",
+                  value = Just $ show info.baseFare
+                },
+              OS.Tag
+                { display = Just True,
                   code = Just "rental_base_duration",
                   name = Just "Base Duration",
                   value = Just $ show info.baseDuration.getSeconds

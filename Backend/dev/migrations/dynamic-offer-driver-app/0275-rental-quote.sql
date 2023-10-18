@@ -31,3 +31,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN opt_for_rental 
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_start_reading_image_path CHARACTER VARYING(255);
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading_image_path CHARACTER VARYING(255);
+
+alter table atlas_app.rental_slab add column base_fare int;
+alter table atlas_app.rental_slab add column per_hour_charge int;
+alter table atlas_app.rental_slab add column per_hour_free_kms int;
+alter table atlas_app.rental_slab add column per_extra_km_rate int;
+alter table atlas_app.rental_slab add column night_shift_charge int;
+alter table atlas_app.rental_slab drop column base_distance;
+alter table atlas_app.rental_slab drop column base_duration;

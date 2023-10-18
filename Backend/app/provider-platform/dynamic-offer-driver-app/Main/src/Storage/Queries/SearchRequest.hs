@@ -39,13 +39,13 @@ createDSReq' = createWithKV
 
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
-  case dsReq.tag of
-    ON_DEMAND -> do
-      _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.fromLocation.id) $ do QL.create dsReq.searchRequestDetails.fromLocation
-      _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.toLocation.id) $ do QL.create dsReq.searchRequestDetails.toLocation
+  case dsReq.searchRequestDetails of
+    SearchRequestDetailsOnDemand {fromLocation, toLocation} -> do
+      _ <- whenNothingM_ (QL.findById fromLocation.id) $ do QL.create fromLocation
+      _ <- whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
       pure ()
-    RENTAL -> do
-      _ <- whenNothingM_ (QL.findById dsReq.searchRequestDetails.rentalFromLocation.id) $ do QL.create dsReq.searchRequestDetails.rentalFromLocation
+    SearchRequestDetailsRental {rentalFromLocation} -> do
+      _ <- whenNothingM_ (QL.findById rentalFromLocation.id) $ do QL.create rentalFromLocation
       pure ()
   createDSReq' dsReq
 
@@ -58,7 +58,7 @@ createDSReq searchRequest = do
       toLocationMaps <- SLM.buildDropLocationMapping details.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
     RENTAL -> do
-      fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+      fromLocationMap <- SLM.buildPickUpLocationMapping details.rentalFromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> create searchRequest
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
