@@ -113,6 +113,7 @@ data DriversAPIs = DriversAPIs
     updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
     getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     getFleetDriverAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
+    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
   }
 
@@ -303,6 +304,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updateSubscriptionDriverFeeAndInvoice
       :<|> getFleetDriverVehicleAssociation
       :<|> getFleetDriverAssociation
+      :<|> getFleetVehicleAssociation
       :<|> setVehicleDriverRcStatusForFleet = driversClient
 
     rideList

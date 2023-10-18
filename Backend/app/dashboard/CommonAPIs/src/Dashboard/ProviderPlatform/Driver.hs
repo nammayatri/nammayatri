@@ -926,6 +926,7 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
     driverName :: Text,
     status :: DriverMode,
     completedRides :: Int,
+    vehicleType :: Maybe Variant,
     earning :: Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
@@ -939,6 +940,13 @@ data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes
 type GetFleetDriverAssociationAPI =
   "fleet"
     :> "driverAssociation"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+type GetFleetVehicleAssociationAPI =
+  "fleet"
+    :> "vehicleAssociation"
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
     :> Get '[JSON] DrivertoVehicleAssociationRes

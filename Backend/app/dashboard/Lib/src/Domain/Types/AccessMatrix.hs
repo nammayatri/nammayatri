@@ -182,6 +182,7 @@ data UserActionType
   | SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
   | GET_DRIVER_VEHICLE_ASSOCIATION
   | GET_DRIVER_ASSOCIATION
+  | GET_VEHICLE_ASSOCIATION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

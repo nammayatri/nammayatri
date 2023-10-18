@@ -73,6 +73,7 @@ type API =
            :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
            :<|> GetFleetDriverVehicleAssociationAPI
            :<|> GetFleetDriverAssociationAPI
+           :<|> GetFleetVehicleAssociationAPI
            :<|> SetVehicleDriverRcStatusForFleetAPI
        )
 
@@ -224,6 +225,14 @@ type GetFleetDriverAssociationAPI =
     :> QueryParam "offset" Int
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
+type GetFleetVehicleAssociationAPI =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "getFleetVehicleAssociation"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocumentsInfo merchantId
@@ -271,6 +280,7 @@ handler merchantId =
     :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId
     :<|> getFleetDriverVehicleAssociation merchantId
     :<|> getFleetDriverAssociation merchantId
+    :<|> getFleetVehicleAssociation merchantId
     :<|> setVehicleDriverRcStatusForFleet merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
@@ -413,3 +423,6 @@ getFleetDriverVehicleAssociation merchantShortId fleetOwnerId mbLimit mbOffset =
 
 getFleetDriverAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
 getFleetDriverAssociation merchantShortId fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId fleetOwnerId mbLimit mbOffset
+
+getFleetVehicleAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociation merchantShortId fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId fleetOwnerId mbLimit mbOffset
