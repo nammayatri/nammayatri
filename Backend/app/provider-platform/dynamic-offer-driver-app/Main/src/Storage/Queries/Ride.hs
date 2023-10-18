@@ -489,7 +489,7 @@ createMapping bookingId rideId = do
   fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
 
   when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-  let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+  let toLocMap = DL.maximumBy (comparing (.order)) toLocationMappings
 
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
   toLocationRideMappings <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
