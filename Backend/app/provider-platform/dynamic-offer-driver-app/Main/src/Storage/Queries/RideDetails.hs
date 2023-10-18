@@ -47,14 +47,25 @@ totalRidesByFleetOwnerPerVehicle fleetIdWanted vehicleNumberWanted = do
       ]
   pure $ length res
 
+totalRidesByFleetOwnerPerDriver :: MonadFlow m => Maybe Text -> Text -> m Int
+totalRidesByFleetOwnerPerDriver fleetIdWanted driverNumberWanted = do
+  res <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted,
+            Se.Is BeamRD.driverNumberEncrypted $ Se.Eq (Just driverNumberWanted)
+          ]
+      ]
+  pure $ length res
+
 totalRidesByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Text -> m Int
-totalRidesByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverNameWanted = do
+totalRidesByFleetOwnerPerVehicleAndDriver fleetIdWanted vehicleNumberWanted driverNumberWanted = do
   res <-
     findAllWithKV
       [ Se.And
           [ Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted,
             Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNumberWanted,
-            Se.Is BeamRD.driverName $ Se.Eq driverNameWanted
+            Se.Is BeamRD.driverNumberEncrypted $ Se.Eq (Just driverNumberWanted)
           ]
       ]
   pure $ length res
