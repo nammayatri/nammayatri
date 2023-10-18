@@ -261,13 +261,13 @@ mkQuoteEntitiesRental start provider it = do
                 { display = Just True,
                   code = Just "rental_base_duration",
                   name = Just "Base Duration",
-                  value = Just $ show info.baseDuration.getHours
+                  value = Just $ show info.baseDuration.getSeconds
                 },
               OS.Tag
                 { display = Just True,
                   code = Just "rental_base_distance",
                   name = Just "Base Distance",
-                  value = Just $ show info.baseDistance.getKilometers
+                  value = Just $ show info.baseDistance.getMeters
                 },
               OS.Tag
                 { display = Just True,

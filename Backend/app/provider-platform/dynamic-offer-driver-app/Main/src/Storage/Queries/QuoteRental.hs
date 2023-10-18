@@ -49,6 +49,15 @@ countAllByRequestId searchReqID = do
 findById :: MonadFlow m => Id QuoteRental -> m (Maybe QuoteRental)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQR.id $ Se.Eq dQuoteId]
 
+updateBaseFields :: MonadFlow m => Id QuoteRental -> Meters -> Seconds -> Money -> m ()
+updateBaseFields (Id id) baseDistance baseDuration baseFare =
+  updateOneWithKV
+    [ Se.Set BeamQR.baseDistance baseDistance,
+      Se.Set BeamQR.baseDuration baseDuration,
+      Se.Set BeamQR.baseFare baseFare
+    ]
+    [Se.Is BeamQR.id (Se.Eq id)]
+
 instance FromTType' BeamQR.QuoteRental QuoteRental where
   fromTType' BeamQR.QuoteRentalT {..} = do
     fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in QuoteSpecialZone for id: " <> show fareParametersId)

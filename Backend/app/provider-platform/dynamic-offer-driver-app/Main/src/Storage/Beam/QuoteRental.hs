@@ -29,8 +29,8 @@ data QuoteRentalT f = QuoteRentalT
     validTill :: B.C f LocalTime,
     fareParametersId :: B.C f Text,
     estimatedFinishTime :: B.C f UTCTime,
-    baseDistance :: B.C f Kilometers,
-    baseDuration :: B.C f Hours,
+    baseDistance :: B.C f Meters,
+    baseDuration :: B.C f Seconds,
     baseFare :: B.C f Money,
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime

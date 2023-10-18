@@ -32,8 +32,8 @@ data QuoteRental = QuoteRental
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,
-    baseDistance :: Kilometers,
-    baseDuration :: Hours,
+    baseDistance :: Meters,
+    baseDuration :: Seconds,
     baseFare :: Money,
     fareParams :: Params.FareParameters
   }

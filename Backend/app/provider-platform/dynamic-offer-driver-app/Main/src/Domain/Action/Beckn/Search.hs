@@ -136,8 +136,8 @@ data RentalQuoteInfo = RentalQuoteInfo
   { quoteId :: Id DQuoteRental.QuoteRental,
     vehicleVariant :: DVeh.Variant,
     baseFare :: Money,
-    baseDistance :: Kilometers,
-    baseDuration :: Hours,
+    baseDistance :: Meters,
+    baseDuration :: Seconds,
     perHourCharge :: Money,
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
@@ -550,8 +550,8 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
         providerId = transporterId,
         createdAt = now,
         updatedAt = now,
-        baseDistance = metersToKilometers distance,
-        baseDuration = Hours $ div (getSeconds duration) 3600,
+        baseDistance = distance,
+        baseDuration = duration,
         baseFare = estimatedFare,
         ..
       }
