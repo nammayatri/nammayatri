@@ -45,14 +45,14 @@ type CustomerConfirmAPI =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
-    :> QueryParam "startTime" UTCTime
+    :> ReqBody '[JSON] UC.ConfirmReq
     :> Post '[JSON] UC.ConfirmRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler =
   callConfirm
 
-callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> Maybe UTCTime -> FlowHandler UC.ConfirmRes
-callConfirm merchantId personId quote mbPaymentMethodId startTime = do
+callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> UC.ConfirmReq -> FlowHandler UC.ConfirmRes
+callConfirm merchantId personId quote mbPaymentMethodId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UC.confirm (personId, m.id) quote mbPaymentMethodId startTime
+  UC.confirm (personId, m.id) quote mbPaymentMethodId req

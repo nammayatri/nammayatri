@@ -72,7 +72,7 @@ buildInitMessage res = do
                     breakup = Nothing
                   },
               billing = mkBilling res.riderPhone res.riderName,
-              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st res.rentalDuration,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
             }
@@ -104,31 +104,47 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> UTCTime -> Init.FulfillmentInfo
-mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant startTime =
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> UTCTime -> Maybe Int -> Init.FulfillmentInfo
+mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant startTime rentalDuration =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,
       _type = fulfillmentType,
       tags =
-        if isJust mbMaxDistance
-          then
-            Just $
-              Init.TG
-                [ Init.TagGroup
-                    { display = True,
-                      code = "estimations",
-                      name = "Estimations",
-                      list =
-                        [ Init.Tag
-                            { display = (\_ -> Just True) =<< mbMaxDistance,
-                              code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
-                              name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                              value = (\distance -> Just $ show $ distance) =<< mbMaxDistance
-                            }
-                        ]
-                    }
-                ]
-          else Nothing,
+        Just $
+          Init.TG
+            ( if isJust mbMaxDistance
+                then
+                  [ Init.TagGroup
+                      { display = True,
+                        code = "estimations",
+                        name = "Estimations",
+                        list =
+                          [ Init.Tag
+                              { display = (\_ -> Just True) =<< mbMaxDistance,
+                                code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
+                                name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
+                                value = (\distance -> Just $ show $ distance) =<< mbMaxDistance
+                              }
+                          ]
+                      }
+                  ]
+                else
+                  []
+                    <> [ Init.TagGroup
+                           { display = True,
+                             code = "rental_info",
+                             name = "RentalInfo",
+                             list =
+                               [ Init.Tag
+                                   { display = (\_ -> Just True) =<< rentalDuration,
+                                     code = (\_ -> Just "rental_duration") =<< rentalDuration,
+                                     name = (\_ -> Just "How may hours selected") =<< rentalDuration,
+                                     value = (\distance -> Just $ show $ distance) =<< rentalDuration
+                                   }
+                               ]
+                           }
+                       ]
+            ),
       start =
         Init.StartInfo
           { location =

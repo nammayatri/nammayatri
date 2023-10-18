@@ -17,6 +17,7 @@ module API.UI.Confirm
     handler,
     confirm,
     ConfirmRes (..),
+    ConfirmReq (..),
   )
 where
 
@@ -44,11 +45,17 @@ type API =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
-    :> QueryParam "startTime" UTCTime
+    :> ReqBody '[JSON] ConfirmReq
     :> Post '[JSON] ConfirmRes
 
 newtype ConfirmRes = ConfirmRes
   { bookingId :: Id DRB.Booking
+  }
+  deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
+
+data ConfirmReq = ConfirmReq
+  { startTime :: Maybe UTCTime,
+    rentalDuration :: Maybe Int
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
@@ -63,11 +70,11 @@ confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
-  Maybe UTCTime ->
+  ConfirmReq ->
   FlowHandler ConfirmRes
-confirm (personId, _) quoteId mbPaymentMethodId startTime =
+confirm (personId, _) quoteId mbPaymentMethodId ConfirmReq {..} =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId startTime
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId startTime rentalDuration
     becknInitReq <- ACL.buildInitReq dConfirmRes
     handle (errHandler dConfirmRes.booking) $
       void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq

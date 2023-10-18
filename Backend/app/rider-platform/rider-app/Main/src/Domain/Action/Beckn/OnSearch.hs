@@ -148,8 +148,11 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
 
 data RentalQuoteDetails = RentalQuoteDetails
   { id :: Text,
-    baseDistance :: Meters,
-    baseDuration :: Seconds
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Money
   }
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq

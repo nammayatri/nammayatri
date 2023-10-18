@@ -17,18 +17,23 @@ module Domain.Types.RentalSlab where
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.GenericPretty (PrettyShow)
 
 data RentalSlab = RentalSlab
   { id :: Id RentalSlab, --not used in domain layer
-    baseDistance :: Meters,
-    baseDuration :: Seconds
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Money
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
 data RentalSlabAPIEntity = RentalSlabAPIEntity
   { bppQuoteId :: Text,
-    baseDistance :: Meters,
-    baseDuration :: Seconds
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Money
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

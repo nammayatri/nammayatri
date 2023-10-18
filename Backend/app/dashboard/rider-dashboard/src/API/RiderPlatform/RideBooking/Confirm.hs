@@ -51,9 +51,9 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.ConfirmAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callConfirm :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> Maybe UTCTime -> FlowHandler UC.ConfirmRes
-callConfirm merchantShortId apiTokenInfo personId quoteId mbMerchantPaymentId startTime = withFlowHandlerAPI $ do
+callConfirm :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> UC.ConfirmReq -> FlowHandler UC.ConfirmRes
+callConfirm merchantShortId apiTokenInfo personId quoteId mbMerchantPaymentId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction BAP.ConfirmEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.confirm.rconfirm) personId quoteId mbMerchantPaymentId startTime
+    Client.callRiderApp checkedMerchantId (.rideBooking.confirm.rconfirm) personId quoteId mbMerchantPaymentId req

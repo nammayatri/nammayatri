@@ -50,7 +50,8 @@ data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quoteId :: Id DQuote.Quote,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    rentalDuration :: Maybe Int
   }
 
 data DConfirmRes = DConfirmRes
@@ -68,7 +69,8 @@ data DConfirmRes = DConfirmRes
     merchant :: DM.Merchant,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    rentalDuration :: Maybe Int
   }
   deriving (Show, Generic)
 
@@ -78,6 +80,9 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
+
+calculateRentalEstimateFare :: Int -> RentalSlab -> Money
+calculateRentalEstimateFare _ _ = Money 100 --TODO
 
 confirm ::
   ( EsqDBFlow m r,
@@ -94,7 +99,10 @@ confirm DConfirmReq {..} = do
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure (Nothing)
       DQuote.RentalDetails rentalOffer -> do
-        unless (isJust startTime) $ throwError $ InvalidRequest "Rental confirm qoute should have startTime param"
+        unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm qoute should have startTime param"
+        --here i can update the quote estimate fare
+        let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalOffer
+        _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare
         pure $ Just rentalOffer.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound

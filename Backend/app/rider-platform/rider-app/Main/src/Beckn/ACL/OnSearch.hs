@@ -167,8 +167,11 @@ buildRentalQuoteDetails ::
   m DOnSearch.RentalQuoteDetails
 buildRentalQuoteDetails item = do
   let bppQuoteId = item.fulfillment_id
-  baseDistance <- (getRentalBaseDistance =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
-  baseDuration <- (getRentalBaseDuration =<< item.tags) & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
+  baseFare <- (getRentalBaseFare =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_base_fare in rental search item")
+  perHourCharge <- (getRentalPerHourCharge =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_hour_charge in rental search item")
+  perHourFreeKms <- (getRentalPerHourFreeKms =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_hour_free_kms in rental search item")
+  perExtraKmRate <- (getRentalPerExtraKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_extra_km_rate in rental search item")
+  nightShiftCharge <- (getRentalNightShiftCharge =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_night_shift_charge in rental search item")
   pure DOnSearch.RentalQuoteDetails {id = bppQuoteId, ..}
 
 validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
@@ -232,17 +235,35 @@ buildWaitingChargeInfo tags = do
 buildSpecialLocationTag :: OnSearch.TagGroups -> Maybe Text
 buildSpecialLocationTag = getTag "general_info" "special_location_tag"
 
-getRentalBaseDistance :: OnSearch.TagGroups -> Maybe Meters
-getRentalBaseDistance tagGroups = do
-  tagValue <- getTag "general_info" "rental_base_distance" tagGroups
-  baseDistance <- readMaybe $ T.unpack tagValue
-  Just $ Meters baseDistance
+getRentalBaseFare :: OnSearch.TagGroups -> Maybe Money
+getRentalBaseFare tagGroups = do
+  tagValue <- getTag "general_info" "rental_base_fare" tagGroups
+  baseFare <- readMaybe $ T.unpack tagValue
+  Just $ Money baseFare
 
-getRentalBaseDuration :: OnSearch.TagGroups -> Maybe Seconds
-getRentalBaseDuration tagGroups = do
-  tagValue <- getTag "general_info" "rental_base_duration" tagGroups
-  baseDistance <- readMaybe $ T.unpack tagValue
-  Just $ Seconds baseDistance
+getRentalPerHourCharge :: OnSearch.TagGroups -> Maybe Money
+getRentalPerHourCharge tagGroups = do
+  tagValue <- getTag "general_info" "rental_per_hour_charge" tagGroups
+  perHourCharge <- readMaybe $ T.unpack tagValue
+  Just $ Money perHourCharge
+
+getRentalPerHourFreeKms :: OnSearch.TagGroups -> Maybe Int
+getRentalPerHourFreeKms tagGroups = do
+  tagValue <- getTag "general_info" "rental_per_hour_free_kms" tagGroups
+  perHourFreeKms <- readMaybe $ T.unpack tagValue
+  Just perHourFreeKms
+
+getRentalPerExtraKmRate :: OnSearch.TagGroups -> Maybe Money
+getRentalPerExtraKmRate tagGroups = do
+  tagValue <- getTag "general_info" "rental_per_extra_km_rate" tagGroups
+  perExtraKmRate <- readMaybe $ T.unpack tagValue
+  Just $ Money perExtraKmRate
+
+getRentalNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
+getRentalNightShiftCharge tagGroups = do
+  tagValue <- getTag "general_info" "rental_night_shift_charge" tagGroups
+  nightShiftCharge <- readMaybe $ T.unpack tagValue
+  Just $ Money nightShiftCharge
 
 getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
 getNightShiftCharge tagGroups = do
