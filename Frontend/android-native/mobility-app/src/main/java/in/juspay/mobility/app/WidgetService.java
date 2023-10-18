@@ -480,7 +480,7 @@ public class WidgetService extends Service {
                             if (widgetLayoutParams.y > height * 0.85 && widgetLayoutParams.x > width * 0.30 && widgetLayoutParams.x < width * 0.55) {
                                 imageClose.setImageResource(R.drawable.ny_ic_close_filled_round);
                                 Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                                if (!isCloseEnabled) {
+                                if (isCloseEnabled) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                         vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
                                     } else {

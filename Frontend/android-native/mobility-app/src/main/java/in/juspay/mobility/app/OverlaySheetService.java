@@ -68,6 +68,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -891,7 +892,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         float currentVolume = (float) audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume / maxVolume < 0.7) {
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            try{
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            }catch (Exception e){
+                RideRequestUtils.firebaseLogEventWithParams("exception", "increase_volume", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            }
         }
     }
 
