@@ -26,7 +26,6 @@ where
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -76,14 +75,14 @@ setBatchDurationLock ::
   ( MonadFlow m,
     HedisFlow m r
   ) =>
-  Id SearchTry ->
+  Id DST.SearchTry ->
   Seconds ->
   m (Maybe UTCTime)
-setBatchDurationLock searchRequestId singleBatchProcessTime = do
+setBatchDurationLock searchId singleBatchProcessTime = do
   now <- getCurrentTime
-  res <- Hedis.setNxExpire (getId searchRequestId) (fromIntegral singleBatchProcessTime) now
+  res <- Hedis.setNxExpire (getId searchId) (fromIntegral singleBatchProcessTime) now
   if not res
-    then do Hedis.get (getId searchRequestId)
+    then do Hedis.get (getId searchId)
     else return Nothing
 
 createRescheduleTime ::

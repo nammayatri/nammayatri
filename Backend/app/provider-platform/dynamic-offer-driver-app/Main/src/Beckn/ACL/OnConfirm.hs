@@ -36,12 +36,14 @@ buildOnConfirmMessage res = do
       totalFareDecimal = fromIntegral booking.estimatedFare
       currency = "INR"
   now <- getCurrentTime
+  let (mbDriverId, mbDriverName) = case res.bookingTypeDetails of
+        DConfirm.DConfirmResNormalBooking details -> (Just details.driverId, Just details.driverName)
+        _ -> (Nothing, Nothing)
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.bookingDetails.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
       return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant now
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant now
-    DConfirm.RentalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant now
+    _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant now
   return $
     OnConfirm.OnConfirmMessage
       { order =
@@ -66,7 +68,7 @@ buildOnConfirmMessage res = do
                           fareParams
                   },
               provider =
-                res.driverId >>= \dId ->
+                mbDriverId >>= \dId ->
                   Just $
                     OnConfirm.Provider
                       { id = dId

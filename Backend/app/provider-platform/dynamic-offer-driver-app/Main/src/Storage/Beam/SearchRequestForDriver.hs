@@ -18,6 +18,7 @@ module Storage.Beam.SearchRequestForDriver where
 import Data.ByteString
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as D
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Types
@@ -35,8 +36,10 @@ searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
     requestId :: B.C f Text,
+    searchRequestTag :: B.C f DSR.SearchRequestTag,
     searchTryId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    bookingId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,

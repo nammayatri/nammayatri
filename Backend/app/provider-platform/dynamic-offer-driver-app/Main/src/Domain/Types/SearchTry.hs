@@ -30,7 +30,8 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data SearchTry = SearchTry
   { id :: Id SearchTry,
     requestId :: Id DSR.SearchRequest,
-    estimateId :: Id DEst.Estimate,
+    tag :: DSR.SearchRequestTag,
+    estimateId :: Maybe (Id DEst.Estimate), -- not required for RENTAL
     merchantId :: Maybe (Id DM.Merchant),
     messageId :: Text,
     startTime :: UTCTime,

@@ -61,6 +61,7 @@ buildInitReq subscriber req = do
   pure
     DInit.InitReq
       { estimateId = fulfillmentId,
+        messageId = context.message_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,
