@@ -22,6 +22,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 import qualified Tools.Maps as Maps
 
@@ -41,7 +42,8 @@ data SearchRequestDetails
 
 data SearchRequestTag = ON_DEMAND | RENTAL
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable SearchRequestTag
 
 $(mkBeamInstancesForEnum ''SearchRequestTag)
 

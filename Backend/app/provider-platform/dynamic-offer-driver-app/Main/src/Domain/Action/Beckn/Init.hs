@@ -65,7 +65,8 @@ data ValidateInitResponse
   | RENTAL_QUOTE (DQR.QuoteRental, DSR.SearchRequest)
 
 data InitReq = InitReq
-  { estimateId :: Text,
+  { messageId :: Text,
+    estimateId :: Text,
     driverId :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     bapId :: Text,
@@ -130,7 +131,8 @@ cancelBooking booking transporterId = do
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -174,8 +176,10 @@ handler merchantId req initReq = do
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
           --- TODO -- Update Rental Quote estimate fare and estimate duration
           --- make booking properly --with estimates and duration
-          booking <- buildRentalBooking rentalQuote searchRequest rentalQuote.id.getId req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote
+          booking <- buildRentalBooking rentalQuote searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
+          QST.create searchTry
           return (booking, Nothing, Nothing)
         _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   let paymentMethodInfo = req.paymentMethodInfo
@@ -305,7 +309,6 @@ handler merchantId req initReq = do
       ) =>
       DQR.QuoteRental ->
       DSR.SearchRequest ->
-      Text ->
       UTCTime ->
       DRB.BookingType ->
       UTCTime ->
@@ -313,7 +316,7 @@ handler merchantId req initReq = do
       Maybe Text ->
       Maybe Text ->
       m DRB.Booking
-    buildRentalBooking rentalQuote searchRequest quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
       exophone <- findRandomExophone merchantId
       bookingDetails <- do
@@ -347,11 +350,47 @@ handler merchantId req initReq = do
             bookingDetails,
             estimatedFare = rentalQuote.baseFare,
             riderName = Nothing,
-            estimatedDuration = 0,
+            estimatedDuration = Seconds $ rentalQuote.baseDuration.getHours * 3600,
             fareParams = rentalQuote.fareParams,
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            quoteId = rentalQuote.id.getId,
+            ..
+          }
+    buildRentalSearchTry ::
+      ( MonadTime m,
+        MonadGuid m,
+        MonadReader r m,
+        HasField "searchRequestExpirationSeconds" r NominalDiffTime
+      ) =>
+      Id DSR.SearchRequest ->
+      UTCTime ->
+      DQR.QuoteRental ->
+      m DST.SearchTry
+    buildRentalSearchTry searchReqId startTime rentalQuote = do
+      now <- getCurrentTime
+      id_ <- Id <$> generateGUID
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let validTill_ = searchRequestExpirationSeconds `addUTCTime` startTime
+          customerExtraFee = Nothing
+      pure
+        DST.SearchTry
+          { id = id_,
+            requestId = searchReqId,
+            tag = DSR.RENTAL,
+            estimateId = Nothing,
+            merchantId = Just merchantId,
+            messageId = req.messageId,
+            startTime,
+            validTill = validTill_,
+            vehicleVariant = rentalQuote.vehicleVariant,
+            status = DST.ACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            searchRepeatType = DST.INITIAL,
+            searchRepeatCounter = 0,
+            baseFare = rentalQuote.baseFare,
             ..
           }
 

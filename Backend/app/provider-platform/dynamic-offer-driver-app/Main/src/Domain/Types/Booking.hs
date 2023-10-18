@@ -33,6 +33,7 @@ import Tools.Beam.UtilsTH
 
 data BookingStatus
   = NEW
+  | SCHEDULED
   | TRIP_ASSIGNED
   | COMPLETED
   | CANCELLED

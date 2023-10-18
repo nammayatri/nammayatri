@@ -40,6 +40,7 @@ mkOnStatusMessage res =
 
 mapToBecknBookingStatus :: DBooking.BookingStatus -> OnStatus.BookingStatus
 mapToBecknBookingStatus DBooking.NEW = OnStatus.NEW_BOOKING
+mapToBecknBookingStatus DBooking.SCHEDULED = OnStatus.BOOKING_SCHEDULED
 mapToBecknBookingStatus DBooking.TRIP_ASSIGNED = OnStatus.TRIP_ASSIGNED
 mapToBecknBookingStatus DBooking.COMPLETED = OnStatus.BOOKING_COMPLETED
 mapToBecknBookingStatus DBooking.CANCELLED = OnStatus.BOOKING_CANCELLED

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
@@ -151,7 +150,8 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare searchRepeatCounter
     DST.SearchTry
       { id = id_,
         requestId = searchReqId,
-        estimateId = estimate.id,
+        tag = DSR.ON_DEMAND,
+        estimateId = Just estimate.id,
         merchantId = Just merchantId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,

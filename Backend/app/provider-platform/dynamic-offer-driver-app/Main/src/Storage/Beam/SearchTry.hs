@@ -16,6 +16,7 @@
 module Storage.Beam.SearchTry where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
@@ -24,12 +25,13 @@ import Tools.Beam.UtilsTH
 
 data SearchTryT f = SearchTryT
   { id :: B.C f Text,
+    tag :: B.C f DSR.SearchRequestTag,
     messageId :: B.C f Text,
     requestId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
-    estimateId :: B.C f Text,
+    estimateId :: B.C f (Maybe Text),
     baseFare :: B.C f Money,
     customerExtraFee :: B.C f (Maybe Money),
     status :: B.C f Domain.SearchTryStatus,
