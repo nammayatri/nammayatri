@@ -47,6 +47,18 @@ executeInSequence func store dbStreamKey (command : commands) = do
       let store' = first (id' :) store
       executeInSequence func store' dbStreamKey commands
 
+executeInSequence' :: (L.MonadFlow f, Show a1) => (t -> Text -> f (Either a1 a2)) -> ([a2], [a1]) -> Text -> [t] -> f ([a2], [a1])
+executeInSequence' _ store _ [] = pure store
+executeInSequence' func store dbStreamKey (command : commands) = do
+  result <- func command dbStreamKey
+  case result of
+    Left id -> do
+      let store' = second (id :) store
+      L.logErrorT "EXECUTION_FAILURE" (show id) $> store'
+    Right id' -> do
+      let store' = first (id' :) store
+      executeInSequence' func store' dbStreamKey commands
+
 (|::|) :: (EL.MonadFlow m, Show a) => m [Either a b] -> m [Either a b] -> m [Either a b]
 (|::|) fa fb = do
   result <- fa
@@ -102,6 +114,10 @@ decodeFromText = A.decode . BSL.fromStrict . DTE.encodeUtf8
 filterCreateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (CreateDBCommand, ByteString)
 filterCreateCommands (id, Create a b c d e, val) = Just (CreateDBCommand id a b c d e, val)
 filterCreateCommands _ = Nothing
+
+filterCreateCommands' :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterCreateCommands' (id, Create {}, val) = Just (id, val)
+filterCreateCommands' _ = Nothing
 
 filterUpdateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (UpdateDBCommand, ByteString)
 filterUpdateCommands (id, Update a b c d e, val) = Just (UpdateDBCommand id a b c d e, val)
