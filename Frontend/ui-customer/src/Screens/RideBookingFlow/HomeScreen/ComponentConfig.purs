@@ -187,7 +187,7 @@ skipButtonConfig state =
           , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
+        , background = state.data.config.primaryBackground
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
@@ -821,7 +821,9 @@ ratingCardViewState state = {
   , primaryButtonConfig : PrimaryButton.config {
     textConfig{
       text = getString SUBMIT_FEEDBACK
+    , color = state.data.config.primaryTextColor
     },
+    background = state.data.config.primaryBackground,
     margin = MarginHorizontal 16 16,
     isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true,
     alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
@@ -847,7 +849,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isDestServiceable: state.props.isDestServiceable
                                     , isRideServiceable: state.props.isRideServiceable
                                     , savedlocationList: state.data.savedLocations
-                                    , homeScreenConfig : state.data.config
+                                    , appConfig : state.data.config
                                     , logField : state.data.logField
                                     , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
                                     , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
@@ -1143,6 +1145,7 @@ rideCompletedCardConfig state = let
           finalAmount = state.data.finalAmount,
           initalAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
+          gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
           infoPill {
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
             image = "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png",

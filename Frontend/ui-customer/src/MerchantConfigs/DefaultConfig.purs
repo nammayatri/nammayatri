@@ -45,6 +45,8 @@ config =
   , searchLocationConfig : 
     { searchLocationTheme: "#2C2F3A"
     , setLocationOnMapColor:"#6D7280"
+    , editTextBackground : "#313440"
+    , editTextDefaultColor : "#A7A7A7"
     , strokeColor: "1,#E5E7EB"
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
@@ -131,10 +133,19 @@ config =
   , estimateAndQuoteConfig : 
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"] ]
       , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV"]
+      , enableOnlyAuto : false
       }
   , customerTip : {
       auto : true,
       cabs : false
     }
   , enableContactSupport : true
+  , features : {
+    enableAutoReadOtp : true
+  }
+  , rideCompletedCardConfig : {
+      topCard : {
+        gradient : "#29334A"
+      } 
+  }
   }

@@ -56,7 +56,7 @@ type SearchLocationModelState = {
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
-  , homeScreenConfig :: AppConfig
+  , appConfig :: AppConfig
   , logField :: Object Foreign
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean

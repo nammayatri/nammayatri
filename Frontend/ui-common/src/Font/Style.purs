@@ -200,7 +200,7 @@ body2 :: LazyCheck -> forall properties. (Array (Prop properties))
 body2 typography = [
  textSize FontSize.a_14
 , lineHeight "20"
-] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeightWithItalic 500 true]
+] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body3 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body3 typography = [

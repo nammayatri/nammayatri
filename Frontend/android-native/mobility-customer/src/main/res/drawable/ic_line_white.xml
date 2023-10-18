@@ -11,9 +11,9 @@
             android:shape="rectangle">
             <solid android:color="#00F8F8F8" />
             <stroke
-                android:width="6px"
+                android:width="4px"
                 android:dashWidth="20px"
-                android:dashGap="15px"
+                android:dashGap="10px"
                 android:color="#E5E7EB" />
         </shape>
     </item>
