@@ -622,9 +622,9 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1703765920,
-        "narHash": "sha256-1UT2s+1KBb2UtFGdYFZuv/zVQIuJWvnLtvr4iShtBQg=",
-        "owner": "nammayatri",
+        "lastModified": 1702549068,
+        "narHash": "sha256-th4rnWCZYXlHPbUrcwd9F977xrqmocn9YfrA+JYvr6s=",
+        "owner": "enigma-commits",
         "repo": "euler-hs",
         "rev": "50a9fc56258ceed718a1e84951550821738d83a3",
         "type": "github"
@@ -3093,16 +3093,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1702897959,
-        "narHash": "sha256-uhv/uKOwu1IfFnYyFFB4k5dMrYcorjs1DCd6ehm9ReA=",
-        "owner": "vijaygupta18",
+        "lastModified": 1696055637,
+        "narHash": "sha256-RVlpKevWjt9pB9Ia61+ILFcbjB8omiRA6zehmPb6FHg=",
+        "owner": "juspay",
         "repo": "haskell-sequelize",
-        "rev": "b109d29f46b611cd5ff7e0d09aead48076871210",
+        "rev": "991064c0b9b5f5cf691b19d53ac6b0c9109a2dff",
         "type": "github"
       },
       "original": {
-        "owner": "vijaygupta18",
-        "ref": "decouple-drainer-from-app",
+        "owner": "juspay",
+        "ref": "beckn-compatible",
         "repo": "haskell-sequelize",
         "type": "github"
       }

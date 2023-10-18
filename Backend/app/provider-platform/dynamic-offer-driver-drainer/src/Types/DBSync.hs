@@ -18,6 +18,7 @@ module Types.DBSync
   )
 where
 
+import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
@@ -39,6 +40,7 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
+    _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text]
   }
