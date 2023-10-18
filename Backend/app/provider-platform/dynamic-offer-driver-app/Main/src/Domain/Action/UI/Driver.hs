@@ -398,8 +398,7 @@ data DriverOfferReq = DriverOfferReq
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data DriverRespondReq = DriverRespondReq
-  { searchRequestTag :: Maybe DSR.SearchRequestTag,
-    offeredFare :: Maybe Money,
+  { offeredFare :: Maybe Money,
     searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
     searchTryId :: Maybe (Id DST.SearchTry),
     response :: SearchRequestForDriverResponse
@@ -1179,7 +1178,7 @@ offerQuote ::
   m APISuccess
 offerQuote (driverId, merchantId) DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId) DriverRespondReq {searchRequestTag = Nothing, searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
+  respondQuote (driverId, merchantId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
   ( CacheFlow m r,
@@ -1207,12 +1206,12 @@ respondQuote ::
   m APISuccess
 respondQuote (driverId, _) req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-    let searchRequestTag = fromMaybe DSR.ON_DEMAND req.searchRequestTag
+    searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
+    searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+    now <- getCurrentTime
+    let searchRequestTag = searchTry.tag
     case searchRequestTag of
       DSR.ON_DEMAND {} -> do
-        searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
-        searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-        now <- getCurrentTime
         when (searchTry.validTill < now) $ throwError SearchRequestExpired
         searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
         let mbOfferedFare = req.offeredFare
@@ -1273,7 +1272,7 @@ respondQuote (driverId, _) req = do
               pure []
         DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
       DSR.RENTAL -> do
-        respondRentalRide
+        respondRentalRide searchTry
   pure Success
   where
     buildDriverRespondEventPayload searchTryId merchantId restActiveDriverSearchReqs =
@@ -1338,9 +1337,8 @@ respondQuote (driverId, _) req = do
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId estimatedFare driver_.deviceToken
 
-    respondRentalRide = do
-      searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
-      searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+    respondRentalRide searchTry = do
+      let searchTryId = searchTry.id
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
       when driverInfo.onRide $ throwError DriverOnRide
