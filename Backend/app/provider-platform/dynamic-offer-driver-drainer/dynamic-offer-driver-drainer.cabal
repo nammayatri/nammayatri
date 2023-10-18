@@ -110,8 +110,10 @@ library
     , mobility-core
     , payment
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scientific
     , sequelize
     , servant-server
     , shared-services
@@ -203,8 +205,10 @@ executable dynamic-offer-driver-drainer-exe
     , lens
     , mobility-core
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scientific
     , sequelize
     , servant-server
     , shared-services
