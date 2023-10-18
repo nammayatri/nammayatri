@@ -24,18 +24,19 @@ where
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import Kernel.External.Types (ServiceFlow)
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import qualified Tools.Maps as Maps
 
 getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes (_, merchantId) req = do
-  Maps.getRoutes merchantId req
+getRoutes (personId, merchantId) req = do
+  Maps.getRoutes personId merchantId Nothing req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getPickupRoutes (_, merchantId) req = do
-  Maps.getPickupRoutes merchantId req
+getPickupRoutes (personId, merchantId) req = do
+  Maps.getPickupRoutes personId merchantId Nothing req
 
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes (_, merchantId) req = do
-  Maps.getTripRoutes merchantId req
+getTripRoutes (personId, merchantId) req = do
+  Maps.getTripRoutes personId merchantId Nothing req

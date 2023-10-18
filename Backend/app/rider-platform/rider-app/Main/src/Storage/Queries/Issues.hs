@@ -22,7 +22,7 @@ import qualified IssueManagement.Common as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, MonadTime (..), getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
@@ -31,7 +31,7 @@ import qualified Storage.Queries.Person ()
 insertIssue :: MonadFlow m => Issue -> m ()
 insertIssue = createWithKV
 
-findByCustomerId :: MonadFlow m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findByCustomerId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
@@ -53,7 +53,7 @@ findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
        in acc <> ((\p -> (issue, p)) <$> persons')
 
 -- Finding issues over non-Id; do it through DB
-findAllIssue :: MonadFlow m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findAllIssue :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
@@ -117,5 +117,5 @@ updateTicketId issueId ticketId = do
     [Se.Set BeamI.ticketId (Just ticketId), Se.Set BeamI.updatedAt now]
     [Se.Is BeamI.id (Se.Eq $ getId issueId)]
 
-findByTicketId :: MonadFlow m => Text -> m (Maybe Issue)
+findByTicketId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Issue)
 findByTicketId ticketId = findOneWithKV [Se.Is BeamI.ticketId $ Se.Eq (Just ticketId)]

@@ -160,7 +160,8 @@ buildBookingAPIEntity booking = do
   mbRide <- runInReplica $ QRide.findByRBId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  let merchantOperatingCityId = booking.merchantOperatingCityId
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId
+    CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod

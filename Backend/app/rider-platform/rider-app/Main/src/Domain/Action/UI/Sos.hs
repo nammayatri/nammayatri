@@ -59,7 +59,7 @@ createSosDetails personId req = do
       { sosId = sosDetails.id
       }
 
-updateSosDetails :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) => Id DSos.Sos -> Id Person.Person -> SosFeedbackReq -> m APISuccess.APISuccess
+updateSosDetails :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) => Id DSos.Sos -> Id Person.Person -> SosFeedbackReq -> m APISuccess.APISuccess
 updateSosDetails sosId personId req = do
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
 

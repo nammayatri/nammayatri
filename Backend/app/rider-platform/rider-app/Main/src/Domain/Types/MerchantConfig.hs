@@ -15,6 +15,7 @@
 module Domain.Types.MerchantConfig where
 
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -23,6 +24,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 data MerchantConfig = MerchantConfig
   { id :: Id MerchantConfig,
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     fraudBookingCancellationCountThreshold :: Int,
     fraudBookingCancellationCountWindow :: SWC.SlidingWindowOptions,
     fraudBookingTotalCountThreshold :: Int,

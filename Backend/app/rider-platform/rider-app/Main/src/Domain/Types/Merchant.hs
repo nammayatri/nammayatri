@@ -29,7 +29,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    city :: Context.City,
+    defaultCity :: Context.City,
     country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

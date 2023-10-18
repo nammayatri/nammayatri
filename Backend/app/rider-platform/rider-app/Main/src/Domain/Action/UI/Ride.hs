@@ -108,6 +108,7 @@ getDriverLoc rideId personId = do
 getRideStatus ::
   ( CacheFlow m r,
     EncFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig
   ) =>

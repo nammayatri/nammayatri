@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 data MerchantConfigT f = MerchantConfigT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     fraudBookingCancellationCountThreshold :: B.C f Int,
     fraudBookingCancellationCountWindow :: B.C f SWC.SlidingWindowOptions,
     fraudBookingTotalCountThreshold :: B.C f Int,
@@ -45,6 +46,6 @@ instance B.Table MerchantConfigT where
 
 type MerchantConfig = MerchantConfigT Identity
 
-$(enableKVPG ''MerchantConfigT ['id] [['merchantId]])
+$(enableKVPG ''MerchantConfigT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''MerchantConfigT "merchant_config")

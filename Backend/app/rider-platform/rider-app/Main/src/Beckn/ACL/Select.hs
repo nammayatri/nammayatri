@@ -36,7 +36,7 @@ buildSelectReq dSelectRes = do
   let messageId = dSelectRes.estimate.bppEstimateId.getId
   let transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.city dSelectRes.merchant.country dSelectRes.autoAssignEnabled
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country dSelectRes.autoAssignEnabled
   order <- buildOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 

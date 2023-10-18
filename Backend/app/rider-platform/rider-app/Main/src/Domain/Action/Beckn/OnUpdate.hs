@@ -276,6 +276,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
           { id = guid,
             bookingId = booking.id,
             merchantId = Just booking.merchantId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             status = SRide.NEW,
             trackingUrl = Nothing,
             fare = Nothing,
@@ -307,7 +308,7 @@ onUpdate ValidatedRideStartedReq {..} = do
 onUpdate ValidatedRideCompletedReq {..} = do
   frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripEnd
   SMC.updateTotalRidesCounters booking.riderId
-  merchantConfigs <- CMC.findAllByMerchantId person.merchantId
+  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
 
   rideEndTime <- getCurrentTime
@@ -364,13 +365,14 @@ onUpdate ValidatedRideCompletedReq {..} = do
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
-  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   case cancellationSource of
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
     SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
   fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+    let merchantOperatingCityId = booking.merchantOperatingCityId
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do

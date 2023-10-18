@@ -13,7 +13,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Person as QP
@@ -36,7 +36,7 @@ dashboardIssueHandle =
     { findPersonById = castPersonById
     }
 
-castPersonById :: EsqDBReplicaFlow m r => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
 castPersonById driverId = do
   person <- runInReplica $ QP.findById (cast driverId)
   return $ fmap castPerson person

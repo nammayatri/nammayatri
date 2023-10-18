@@ -18,6 +18,7 @@ module Domain.Types.Estimate where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -33,6 +34,7 @@ data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSearchRequest.SearchRequest,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     bppEstimateId :: Id BPPEstimate,
     estimatedFare :: Money,
     discount :: Maybe Money,

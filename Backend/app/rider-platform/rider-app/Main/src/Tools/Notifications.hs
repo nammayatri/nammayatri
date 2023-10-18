@@ -22,6 +22,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.Person as Person
@@ -55,6 +56,7 @@ notifyPerson ::
     ToJSON b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   Notification.NotificationReq a b ->
   m ()
 notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
@@ -66,6 +68,7 @@ notifyPersonWithMutableContent ::
     ToJSON b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   Notification.NotificationReq a b ->
   m ()
 notifyPersonWithMutableContent = runWithServiceConfig Notification.notifyPersonWithMutableContent (.notifyPerson)
@@ -75,10 +78,11 @@ runWithServiceConfig ::
   (Notification.NotificationServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> Notification.NotificationService) ->
   Id Merchant ->
+  Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId req = do
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
+  merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
     QMSC.findByMerchantIdAndService merchantId (DMSC.NotificationService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
@@ -93,6 +97,7 @@ notifyOnDriverOfferIncoming ::
   Person.Person ->
   m ()
 notifyOnDriverOfferIncoming estimateId quotes person = do
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_QUOTE_INCOMING,
@@ -111,7 +116,7 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
           [ "There are new driver offers!",
             "Check the app for details"
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 newtype RideAssignedParam = RideAssignedParam
   { driverName :: Text
@@ -128,6 +133,7 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_ASSIGNMENT,
@@ -146,7 +152,7 @@ notifyOnRideAssigned booking ride = do
           [ driverName,
             "will be your driver for this trip."
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
@@ -163,6 +169,7 @@ notifyOnRideStarted booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.TRIP_STARTED,
@@ -181,7 +188,7 @@ notifyOnRideStarted booking ride = do
           [ driverName,
             "has started your trip. Please enjoy the ride!"
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 data RideCompleteParam = RideCompleteParam
   { driverName :: Text,
@@ -200,6 +207,7 @@ notifyOnRideCompleted booking ride = do
       driverName = ride.driverName
       totalFare = ride.totalFare
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.TRIP_FINISHED,
@@ -219,7 +227,7 @@ notifyOnRideCompleted booking ride = do
             driverName,
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -231,6 +239,7 @@ notifyOnExpiration searchReq = do
   person <- Person.findById personId
   case person of
     Just p -> do
+      let merchantOperatingCityId = p.merchantOperatingCityId
       let notificationData =
             Notification.NotificationReq
               { category = Notification.EXPIRED_CASE,
@@ -249,7 +258,7 @@ notifyOnExpiration searchReq = do
               [ "Your ride has expired as you did not confirm any offer.",
                 "Please book again to continue."
               ]
-      notifyPerson p.merchantId notificationData
+      notifyPerson p.merchantId merchantOperatingCityId notificationData
     _ -> pure ()
 
 notifyOnRegistration ::
@@ -259,6 +268,7 @@ notifyOnRegistration ::
   Maybe Text ->
   m ()
 notifyOnRegistration regToken person mbDeviceToken = do
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let tokenId = RegToken.id regToken
       notificationData =
         Notification.NotificationReq
@@ -278,7 +288,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
           [ "Welcome to Yatri.",
             "Click here to book your first ride with us."
           ]
-   in notifyPerson person.merchantId notificationData
+   in notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 newtype RideCancelParam = RideCancelParam
   { rideTime :: Text
@@ -292,7 +302,8 @@ notifyOnBookingCancelled ::
   m ()
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  notifyPerson person.merchantId (notificationData booking.providerName person)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData booking.providerName person)
   where
     notificationData orgName person =
       Notification.NotificationReq
@@ -353,7 +364,8 @@ notifyOnBookingReallocated ::
   m ()
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  notifyPerson person.merchantId (notificationData person)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData person)
   where
     notificationData person =
       Notification.NotificationReq
@@ -382,7 +394,8 @@ notifyOnEstimatedReallocated ::
   m ()
 notifyOnEstimatedReallocated booking estimateId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  notifyPerson person.merchantId (notificationData person)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData person)
   where
     notificationData person =
       Notification.NotificationReq
@@ -411,8 +424,9 @@ notifyOnQuoteReceived ::
 notifyOnQuoteReceived quote = do
   searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData = mkNotificationData person
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
     mkNotificationData person = do
       let title = T.pack "Quote received!"
@@ -439,6 +453,7 @@ notifyDriverOnTheWay ::
   m ()
 notifyDriverOnTheWay personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_ON_THE_WAY,
@@ -456,7 +471,7 @@ notifyDriverOnTheWay personId = do
         unwords
           [ "Driver is on the way"
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 data DriverReachedParam = DriverReachedParam
   { vehicleNumber :: Text,
@@ -472,6 +487,7 @@ notifyDriverHasReached ::
   m ()
 notifyDriverHasReached personId otp vehicleNumber = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_HAS_REACHED,
@@ -489,7 +505,7 @@ notifyDriverHasReached personId otp vehicleNumber = do
         unwords
           [ "Use OTP " <> otp <> " to verify the ride with Vehicle No. " <> vehicleNumber
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
 
 notifyOnNewMessage ::
   ( ServiceFlow m r,
@@ -501,6 +517,7 @@ notifyOnNewMessage ::
 notifyOnNewMessage booking message = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   -- person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
@@ -518,4 +535,4 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPersonWithMutableContent person.merchantId notificationData
+  notifyPersonWithMutableContent person.merchantId merchantOperatingCityId notificationData

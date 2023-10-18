@@ -12,15 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Geometry where
+module Domain.Types.Merchant.MerchantOperatingCity where
 
+import Database.Beam.MySQL ()
+import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
-import Kernel.Types.Beckn.Context (City)
-import Kernel.Types.Id (Id)
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id
 
-data Geometry = Geometry
-  { id :: Id Geometry,
-    region :: Text,
-    city :: City
+data MerchantOperatingCity = MerchantOperatingCity
+  { id :: Id MerchantOperatingCity,
+    merchantId :: Id DM.Merchant,
+    merchantShortId :: ShortId DM.Merchant,
+    city :: Context.City
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

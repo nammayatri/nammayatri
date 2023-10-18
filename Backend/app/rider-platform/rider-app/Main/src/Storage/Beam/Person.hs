@@ -22,6 +22,7 @@ import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
@@ -51,6 +52,8 @@ data PersonT f = PersonT
     notificationToken :: B.C f (Maybe Text),
     description :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
+    currentCity :: B.C f (Maybe Context.City),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),
     createdAt :: B.C f UTCTime,
     blockedAt :: B.C f (Maybe LocalTime),

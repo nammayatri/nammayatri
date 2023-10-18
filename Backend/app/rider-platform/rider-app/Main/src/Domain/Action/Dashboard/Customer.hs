@@ -21,7 +21,7 @@ module Domain.Action.Dashboard.Customer
   )
 where
 
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -94,7 +94,7 @@ unblockCustomer merchantShortId customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  merchantConfigs <- CMC.findAllByMerchantId merchantId
+  merchantConfigs <- CMC.findAllByMerchantOperatingCityId customer.merchantOperatingCityId
   mapM_
     ( \mc -> withCrossAppRedis $ do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow

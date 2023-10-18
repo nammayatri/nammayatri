@@ -21,7 +21,6 @@ import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -98,7 +97,7 @@ onSelect ::
   Flow ()
 onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
-  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
+  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest) quotesInfo
   logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
@@ -145,13 +144,13 @@ buildSelectedQuote ::
   DEstimate.Estimate ->
   ProviderInfo ->
   UTCTime ->
-  Id DMerchant.Merchant ->
+  DSearchRequest.SearchRequest ->
   QuoteInfo ->
   m DQuote.Quote
-buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
+buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  driverOffer <- buildDriverOffer estimate.id quoteDetails merchantId
+  driverOffer <- buildDriverOffer estimate.id quoteDetails req
   let quote =
         DQuote.Quote
           { id = uid,
@@ -164,7 +163,6 @@ buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
             itemId = estimate.itemId,
-            merchantId,
             ..
           }
   pure quote
@@ -173,15 +171,16 @@ buildDriverOffer ::
   MonadFlow m =>
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
-  Id DMerchant.Merchant ->
+  DSearchRequest.SearchRequest ->
   m DDriverOffer.DriverOffer
-buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
   uid <- generateGUID
   now <- getCurrentTime
   pure
     DDriverOffer.DriverOffer
       { id = uid,
-        merchantId = Just merchantId,
+        merchantId = Just searchRequest.merchantId,
+        merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
         driverId = Just driverId,
         bppQuoteId = bppDriverQuoteId,
         status = DDriverOffer.ACTIVE,
@@ -213,7 +212,7 @@ validateRequest DOnSelectReq {..} = do
       { ..
       }
   where
-    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
+    duplicateCheckCond :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)

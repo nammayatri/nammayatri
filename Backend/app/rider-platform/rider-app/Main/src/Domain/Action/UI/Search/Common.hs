@@ -22,6 +22,7 @@ where
 
 import qualified Domain.Types.Location as Location
 import Domain.Types.LocationAddress
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -39,6 +40,7 @@ buildSearchRequest ::
   ) =>
   DPerson.Person ->
   Location.Location ->
+  DMOC.MerchantOperatingCity ->
   Maybe Location.Location ->
   Maybe HighPrecMeters ->
   Maybe HighPrecMeters ->
@@ -49,7 +51,7 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Seconds ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration = do
+buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -63,6 +65,7 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         distance = mbDistance,
         maxDistance = mbMaxDistance,
         merchantId = person.merchantId,
+        merchantOperatingCityId = merchantOperatingCity.id,
         createdAt = now,
         estimatedRideDuration = duration,
         device = device,

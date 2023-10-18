@@ -27,13 +27,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 
 create :: MonadFlow m => DPFS.PersonFlowStatus -> m ()
 create = createWithKV
 
-getStatus :: MonadFlow m => Id Person -> m (Maybe DPFS.FlowStatus)
+getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe DPFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamPFS.personId $ Se.Eq personId] <&> (DPFS.flowStatus <$>)
 
 updateStatus :: MonadFlow m => Id Person -> DPFS.FlowStatus -> m ()

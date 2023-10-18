@@ -20,16 +20,17 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Webengage as BeamW
 
 create :: MonadFlow m => Webengage -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Webengage -> m (Maybe Webengage)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Webengage -> m (Maybe Webengage)
 findById webengageId = findOneWithKV [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
 
-findByInfoMsgId :: MonadFlow m => Text -> m (Maybe Webengage)
+findByInfoMsgId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Webengage)
 findByInfoMsgId infoMessageId = findOneWithKV [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]
 
 instance FromTType' BeamW.Webengage Webengage where
