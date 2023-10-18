@@ -75,10 +75,11 @@ data InitReq = InitReq
     initTypeReq :: InitTypeReq,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    startTime :: UTCTime
+    startTime :: UTCTime,
+    rentalDuration :: Maybe Int
   }
 
-data InitTypeReq = InitSpecialZoneReq | InitNormalReq | InitRentalReq
+data InitTypeReq = InitSpecialZoneReq | InitNormalReq | InitRentalReq deriving (Show, Eq)
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
@@ -171,6 +172,8 @@ handler merchantId req initReq = do
     InitRentalReq -> do
       case initReq of
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
+          --- TODO -- Update Rental Quote estimate fare and estimate duration
+          --- make booking properly --with estimates and duration
           booking <- buildRentalBooking rentalQuote searchRequest rentalQuote.id.getId req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
           return (booking, Nothing, Nothing)

@@ -47,7 +47,12 @@ buildInitReq subscriber req = do
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
   fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
+  let rentalDuration = getRentalDuration =<< order.fulfillment.tags
   let initTypeReq = buildInitTypeReq order.fulfillment._type
+  case initTypeReq of
+    DInit.InitRentalReq ->
+      when (isNothing rentalDuration) $ throwError (InvalidRequest "No rental duration passed")
+    _ -> pure ()
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -93,3 +98,9 @@ getMaxEstimateDistance tagGroups = do
   tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
+
+getRentalDuration :: Init.TagGroups -> Maybe Int
+getRentalDuration tagGroups = do
+  tagValue <- Common.getTag "rental_info" "rental_duration" tagGroups
+  rentalDuration <- readMaybe $ T.unpack tagValue
+  Just rentalDuration
