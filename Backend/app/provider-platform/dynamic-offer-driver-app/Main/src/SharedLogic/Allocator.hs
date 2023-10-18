@@ -22,7 +22,6 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -166,8 +165,7 @@ type instance JobContent 'SendOverlay = SendOverlayJobData
 
 data AllocateRentalRideJobData = AllocateRentalRideJobData
   { bookingId :: Id Booking,
-    searchTryId :: Id DST.SearchTry,
-    searchRequestId :: Id DSR.SearchRequest
+    searchTryId :: Id DST.SearchTry
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

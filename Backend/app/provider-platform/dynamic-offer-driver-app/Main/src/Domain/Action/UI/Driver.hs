@@ -1128,21 +1128,18 @@ getNearbySearchRequests (driverId, merchantId) = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
+      let searchTryId = nearbyReq.searchTryId
+      searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+      searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+      bapMetadata <- CQSM.findById (Id searchRequest.bapId)
+      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       case nearbyReq.searchRequestTag of
         DSR.ON_DEMAND -> do
-          let searchTryId = nearbyReq.searchTryId
-          searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-          searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-          bapMetadata <- CQSM.findById (Id searchRequest.bapId)
-          popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
           return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (OnDemandSearchDetails {searchTry}) bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
         DSR.RENTAL -> do
           bookingId <- nearbyReq.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
-          searchRequest <- runInReplica $ QSR.findById nearbyReq.requestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.requestId.getId)
-          bapMetadata <- CQSM.findById (Id searchRequest.bapId)
-          popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
           booking <- QB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (RentalSearchDetails {booking, searchTryId = nearbyReq.searchTryId}) bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (RentalSearchDetails {booking, searchTry}) bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

@@ -273,8 +273,7 @@ handler transporter req validateRes = do
       let jobData =
             AllocateRentalRideJobData
               { searchTryId = searchTry.id,
-                bookingId = booking.id,
-                searchRequestId = quote.searchRequestId
+                bookingId = booking.id
               }
       JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData
       pure $
