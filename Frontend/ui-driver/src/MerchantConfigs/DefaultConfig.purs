@@ -26,9 +26,12 @@ config =
     enableBlocking : false,
     completePaymentPopup : false,
     onBoardingSubscription : false,
-    showDUOfferBanner : false,
-    offerBannerValidTill : "",
-    offerBannerDeadline : "",
+    offerBannerConfig : {
+      showDUOfferBanner : false,
+      offerBannerValidTill : "",
+      offerBannerDeadline : "",
+      offerBannerPlans : []
+    },
     lowDuesLimit : 25.0,
     maxDuesLimit : 100.0,
     highDueWarningLimit : 75.0,
