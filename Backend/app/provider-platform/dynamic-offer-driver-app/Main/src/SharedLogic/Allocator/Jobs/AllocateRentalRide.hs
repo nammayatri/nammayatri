@@ -100,7 +100,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchan
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
-          isReceivedMaxDriverQuotes = pure $ booking.status /= DB.SCHEDULED,
+          isReceivedMaxDriverQuotes = pure $ booking.status /= DB.CONFIRMED,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,

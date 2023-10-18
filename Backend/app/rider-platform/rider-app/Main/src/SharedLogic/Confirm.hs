@@ -97,9 +97,9 @@ confirm DConfirmReq {..} = do
   now <- getCurrentTime
   fulfillmentId <-
     case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> pure (Nothing)
+      DQuote.OneWayDetails _ -> pure Nothing
       DQuote.RentalDetails rentalOffer -> do
-        unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm qoute should have startTime param"
+        unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm quote should have startTime param"
         --here i can update the quote estimate fare
         let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalOffer
         _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare

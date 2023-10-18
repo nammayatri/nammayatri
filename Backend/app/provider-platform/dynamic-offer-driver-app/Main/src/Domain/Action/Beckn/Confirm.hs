@@ -249,7 +249,7 @@ handler transporter req validateRes = do
           }
     DConfirmRentalBookingValidateRes quote -> do
       -- critical updates
-      QRB.updateStatus booking.id DRB.SCHEDULED -- TODO check we do not block customer
+      QRB.updateStatus booking.id DRB.CONFIRMED
 
       -- non-critical updates
       when isNewRider $ QRD.create riderDetails
