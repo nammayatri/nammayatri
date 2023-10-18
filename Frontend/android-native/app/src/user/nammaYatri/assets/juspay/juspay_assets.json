@@ -1,5 +1,6 @@
 {
    "fonts" : {
+      "FEFont" : true,
       "NotoSansKannada-Black" : true,
       "NotoSansKannada-Bold" : true,
       "NotoSansKannada-ExtraBold" : true,
@@ -175,6 +176,7 @@
       "ny_ic_close" : true,
       "ny_ic_close_bold" : true,
       "ny_ic_close_filled_round" : true,
+      "ny_ic_close_grey" : true,
       "ny_ic_close_transparent" : true,
       "ny_ic_close_white" : true,
       "ny_ic_contact_support" : true,
@@ -205,7 +207,6 @@
       "ny_ic_emergency_contacts" : true,
       "ny_ic_emergency_shield" : true,
       "ny_ic_enable_location_in_settings_android" : true,
-      "ny_ic_enable_location_in_settings_ios" : true,
       "ny_ic_error_404" : true,
       "ny_ic_faster" : true,
       "ny_ic_fav" : true,

@@ -225,6 +225,7 @@ initData = {
     , showDisabilityPopUp : false
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
+    , flowWithoutOffers : true
     }
 }
 

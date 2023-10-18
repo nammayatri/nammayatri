@@ -873,7 +873,7 @@ driverDetailsView push state =
           , gravity BOTTOM
           ][  imageView
               [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails)
-              , height $ V 120
+              , height $ V 100
               , gravity RIGHT
               , width MATCH_PARENT
               , margin $ MarginBottom 15

@@ -982,7 +982,7 @@ eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ if autoAssign then "4" else "17"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ if autoAssign then "8000.0" else "1500.0"
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT $ if autoAssign then "22" else "117"
-  continue state
+  continue state{props{flowWithoutOffers = (show autoAssign) == "true"}}
 
 eval (OnIconClick autoAssign) state = do
   continue state { props {showMultipleRideInfo = not autoAssign}}
@@ -1664,12 +1664,14 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  case null quotesRes.quotes of
-    false -> specialZoneFlow quotesRes.quotes state
-    true -> case (getMerchant FunctionCall) of
-      YATRI -> estimatesListFlow quotesRes.estimates state
-      YATRISATHI -> estimatesListFlow quotesRes.estimates state
-      _ -> estimatesFlow quotesRes.estimates state
+  if isLocalStageOn SearchLocationModel then  continue state 
+  else 
+    case null quotesRes.quotes of
+      false -> specialZoneFlow quotesRes.quotes state
+      true -> case (getMerchant FunctionCall) of
+        YATRI -> estimatesListFlow quotesRes.estimates state
+        YATRISATHI -> estimatesListFlow quotesRes.estimates state
+        _ -> estimatesFlow quotesRes.estimates state
 
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do

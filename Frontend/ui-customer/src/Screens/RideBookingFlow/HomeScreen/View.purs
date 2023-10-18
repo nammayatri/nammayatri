@@ -1315,7 +1315,7 @@ showMenuButtonView push menuText menuImage autoAssign state =
   ][ linearLayout
       [ height $ V 20
       , width $ V 20
-      , stroke if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
+      , stroke if ( state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign ) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
       , cornerRadius 10.0
       , gravity CENTER
       , onClick push (const $ CheckBoxClick autoAssign)
@@ -1324,7 +1324,7 @@ showMenuButtonView push menuText menuImage autoAssign state =
           , height $ V 10
           , cornerRadius 5.0
           , background $ state.data.config.primaryBackground
-          , visibility if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then VISIBLE else GONE
+          , visibility if ( state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign ) then VISIBLE else GONE
           ][]
         ]
     , textView $
