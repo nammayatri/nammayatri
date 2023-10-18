@@ -42,7 +42,8 @@ data UpdateBuildReq = PaymentCompletedBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City -- Booking city, not merchant default city
   }
 
 buildUpdateReq ::
@@ -52,7 +53,7 @@ buildUpdateReq ::
 buildUpdateReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country False
   pure $ BecknReq context $ mkUpdateMessage res
 
 mkUpdateMessage ::

@@ -53,6 +53,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -326,7 +327,7 @@ castCancellationSource = \case
   DBCReason.ByApplication -> Common.ByApplication
 
 bookingCancel ::
-  EsqDBFlow m r =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   BookingCancelledReq ->
   m ()
 bookingCancel BookingCancelledReq {..} = do
@@ -381,7 +382,10 @@ rideSync merchant reqRideId = do
 
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  let dStatusReq = DStatusReq {booking, merchant}
+  city <- case ride.merchantOperatingCityId of
+    Nothing -> pure merchant.defaultCity
+    Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  let dStatusReq = DStatusReq {booking, merchant, city}
   becknStatusReq <- buildStatusReq dStatusReq
   void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
   pure Success

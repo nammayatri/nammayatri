@@ -19,6 +19,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -30,11 +31,13 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -65,6 +68,7 @@ data DConfirmRes = DConfirmRes
     riderName :: Maybe Text,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
+    city :: Context.City,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
@@ -90,8 +94,8 @@ confirm DConfirmReq {..} = do
   now <- getCurrentTime
   fulfillmentId <-
     case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> pure (Nothing)
-      DQuote.RentalDetails _ -> pure (Nothing)
+      DQuote.OneWayDetails _ -> pure Nothing
+      DQuote.RentalDetails _ -> pure Nothing
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -108,7 +112,10 @@ confirm DConfirmReq {..} = do
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
-  exophone <- findRandomExophone searchRequest.merchantId
+  let merchantId = searchRequest.merchantId
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  exophone <- findRandomExophone merchantId merchantOperatingCityId
   booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
@@ -118,7 +125,7 @@ confirm DConfirmReq {..} = do
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
-      CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
+      CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId' merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
     unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
       throwError (InvalidRequest "Payment method not allowed")
@@ -201,6 +208,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         bookingDetails,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
+        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         specialLocationTag = quote.specialLocationTag,
         createdAt = now,
         updatedAt = now
@@ -222,10 +230,10 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
-findRandomExophone merchantId = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  exophones <- CQExophone.findByMerchantAndService merchantId merchantServiceUsageConfig.getExophone
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
+findRandomExophone merchantId merchantOperatingCityId = do
+  merchantServiceUsageConfig <- CMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  exophones <- CQExophone.findByMerchantOperatingCityIdAndService merchantOperatingCityId merchantServiceUsageConfig.getExophone
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es

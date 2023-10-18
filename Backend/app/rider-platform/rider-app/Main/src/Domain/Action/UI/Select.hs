@@ -43,12 +43,14 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
@@ -80,6 +82,7 @@ data DSelectRes = DSelectRes
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
     merchant :: DM.Merchant,
+    city :: Context.City,
     autoAssignEnabled :: Bool
   }
 
@@ -132,6 +135,8 @@ select personId estimateId req@DSelectReq {..} = do
   when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -141,14 +146,14 @@ select personId estimateId req@DSelectReq {..} = do
       }
 
 --DEPRECATED
-selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
+selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
-selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
+selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId

@@ -21,16 +21,17 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
 create :: MonadFlow m => RegistrationToken -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
 
-findByToken :: MonadFlow m => RegToken -> m (Maybe RegistrationToken)
+findByToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RegToken -> m (Maybe RegistrationToken)
 findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
 setVerified :: MonadFlow m => Id RegistrationToken -> m ()
@@ -68,7 +69,7 @@ deleteByPersonId (Id personId) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se
 deleteByPersonIdExceptNew :: MonadFlow m => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
 
-findAllByPersonId :: MonadFlow m => Id Person -> m [RegistrationToken]
+findAllByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where

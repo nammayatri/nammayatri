@@ -81,7 +81,7 @@ data LoginRes = LoginRes
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-login :: (EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
+login :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
 login LoginReq {..} = do
   person <- Person.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
@@ -99,7 +99,7 @@ generateToken SP.Person {..} = do
   _ <- RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: (EsqDBFlow m r) => (Id SP.Person, Id Merchant.Merchant) -> m LogoutRes
+logout :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id Merchant.Merchant) -> m LogoutRes
 logout (personId, _) = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized

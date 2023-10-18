@@ -28,6 +28,7 @@ data EstimateT f = EstimateT
   { id :: B.C f Text,
     requestId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     bppEstimateId :: B.C f Text,
     itemId :: B.C f Text,
     estimatedFare :: B.C f HighPrecMoney,

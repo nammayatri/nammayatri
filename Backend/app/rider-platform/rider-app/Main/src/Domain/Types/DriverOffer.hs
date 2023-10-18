@@ -18,6 +18,7 @@ module Domain.Types.DriverOffer where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -37,6 +38,7 @@ data DriverOffer = DriverOffer
   { id :: Id DriverOffer,
     estimateId :: Id DEstimate.Estimate,
     merchantId :: Maybe (Id DMerchant.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     driverName :: Text,
     driverId :: Maybe Text,
     durationToPickup :: Int, -- Seconds?

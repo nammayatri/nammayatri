@@ -38,10 +38,10 @@ updateRating (Id ratingId) (Id riderId) newRatingValue newFeedbackDetails = do
     ]
     [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.riderId (Se.Eq riderId)]]
 
-findAllRatingsForPerson :: MonadFlow m => Id Person -> m [Rating]
+findAllRatingsForPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Rating]
 findAllRatingsForPerson riderId = findAllWithDb [Se.Is BeamR.riderId $ Se.Eq $ getId riderId]
 
-findRatingForRide :: MonadFlow m => Id Ride -> m (Maybe Rating)
+findRatingForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
 -- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int

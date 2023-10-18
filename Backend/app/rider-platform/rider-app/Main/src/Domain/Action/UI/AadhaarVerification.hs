@@ -66,7 +66,8 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   let tried = fromMaybe 0 numberOfTries
   merchant <- CM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   unless (isDashboard || tried < merchant.aadhaarVerificationTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
-  res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOperatingCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   _ <- Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard merchant
@@ -102,7 +103,8 @@ verifyAadhaarOtp mbMerchant personId req = do
                 shareCode = req.shareCode,
                 transactionId = tId
               }
-      res <- AadhaarVerification.verifyAadhaarOtp person.merchantId aadhaarVerifyReq
+      let merchantOperatingCityId = person.merchantOperatingCityId
+      res <- AadhaarVerification.verifyAadhaarOtp person.merchantId merchantOperatingCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
       Query.createForVerify aadhaarVerifyEntity
       if res.code == pack "1002"

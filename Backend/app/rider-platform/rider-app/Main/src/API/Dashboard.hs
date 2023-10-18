@@ -24,6 +24,7 @@ import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Servant hiding (throwError)
 import Tools.Auth (DashboardTokenAuth)
@@ -31,6 +32,7 @@ import Tools.Auth (DashboardTokenAuth)
 type API =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
+           :> Capture "city" Context.City
            :> API'
        )
     :<|> ExotelAPI
@@ -48,10 +50,10 @@ type API' =
 
 handler :: FlowServer API
 handler =
-  ( \merchantId _dashboard ->
+  ( \merchantId city _dashboard ->
       Customer.handler merchantId
         :<|> Booking.handler merchantId
-        :<|> Merchant.handler merchantId
+        :<|> Merchant.handler merchantId city
         :<|> Ride.handler merchantId
         :<|> RideBookings.handler merchantId
         :<|> IssueList.handler merchantId

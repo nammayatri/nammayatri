@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as BeamS
 
@@ -23,7 +24,7 @@ updateStatus sosId status = do
     ]
     [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
-findById :: MonadFlow m => Id Sos.Sos -> m (Maybe Sos)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
 instance FromTType' BeamS.Sos Sos where

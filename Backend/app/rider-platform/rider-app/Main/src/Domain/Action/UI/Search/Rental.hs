@@ -21,18 +21,19 @@ module Domain.Action.UI.Search.Rental
 where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Action.UI.Serviceability as Serviceability
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
-import Kernel.Serviceability
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import Storage.Queries.Geometry
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -51,7 +52,8 @@ data RentalSearchRes = RentalSearchRes
     startTime :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: City
   }
 
 rentalSearch ::
@@ -72,10 +74,17 @@ rentalSearch personId bundleVersion clientVersion device req = do
   merchant <-
     QMerchant.findById person.merchantId
       >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  validateServiceability merchant.geofencingConfig
+  let sourceLatLong = req.origin.gps
+  originCity <- validateServiceability sourceLatLong person <&> fromMaybe merchant.defaultCity <$> (.city)
+  merchantOperatingCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id originCity
+      >>= fromMaybeM
+        ( MerchantOperatingCityNotFound $
+            "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
+        )
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing -- Handle disabilityTag if need for rentals
+  searchRequest <- DSearch.buildSearchRequest person fromLocation merchantOperatingCity Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing -- Handle disabilityTag if need for rentals
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
@@ -87,10 +96,13 @@ rentalSearch personId bundleVersion clientVersion device req = do
             startTime = req.startTime,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
+            city = originCity,
             ..
           }
   return dSearchRes
   where
-    validateServiceability geoConfig = do
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $
-        throwError RideNotServiceable
+    validateServiceability origin person' = do
+      originServiceability <- Serviceability.checkServiceability (.origin) (person'.id, person'.merchantId) origin False
+      if originServiceability.serviceable
+        then pure originServiceability
+        else throwError RideNotServiceable

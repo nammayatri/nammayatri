@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
@@ -34,46 +35,52 @@ type API =
            :<|> Common.SmsServiceUsageConfigUpdateAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  merchantUpdate merchantId
-    :<|> serviceUsageConfig merchantId
-    :<|> mapsServiceConfigUpdate merchantId
-    :<|> mapsServiceUsageConfigUpdate merchantId
-    :<|> smsServiceConfigUpdate merchantId
-    :<|> smsServiceUsageConfigUpdate merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  merchantUpdate merchantId city
+    :<|> serviceUsageConfig merchantId city
+    :<|> mapsServiceConfigUpdate merchantId city
+    :<|> mapsServiceUsageConfigUpdate merchantId city
+    :<|> smsServiceConfigUpdate merchantId city
+    :<|> smsServiceUsageConfigUpdate merchantId city
 
 merchantUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.MerchantUpdateReq ->
   FlowHandler APISuccess
-merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId
+merchantUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId city
 
 serviceUsageConfig ::
   ShortId DM.Merchant ->
+  Context.City ->
   FlowHandler Common.ServiceUsageConfigRes
-serviceUsageConfig = withFlowHandlerAPI . DMerchant.serviceUsageConfig
+serviceUsageConfig merchantShortId = withFlowHandlerAPI . DMerchant.serviceUsageConfig merchantShortId
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceConfigUpdate merchantShortId
+mapsServiceConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.mapsServiceConfigUpdate merchantShortId city
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.MapsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId
+mapsServiceUsageConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId city
 
 smsServiceConfigUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId
+smsServiceConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId city
 
 smsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.SmsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId
+smsServiceUsageConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId city

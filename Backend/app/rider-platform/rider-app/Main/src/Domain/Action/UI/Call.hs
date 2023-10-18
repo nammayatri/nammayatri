@@ -49,6 +49,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -96,7 +97,8 @@ initiateCallToDriver rideId = do
             toPhoneNum = providerPhone,
             attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
           }
-  exotelResponse <- Call.initiateCall booking.merchantId callReq
+  let merchantOperatingCityId = booking.merchantOperatingCityId
+  exotelResponse <- Call.initiateCall booking.merchantId merchantOperatingCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
   callStatus <- buildCallStatus callStatusId exotelResponse
   QCallStatus.create callStatus
@@ -116,14 +118,14 @@ initiateCallToDriver rideId = do
             createdAt = now
           }
 
-callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   void $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
@@ -151,14 +153,15 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+  merchantId <- CQMOC.findById exophone.merchantOperatingCityId >>= fmap (.merchantId) . fromMaybeM (MerchantOperatingCityDoesNotExist exophone.merchantOperatingCityId.getId)
   mobileNumberHash <- getDbHash callFrom
   (dtmfNumberUsed, booking) <-
-    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
       -- (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
-      Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
+      Nothing -> getDtmfFlow dtmfNumber_ merchantId
       Just person ->
         (QRB.findAssignedByRiderId person.id) >>= \case
-          Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
+          Nothing -> getDtmfFlow dtmfNumber_ merchantId
           Just activeBooking -> return (Nothing, activeBooking)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
@@ -193,11 +196,11 @@ getDtmfFlow dtmfNumber_ merchantId = do
     dropFirstZero = T.dropWhile (== '0')
     removeQuotes = T.replace "\"" ""
 
-getCallStatus :: EsqDBReplicaFlow m r => Id CallStatus -> m GetCallStatusRes
+getCallStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
-getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
+getPerson :: (EsqDBFlow m r, CacheFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let personId = booking.riderId
@@ -211,7 +214,7 @@ getPersonPhone Person {..} = do
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Returns phones pair or throws an error
-getCustomerAndDriverPhones :: (EncFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m (Text, Text)
 getCustomerAndDriverPhones rideId = do
   ride <-
     QRide.findById rideId

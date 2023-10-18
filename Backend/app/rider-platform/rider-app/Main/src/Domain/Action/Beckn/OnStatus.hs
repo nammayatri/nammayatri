@@ -41,7 +41,7 @@ data RideInfo = RideInfo
     rideStatus :: DRide.RideStatus
   }
 
-onStatus :: MonadFlow m => OnStatusReq -> m ()
+onStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnStatusReq -> m ()
 onStatus OnStatusReq {..} = do
   booking <- QBooking.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   case mbRideInfo of

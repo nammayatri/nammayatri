@@ -19,9 +19,10 @@ import qualified Domain.Types.LocationMapping as DLM
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.LocationMapping as QLM
 
-buildPickUpLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
+buildPickUpLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
 buildPickUpLocationMapping locationId entityId tag = do
   id <- generateGUID
   let order = 0
@@ -29,7 +30,7 @@ buildPickUpLocationMapping locationId entityId tag = do
   let version = "LATEST"
   return DLM.LocationMapping {..}
 
-buildDropLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
+buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
 buildDropLocationMapping locationId entityId tag = do
   id <- generateGUID
   noOfEntries <- QLM.countOrders entityId

@@ -57,7 +57,7 @@ customerIssueHandle =
       createTicket = castTicket
     }
 
-castPersonById :: EsqDBReplicaFlow m r => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
 castPersonById personId = do
   person <- runInReplica $ QP.findById (cast personId)
   return $ fmap castPerson person
@@ -72,7 +72,7 @@ castPersonById personId = do
           mobileNumber = person.mobileNumber
         }
 
-castRideById :: EsqDBReplicaFlow m r => Id Common.Ride -> m (Maybe Common.Ride)
+castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> m (Maybe Common.Ride)
 castRideById rideId = do
   ride <- runInReplica $ QR.findById (cast rideId)
   return $ fmap castRide ride
@@ -111,7 +111,7 @@ castRideInfo merchantShortId rideId = do
         }
 
 castTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
-castTicket merchantId = TT.createTicket (cast merchantId)
+castTicket merchantId req = TT.createTicket (Id req.personId) (cast merchantId) Nothing req
 
 castMerchantById :: (CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> m (Maybe Common.Merchant)
 castMerchantById merchantId = do

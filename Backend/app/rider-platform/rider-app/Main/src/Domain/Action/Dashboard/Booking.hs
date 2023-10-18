@@ -29,16 +29,17 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 
 ---------------------------------------------------------------------
 
@@ -125,6 +126,8 @@ bookingSync merchant reqBookingId = do
   unless (merchant.id == booking.merchantId) $
     throwError (BookingDoesNotExist bookingId.getId)
 
+  let merchantOperatingCityId = booking.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= ((.city) <$>) . fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   mbRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
   case mbRide of
     Just ride -> do
@@ -138,7 +141,7 @@ bookingSync merchant reqBookingId = do
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant}
+      let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReq dStatusReq
       void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
     Nothing -> do

@@ -23,13 +23,13 @@ where
 import Domain.Types.BlackListOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Registry.Subscriber (Subscriber)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as BeamBLO
 
-findBySubscriberId :: MonadFlow m => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe BlackListOrg)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
 
 instance FromTType' BeamBLO.BlackListOrg BlackListOrg where
