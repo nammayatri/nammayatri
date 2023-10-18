@@ -271,27 +271,27 @@ mkQuoteEntitiesRental start provider it = do
                 },
               OS.Tag
                 { display = Just True,
-                  code = Just "per_hour_charge",
+                  code = Just "rental_per_hour_charge",
                   name = Just "Per Hour Charge",
                   value = Just $ show info.perHourCharge
                 },
               OS.Tag
                 { display = Just True,
-                  code = Just "per_hour_free_kms",
+                  code = Just "rental_per_hour_free_kms",
                   name = Just "Per Hour Free Kms",
                   value = Just $ show info.perHourFreeKms
                 },
               OS.Tag
                 { display = Just True,
-                  code = Just "per_extra_km_rate",
+                  code = Just "rental_per_extra_km_rate",
                   name = Just "Per Extra Km Rate",
                   value = Just $ show info.perHourFreeKms
                 },
               OS.Tag
                 { display = Just True,
-                  code = Just "night_shift_charge",
+                  code = Just "rental_night_shift_charge",
                   name = Just "Night Shift Charge",
-                  value = (show . (.getMoney)) <$> info.nightShiftCharge
+                  value = show . (.getMoney) <$> info.nightShiftCharge
                 }
             ]
         }
