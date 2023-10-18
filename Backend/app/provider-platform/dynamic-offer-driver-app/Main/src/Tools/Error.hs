@@ -516,6 +516,23 @@ instance IsHTTPError DriverPoolConfigError where
 
 instance IsAPIError DriverPoolConfigError
 
+data VehicleRegCertError = VehicleRegCertNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''VehicleRegCertError
+
+instance IsBaseError VehicleRegCertError where
+  toMessage = \case
+    VehicleRegCertNotFound vehicleNo -> Just $ "Fleet-driver association with vehicle no. \"" <> show vehicleNo <> "\"not found. "
+
+instance IsHTTPError VehicleRegCertError where
+  toErrorCode = \case
+    VehicleRegCertNotFound _ -> "VEHICLE_REG_CERT_NOT_FOUND"
+  toHttpCode = \case
+    VehicleRegCertNotFound _ -> E400
+
+instance IsAPIError VehicleRegCertError
+
 data SearchTryError
   = SearchTryNotFound Text
   | SearchTryDoesNotExist Text
